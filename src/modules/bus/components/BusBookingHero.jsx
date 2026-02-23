@@ -75,7 +75,7 @@ const BusBookingHero = () => {
           <div className="flex-1 flex flex-col justify-center">
             <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white text-left mb-2 drop-shadow-2xl max-w-3xl">
-                India's Fastest Bus Ticket Booking Platform
+                India's Bus Ticket Booking Platform
               </h1>
               <p className="text-white/90 text-base md:text-lg drop-shadow-xl max-w-2xl">
                 Book tickets effortlessly with the best prices and comfort
@@ -183,7 +183,9 @@ const BusBookingHero = () => {
 
         {/* Recent Searches - Below search card */}
         <div className="mt-6 max-w-4xl">
-          <p className="text-gray-700 text-sm mb-3 font-medium">Recent searches</p>
+          <p className="text-gray-700 text-sm mb-3 font-medium">
+            Recent searches
+          </p>
           <div className="flex flex-wrap gap-2">
             {recentSearches.map((search, idx) => (
               <button
@@ -194,7 +196,9 @@ const BusBookingHero = () => {
                   setDestination(search.to);
                 }}
               >
-                <span className="font-medium">{search.from} → {search.to}</span>
+                <span className="font-medium">
+                  {search.from} → {search.to}
+                </span>
                 <span className="text-gray-500 text-[10px]">{search.date}</span>
               </button>
             ))}
