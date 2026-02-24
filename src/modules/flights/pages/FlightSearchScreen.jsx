@@ -20,6 +20,7 @@ import {
   FaPlane,
   FaSpinner,
 } from "react-icons/fa";
+import PopularFlightRoutes from "../components/PopularFlightRoutes";
 
 const FlightSearchScreen = () => {
   const navigate = useNavigate();
@@ -903,7 +904,7 @@ const FlightSearchScreen = () => {
         </div>
 
         {/* Do More With BOBROS Section */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-8 mt-30">
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-8 mt-60">
           <h2 className="text-xl font-bold text-gray-800 mb-6">
             Do More With BOBROS
           </h2>
@@ -998,6 +999,7 @@ const FlightSearchScreen = () => {
             ))}
           </div>
         </div>
+        <PopularFlightRoutes />
 
         {/* FAQ Section */}
         <div className="bg-white rounded-xl shadow-lg p-8">
