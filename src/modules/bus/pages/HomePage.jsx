@@ -3,6 +3,7 @@ import Services from "../components/Services";
 import WhyBobros from "../components/WhyBobros";
 import BusBookingHero from "../components/BusBookingHero";
 import AppDownload from "../components/AppDownload";
+import PopularBusRoutes from "../components/PopularBusRoutes";
 
 function HomePage() {
   return (
@@ -21,6 +22,7 @@ function HomePage() {
           <Services />
         </div>
         <AppDownload />
+        <PopularBusRoutes />
 
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <WhyBobros />

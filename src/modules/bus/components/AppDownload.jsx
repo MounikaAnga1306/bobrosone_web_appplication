@@ -36,11 +36,11 @@ export default function AppDownload() {
 
           <div className="flex items-center gap-6 flex-wrap mt-5">
             {/* QR / Scanner Placeholder */}
-            <div className="w-36 h-28 bg-[#e7cfc8] rounded-md flex items-center justify-center text-gray-700">
+            <div className="w-36 h-28 bg-[#e7cfc8] mb-16 rounded-md flex items-center justify-center text-gray-700">
               Scanner
             </div>
 
-            <div className="flex flex-col items-start">
+            <div className="flex flex-col items-start ">
               {/* GOOGLE PLAY IMAGE */}
               <motion.div
                 whileHover={{ y: -2, scale: 1.04 }}
@@ -61,7 +61,7 @@ export default function AppDownload() {
                 <img
                   src="/assets/App-Store.png"
                   alt="Download on App Store"
-                  className="w-72  -ml-9 mb-10 object-contain"
+                  className="w-74  -ml-10 mb-10 object-contain"
                 />
               </motion.div>
             </div>
