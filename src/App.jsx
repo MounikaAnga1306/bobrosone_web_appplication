@@ -1,6 +1,11 @@
 // App.js
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import { FlightSearchProvider } from "./modules/flights/contexts/FlightSearchContext"; // Added this
 import FlightTracker from "./modules/flights/pages/FlightTracker";
 import FlightSearchScreen from "./modules/flights/pages/FlightSearchScreen";
@@ -18,14 +23,22 @@ function App() {
           <div className="min-h-screen flex flex-col">
             {/* Navbar at the top */}
             <Navbar />
-            
+
             {/* Main content area */}
-            <div className="flex-1"> {/* Removed upper padding */}
+            <div className="flex-1">
+              {" "}
+              {/* Removed upper padding */}
               <Routes>
-                <Route path="/" element={<Home />} />
- 
-                <Route path="/flights/search" element={<FlightSearchScreen />} />
-                <Route path="/flights/results" element={<FlightSearchResults />} /> {/* Added results route */}
+                <Route path="/HomePage" element={<Home />} />
+                <Route
+                  path="/flights/search"
+                  element={<FlightSearchScreen />}
+                />
+                <Route
+                  path="/flights/results"
+                  element={<FlightSearchResults />}
+                />{" "}
+                {/* Added results route */}
                 <Route path="/flights/tracker" element={<FlightTracker />} />
                 {/* Add more routes as needed */}
                 <Route path="*" element={<Navigate to="/flights/search" />} />
@@ -37,6 +50,5 @@ function App() {
     </FlightMasterProvider>
   );
 }
-
 
 export default App;
