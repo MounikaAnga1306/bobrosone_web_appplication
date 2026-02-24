@@ -231,7 +231,7 @@ export default function BookingForm() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
               >
-                Search
+                Next
               </motion.span>
             )}
           </AnimatePresence>
