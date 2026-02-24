@@ -239,7 +239,14 @@ export default function BookingForm() {
             {isSearching ? (
               <motion.span key="searching">Searching...</motion.span>
             ) : (
-              <motion.span key="search">Search</motion.span>
+              <motion.span
+                key="search"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+              >
+                Next
+              </motion.span>
             )}
           </AnimatePresence>
         </motion.button>
