@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Briefcase, User, Menu, X } from "lucide-react";
-import logo from "../assets/Bobros_logo.png";
+import logo from "../assets/Bobros_image.png";
 import { Link } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 
