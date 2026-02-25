@@ -21,6 +21,8 @@ import {
   FaSpinner,
 } from "react-icons/fa";
 import PopularFlightRoutes from "../components/PopularFlightRoutes";
+import FlightFAQ from "../components/FlightFAQ";
+import Quick_Links from "../components/Quick_Links";
 
 const FlightSearchScreen = () => {
   const navigate = useNavigate();
@@ -1000,28 +1002,10 @@ const FlightSearchScreen = () => {
           </div>
         </div>
         <PopularFlightRoutes />
-
-        {/* FAQ Section */}
-        <div className="bg-white rounded-xl shadow-lg p-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-8 text-center">
-            Frequently Asked Questions
-          </h2>
-          <div className="space-y-6">
-            <div className="p-4 hover:bg-gray-50 rounded-lg transition-colors duration-200">
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">
-                Why is flight ticket booking the cheapest on BOBROS?
-              </h3>
-              <p className="text-gray-600">
-                BOBROS directly searches multiple airline websites for the
-                cheapest fares. Many airlines sell their cheapest flight tickets
-                on BOBROS. Additionally, with its exclusive offers and deals,
-                including several bank and partner offers, BOBROS serves as the
-                best and cheap platform to book cheap flights online.
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
+      <Quick_Links />
+      {/* FAQ Section */}
+      <FlightFAQ />
     </div>
   );
 };

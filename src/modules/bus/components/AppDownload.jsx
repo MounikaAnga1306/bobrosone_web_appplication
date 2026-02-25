@@ -14,10 +14,13 @@ export default function AppDownload() {
           <motion.div
             animate={{ y: [0, -12, 0] }}
             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            className="w-[260px] h-[480px] rounded-[32px] bg-[#e7cfc8] flex items-center justify-center shadow-xl"
+            className="w-[260px] h-[480px] rounded-[32px] overflow-hidden bg-[#e7cfc8] flex items-center justify-center shadow-xl"
           >
-            {/* Replace this div with <video/> later */}
-            <span className="text-gray-700 text-lg">Mobile Video</span>
+            <img
+              src="/assets/Mobile_View.png" // <-- put your image in public folder
+              alt="Mobile preview"
+              className="max-w-full max-h-full object-contain"
+            />
           </motion.div>
         </motion.div>
 
