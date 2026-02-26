@@ -29,6 +29,7 @@ function App() {
               {" "}
               {/* Removed upper padding */}
               <Routes>
+                <Route path="/" element={<Home />} />
                 <Route path="/HomePage" element={<Home />} />
                 <Route
                   path="/flights/search"
