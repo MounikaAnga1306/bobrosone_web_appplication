@@ -4,6 +4,9 @@ import WhyBobros from "../components/WhyBobros";
 import BusBookingHero from "../components/BusBookingHero";
 import AppDownload from "../components/AppDownload";
 import PopularBusRoutes from "../components/PopularBusRoutes";
+import Quick_Links from "../components/Quick_Links";
+import BusFAQ from "../components/BusFAQ";
+import FooterBottom from "../components/FooterBottom";
 
 function HomePage() {
   return (
@@ -27,6 +30,11 @@ function HomePage() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <WhyBobros />
         </div>
+
+        <Quick_Links />
+
+        <BusFAQ />
+        <FooterBottom />
       </main>
     </div>
   );
