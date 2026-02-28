@@ -1,7 +1,7 @@
 export default function Quick_Links() {
   return (
-    <div className=" max-w-full  bg-white flex items-center justify-center p-2">
-      <div className="w-full  border  border-gray-200 bg-white px-10 py-8 mb-10">
+    <div className=" max-w-full  bg-white flex items-center justify-center p-2 mt-10">
+      <div className="w-full   bg-white px-10 py-8 mb-10">
         <div className="grid grid-cols-4 gap-8">
           {/* Column 1: OUR PRODUCTS */}
           <div>
