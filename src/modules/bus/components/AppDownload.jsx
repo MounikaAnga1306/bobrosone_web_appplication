@@ -3,8 +3,8 @@ import { motion } from "framer-motion";
 export default function AppDownload() {
   return (
     <section className="w-full py-16 px-6">
-      <div className="max-w-6xl mx-auto bg-gray-100 rounded-3xl p-10 flex flex-col lg:flex-row items-center gap-12">
-        {/* LEFT — MOBILE MOCKUP / VIDEO PLACEHOLDER */}
+      <div className="max-w-[85%] mx-auto bg-white rounded-3xl p-10 flex flex-col lg:flex-row items-center gap-12">
+        {/* LEFT — REAL MOBILE MOCKUP */}
         <motion.div
           initial={{ opacity: 0, x: -60 }}
           animate={{ opacity: 1, x: 0 }}
@@ -12,15 +12,30 @@ export default function AppDownload() {
           className="w-full lg:w-1/2 flex justify-center"
         >
           <motion.div
-            animate={{ y: [0, -12, 0] }}
+            animate={{ y: [0, -10, 0] }}
             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            className="w-[260px] h-[480px] rounded-[32px] overflow-hidden bg-[#e7cfc8] flex items-center justify-center shadow-xl"
+            className="relative"
           >
-            <img
-              src="/assets/Mobile_View.png" // <-- put your image in public folder
-              alt="Mobile preview"
-              className="max-w-full max-h-full object-contain"
-            />
+            {/* PHONE FRAME */}
+            <div className="w-[290px] h-[575px] bg-[#f8f8f8] rounded-[48px] border-3 border-black-200 shadow-lg p-[3px]">
+              {" "}
+              {/* NOTCH */}
+              <div className="absolute top-[2px] left-1/2 -translate-x-1/2 w-[120px] h-[26px] bg-black rounded-b-2xl z-20" />
+              {/* SCREEN */}
+              <div className="w-full h-full bg-white rounded-[36px] overflow-hidden relative">
+                {/* STATUS BAR MOCK */}
+                <div className="h-6 bg-white flex items-center justify-between px-4 text-xs font-semibold">
+                  <div className="flex gap-1"></div>
+                </div>
+
+                {/* APP SCREEN IMAGE */}
+                <img
+                  src="/assets/Mobile_View.png"
+                  alt="App preview"
+                  className="w-full h-[calc(100%-32px)] object-cover"
+                />
+              </div>
+            </div>
           </motion.div>
         </motion.div>
 
@@ -38,13 +53,20 @@ export default function AppDownload() {
           </h2>
 
           <div className="flex items-center gap-6 flex-wrap mt-5">
-            {/* QR / Scanner Placeholder */}
-            <div className="w-36 h-28 bg-[#e7cfc8] mb-16 rounded-md flex items-center justify-center text-gray-700">
-              Scanner
-            </div>
+            {/* QR */}
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              className="w-44 h-44 bg-white p-4 rounded-3xl shadow-2xl border border-gray-100 flex items-center justify-center"
+            >
+              <img
+                src="/assets/QR_code.png"
+                alt="Scan to download app"
+                className="w-full h-full object-contain"
+              />
+            </motion.div>
 
-            <div className="flex flex-col items-start ">
-              {/* GOOGLE PLAY IMAGE */}
+            <div className="flex flex-col items-start">
+              {/* GOOGLE PLAY */}
               <motion.div
                 whileHover={{ y: -2, scale: 1.04 }}
                 className="cursor-pointer"
@@ -56,7 +78,7 @@ export default function AppDownload() {
                 />
               </motion.div>
 
-              {/* APP STORE IMAGE */}
+              {/* APP STORE */}
               <motion.div
                 whileHover={{ y: -2, scale: 1.04 }}
                 className="cursor-pointer"
@@ -64,7 +86,7 @@ export default function AppDownload() {
                 <img
                   src="/assets/App-Store.png"
                   alt="Download on App Store"
-                  className="w-74  -ml-10 mb-10 object-contain"
+                  className="w-66 -ml-7 mt-2 object-contain"
                 />
               </motion.div>
             </div>

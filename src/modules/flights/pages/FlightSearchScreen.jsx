@@ -387,7 +387,7 @@ const FlightSearchScreen = () => {
   return (
     <div className="w-full bg-gray-50">
       {/* Hero Section - Full width image */}
-      <div className="relative w-full h-[800px] overflow-hidden">
+      <div className="relative w-full h-[630px] overflow-hidden">
         <div className="absolute inset-0 w-screen left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
           <img
             src="https://images.unsplash.com/photo-1436491865332-7a61a109cc05?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
@@ -425,7 +425,7 @@ const FlightSearchScreen = () => {
       </div>
 
       {/* Search Section - Overlapping card */}
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-160 mb-10 z-20">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-130 mb-10 z-20">
         {/* Flight Booking Card */}
 
         <div className=" relative bg-white rounded-2xl shadow-xl p-6 pb-16 border border-gray-200">

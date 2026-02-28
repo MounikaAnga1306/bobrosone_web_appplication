@@ -1,20 +1,35 @@
 import BookingForm from "./BookingForm";
-export default function HeroSection() {
-  return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* Background Image */}
-      <div
-        className="absolute inset-0 bg-cover bg-center"
-        style={{
-          backgroundImage: `url(https://images.unsplash.com/photo-1749961347714-7d1bbb4b30b7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxoaWdod2F5JTIwcm9hZCUyMHN1bnNldCUyMHRyYXZlbHxlbnwxfHx8fDE3NzE4MzQ1Mjd8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral)`,
-        }}
-      />
 
-      {/* Gradient Overlay */}
-      <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]" />
-      <div className="relative z-10 max-w-6xl mx-auto pt-32 px-8">
+export default function BusBookingHero() {
+  return (
+    <section className="relative min-h-[750px] flex items-center justify-center">
+      {/* Background Image */}
+      <div className="absolute inset-0">
+        <img
+          src="/assets/hero-bg.jpg" // 🔥 Replace with your sunset road image
+          alt="Travel Background"
+          className="w-full h-full object-cover"
+        />
+
+        {/* Dark Overlay */}
+        <div className="absolute inset-0 bg-black/40" />
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 w-full max-w-6xl mx-auto px-6 pt-32">
+        {/* Heading */}
+        <div className="text-center text-white mb-12">
+          <h1 className="text-4xl md:text-6xl font-extrabold mb-4">
+            Your Journey, Our Priority
+          </h1>
+          <p className="text-lg md:text-xl text-white/80">
+            Book buses, flights, hotels & more at the best prices
+          </p>
+        </div>
+
+        {/* Booking Form */}
         <BookingForm />
       </div>
-    </div>
+    </section>
   );
 }

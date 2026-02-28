@@ -38,12 +38,12 @@ function ServiceCard({ image, title, description, contain }) {
       animate="rest"
       variants={cardHover}
       className="
+        group
         relative bg-white 
         hover:bg-gradient-to-br 
         hover:from-[#fff1ea] 
         hover:via-[#ffe2d6] 
         hover:to-[#ffd2c1]
-        hover:text-[#fd561e]
         rounded-2xl
         px-5 sm:px-6
         pb-6 pt-20 sm:pt-24
@@ -52,7 +52,7 @@ function ServiceCard({ image, title, description, contain }) {
         transition-all duration-300
       "
     >
-      {/* ✅ Responsive Image */}
+      {/* Image */}
       <motion.div
         variants={imageHover}
         className="
@@ -76,10 +76,29 @@ function ServiceCard({ image, title, description, contain }) {
         />
       </motion.div>
 
-      <h3 className="text-base sm:text-lg md:text-xl font-bold mb-2 text-gray-900">
+      {/* Title with motion */}
+      <motion.h3
+        variants={{
+          rest: { y: 0, color: "#111827" },
+          hover: { y: -4, color: "#fd561e" },
+        }}
+        transition={{ type: "spring", stiffness: 200, damping: 14 }}
+        className="text-base sm:text-lg md:text-xl font-bold mb-2 relative"
+      >
         {title}
-      </h3>
 
+        {/* Animated underline */}
+        <motion.span
+          variants={{
+            rest: { width: 0, opacity: 0 },
+            hover: { width: "60%", opacity: 1 },
+          }}
+          transition={{ duration: 0.3 }}
+          className="absolute left-1/2 -translate-x-1/2 -bottom-1 h-[2px] bg-[#fd561e] rounded"
+        />
+      </motion.h3>
+
+      {/* Description */}
       <p className="text-xs sm:text-sm md:text-base text-gray-600 leading-relaxed max-w-xs sm:max-w-sm">
         {description}
       </p>
@@ -136,9 +155,9 @@ export default function Service() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-16 sm:py-20 px-4 sm:px-6">
+    <div className=" bg-white py-16 sm:py-20 px-4 sm:px-6 ">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-12 sm:mb-16 text-orange-500">
+        <h1 className="text-3xl -mt-10 sm:text-4xl md:text-5xl font-bold text-center mb-12 sm:mb-16 text-orange-500">
           Our Services
         </h1>
 

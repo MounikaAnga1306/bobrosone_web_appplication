@@ -11,7 +11,7 @@ const features = [
 
 export default function WhyBobros() {
   return (
-    <section className="w-full bg-white pt-0 pb-12 ">
+    <section className="w-full bg-white pt-0 pb-12 mt-10 ">
       <div className="max-w-6xl mx-auto px-6">
         {/* Heading */}
         <h2 className="text-3xl md:text-4xl font-semibold mb-10 flex items-center gap-2">

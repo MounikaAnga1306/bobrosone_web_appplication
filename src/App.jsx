@@ -13,6 +13,8 @@ import FlightSearchResults from "./modules/flights/pages/FlightSearchResult"; //
 import { FlightMasterProvider } from "./modules/flights/providers/CarrierCodeProvider";
 import Navbar from "./globalfiles/Navbar";
 import Home from "./modules/bus/pages/HomePage";
+import FooterBottom from "./globalfiles/FooterBottom";
+import BusResultsPage from "./modules/bus/components/BusResultsPage";
 
 function App() {
   return (
@@ -20,7 +22,7 @@ function App() {
       {/* Wrap with FlightSearchProvider for flight search functionality */}
       <FlightSearchProvider>
         <Router>
-          <div className="min-h-screen flex flex-col">
+          <div className="min-h-screen bg-gray-100 flex flex-col">
             {/* Navbar at the top */}
             <Navbar />
 
@@ -31,6 +33,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/HomePage" element={<Home />} />
+                <Route path="/results" element={<BusResultsPage />} />
                 <Route
                   path="/flights/search"
                   element={<FlightSearchScreen />}
@@ -46,6 +49,7 @@ function App() {
               </Routes>
             </div>
           </div>
+          <FooterBottom />
         </Router>
       </FlightSearchProvider>
     </FlightMasterProvider>
