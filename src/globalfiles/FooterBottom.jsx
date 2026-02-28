@@ -4,12 +4,12 @@ export default function FooterBottom() {
       {/* Top Row */}
       <div className="flex items-center gap-6 flex-nowrap overflow-x-auto">
         {/* WE ACCEPT */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 ml-80">
           <span className="text-xs font-bold text-gray-800 tracking-widest whitespace-nowrap">
             WE ACCEPT
           </span>
           {/* VISA */}
-          <div className="w-16 h-8 bg-gray-100 border border-gray-200 rounded flex items-center justify-center">
+          <div className="w-16 h-8 bg-white-100   rounded flex items-center justify-center">
             <img
               src="/assets/visa.png"
               alt="VISA"
@@ -17,7 +17,7 @@ export default function FooterBottom() {
             />
           </div>
           {/* Mastercard */}
-          <div className="w-12 h-8 bg-gray-100 border border-gray-200 rounded flex items-center justify-center">
+          <div className="w-12 h-8 bg-white-100 rounded flex items-center justify-center">
             <img
               src="/assets/master_card.png"
               alt="Mastercard"
@@ -25,7 +25,7 @@ export default function FooterBottom() {
             />
           </div>
           {/* UPI */}
-          <div className="w-12 h-8 bg-gray-100 border border-gray-200 rounded flex items-center justify-center">
+          <div className="w-14 h-12 bg-white-100  rounded flex items-center justify-center">
             <img
               src="/assets/upi.png"
               alt="UPI"
@@ -33,7 +33,7 @@ export default function FooterBottom() {
             />
           </div>
           {/* RuPay */}
-          <div className="w-16 h-8 bg-gray-100 border border-gray-200 rounded flex items-center justify-center">
+          <div className="w-20 h-14 bg-white-100 -ml-3  rounded flex items-center justify-center">
             <img
               src="/assets/Rupay-Logo.avif"
               alt="RuPay"
@@ -43,30 +43,22 @@ export default function FooterBottom() {
         </div>
 
         {/* MEMBER OF */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 ml-10">
           <span className="text-xs font-bold text-gray-800 tracking-widest whitespace-nowrap">
             MEMBER OF
           </span>
           {/* IATA */}
-          <div className="w-20 h-10 bg-gray-100 border border-gray-200 rounded flex items-center justify-center">
+          <div className="w-24 h-16 bg-white-100 mb-2 rounded flex items-center justify-center">
             <img
               src="/assets/IATAloogo.jpg"
               alt="IATA"
               className="w-full h-full object-contain p-1"
             />
           </div>
-          {/* Accredited Agent
-          <div className="w-20 h-10 bg-gray-100 border border-gray-200 rounded flex items-center justify-center">
-            <img
-              src="/assets/razorpay_partner2.png"
-              alt="Accredited Agent"
-              className="w-full h-full object-contain p-1"
-            />
-          </div> */}
         </div>
 
         {/* Razorpay */}
-        <div className="w-24 h-10 bg-gray-100 border border-gray-200 rounded flex items-center justify-center">
+        <div className="w-26 h-12 bg-white-100  rounded flex -ml-6 items-center justify-center">
           <img
             src="/assets/razorpay_partner2.png"
             alt="Razorpay"
@@ -75,7 +67,7 @@ export default function FooterBottom() {
         </div>
 
         {/* Google Partner */}
-        <div className="w-24 h-10 bg-gray-100 border border-gray-200 rounded flex items-center justify-center">
+        <div className="w-24 h-20 bg-white-100 -ml-10 rounded flex items-center justify-center">
           <img
             src="/assets/Google-Partner.png"
             alt="Google Partner"
@@ -84,7 +76,7 @@ export default function FooterBottom() {
         </div>
 
         {/* SECTIGO */}
-        <div className="w-28 h-10 bg-gray-100 border border-gray-200 rounded flex items-center justify-center">
+        <div className="w-28 h-12 bg-white-100 -ml-10 rounded mb-2 flex items-center justify-center">
           <img
             src="/assets/secure-partner-logo.png"
             alt="SECTIGO"

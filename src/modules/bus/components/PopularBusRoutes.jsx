@@ -41,12 +41,12 @@ const routes = [
 
 export default function PopularBusRoutes() {
   return (
-    <div className="w-full max-w-7xl mx-auto mt-10">
+    <div className="w-full max-w-[82%] mx-auto -mt-8">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">
         Popular Bus Routes
       </h2>
 
-      <div className="bg-white rounded-xl shadow-sm border p-4">
+      <div className="bg-white rounded-xl shadow-sm  p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8">
           {routes.map((route, index) => (
             <div key={index} className="flex gap-3">
