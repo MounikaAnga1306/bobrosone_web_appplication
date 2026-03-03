@@ -15,7 +15,7 @@ export default function Advertisement() {
         {/* Content */}
         <div className="relative z-10 h-full flex flex-col md:flex-row items-center justify-between px-8 py-6 text-white">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-wider mb-2 text-[#FD561E]">
+            <p className="text-sm font-bold uppercase tracking-wider mb-2 text-white">
               New User Offer
             </p>
 

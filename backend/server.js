@@ -97,6 +97,32 @@ app.get("/searchTrips", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch trips" });
   }
 });
+// =========================
+// TRIP DETAILS ENDPOINT
+// =========================
+app.get("/tripdetails", async (req, res) => {
+  try {
+    const { id } = req.query;
+
+    if (!id) {
+      return res.status(400).json({ error: "Trip ID is required" });
+    }
+
+    const url = `${process.env.BASE_URL}/tripdetails?id=${id}`;
+    console.log("Trip details API:", url);
+
+    const requestData = { url, method: "GET" };
+    const headers = oauth.toHeader(oauth.authorize(requestData));
+
+    const response = await axios.get(url, { headers });
+
+    res.json(response.data);
+
+  } catch (error) {
+    console.error("Trip details error:", error.response?.data || error.message);
+    res.status(500).json({ error: "Failed to fetch trip details" });
+  }
+});
 
 
 // =========================
