@@ -29,6 +29,13 @@ const specialFares = [
   { id: "reward", label: "Ride & Get Rewarded!", desc: "Earn 4% Every Trip" },
   { id: "promo", label: "Apply. Save. Smile!", desc: "Use Promocode upto 10%" },
 ];
+const tabRoutes = {
+  bus: "/",
+  flights: "/flights",
+  hotels: "/hotels",
+  holidays: "/holidays",
+  cabs: "/cabs",
+};
 
 const BookingForm = () => {
   const [activeTab, setActiveTab] = useState("bus");
@@ -49,6 +56,8 @@ const BookingForm = () => {
   const toRef = useRef(null);
   const [fromSelected, setFromSelected] = useState("");
   const [toSelected, setToSelected] = useState("");
+  const [fromError, setFromError] = useState("");
+  const [toError, setToError] = useState("");
 
   // ✅ Separate debounce refs
   const fromDebounce = useRef(null);
@@ -65,8 +74,16 @@ const BookingForm = () => {
     const formattedDate = selectedDate.toISOString().split("T")[0];
 
     // Navigate to front-end route, BusResultsPage will call API
+    //console.log(fromCity, toCity);
     navigate(
       `/results?source=${fromCity.sid}&destination=${toCity.sid}&doj=${formattedDate}`,
+      {
+        state: {
+          sourceName: fromCity.cityname,
+          destinationName: toCity.cityname,
+          date: selectedDate, // <-- PASS THE FULL DATE OBJECT
+        },
+      },
     );
   };
 
@@ -195,20 +212,20 @@ const BookingForm = () => {
   };
 
   return (
-    <section className="relative h-[650px] flex items-center justify-center">
+    <section className="relative h-[590px] flex items-center justify-center">
       <img
         src="/assets/hero-bg.jpg"
         alt="hero"
-        className="absolute inset-0 w-full h-full object-cover"
+        className="absolute inset-0 w-full h-[590px] object-cover"
       />
       <div className="absolute inset-0 bg-black/30" />
 
       <div className="relative z-10 w-full max-w-6xl px-6">
         <div className="text-center mb-10 text-white">
-          <h1 className="text-5xl font-bold mb-3">
+          <h1 className="text-5xl font-bold -mb-15">
             Your Journey, Our Priority
           </h1>
-          <p className="text-lg opacity-90">
+          <p className="text-lg opacity-90 mt-18">
             Book buses, flights, hotels & more at the best prices
           </p>
         </div>
@@ -223,7 +240,10 @@ const BookingForm = () => {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    navigate(tabRoutes[tab.id]);
+                  }}
                   className={`flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300 border ${
                     active
                       ? "bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white border-transparent shadow-lg scale-105"
@@ -238,7 +258,7 @@ const BookingForm = () => {
           </div>
 
           {/* FORM */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
+          <div className=" h-[50px] grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
             {/* FROM */}
             <div ref={fromRef} className="md:col-span-4 group relative">
               <p className="text-xs text-gray-500 uppercase tracking-wide mb-2 transition-colors duration-300 group-hover:text-[#FD561E]">
@@ -446,16 +466,25 @@ const BookingForm = () => {
                         selectedDate &&
                         selectedDate.getDate() === day &&
                         selectedDate.getMonth() === currentDate.getMonth();
+                      const isPastDate = (day) => {
+                        const date = new Date(
+                          currentDate.getFullYear(),
+                          currentDate.getMonth(),
+                          day,
+                        );
+                        return date < new Date(); // today
+                      };
 
                       return (
                         <button
                           key={day}
-                          onClick={() => handleDateSelect(day)}
+                          onClick={() =>
+                            !isPastDate(day) && handleDateSelect(day)
+                          }
+                          disabled={isPastDate(day)}
                           className={`p-2 rounded-lg transition ${
-                            isSelected
-                              ? "bg-[#FD561E] text-white"
-                              : "hover:bg-orange-100"
-                          }`}
+                            isSelected ? "bg-[#FD561E] text-white" : ""
+                          } ${isPastDate(day) ? "text-gray-300 cursor-not-allowed" : "hover:bg-orange-100"}`}
                         >
                           {day}
                         </button>
