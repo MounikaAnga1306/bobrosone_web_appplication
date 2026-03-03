@@ -71,7 +71,12 @@ const CheckboxSection = ({
         </h3>
         <button
           onClick={onClear}
-          className="text-xs font-medium text-[#FD561E] hover:underline"
+          disabled={selected.size === 0}
+          className={`text-xs font-bold ${
+            selected.size === 0
+              ? "text-gray-400 cursor-not-allowed"
+              : "text-[#FD561E] cursor-pointer"
+          }`}
         >
           Clear All
         </button>
@@ -84,7 +89,7 @@ const CheckboxSection = ({
             placeholder={searchPlaceholder}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full border border-border rounded-lg px-3 py-2 text-sm bg-background text-foreground placeholder:text-muted-foreground pr-9"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-background text-foreground placeholder:text-muted-foreground pr-9"
           />
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         </div>
@@ -98,7 +103,7 @@ const CheckboxSection = ({
           >
             <Checkbox
               checked={selected.has(item)}
-              onCheckedChange={() => onToggle(item)}
+              onChange={() => onToggle(item)}
             />
             <span className="text-sm text-foreground">{item}</span>
           </label>
@@ -164,10 +169,10 @@ const FiltersSidebar = () => {
             <button
               key={slot.label}
               onClick={() => toggleSet(setSelected, slot.label)}
-              className={`flex flex-col items-center gap-1 p-3 rounded-lg border text-xs transition-all ${
+              className={`flex flex-col items-center gap-1 p-3 rounded-lg border text-xs  transition-all ${
                 isActive
                   ? "border-[#FD561E] bg-[#FD561E]/10 text-[#FD561E]"
-                  : "border-border bg-background text-muted-foreground hover:border-[#FD561E]"
+                  : "border-gray-300 bg-gray-50 text-muted-foreground hover:border-[#FD561E]"
               }`}
             >
               {slot.icon}
@@ -185,7 +190,26 @@ const FiltersSidebar = () => {
         <h2 className="text-base font-bold text-foreground">Filters</h2>
         <button
           onClick={clearAll}
-          className="text-xs font-medium text-[#FD561E] hover:underline"
+          disabled={
+            chipSelected.size === 0 &&
+            depTime.size === 0 &&
+            arrTime.size === 0 &&
+            boarding.size === 0 &&
+            dropping.size === 0 &&
+            ops.size === 0 &&
+            amens.size === 0
+          }
+          className={`text-xs font-bold transition-colors duration-200 ${
+            chipSelected.size === 0 &&
+            depTime.size === 0 &&
+            arrTime.size === 0 &&
+            boarding.size === 0 &&
+            dropping.size === 0 &&
+            ops.size === 0 &&
+            amens.size === 0
+              ? "text-gray-400 cursor-not-allowed"
+              : "text-[#FD561E] cursor-pointer"
+          }`}
         >
           Clear All
         </button>
@@ -201,7 +225,7 @@ const FiltersSidebar = () => {
             key={title}
             className="pb-4 mb-4 border-b border-gray-200 -mx-5 px-5"
           >
-            <h3 className="text-sm font-bold text-foreground uppercase tracking-wide mb-3">
+            <h3 className="text-sm font-bold  text-foreground uppercase tracking-wide mb-3">
               {title}
             </h3>
 
@@ -214,10 +238,10 @@ const FiltersSidebar = () => {
                   <button
                     key={key}
                     onClick={() => toggleChip(key)}
-                    className={`flex flex-col items-center gap-1 p-3 rounded-lg border   text-xs font-medium transition-all ${
+                    className={`flex flex-col items-center gap-1 p-3 rounded-lg border bg-gray-50  text-xs  transition-all ${
                       isActive
                         ? "border-[#FD561E] bg-[#FD561E]/10 text-[#FD561E]"
-                        : "border border-gray-300 bg-background text-muted-foreground hover:border-muted-foreground"
+                        : "border border-gray-300 bg-background text-muted-foreground hover:border-[#fd561e]"
                     }`}
                   >
                     {opt.icon}
@@ -242,25 +266,26 @@ const FiltersSidebar = () => {
             setSelected={setArrTime}
           />
         </div>
-
-        <CheckboxSection
-          className="pb-4 mb-4 border-b border-gray-200 -mx-5 px-5"
-          title="Boarding Point"
-          items={boardingPoints}
-          searchPlaceholder="Enter/Search boarding point"
-          selected={boarding}
-          onToggle={(i) => toggleSet(setBoarding, i)}
-          onClear={() => clearSet(setBoarding)}
-          showMore
-        />
         <div className="pb-4 mb-4 border-b border-gray-200 -mx-5 px-5">
           <CheckboxSection
+            title="Boarding Point"
+            items={boardingPoints}
+            searchPlaceholder="Enter/Search boarding point"
+            selected={boarding}
+            onToggle={(i) => toggleSet(setBoarding, i)}
+            onClear={() => clearSet(setBoarding)}
+            showMore
+          />
+        </div>
+        <div className="pb-4 mb-4 border-b border-gray-200 -mx-5 px-5">
+          <CheckboxSection
+            checkboxClass="border-gray-200"
             title="Dropping Point"
             items={droppingPoints}
             searchPlaceholder="Enter/Search dropping point"
             selected={dropping}
             onToggle={(i) => toggleSet(setDropping, i)}
-            onClear={() => clearSet(droping)}
+            onClear={() => clearSet(setDropping)}
           />
         </div>
         <div className="pb-4 mb-4 border-b border-gray-200 -mx-5 px-5">

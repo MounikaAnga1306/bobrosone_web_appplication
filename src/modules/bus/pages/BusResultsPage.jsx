@@ -5,6 +5,7 @@ import SearchBar from "../components/SearchBar";
 import FiltersSidebar from "../components/FiltersSidebar";
 import SortBar from "../components/SortBar";
 import BusResultCard from "../components/BusResultCard";
+import SeatBookingLayout from "./SeatBookingLayout";
 
 import { searchTrips } from "../services/BustripService";
 
@@ -24,6 +25,13 @@ export default function BusResultsPage() {
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedTripId, setSelectedTripId] = useState(null);
+  const [seatPanelOpen, setSeatPanelOpen] = useState(false);
+
+  const handleSeatOpen = (tripId) => {
+    setSelectedTripId(tripId);
+    setSeatPanelOpen(true);
+  };
 
   // Parse HHMM string to HH:MM 24-hour format, normalize minutes > 59
   const parseTime = (hhmm) => {
@@ -53,7 +61,7 @@ export default function BusResultsPage() {
 
       try {
         const data = await searchTrips(fromId, toId, date);
-        console.log("API response:", data);
+        //console.log("API response:", data);
 
         if (!data || !data.length) {
           setError("No trips found for this route.");
@@ -110,6 +118,7 @@ export default function BusResultsPage() {
                 {trips.map((trip, index) => (
                   <BusResultCard
                     key={index}
+                    id={trip.id}
                     operator={trip.travels}
                     type={trip.busType || "Bus"}
                     departure={parseTime(trip.departureTime)}
@@ -119,6 +128,7 @@ export default function BusResultsPage() {
                     duration={trip.duration || ""}
                     price={Number(trip.fare || 0)}
                     seatsLeft={Number(trip.availableSeats || 0)}
+                    onSelectSeat={handleSeatOpen}
                   />
                 ))}
               </div>
@@ -126,6 +136,11 @@ export default function BusResultsPage() {
           </div>
         </div>
       </main>
+      <SeatBookingLayout
+        tripId={selectedTripId}
+        open={seatPanelOpen}
+        onClose={() => setSeatPanelOpen(false)}
+      />
     </div>
   );
 }
