@@ -18,7 +18,19 @@ const imageHover = {
     transition: { type: "spring", stiffness: 260, damping: 16 },
   },
 };
-
+// ✅ Entry animation (cards rise from bottom on load)
+const cardEntry = {
+  hidden: { opacity: 0, y: 60 }, // start BELOW
+  show: (i) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      delay: i * 0.08,
+      duration: 0.6,
+      ease: [0.22, 1, 0.36, 1],
+    },
+  }),
+};
 // ✅ Card hover animation (clean lift)
 const cardHover = {
   rest: { y: 0, boxShadow: "0 10px 20px rgba(0,0,0,0.08)" },
@@ -157,7 +169,7 @@ export default function Service() {
   return (
     <div className=" bg-white py-16 sm:py-20 px-4 sm:px-6 ">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl -mt-10 sm:text-4xl md:text-5xl font-bold text-center mb-12 sm:mb-16 text-orange-500">
+        <h1 className="text-3xl -mt-10 sm:text-4xl md:text-5xl font-bold text-center mb-12 sm:mb-16 text-black-500">
           Our Services
         </h1>
 
@@ -172,7 +184,16 @@ export default function Service() {
         "
         >
           {services.map((service, index) => (
-            <ServiceCard key={index} {...service} />
+            <motion.div
+              key={index}
+              variants={cardEntry}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, margin: "-80px" }}
+              custom={index}
+            >
+              <ServiceCard {...service} />
+            </motion.div>
           ))}
         </div>
       </div>

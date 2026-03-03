@@ -32,7 +32,7 @@ export default function AppDownload() {
                 <img
                   src="/assets/Mobile_View.png"
                   alt="App preview"
-                  className="w-full h-[calc(100%-32px)] object-cover"
+                  className="w-full h-[calc(110%-32px)] object-cover"
                 />
               </div>
             </div>
@@ -46,17 +46,22 @@ export default function AppDownload() {
           transition={{ duration: 0.7, delay: 0.2 }}
           className="w-full lg:w-1/2"
         >
-          <p className="text-gray-500 text-lg mb-2">Try on Mobile</p>
+          <p className="text-[#fd561e] text-lg mb-2 font-semibold">
+            Try on Mobile
+          </p>
 
           <h2 className="text-4xl lg:text-5xl font-bold leading-tight mb-8">
-            Download our app for unbeatable perks!
+            Download our app for{" "}
+            <span className="bg-gradient-to-r from-[#FD561E] to-[#ff8a5c] bg-clip-text text-transparent">
+              unbeatable perks!
+            </span>
           </h2>
 
           <div className="flex items-center gap-6 flex-wrap mt-5">
             {/* QR */}
             <motion.div
               whileHover={{ scale: 1.05 }}
-              className="w-44 h-44 bg-white p-4 rounded-3xl shadow-2xl border border-gray-100 flex items-center justify-center"
+              className="w-30 h-30 -mt-6 bg-white p-4 rounded-3xl shadow-2xl border border-gray-100 flex items-center justify-center"
             >
               <img
                 src="/assets/QR_code.png"
