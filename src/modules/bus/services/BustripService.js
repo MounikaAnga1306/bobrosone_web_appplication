@@ -32,23 +32,22 @@ export const searchTrips = async (sourceId, destId, date) => {
   }
 
   const url = `${API_BASE}/searchTrips?source=${sourceId}&destination=${destId}&doj=${date}`;
-  console.log("Calling API:", url);
+  //console.log("Calling API:", url);
 
   try {
     const res = await fetch(url);
-    console.log("[searchTrips] Response status:", res.status, res.statusText);
+   
      if (!res.ok) {
-      console.error("[searchTrips] API returned an error:", res.status, res.statusText);
+    
       throw new Error(`HTTP ${res.status}`);
     }
     const data = await res.json();
-     console.log("[searchTrips] API returned data:", data);
-    //return formatTrips(data);
+     
      const formatted = formatTrips(data);
-    console.log("[searchTrips] Formatted trips:", formatted);
+    
     return formatted;
   } catch (err) {
-    console.error("Failed to fetch trips:", err);
+   
     return [];
   }
 };
