@@ -14,7 +14,7 @@ import { FlightMasterProvider } from "./modules/flights/providers/CarrierCodePro
 import Navbar from "./globalfiles/Navbar";
 import Home from "./modules/bus/pages/HomePage";
 import FooterBottom from "./globalfiles/FooterBottom";
-import BusResultsPage from "./modules/bus/components/BusResultsPage";
+import BusResultsPage from "./modules/bus/pages/BusResultsPage";
 
 function App() {
   return (
@@ -34,10 +34,7 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/HomePage" element={<Home />} />
                 <Route path="/results" element={<BusResultsPage />} />
-                <Route
-                  path="/flights/search"
-                  element={<FlightSearchScreen />}
-                />
+                <Route path="/flights" element={<FlightSearchScreen />} />
                 <Route
                   path="/flights/results"
                   element={<FlightSearchResults />}

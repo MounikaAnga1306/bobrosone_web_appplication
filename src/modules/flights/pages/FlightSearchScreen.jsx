@@ -2,10 +2,10 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import DatePicker from "react-datepicker";
-import { Bus, Plane, Hotel, Palmtree, Car } from "lucide-react";
+//import { Bus, Plane, Hotel, Palmtree, Car } from "lucide-react";
 import { motion } from "framer-motion";
 import "react-datepicker/dist/react-datepicker.css";
-import { useFlightSearchContext } from "../contexts/flightSearchContext";
+import { useFlightSearchContext } from "../contexts/FlightSearchContext";
 import { searchFlights } from "../services/flightSearchService";
 import { searchAirports } from "../services/airportSearchService"; // We'll create this service
 import SpecialFares from "../components/SpecialFares";
@@ -23,6 +23,15 @@ import {
 import PopularFlightRoutes from "../components/PopularFlightRoutes";
 import FlightFAQ from "../components/FlightFAQ";
 import Quick_Links from "../components/Quick_Links";
+import { Bus, Plane, Building2, Palmtree, Car } from "lucide-react";
+
+const tabs = [
+  { id: "flights", label: "Flights", icon: Plane },
+  { id: "bus", label: "Bus", icon: Bus },
+  { id: "hotels", label: "Hotels", icon: Building2 },
+  { id: "holidays", label: "Holidays", icon: Palmtree },
+  { id: "cabs", label: "Cabs", icon: Car },
+];
 
 const FlightSearchScreen = () => {
   const navigate = useNavigate();
@@ -38,6 +47,7 @@ const FlightSearchScreen = () => {
   const [departureDate, setDepartureDate] = useState(new Date());
   const [returnDate, setReturnDate] = useState(null);
   const [activeTab, setActiveTab] = useState("flights");
+  const [activeFare, setActiveFare] = useState("regular");
   const [specialFares, setSpecialFares] = useState({
     regular: false,
     student: false,
@@ -75,14 +85,6 @@ const FlightSearchScreen = () => {
 
   // Travel classes
   const travelClasses = ["Economy", "Premium Economy", "Business", "First"];
-
-  // Category tabs
-  // const tabs = [
-  //   { id: "buses", label: "Buses", icon: "🚌" },
-  //   { id: "flights", label: "Flights", icon: "✈️" },
-  //   { id: "trains", label: "Trains", icon: "🚆" },
-  //   { id: "hotels", label: "Hotels", icon: "🏨" },
-  // ];
 
   // Calculate total travellers
   const totalTravellers =
@@ -289,6 +291,13 @@ const FlightSearchScreen = () => {
       class: travelClass,
     }));
   };
+  const tabRoutes = {
+    bus: "/",
+    flights: "/flights",
+    hotels: "/hotels",
+    holidays: "/holidays",
+    cabs: "/cabs",
+  };
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -376,14 +385,6 @@ const FlightSearchScreen = () => {
     }
   };
 
-  const tabs = [
-    { id: "flights", label: "Flights", icon: Plane },
-    { id: "bus", label: "Bus", icon: Bus },
-    { id: "hotels", label: "Hotels", icon: Hotel },
-    { id: "holidays", label: "Holidays", icon: Palmtree },
-    { id: "cabs", label: "Cabs", icon: Car },
-  ];
-
   return (
     <div className="w-full bg-gray-50">
       {/* Hero Section - Full width image */}
@@ -394,93 +395,41 @@ const FlightSearchScreen = () => {
             alt="Airplane wing view during daytime"
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-transparent"></div>
-        </div>
-
-        <div className="relative z-10 flex flex-col h-[400px]">
-          {/* Top section with tabs */}
-          {/* <div className="pt-8">
-            <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex justify-start">
-                <div className="inline-flex bg-white/95 backdrop-blur-md rounded-xl p-1 shadow-xl border border-white/20">
-                  {tabs.map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 ${
-                        activeTab === tab.id
-                          ? "bg-orange-500 text-white shadow-md"
-                          : "text-gray-700 hover:text-orange-500 hover:bg-orange-50"
-                      }`}
-                    >
-                      <span>{tab.icon}</span>
-                      <span>{tab.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div> */}
         </div>
       </div>
 
       {/* Search Section - Overlapping card */}
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-130 mb-10 z-20">
+      <div className="relative max-w-7xl h-[300px]  mx-auto px-5  sm:px-6 lg:px-8 -mt-130 overflo-hidden">
         {/* Flight Booking Card */}
 
-        <div className=" relative bg-white rounded-2xl shadow-xl p-6 pb-16 border border-gray-200">
+        <div className=" relative  bg-white rounded-2xl shadow-xl p-6 pb-16 border border-gray-200">
           {/* Service Tabs */}
-          <motion.div
-            className="flex items-center justify-start gap-4 mb-6  backdrop-blur-md p-4 rounded-3xl w-fit"
-            initial={{ y: 30, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.5 }}
-          >
-            {tabs.map((tab, index) => {
+
+          <div className="flex gap-4 mb-10">
+            {tabs.map((tab) => {
               const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
+              const active = activeTab === tab.id;
 
               return (
-                <motion.button
+                <button
                   key={tab.id}
                   onClick={() => {
                     setActiveTab(tab.id);
-
-                    if (tab.id === "flights") {
-                      navigate("/flights/search");
-                    }
-
-                    if (tab.id === "bus") {
-                      navigate("/HomePage");
-                    }
+                    navigate(tabRoutes[tab.id]);
                   }}
-                  className={`flex items-center gap-3 px-6 py-3 cursor-pointer rounded-2xl border transition-all duration-200 ${
-                    isActive
-                      ? "bg-white border-black shadow-md"
-                      : "bg-gray-50 border-gray-200 hover:bg-white hover:border-gray-300"
+                  className={`flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300 border ${
+                    active
+                      ? "bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white border-transparent shadow-lg scale-105"
+                      : "border-gray-200 text-gray-600 hover:border-[#FD561E] hover:text-[#FD561E]"
                   }`}
-                  whileHover={{ scale: 1.05, y: -3 }}
-                  whileTap={{ scale: 0.95 }}
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ duration: 0.4, delay: 0.6 + index * 0.05 }}
                 >
-                  <Icon
-                    className={`w-6 h-6 ${
-                      isActive ? "text-black" : "text-gray-600"
-                    }`}
-                  />
-                  <span
-                    className={`font-semibold ${
-                      isActive ? "text-black" : "text-gray-700"
-                    }`}
-                  >
-                    {tab.label}
-                  </span>
-                </motion.button>
+                  <Icon className="w-4 h-4" />
+                  {tab.label}
+                </button>
               );
             })}
-          </motion.div>
+          </div>
+
           {/* <h1 className="text-2xl font-bold text-gray-800 mb-6">
             Flight Booking
           </h1> */}

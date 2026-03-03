@@ -64,7 +64,7 @@ export default function PopularBusRoutes() {
                   {route.to.map((place, i) => (
                     <span
                       key={i}
-                      className="text-blue-600 hover:underline cursor-pointer"
+                      className="text-[#fd561e] hover:underline cursor-pointer"
                     >
                       {place}
                       {i !== route.to.length - 1 && ", "}
