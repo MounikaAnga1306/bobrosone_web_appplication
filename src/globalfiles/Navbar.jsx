@@ -49,8 +49,20 @@ const Navbar = () => {
 
   // auto active tab detection from URL
   const getActiveTab = () => {
-    const match = tabs.find((t) => location.pathname.startsWith(t.path));
-    return match ? match.id : "";
+    if (location.pathname === "/" || location.pathname === "/HomePage")
+      return "bus";
+
+    if (location.pathname.startsWith("/results")) return "bus";
+
+    if (location.pathname.startsWith("/flights")) return "flights";
+
+    if (location.pathname.startsWith("/hotels")) return "hotels";
+
+    if (location.pathname.startsWith("/holidays")) return "holidays";
+
+    if (location.pathname.startsWith("/cabs")) return "cabs";
+
+    return "";
   };
 
   const activeTab = getActiveTab();
@@ -59,7 +71,7 @@ const Navbar = () => {
 
   return (
     <nav
-      className={`${isNoFixedPage ? "relative" : "fixed top-0 left-0 right-0"} z-50 transition-all duration-300 ${
+      className={`${isNoFixedPage ? "relative" : "fixed top-0 left-0 right-0"} z-50 transition-all duration-300 cursor-pointer ${
         isSolid ? "bg-white shadow-md" : "bg-transparent"
       }`}
     >
@@ -96,7 +108,7 @@ const Navbar = () => {
                     navigate(tab.path);
                     window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
-                  className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 border ${
+                  className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 border cursor-pointer ${
                     active
                       ? "bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white border-transparent shadow-lg"
                       : "border-gray-200 text-gray-600 hover:border-[#FD561E] hover:text-[#FD561E]"
@@ -113,7 +125,7 @@ const Navbar = () => {
         {/* RIGHT SIDE */}
         <div className="hidden md:flex items-center gap-4">
           <button
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-full border transition-all duration-300 ${
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-full border transition-all duration-300 cursor-pointer ${
               isSolid
                 ? "border-gray-300 text-gray-700 hover:bg-gray-100"
                 : "border-white/40 text-white hover:bg-white/10"
@@ -124,7 +136,7 @@ const Navbar = () => {
           </button>
 
           <button
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-full border transition-all duration-300 ${
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-full border transition-all duration-300 cursor-pointer ${
               isSolid
                 ? "border-gray-300 text-gray-700 hover:bg-gray-100"
                 : "border-white/40 text-white hover:bg-white/10"
@@ -135,7 +147,7 @@ const Navbar = () => {
           </button>
 
           <button
-            className={`w-10 h-10 flex items-center justify-center rounded-full border transition-all duration-300 ${
+            className={`w-10 h-10 flex items-center justify-center rounded-full border transition-all duration-300 cursor-pointer ${
               isSolid
                 ? "border-gray-300 text-gray-700 hover:bg-gray-100"
                 : "border-white/40 text-white hover:bg-white/10"

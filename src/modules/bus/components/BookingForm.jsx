@@ -244,7 +244,7 @@ const BookingForm = () => {
                     setActiveTab(tab.id);
                     navigate(tabRoutes[tab.id]);
                   }}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300 border ${
+                  className={`flex items-center gap-2 px-6 py-3 cursor-pointer rounded-full text-sm font-semibold transition-all duration-300 border ${
                     active
                       ? "bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white border-transparent shadow-lg scale-105"
                       : "border-gray-200 text-gray-600 hover:border-[#FD561E] hover:text-[#FD561E]"
@@ -526,7 +526,7 @@ const BookingForm = () => {
           <div className="absolute left-1/2 -bottom-8 transform -translate-x-1/2">
             <button
               onClick={handleSearch}
-              className="bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white px-16 py-4 rounded-full text-lg font-semibold shadow-xl hover:scale-110 transition-all duration-300"
+              className="bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white cursor-pointer px-16 py-4 rounded-full text-lg font-semibold shadow-xl hover:scale-110 transition-all duration-300"
             >
               Search
             </button>
