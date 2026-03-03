@@ -2,6 +2,7 @@ import { Star } from "lucide-react";
 import Button from "../components/ui/Button";
 
 const BusResultCard = ({
+  id,
   operator,
   type,
   departure,
@@ -10,8 +11,8 @@ const BusResultCard = ({
   arrivalCity,
   duration,
   price,
-  rating,
   seatsLeft,
+  onSelectSeat,
 }) => {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
@@ -68,7 +69,11 @@ const BusResultCard = ({
             </span>
           )}
 
-          <Button size="sm" className="w-full font-bold">
+          <Button
+            size="sm"
+            className="w-full font-bold"
+            onClick={() => onSelectSeat(id)}
+          >
             Select Seat
           </Button>
         </div>
