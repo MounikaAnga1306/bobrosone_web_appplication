@@ -299,7 +299,7 @@ const SearchBar = () => {
           </div>
 
           {/* DATE */}
-          <div className="md:col-span-2 relative">
+          <div className="md:col-span-2 relative" ref={calendarRef}>
             <p className="text-white text-xs font-semibold mb-1">
               DEPARTURE DATE
             </p>
@@ -313,6 +313,75 @@ const SearchBar = () => {
                 {formatDate(selectedDate)}
               </span>
             </div>
+            {/* CALENDAR DROPDOWN */}
+  {showCalendar && (
+    <div className="absolute top-16 left-0 bg-white rounded-md shadow-xl p-4 z-50 w-72">
+      
+      {/* HEADER */}
+      <div className="flex justify-between items-center mb-3">
+        <button
+          onClick={() =>
+            setCurrentDate(
+              new Date(currentDate.getFullYear(), currentDate.getMonth() - 1)
+            )
+          }
+        >
+          <ChevronLeft size={18} />
+        </button>
+
+        <span className="font-semibold">
+          {monthName} {year}
+        </span>
+
+        <button
+          onClick={() =>
+            setCurrentDate(
+              new Date(currentDate.getFullYear(), currentDate.getMonth() + 1)
+            )
+          }
+        >
+          <ChevronRight size={18} />
+        </button>
+      </div>
+
+      {/* DAYS GRID */}
+      <div className="grid grid-cols-7 gap-1 text-center text-sm">
+        {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((day) => (
+          <div key={day} className="font-semibold text-gray-500">
+            {day}
+          </div>
+        ))}
+
+        {/* Empty spaces */}
+        {Array.from({ length: firstDay }).map((_, i) => (
+          <div key={"empty" + i}></div>
+        ))}
+
+        {/* Days */}
+        {Array.from({ length: daysInMonth }).map((_, index) => {
+          const day = index + 1;
+          const isPast = isPastDate(day);
+          const isSelected =
+            selectedDate.getDate() === day &&
+            selectedDate.getMonth() === currentDate.getMonth() &&
+            selectedDate.getFullYear() === currentDate.getFullYear();
+
+          return (
+            <div
+              key={day}
+              onClick={() => !isPast && handleDateSelect(day)}
+              className={`p-2 rounded cursor-pointer
+                ${isPast ? "text-gray-300 cursor-not-allowed" : ""}
+                ${isSelected ? "bg-[#f36b32] text-white" : "hover:bg-gray-100"}
+              `}
+            >
+              {day}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  )}
           </div>
 
           {/* SEARCH */}
