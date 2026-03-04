@@ -10,11 +10,15 @@ import { FlightSearchProvider } from "./modules/flights/contexts/FlightSearchCon
 import FlightTracker from "./modules/flights/pages/FlightTracker";
 import FlightSearchScreen from "./modules/flights/pages/FlightSearchScreen";
 import FlightSearchResults from "./modules/flights/pages/FlightSearchResult"; // Added this
+import PNRSearch from "./modules/flights/pages/PNRSearch"; // Import PNRSearch component
 import { FlightMasterProvider } from "./modules/flights/providers/CarrierCodeProvider";
 import Navbar from "./globalfiles/Navbar";
 import Home from "./modules/bus/pages/HomePage";
 import FooterBottom from "./globalfiles/FooterBottom";
 import BusResultsPage from "./modules/bus/pages/BusResultsPage";
+
+// Import Hotel Home Screen
+import HotelsHomeScreen from "./modules/hotels/pages/HotelsHomeScreen";
 
 function App() {
   return (
@@ -41,8 +45,12 @@ function App() {
                 />{" "}
                 {/* Added results route */}
                 <Route path="/flights/tracker" element={<FlightTracker />} />
+                {/* Add PNR Search route */}
+                <Route path="/flights/pnr-search" element={<PNRSearch />} />
+                {/* Add Hotel route */}
+                <Route path="/hotels" element={<HotelsHomeScreen />} />
                 {/* Add more routes as needed */}
-                <Route path="*" element={<Navigate to="/flights/search" />} />
+                <Route path="*" element={<Navigate to="/" />} />
               </Routes>
             </div>
           </div>
