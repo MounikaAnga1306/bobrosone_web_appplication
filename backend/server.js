@@ -8,13 +8,16 @@ require("dotenv").config();
 
 const rateLimit = require("express-rate-limit");
 
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // max 100 requests per IP
-  message: "Too many requests, please try again later."
-});
-
 const app = express();
+
+// =========================
+// SECURITY & MIDDLEWARE
+// =========================
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: "Too many requests, please try again later.",
+});
 
 app.use(cors({
   origin: true,
@@ -26,8 +29,30 @@ app.use(limiter);
 app.use(express.json());
 app.use(helmet());
 
-// Serve frontend only if public folder exists
+// Serve frontend in production
 app.use(express.static(path.join(__dirname, "public")));
+
+
+// ======================================================
+// HELPER FUNCTION: Transform Seats For Frontend Layout
+// ======================================================
+const transformSeats = (seats) => {
+  if (!Array.isArray(seats)) return [];
+
+  return seats.map((seat, index) => ({
+    id: seat.id || index + 1,
+    name: seat.name || `S${index + 1}`,
+    available: seat.available ?? true,
+    ladiesSeat: seat.ladiesSeat ?? false,
+
+    // Layout fields (VERY IMPORTANT for your seat page)
+    zIndex: Number(seat.zIndex ?? 0),   // 0 = Lower, 1 = Upper
+    row: Number(seat.row ?? Math.floor(index / 4)),
+    column: Number(seat.column ?? index % 4),
+    length: Number(seat.length ?? 1),   // 1 = Seater, 2 = Sleeper
+  }));
+};
+
 
 // =========================
 // CITIES ENDPOINT
@@ -43,14 +68,8 @@ app.get("/cities", async (req, res) => {
     const sanitizedName = name.trim();
     const url = `${process.env.BASE_URL}/cities?name=${encodeURIComponent(sanitizedName)}`;
 
-    const requestData = {
-      url,
-      method: "GET",
-    };
-
-    const headers = oauth.toHeader(
-      oauth.authorize(requestData)
-    );
+    const requestData = { url, method: "GET" };
+    const headers = oauth.toHeader(oauth.authorize(requestData));
 
     const response = await axios.get(url, { headers });
 
@@ -67,6 +86,8 @@ app.get("/cities", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch cities" });
   }
 });
+
+
 // =========================
 // SEARCH TRIPS ENDPOINT
 // =========================
@@ -78,18 +99,14 @@ app.get("/searchTrips", async (req, res) => {
       return res.status(400).json({ error: "Missing required parameters" });
     }
 
-    // Construct the trips API URL
     const url = `${process.env.BASE_URL}/availabletrips?source=${source}&destination=${destination}&doj=${doj}`;
-    console.log("backend URL",url);
+    console.log("Trips API:", url);
 
-    // Use the same oauthService library to sign the request
     const requestData = { url, method: "GET" };
     const headers = oauth.toHeader(oauth.authorize(requestData));
 
-    // Make the request to the API
     const tripsResponse = await axios.get(url, { headers });
 
-    // Return the data directly
     res.json(tripsResponse.data);
 
   } catch (error) {
@@ -97,8 +114,10 @@ app.get("/searchTrips", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch trips" });
   }
 });
+
+
 // =========================
-// TRIP DETAILS ENDPOINT
+// TRIP DETAILS ENDPOINT (UPDATED FOR SEAT LAYOUT)
 // =========================
 app.get("/tripdetails", async (req, res) => {
   try {
@@ -116,7 +135,15 @@ app.get("/tripdetails", async (req, res) => {
 
     const response = await axios.get(url, { headers });
 
-    res.json(response.data);
+    const tripData = response.data;
+
+    // 🔥 IMPORTANT PART
+    const transformedSeats = transformSeats(tripData.seats);
+
+    res.json({
+      ...tripData,
+      seats: transformedSeats,
+    });
 
   } catch (error) {
     console.error("Trip details error:", error.response?.data || error.message);
@@ -126,12 +153,16 @@ app.get("/tripdetails", async (req, res) => {
 
 
 // =========================
-// React routing support (only useful in production)
+// React Routing Support
 // =========================
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
+
+// =========================
+// START SERVER
+// =========================
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
