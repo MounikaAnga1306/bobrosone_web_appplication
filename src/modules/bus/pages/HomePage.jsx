@@ -6,7 +6,7 @@ import Quick_Links from "../components/Quick_Links";
 import BusFAQ from "../components/BusFAQ";
 import BookingForm from "../components/BookingForm";
 import Advertisement from "../components/Advertisement";
-import Navbar from "../../../globalfiles/Navbar";
+//import Navbar from "../../../globalfiles/Navbar";
 
 function HomePage() {
   return (
