@@ -22,6 +22,8 @@ import Navbar from "./globalfiles/Navbar";
 import Home from "./modules/bus/pages/HomePage";
 import FooterBottom from "./globalfiles/FooterBottom";
 import BusResultsPage from "./modules/bus/pages/BusResultsPage";
+import BillHome from "./modules/Bill Payments/pages/BillHomeScreen";
+import BookingSuccess from "./modules/bus/pages/BookingSuccess";
 
 function App() {
   return (
