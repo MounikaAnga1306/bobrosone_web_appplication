@@ -23,6 +23,30 @@ export const formatTrips = (data) => {
     };
   });
 };
+export const sortTrips = (trips, type) => {
+  const sorted = [...trips];
+
+  switch (type) {
+    case "Low to High":
+      return sorted.sort((a, b) => a.fare - b.fare);
+
+    case "High to Low":
+      return sorted.sort((a, b) => b.fare - a.fare);
+
+    case "Early Departure":
+      return sorted.sort((a, b) =>
+        a.departureTime.localeCompare(b.departureTime)
+      );
+
+    case "Late Departure":
+      return sorted.sort((a, b) =>
+        b.departureTime.localeCompare(a.departureTime)
+      );
+
+    default:
+      return trips;
+  }
+};
 
 // Search trips from backend
 export const searchTrips = async (sourceId, destId, date) => {

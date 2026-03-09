@@ -39,18 +39,31 @@ app.use(express.static(path.join(__dirname, "public")));
 const transformSeats = (seats) => {
   if (!Array.isArray(seats)) return [];
 
-  return seats.map((seat, index) => ({
-    id: seat.id || index + 1,
-    name: seat.name || `S${index + 1}`,
-    available: seat.available ?? true,
-    ladiesSeat: seat.ladiesSeat ?? false,
+  return seats.map((seat, index) => {
 
-    // Layout fields (VERY IMPORTANT for your seat page)
-    zIndex: Number(seat.zIndex ?? 0),   // 0 = Lower, 1 = Upper
-    row: Number(seat.row ?? Math.floor(index / 4)),
-    column: Number(seat.column ?? index % 4),
-    length: Number(seat.length ?? 1),   // 1 = Seater, 2 = Sleeper
-  }));
+    const baseFare = Number(seat.baseFare ?? 0);
+    const serviceTax = Number(seat.serviceTaxAbsolute ?? 0);
+
+    return {
+      id: seat.id || index + 1,
+      name: seat.name || `S${index + 1}`,
+      available: seat.available ?? true,
+      ladiesSeat: seat.ladiesSeat ?? false,
+
+      baseFare: baseFare,
+
+      // ⭐ totalFare
+      totalFare: baseFare + serviceTax,
+
+      // Layout fields
+      zIndex: Number(seat.zIndex ?? 0),
+      row: Number(seat.row ?? Math.floor(index / 4)),
+      column: Number(seat.column ?? index % 4),
+      length: Number(seat.length ?? 1),
+      width: Number(seat.width ?? 1),
+    };
+
+  });
 };
 
 
@@ -128,7 +141,9 @@ app.get("/tripdetails", async (req, res) => {
     }
 
     const url = `${process.env.BASE_URL}/tripdetails?id=${id}`;
+
     console.log("Trip details API:", url);
+    console.log("Trip ID:", id);
 
     const requestData = { url, method: "GET" };
     const headers = oauth.toHeader(oauth.authorize(requestData));
@@ -137,7 +152,9 @@ app.get("/tripdetails", async (req, res) => {
 
     const tripData = response.data;
 
-    // 🔥 IMPORTANT PART
+    // ✅ LOG ACTUAL RESPONSE
+    //console.log("Trip Details Response:", tripData);
+
     const transformedSeats = transformSeats(tripData.seats);
 
     res.json({
@@ -148,6 +165,35 @@ app.get("/tripdetails", async (req, res) => {
   } catch (error) {
     console.error("Trip details error:", error.response?.data || error.message);
     res.status(500).json({ error: "Failed to fetch trip details" });
+  }
+});
+// =========================
+// BLOCK TICKET ENDPOINT
+// =========================
+app.post("/blockTicket", async (req, res) => {
+  try {
+
+    const url = `${process.env.BASE_URL}/blockTicket`;
+
+    const requestData = {
+  url,
+  method: "POST"
+};
+
+    const headers = oauth.toHeader(oauth.authorize(requestData));
+    headers["Content-Type"] = "application/json";
+     console.log("Block Ticket Body:", req.body);
+    const response = await axios.post(url, req.body, { headers });
+
+    res.json(response.data);
+
+  } catch (error) {
+    console.error("Block Ticket Error:", error.response?.data || error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to block ticket"
+    });
   }
 });
 

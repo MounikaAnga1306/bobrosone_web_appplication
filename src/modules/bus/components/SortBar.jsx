@@ -1,17 +1,20 @@
 import { useState } from "react";
 
 const sortOptions = [
-  "Best",
-  "Rating",
-  "Departure",
-  "Arrival",
-  "Fastest",
-  "Cheapest",
+  { label: "Early Departure", value: "Early Departure" },
+  { label: "Late Departure", value: "Late Departure" },
+  { label: "Price: High to Low", value: "High to Low" },
+  { label: "Price: Low to High", value: "Low to High" },
 ];
 
-const SortBar = ({ busCount }) => {
-  const [active, setActive] = useState("Best");
+const SortBar = ({ busCount,onSortChange }) => {
+  const [active, setActive] = useState(null);
+  const handleSort = (value) => {
+    setActive(value);
+    onSortChange(value);
+  };
 
+ 
   return (
     <div className="w-full bg-white rounded-lg border border-gray-200 px-4 py-3 mb-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -28,15 +31,15 @@ const SortBar = ({ busCount }) => {
           <div className="flex items-center gap-1">
             {sortOptions.map((option) => (
               <button
-                key={option}
-                onClick={() => setActive(option)}
+                key={option.value}
+                onClick={() => handleSort(option.value)}
                 className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all cursor-pointer ${
-                  active === option
+                  active === option.value
                     ? "bg-[#fd561e] text-white shadow-sm"
                     : "text-gray-500 hover:text-gray-800"
                 }`}
               >
-                {option}
+                {option.value}
               </button>
             ))}
           </div>

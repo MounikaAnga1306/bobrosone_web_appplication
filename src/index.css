@@ -1,2 +1,45 @@
 /* Remove ALL previous content and put ONLY this line */
 @import "tailwindcss";
+@keyframes slideUp {
+  from {
+    transform: translate3d(0,100%,0);
+  }
+  to {
+    transform: translate3d(0,0,0);
+  }
+}
+
+/* Price Summary Slide */
+.animate-slideUp-price {
+  animation: slideUp 0.3s ease-out forwards;
+}
+
+/* Seat Selection Slide */
+.animate-slideUp-seat {
+  animation: slideUp 0.8s ease-out forwards;
+}
+@keyframes warningBar {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+.animate-warningBar {
+  animation: warningBar 3s linear forwards;
+}
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.animate-slideUp {
+  animation: slideUp 0.35s ease forwards;
+}
+

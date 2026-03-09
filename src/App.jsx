@@ -15,6 +15,8 @@ import Navbar from "./globalfiles/Navbar";
 import Home from "./modules/bus/pages/HomePage";
 import FooterBottom from "./globalfiles/FooterBottom";
 import BusResultsPage from "./modules/bus/pages/BusResultsPage";
+import BillHome from "./modules/Bill Payments/pages/BillHomeScreen";
+import BookingSuccess from "./modules/bus/pages/BookingSuccess";
 
 function App() {
   return (
@@ -35,6 +37,9 @@ function App() {
                 <Route path="/HomePage" element={<Home />} />
                 <Route path="/results" element={<BusResultsPage />} />
                 <Route path="/flights" element={<FlightSearchScreen />} />
+                 <Route path="/BillHomePage" element={<BillHome />} />
+                 <Route path="/booking-success" element={<BookingSuccess />} />
+                
                 <Route
                   path="/flights/results"
                   element={<FlightSearchResults />}
