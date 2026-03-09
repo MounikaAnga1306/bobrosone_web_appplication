@@ -7,11 +7,21 @@ import SortBar from "../components/SortBar";
 import BusResultCard from "../components/BusResultCard";
 import SeatBookingLayout from "./SeatBookingLayout";
 
-import { searchTrips } from "../services/BustripService";
+import { searchTrips,sortTrips } from "../services/BustripService";
 
 export default function BusResultsPage() {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
+  const [sortType, setSortType] = useState("Low to Hight");
+  const [allTrips, setAllTrips] = useState([]);
+  const [filteredTrips, setFilteredTrips] = useState([]);
+
+const [filters, setFilters] = useState({
+  ac: false,
+  nonAc: false,
+  seater: false,
+  sleeper: false
+});
 
   // IDs for API
   const fromId = searchParams.get("source");
@@ -28,25 +38,32 @@ export default function BusResultsPage() {
   const [selectedTripId, setSelectedTripId] = useState(null);
   const [seatPanelOpen, setSeatPanelOpen] = useState(false);
 
+
+
+//   const [busName, setBusName] = useState("");
+// const [departureTime, setDepartureTime] = useState("");
+// const [arrivalTime, setArrivalTime] = useState("");
+// const [duration, setDuration] = useState("");
+// const [busType, setBusType] = useState("");
+
   const handleSeatOpen = (tripId) => {
     setSelectedTripId(tripId);
     setSeatPanelOpen(true);
   };
 
   // Parse HHMM string to HH:MM 24-hour format, normalize minutes > 59
-  const parseTime = (hhmm) => {
-    if (!hhmm) return "";
-    hhmm = hhmm.toString().padStart(4, "0");
-    let hrs = parseInt(hhmm.slice(0, 2), 10);
-    let mins = parseInt(hhmm.slice(2), 10);
+  const minutesToTime = (minutes) => {
+  const totalMinutes = Number(minutes);
 
-    if (mins >= 60) {
-      hrs += Math.floor(mins / 60);
-      mins = mins % 60;
-    }
-    hrs = hrs % 24; // wrap around 24h
-    return `${hrs.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}`;
-  };
+  const hrs24 = Math.floor(totalMinutes / 60) % 24;
+  const mins = totalMinutes % 60;
+
+  const period = hrs24 >= 12 ? "PM" : "AM";
+
+  const hrs12 = hrs24 % 12 || 12;
+
+  return `${hrs12}:${String(mins).padStart(2, "0")} ${period}`;
+};
 
   useEffect(() => {
     if (!fromName || !toName || !date) {
@@ -61,13 +78,16 @@ export default function BusResultsPage() {
 
       try {
         const data = await searchTrips(fromId, toId, date);
+        setAllTrips(data);
+        setFilteredTrips(data);
         //console.log("API response:", data);
 
         if (!data || !data.length) {
           setError("No trips found for this route.");
           setTrips([]);
         } else {
-          setTrips(data);
+         setAllTrips(data);
+         setTrips(sortTrips(data, "Low to High"));
         }
       } catch (err) {
         console.error(err);
@@ -83,6 +103,32 @@ export default function BusResultsPage() {
 
     fetchTrips();
   }, [fromId, toId, date, fromName, toName]);
+  const applyFilters = (trips, filters) => {
+  return trips.filter((trip) => {
+
+    if (filters.ac && !trip.AC) return false;
+
+    if (filters.nonAc && !trip.nonAC) return false;
+
+    if (filters.seater && !trip.seater) return false;
+
+    if (filters.sleeper && !trip.sleeper) return false;
+
+    return true;
+
+  });
+};
+useEffect(() => {
+
+  const result = applyFilters(allTrips, filters);
+
+  setFilteredTrips(result);
+
+}, [filters, allTrips]);
+
+ useEffect(() => {
+  setTrips((prevTrips) => sortTrips(prevTrips, sortType));
+}, [sortType]);
 
   return (
     <div className="min-h-screen bg-[#f1f5f9]">
@@ -92,13 +138,16 @@ export default function BusResultsPage() {
         <div className="flex gap-6">
           {/* Sidebar */}
           <div className="hidden lg:block w-[280px] shrink-0">
-            <FiltersSidebar />
+          <FiltersSidebar onFilterChange={setFilters} />
           </div>
 
           {/* Results Section */}
           <div className="flex-1 min-w-0">
             {/* Sort bar */}
-            <SortBar busCount={trips.length} />
+           <SortBar
+            busCount={trips.length}
+            onSortChange={setSortType}
+          />
 
             {/* Loading */}
             {loading && (
@@ -115,15 +164,15 @@ export default function BusResultsPage() {
             {/* Results */}
             {!loading && !error && (
               <div className="mt-4 space-y-4">
-                {trips.map((trip, index) => (
+                {filteredTrips.map((trip,index) => (
                   <BusResultCard
-                    key={index}
+                    key={trip.id || index}
                     id={trip.id}
                     operator={trip.travels}
                     type={trip.busType || "Bus"}
-                    departure={parseTime(trip.departureTime)}
+                    departure={minutesToTime(trip.departureTime)}
                     departureCity={fromName}
-                    arrival={parseTime(trip.arrivalTime)}
+                    arrival={minutesToTime(trip.arrivalTime)}
                     arrivalCity={toName}
                     duration={trip.duration || ""}
                     price={Number(trip.fare || 0)}
@@ -140,6 +189,11 @@ export default function BusResultsPage() {
         tripId={selectedTripId}
         open={seatPanelOpen}
         onClose={() => setSeatPanelOpen(false)}
+        fromCity={fromName}
+        toCity={toName}
+        source={fromId}
+        destination={toId}
+        date={date}
       />
     </div>
   );

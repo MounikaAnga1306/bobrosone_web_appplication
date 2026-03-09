@@ -13,7 +13,7 @@ const Navbar = () => {
   /* ---------------- ROUTE RULES ---------------- */
 
   // pages that should have transparent → solid scroll navbar
-  const dynamicPages = ["/", "/HomePage", "/flights"];
+  const dynamicPages = ["/", "/HomePage", "/flights","/BillHomePage","/hotels","/cabs","/holidays"];
 
   const isDynamicPage = dynamicPages.includes(location.pathname);
 
@@ -41,6 +41,7 @@ const Navbar = () => {
 
   const tabs = [
     { id: "bus", label: "Bus", icon: Bus, path: "/HomePage" },
+    { id: "billpayment", label: "Bill Payments", icon: Bus, path: "/BillHomePage" },
     { id: "flights", label: "Flights", icon: Plane, path: "/flights" },
     { id: "hotels", label: "Hotels", icon: Building2, path: "/hotels" },
     { id: "holidays", label: "Holidays", icon: Palmtree, path: "/holidays" },
@@ -75,7 +76,7 @@ const Navbar = () => {
         isSolid ? "bg-white shadow-md" : "bg-transparent"
       }`}
     >
-      <div className="max-w-7xl mx-auto flex items-center justify-between px-6 h-20">
+      <div className="max-w-7xl mx-auto flex items-center justify-between px-4 h-20">
         {/* LOGO */}
         <div
           onClick={() => navigate("/")}
@@ -89,14 +90,14 @@ const Navbar = () => {
             }
             alt="Bobros Logo"
             className={`
-    ${isSolid ? "h-10" : "h-20"}
+    ${isSolid ? "h-10 w-[140px] -ml-10" : "h-20 w-auto -ml-15"}
   `}
           />
         </div>
 
         {/* CENTER TABS */}
         {(isSolid || !isDynamicPage) && (
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-3 flex-1 justify-center">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;
@@ -108,7 +109,7 @@ const Navbar = () => {
                     navigate(tab.path);
                     window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
-                  className={`flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 border cursor-pointer ${
+                  className={`flex items-center gap-2 px-6 py-2.5 rounded-full  whitespace-nowrap text-sm font-semibold transition-all duration-300 border cursor-pointer ${
                     active
                       ? "bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white border-transparent shadow-lg"
                       : "border-gray-200 text-gray-600 hover:border-[#FD561E] hover:text-[#FD561E]"
@@ -123,7 +124,7 @@ const Navbar = () => {
         )}
 
         {/* RIGHT SIDE */}
-        <div className="hidden md:flex items-center gap-4">
+        <div className="hidden md:flex items-center -mr-25 gap-4 flex-shrink-0">
           <button
             className={`flex items-center gap-2 px-6 py-2.5 rounded-full border transition-all duration-300 cursor-pointer ${
               isSolid
@@ -136,7 +137,7 @@ const Navbar = () => {
           </button>
 
           <button
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-full border transition-all duration-300 cursor-pointer ${
+            className={`flex items-center gap-2 px-6 py-2.5   whitespace-nowrap rounded-full border transition-all duration-300 cursor-pointer ${
               isSolid
                 ? "border-gray-300 text-gray-700 hover:bg-gray-100"
                 : "border-white/40 text-white hover:bg-white/10"
