@@ -1,31 +1,40 @@
 // src/modules/hotels/pages/HotelsHomeScreen.jsx
 import React from "react";
 import HotelHeroSection from "../components/HotelHeroSection";
-import DoMoreWithBobros from "../../flights/components/DoMoreWithBobros"; // Reuse the same component
-// import PopularHotelDestinations from "../components/PopularHotelDestinations"; // Comment this out
-
-import Quick_Links from "../../flights/components/Quick_Links"; // Reuse Quick Links
+// Import from bus components (these exist)
+import Services from "../../bus/components/Services";
+import WhyBobros from "../../bus/components/WhyBobros";
+import AppDownload from "../../bus/components/AppDownload";
+import Quick_Links from "../../bus/components/Quick_Links";
+import Advertisement from "../../bus/components/Advertisement";
 
 const HotelsHomeScreen = () => {
   return (
-    <div className="w-full bg-gray-50">
-      {/* Hero Section with Search Form */}
-      <HotelHeroSection />
+    <div className="min-h-screen flex flex-col">
+      <main className="flex-grow">
+        {/* Hotel Hero Section - FULL WIDTH */}
+        <HotelHeroSection />
 
-      {/* Additional Content Section */}
-      <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 mt-8">
-        {/* Do More With BOBROS - Reuse from flights */}
-        <DoMoreWithBobros />
+        {/* Content Sections with consistent spacing */}
+        <div className="mt-16 md:mt-20 lg:mt-24">
+          {/* Advertisement */}
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <Advertisement />
+          </div>
 
-        {/* Popular Hotel Destinations - Temporarily disabled */}
-        {/* <PopularHotelDestinations /> */}
+          {/* Services */}
+          <Services />
 
-        {/* Quick Links - Reuse from flights */}
-        <Quick_Links />
+          {/* App Download */}
+          <AppDownload />
 
-        {/* Hotel FAQ Section */}
-        
-      </div>
+          {/* Why Bobros */}
+          <WhyBobros />
+
+          {/* Quick Links */}
+          <Quick_Links />
+        </div>
+      </main>
     </div>
   );
 };
