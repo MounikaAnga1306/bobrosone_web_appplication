@@ -411,7 +411,7 @@ const PNRSearch = () => {
                   const value = e.target.value.toUpperCase();
                   setPnrCode(value);
                 }}
-                placeholder="Enter PNR Code (e.g., 345O0Z)"
+                placeholder="Enter PNR Code "
                 className="w-full px-5 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FD561E] focus:border-transparent text-gray-800 text-lg uppercase"
                 disabled={loading}
                 maxLength={6}

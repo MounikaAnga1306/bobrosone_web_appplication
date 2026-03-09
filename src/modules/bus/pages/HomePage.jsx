@@ -1,3 +1,4 @@
+// src/modules/bus/pages/HomePage.jsx
 import Services from "../components/Services";
 import WhyBobros from "../components/WhyBobros";
 import AppDownload from "../components/AppDownload";
@@ -6,32 +7,51 @@ import Quick_Links from "../components/Quick_Links";
 import BusFAQ from "../components/BusFAQ";
 import BookingForm from "../components/BookingForm";
 import Advertisement from "../components/Advertisement";
-import Navbar from "../../../globalfiles/Navbar";
 
 function HomePage() {
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Main Content */}
-      {/* <Navbar /> */}
       <main className="flex-grow">
-        {/* Bus Booking Hero Section - NO CONTAINER, FULL WIDTH */}
+        {/* Bus Booking Hero Section - FULL WIDTH */}
         <BookingForm />
 
-        {/* Your existing page content - these can stay in containers */}
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <Advertisement />
+        {/* Content Sections with consistent spacing */}
+        <div className="mt-16 md:mt-20 lg:mt-24">
+          {/* Advertisement */}
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+            <Advertisement />
+          </div>
+
+          {/* Services */}
+          <div className="mt-16">
+            <Services />
+          </div>
+
+          {/* App Download */}
+          <div className="mt-16">
+            <AppDownload />
+          </div>
+
+          {/* Popular Bus Routes */}
+          <div className="mt-16">
+            <PopularBusRoutes />
+          </div>
+
+          {/* Why Bobros */}
+          <div className="mt-16">
+            <WhyBobros />
+          </div>
+
+          {/* Quick Links */}
+          <div className="mt-16">
+            <Quick_Links />
+          </div>
+
+          {/* Bus FAQ */}
+          <div className="mt-16">
+            <BusFAQ />
+          </div>
         </div>
-
-        <Services />
-
-        <AppDownload />
-        <PopularBusRoutes />
-
-        <WhyBobros />
-
-        <Quick_Links />
-
-        <BusFAQ />
       </main>
     </div>
   );
