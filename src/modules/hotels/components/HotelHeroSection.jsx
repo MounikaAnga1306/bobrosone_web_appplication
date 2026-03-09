@@ -1,12 +1,15 @@
 // src/modules/hotels/components/HotelHeroSection.jsx
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { FaSearch, FaMapMarkerAlt, FaCalendarAlt, FaUser, FaChevronDown, FaTimes, FaSpinner } from "react-icons/fa";
+import { FaSearch, FaMapMarkerAlt, FaCalendarAlt, FaUser, FaChevronDown, FaTimes } from "react-icons/fa";
 import { Bus, Plane, Building2, Palmtree, Car } from "lucide-react";
 
-// Tabs configuration (same as flights)
+// IMPORT CHANGED: Import the search hook
+import { useHotelSearch } from "../hooks/useHotelSearch"; 
+
+// Tabs configuration
 const tabs = [
   { id: "flights", label: "Flights", icon: Plane },
   { id: "bus", label: "Bus", icon: Bus },
@@ -23,24 +26,14 @@ const tabRoutes = {
   cabs: "/cabs",
 };
 
-// Popular cities for hotel search
-const popularCities = [
-  { code: "HYD", name: "Hyderabad", fullName: "Hyderabad, Telangana" },
-  { code: "BOM", name: "Mumbai", fullName: "Mumbai, Maharashtra" },
-  { code: "DEL", name: "Delhi", fullName: "Delhi, NCR" },
-  { code: "BLR", name: "Bangalore", fullName: "Bangalore, Karnataka" },
-  { code: "MAA", name: "Chennai", fullName: "Chennai, Tamil Nadu" },
-  { code: "CCU", name: "Kolkata", fullName: "Kolkata, West Bengal" },
-  { code: "GOI", name: "Goa", fullName: "Goa" },
-  { code: "JAIPUR", name: "Jaipur", fullName: "Jaipur, Rajasthan" },
-];
-
 const HotelHeroSection = () => {
   const navigate = useNavigate();
   
+  // CHANGED: Get the executeSearch function from the hook
+  const { executeSearch, loading: hookLoading } = useHotelSearch();
+  
   // State for form fields
   const [location, setLocation] = useState("");
-  const [locationDisplay, setLocationDisplay] = useState("");
   const [checkinDate, setCheckinDate] = useState(new Date());
   const [checkoutDate, setCheckoutDate] = useState(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)); // 3 days later
   const [activeTab, setActiveTab] = useState("hotels");
@@ -48,13 +41,6 @@ const HotelHeroSection = () => {
   // State for loading and errors
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
-  // State for city search dropdown
-  const [showLocationDropdown, setShowLocationDropdown] = useState(false);
-  const [locationResults, setLocationResults] = useState([]);
-  const [locationLoading, setLocationLoading] = useState(false);
-  const [locationSearchError, setLocationSearchError] = useState(null);
-  const [selectedLocation, setSelectedLocation] = useState(null);
   
   // State for guests/rooms modal
   const [showGuestsModal, setShowGuestsModal] = useState(false);
@@ -65,89 +51,16 @@ const HotelHeroSection = () => {
   });
   
   // Refs
-  const locationRef = useRef(null);
   const guestsRef = useRef(null);
-  const locationSearchTimeout = useRef(null);
   
   // Max limits
   const maxRooms = 5;
   const maxAdultsPerRoom = 4;
   const maxChildrenPerRoom = 3;
-  const totalGuests = guests.adults + guests.children;
 
   // Format guests text for display
   const formatGuestsText = () => {
     return `${guests.rooms} Room${guests.rooms > 1 ? "s" : ""}, ${guests.adults} Adult${guests.adults > 1 ? "s" : ""}${guests.children > 0 ? `, ${guests.children} Child${guests.children > 1 ? "ren" : ""}` : ""}`;
-  };
-
-  // City search function (simulated - replace with actual API)
-  const searchCitiesAPI = async (searchTerm) => {
-    if (searchTerm.length < 2) {
-      setLocationResults([]);
-      setLocationLoading(false);
-      return;
-    }
-
-    try {
-      setLocationLoading(true);
-      setLocationSearchError(null);
-      
-      // Simulate API call - replace with actual city search API
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Filter popular cities based on search term
-      const results = popularCities.filter(city => 
-        city.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        city.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        city.code.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      
-      setLocationResults(results);
-      setLocationLoading(false);
-    } catch (error) {
-      setLocationSearchError("Failed to search cities. Please try again.");
-      setLocationLoading(false);
-      setLocationResults([]);
-    }
-  };
-
-  // Debounced search handler
-  const debouncedLocationSearch = useCallback((value) => {
-    if (locationSearchTimeout.current) {
-      clearTimeout(locationSearchTimeout.current);
-    }
-
-    if (value.length >= 2) {
-      locationSearchTimeout.current = setTimeout(() => {
-        searchCitiesAPI(value);
-      }, 400);
-    } else {
-      setLocationResults([]);
-      setLocationLoading(false);
-    }
-  }, []);
-
-  // Handle location input change
-  const handleLocationInputChange = (e) => {
-    const value = e.target.value;
-    setLocationDisplay(value);
-    
-    if (selectedLocation) {
-      setSelectedLocation(null);
-      setLocation("");
-    }
-    
-    debouncedLocationSearch(value);
-    setShowLocationDropdown(true);
-  };
-
-  // Handle city selection
-  const handleCitySelect = (city) => {
-    setSelectedLocation(city);
-    setLocation(city.code);
-    setLocationDisplay(city.fullName);
-    setShowLocationDropdown(false);
-    setLocationResults([]);
   };
 
   // Handle guests update
@@ -174,15 +87,9 @@ const HotelHeroSection = () => {
     });
   };
 
-  // Close dropdowns on outside click
+  // Close modal on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (locationRef.current && !locationRef.current.contains(event.target)) {
-        setShowLocationDropdown(false);
-        if (!selectedLocation) {
-          setLocationDisplay("");
-        }
-      }
       if (guestsRef.current && !guestsRef.current.contains(event.target)) {
         setShowGuestsModal(false);
       }
@@ -190,21 +97,12 @@ const HotelHeroSection = () => {
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [selectedLocation]);
-
-  // Cleanup timeouts
-  useEffect(() => {
-    return () => {
-      if (locationSearchTimeout.current) {
-        clearTimeout(locationSearchTimeout.current);
-      }
-    };
   }, []);
 
   // Handle search
   const handleSearch = async () => {
-    if (!selectedLocation) {
-      setError("Please select a city");
+    if (!location.trim()) {
+      setError("Please enter a city or hotel name");
       return;
     }
 
@@ -222,7 +120,7 @@ const HotelHeroSection = () => {
     setError(null);
 
     const searchData = {
-      location: selectedLocation.code,
+      location: location.trim(),
       checkinDate: checkinDate.toISOString().split("T")[0],
       checkoutDate: checkoutDate.toISOString().split("T")[0],
       guests: guests,
@@ -231,19 +129,12 @@ const HotelHeroSection = () => {
     console.log("🔵 Searching hotels:", searchData);
 
     try {
-      // TODO: Replace with actual API call
-      // const response = await searchHotels(searchData);
+      // CHANGED: Use the actual executeSearch function from the hook
+      await executeSearch(searchData);
       
-      // For now, simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // CHANGED: Navigation is now handled inside executeSearch
+      // No need to navigate here
       
-      // Navigate to results page with search params
-      navigate("/hotels/results", {
-        state: {
-          searchParams: searchData,
-          // response: response.data
-        },
-      });
     } catch (err) {
       setError(err.message || "Failed to search hotels. Please try again.");
     } finally {
@@ -253,8 +144,8 @@ const HotelHeroSection = () => {
 
   return (
     <div className="w-full bg-gray-50">
-      {/* Hero Section - Full width image */}
-      <div className="relative w-full h-[630px] overflow-hidden">
+      {/* Hero Section - Reduced height image */}
+      <div className="relative w-full h-[500px] overflow-hidden">
         <div className="absolute inset-0 w-screen left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
           <img
             src="https://images.unsplash.com/photo-1566073771259-6a8506099945?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
@@ -262,10 +153,11 @@ const HotelHeroSection = () => {
             className="w-full h-full object-cover"
           />
         </div>
+        <div className="absolute inset-0 bg-black/30" /> {/* Dark overlay for better text contrast */}
       </div>
 
-      {/* Search Section - Overlapping card */}
-      <div className="relative max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 -mt-130">
+      {/* Search Section - Moved further down with adjusted negative margin */}
+      <div className="relative max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 -mt-80">
         {/* Hotel Booking Card */}
         <div className="relative bg-white rounded-2xl shadow-xl p-6 pb-16 border border-gray-200">
           {/* Service Tabs */}
@@ -297,8 +189,8 @@ const HotelHeroSection = () => {
           {/* Search Form */}
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
-              {/* Location/City Field */}
-              <div className="lg:col-span-4 relative" ref={locationRef}>
+              {/* Location/City Field - Now accepts any input */}
+              <div className="lg:col-span-4 relative">
                 <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">
                   City / Hotel Name
                 </label>
@@ -306,71 +198,12 @@ const HotelHeroSection = () => {
                   <FaMapMarkerAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <input
                     type="text"
-                    value={locationDisplay}
-                    onChange={handleLocationInputChange}
-                    onFocus={() => {
-                      setShowLocationDropdown(true);
-                      if (selectedLocation) {
-                        setLocationDisplay("");
-                        setSelectedLocation(null);
-                        setLocation("");
-                      }
-                    }}
-                    placeholder="Enter city or hotel name"
-                    className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FD561E] focus:border-transparent text-gray-800 transition-all duration-200 hover:border-gray-400"
-                    disabled={loading}
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="Enter city or hotel name (e.g., Hyderabad, Mumbai)"
+                    className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FD561E] focus:border-transparent text-gray-800 transition-all duration-200 hover:border-gray-400"
+                    disabled={loading || hookLoading}
                   />
-                  {locationLoading && (
-                    <FaSpinner className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 animate-spin" />
-                  )}
-
-                  {/* Location Dropdown */}
-                  {showLocationDropdown && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-64 overflow-y-auto">
-                      <div className="p-3">
-                        {locationLoading ? (
-                          <div className="flex items-center justify-center py-4">
-                            <FaSpinner className="animate-spin text-[#FD561E] mr-2" />
-                            <span className="text-gray-600">Searching cities...</span>
-                          </div>
-                        ) : locationSearchError ? (
-                          <div className="text-center py-4 text-red-500">
-                            {locationSearchError}
-                          </div>
-                        ) : locationDisplay.length < 2 && locationDisplay.length > 0 ? (
-                          <div className="text-center py-4 text-gray-500">
-                            Type at least 2 characters to search
-                          </div>
-                        ) : locationResults.length === 0 && locationDisplay.length >= 2 ? (
-                          <div className="text-center py-4 text-gray-500">
-                            No cities found. Try a different search.
-                          </div>
-                        ) : (
-                          <div className="space-y-1">
-                            {locationResults.map((city, index) => (
-                              <div
-                                key={`${city.code}-${index}`}
-                                className="flex items-center justify-between p-2 hover:bg-orange-50 rounded cursor-pointer transition-colors"
-                                onClick={() => handleCitySelect(city)}
-                              >
-                                <div>
-                                  <div className="font-medium text-gray-900">
-                                    {city.fullName}
-                                  </div>
-                                  <div className="text-xs text-gray-500">
-                                    {city.code}
-                                  </div>
-                                </div>
-                                <div className="text-sm font-bold text-[#FD561E]">
-                                  {city.code}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -388,7 +221,7 @@ const HotelHeroSection = () => {
                     dateFormat="EEE, dd MMM yyyy"
                     minDate={new Date()}
                     popperClassName="z-50"
-                    disabled={loading}
+                    disabled={loading || hookLoading}
                   />
                 </div>
               </div>
@@ -407,7 +240,7 @@ const HotelHeroSection = () => {
                     dateFormat="EEE, dd MMM yyyy"
                     minDate={checkinDate}
                     popperClassName="z-50"
-                    disabled={loading}
+                    disabled={loading || hookLoading}
                   />
                 </div>
               </div>
@@ -420,7 +253,7 @@ const HotelHeroSection = () => {
                 <div className="relative">
                   <div
                     className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg bg-white cursor-pointer flex items-center text-gray-800 hover:border-[#FD561E] transition-all duration-200"
-                    onClick={() => setShowGuestsModal(!showGuestsModal)}
+                    onClick={() => !loading && !hookLoading && setShowGuestsModal(!showGuestsModal)}
                   >
                     <FaUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                     <span className="truncate">{formatGuestsText()}</span>
@@ -570,7 +403,7 @@ const HotelHeroSection = () => {
               <div className="absolute -bottom-6 left-1/2 -translate-x-1/2">
                 <button
                   onClick={handleSearch}
-                  disabled={loading || !selectedLocation}
+                  disabled={loading || hookLoading || !location.trim()}
                   className="bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] 
                     text-white px-10 py-4 
                     rounded-full font-bold text-lg 
@@ -580,7 +413,7 @@ const HotelHeroSection = () => {
                     flex items-center space-x-2
                     disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 >
-                  {loading ? (
+                  {loading || hookLoading ? (
                     <>
                       <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                       <span>SEARCHING...</span>
