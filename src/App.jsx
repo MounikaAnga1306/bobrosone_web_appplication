@@ -24,6 +24,10 @@ import FooterBottom from "./globalfiles/FooterBottom";
 import BusResultsPage from "./modules/bus/pages/BusResultsPage";
 import BillHome from "./modules/Bill Payments/pages/BillHomeScreen";
 import BookingSuccess from "./modules/bus/pages/BookingSuccess";
+import RazorpayDetails from "./modules/bus/pages/RazorpayDetails";
+import BillDeskDetails from "./modules/bus/pages/BillDeskDetails";
+import PaymentStatus from "./modules/bus/pages/PaymentStatus";
+
 
 function App() {
   return (
@@ -44,6 +48,10 @@ function App() {
                   <Route path="/flights/pnr-search" element={<PNRSearch />} />
                   <Route path="/hotels" element={<HotelsHomeScreen />} />
                   <Route path="/hotels/results" element={<HotelSearchResults />} />
+                   <Route path="/booking-success" element={<BookingSuccess />} />
+                   <Route path="/razorpay-details" element={<RazorpayDetails />} />
+                   <Route path="/billdesk-details" element={<BillDeskDetails />} />
+                   <Route path="/payment-status" element={<PaymentStatus />} />
                   <Route path="*" element={<Navigate to="/" />} />
                 </Routes>
               </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { filterBuses } from "../utils/filterBuses";
 
 import SearchBar from "../components/SearchBar";
 import FiltersSidebar from "../components/FiltersSidebar";
@@ -12,7 +13,7 @@ import { searchTrips,sortTrips } from "../services/BustripService";
 export default function BusResultsPage() {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
-  const [sortType, setSortType] = useState("Low to Hight");
+  const [sortType, setSortType] = useState("Low to High");
   const [allTrips, setAllTrips] = useState([]);
   const [filteredTrips, setFilteredTrips] = useState([]);
 
@@ -20,7 +21,14 @@ const [filters, setFilters] = useState({
   ac: false,
   nonAc: false,
   seater: false,
-  sleeper: false
+  sleeper: false,
+  primo: false,
+  evening: false,
+  depTime: new Set(),
+  arrTime: new Set(),
+  boarding: new Set(),
+  dropping: new Set(),
+  ops: new Set(),
 });
 
   // IDs for API
@@ -32,7 +40,6 @@ const [filters, setFilters] = useState({
   const fromName = location.state?.sourceName || "";
   const toName = location.state?.destinationName || "";
 
-  const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedTripId, setSelectedTripId] = useState(null);
@@ -78,16 +85,17 @@ const [filters, setFilters] = useState({
 
       try {
         const data = await searchTrips(fromId, toId, date);
-        setAllTrips(data);
-        setFilteredTrips(data);
-        //console.log("API response:", data);
+      
 
         if (!data || !data.length) {
           setError("No trips found for this route.");
-          setTrips([]);
+           setAllTrips([]);
+           setFilteredTrips([]);
+         
         } else {
          setAllTrips(data);
-         setTrips(sortTrips(data, "Low to High"));
+         setFilteredTrips(data);
+        
         }
       } catch (err) {
         console.error(err);
@@ -103,32 +111,45 @@ const [filters, setFilters] = useState({
 
     fetchTrips();
   }, [fromId, toId, date, fromName, toName]);
+
   const applyFilters = (trips, filters) => {
   return trips.filter((trip) => {
 
-    if (filters.ac && !trip.AC) return false;
+    // Normalize text
+    const busType = (trip.busType || "")
+      .toLowerCase()
+      .replaceAll("/", "")
+      .replaceAll("-", "")
+      .trim();
 
-    if (filters.nonAc && !trip.nonAC) return false;
+    // Detect types
+    const isNonAC = busType.includes("non ac");
+    const isAC = busType.includes("ac") && !isNonAC;
 
-    if (filters.seater && !trip.seater) return false;
+    const isSeater = busType.includes("seater");
+    const isSleeper = busType.includes("sleeper");
 
-    if (filters.sleeper && !trip.sleeper) return false;
+    // AC filter
+    if (filters.ac && !filters.nonAc && !isAC) return false;
+
+    // Non AC filter
+    if (filters.nonAc && !filters.ac && !isNonAC) return false;
+
+    // Seater filter
+    if (filters.seater && !filters.sleeper && !isSeater) return false;
+
+    // Sleeper filter
+    if (filters.sleeper && !filters.seater && !isSleeper) return false;
 
     return true;
-
   });
 };
 useEffect(() => {
-
-  const result = applyFilters(allTrips, filters);
-
+  const result = filterBuses(allTrips, filters);
   setFilteredTrips(result);
-
 }, [filters, allTrips]);
 
- useEffect(() => {
-  setTrips((prevTrips) => sortTrips(prevTrips, sortType));
-}, [sortType]);
+
 
   return (
     <div className="min-h-screen bg-[#f1f5f9]">
@@ -144,10 +165,7 @@ useEffect(() => {
           {/* Results Section */}
           <div className="flex-1 min-w-0">
             {/* Sort bar */}
-           <SortBar
-            busCount={trips.length}
-            onSortChange={setSortType}
-          />
+           <SortBar busCount={filteredTrips.length} onSortChange={setSortType} />
 
             {/* Loading */}
             {loading && (

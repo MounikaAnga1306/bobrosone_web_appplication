@@ -90,7 +90,7 @@ const Navbar = () => {
             }
             alt="Bobros Logo"
             className={`
-    ${isSolid ? "h-10 w-[140px] -ml-10" : "h-20 w-auto -ml-15"}
+    ${isSolid ? "h-auto w-[300px] -ml-10" : "h-auto w-[300px] -ml-15"}
   `}
           />
         </div>
