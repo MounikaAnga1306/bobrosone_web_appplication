@@ -29,7 +29,7 @@ const faqs = [
   },
   {
     id: 4,
-    question: "Why should I make a flight booking from Goibibo?",
+    question: "Why should I make a flight booking from BOBROS?",
     answer: (
       <>
         Along with an easy flight booking process,{" "}

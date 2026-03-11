@@ -216,7 +216,7 @@ const BookingForm = () => {
   return (
     <section className="relative h-[590px] flex items-center justify-center">
       <img
-        src="/assets/hero-bg.jpg"
+        src="/assets/bus_image.png"
         alt="hero"
         className="absolute inset-0 w-full h-[590px] object-cover"
       />
