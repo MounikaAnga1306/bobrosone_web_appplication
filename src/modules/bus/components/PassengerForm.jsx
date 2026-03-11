@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { blockTicket } from "../services/blockTicketService";
 import { useNavigate } from "react-router-dom";
-import { searchTrips } from "../services/BustripService";
 
 const PassengerForm = ({
   selectedSeats,
@@ -18,12 +17,13 @@ const PassengerForm = ({
 const navigate = useNavigate();
   const [passengers, setPassengers] = useState(
     selectedSeats.map(() => ({
-      title: "Mr.",
+      title: "",
       name: "",
       gender: "",
       age: ""
     }))
   );
+ 
 
   const [contact, setContact] = useState({
     address: "",
@@ -31,6 +31,10 @@ const navigate = useNavigate();
     mobile: "",
     email: ""
   });
+//    const passengerInfo = passengers.map((p) => ({
+//   name: p.name,
+//   email: contact.email,
+// }));
 
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [error, setError] = useState("");
@@ -91,31 +95,46 @@ const navigate = useNavigate();
         dateOfJourney: date,
         departureTime: minutesToTime(boardingPoint.time),
         arrivalTime: minutesToTime(droppingPoint.time),
-        source:source,
-        destination:destination,
+        source,
+        destination,
         inventoryItems
       };
 
       console.log("Block Ticket API Body:", body);
+      
 
       // ✅ USE SERVICE FILE
-      const data = await blockTicket(body);
+      const blockResponse = await blockTicket(body);
 
-      console.log("Block Ticket Response:", data);
+      console.log("Block Ticket Response:", blockResponse);
 
-     navigate("/booking-success", {
+      if (!blockResponse.success) {
+      setError("Failed to block ticket. Please try again.");
+      return;
+    }
+    
+   
+
+
+    navigate("/booking-success", {
   state: {
-    ticketId: data.blockedTicketId,
+    ticketId: blockResponse.blockedTicketId,
+    totalFare: totalCost,
     seats: selectedSeats,
     fromCity,
     toCity,
-    date
+    date,uid: contact.mobile,        // UID
+    passengers: inventoryItems.map(i => i.passenger[0]) // Names and emails
   }
+
 });
-    } catch (err) {
-      console.error("Block Ticket Error:", err);
-    }
-  };
+}catch (err) {
+    console.error("Ticket / Payment Error:", err);
+    setError("Something went wrong. Please try again.");
+  }
+};
+
+    
 
  const minutesToTime = (minutes) => {
   const totalMinutes = Number(minutes);
@@ -418,12 +437,11 @@ const navigate = useNavigate();
         )}
 
         <button
-          type="submit"
-          className="bg-[#fd561e] text-white px-12 py-3 rounded-lg hover:opacity-90"
+        type="submit"
+        className="bg-[#fd561e] text-white px-12 py-3 rounded-lg cursor-pointer hover:bg-[#e14d1a] transition disabled:opacity-50"
         >
-          Confirm
-        </button>
-
+  Confirm
+</button>
       </div>
 
     </form>

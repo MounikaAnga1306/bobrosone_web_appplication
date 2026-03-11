@@ -29,7 +29,7 @@ const faqs = [
   },
   {
     id: 4,
-    question: "Why should I make a flight booking from Goibibo?",
+    question: "Why should I make a flight booking from BOBROS?",
     answer: (
       <>
         Along with an easy flight booking process,{" "}
@@ -55,7 +55,7 @@ export default function BusFAQ() {
     <div className="w-full  bg-gray-100 p-8 ">
       <div className="max-w-5xl mx-auto">
         <h2 className="font-bold text-black mb-5 text-xl">
-          Flight Booking FAQs
+          Bus Booking FAQs
         </h2>
 
         <div className="flex flex-col gap-3">
