@@ -1,25 +1,41 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
 // Format trips safely
+// Format trips safely
 export const formatTrips = (data) => {
-  if (!data.availableTrips) return [];
+  if (!data || !data.availableTrips) return [];
 
   return data.availableTrips.map((trip) => {
+    // Convert fares to number array
     const faresArray = Array.isArray(trip.fares)
-      ? trip.fares.map(Number)
+      ? trip.fares.map((fare) => Number(fare))
       : [Number(trip.fares) || 0];
 
     return {
-      id: trip.id,
-      travels: trip.travels,
-      busType: trip.busType,
+      id: trip.id || "",
+      travels: trip.travels || "Unknown Travels",
+
+      busType: trip.busType || "N/A",
       busNumber: trip.businfo?.busNumber || "N/A",
-      departureTime: trip.departureTime,
-      arrivalTime: trip.arrivalTime,
-      duration: trip.duration,
-      availableSeats: trip.availableSeats,
-      fare: Math.min(...faresArray),
-      boardingPoint: trip.boardingTimes?.location || "",
+
+      departureTime: trip.departureTime || "",
+      arrivalTime: trip.arrivalTime || "",
+      duration: trip.duration || "",
+
+      availableSeats: trip.availableSeats || 0,
+
+      // Minimum fare
+      fare: faresArray.length ? Math.min(...faresArray) : 0,
+
+     boardingTimes: trip.boardingTimes || [],
+     droppingTimes: trip.droppingTimes || [],
+
+      // ✅ Filter related fields (IMPORTANT)
+      AC: trip.AC ?? false,
+      nonAC: trip.nonAC ?? false,
+      seater: trip.seater ?? false,
+      sleeper: trip.sleeper ?? false,
+      primo: trip.primo ?? false,
     };
   });
 };

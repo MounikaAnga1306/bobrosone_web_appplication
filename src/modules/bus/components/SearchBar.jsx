@@ -394,7 +394,7 @@ const SearchBar = () => {
               onClick={handleSearch}
               className="w-[150px] h-12 bg-white text-black font-bold rounded-md shadow cursor-pointer transition-all duration-300 hover:text-[#fd561e]"
             >
-              UPDATE SEARCH
+              MODIFY SEARCH
             </button>
           </div>
         </div>

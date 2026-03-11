@@ -204,7 +204,140 @@ app.post("/blockTicket", async (req, res) => {
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
+// =========================
+// RAZORPAY ORDER ENDPOINT (with OAuth)
+// =========================
+app.post("/razorpayment/order", async (req, res) => {
+  try {
+    const { fare, uid, name, ticketId, email } = req.body;
 
+    if (!fare || !ticketId) {
+      return res.status(400).json({ error: "Fare and ticketId are required" });
+    }
+
+    const razorpayBody = {
+      fare,
+      uid: uid || "Not Applicable",
+      name: name || "Guest",
+      ticketId,
+      paymentfor: "BusTicket Rpay",
+      email: email || "Not Applicable",
+    };
+
+    console.log("Razorpay Order Request Body:", razorpayBody);
+
+    const url = `${process.env.BASE_URL}/razorpayment/order`; // Your OAuth-protected API
+    const requestData = { url, method: "POST" };
+
+    // ✅ Generate OAuth headers
+    const headers = oauth.toHeader(oauth.authorize(requestData));
+    headers["Content-Type"] = "application/json";
+
+    // Call the OAuth-protected Razorpay order API
+    const response = await axios.post(url, razorpayBody, { headers });
+
+    console.log("Razorpay Order Response:", response.data);
+
+    res.json(response.data);
+
+  } catch (error) {
+    console.error("Razorpay Order API Error:", error.response?.data || error.message);
+    res.status(500).json({ error: "Failed to create Razorpay order" });
+  }
+});
+// =========================
+// BILLDESK ORDER ENDPOINT
+// =========================
+app.post("/billdesk/order", async (req, res) => {
+  try {
+
+    const { fare, uid, pname, tickid } = req.body;
+
+    if (!fare || !tickid) {
+      return res.status(400).json({
+        success: false,
+        message: "fare and ticketId required"
+      });
+    }
+
+    const billdeskBody = new URLSearchParams({
+      fare: fare,
+      uid: uid || "Not Applicable",
+      pname: pname || "Guest",
+      tickid: tickid
+    });
+
+    console.log("BillDesk Order Request:", billdeskBody.toString());
+
+    const response = await axios.post(
+      "https://uat.bobros.co.in/billdesktest.php",
+      billdeskBody,
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        }
+      }
+    );
+
+    console.log("BillDesk API Response:", response.data);
+
+    res.json(response.data);
+
+  } catch (error) {
+
+    console.error(
+      "BillDesk Order Error:",
+      error.response?.data || error.message
+    );
+
+    res.status(500).json({
+      success: false,
+      message: "BillDesk order creation failed"
+    });
+  }
+});
+app.post("/verifyPayment", async (req, res) => {
+  try {
+
+    const url = `${process.env.BASE_URL}/verifyPayment`;
+
+    console.log("Verify Payment Request:", req.body);
+   
+    const requestData = {
+      url,
+      method: "POST"
+    };
+
+    // ✅ Generate OAuth headers
+    const headers = oauth.toHeader(oauth.authorize(requestData));
+    headers["Content-Type"] = "application/json";
+
+    const response = await axios.post(
+      url,
+      req.body,
+      { headers}
+        
+      
+    );
+
+    console.log("Verify Payment Response:", response.data);
+
+    res.json(response.data);
+
+  } catch (error) {
+
+    console.error(
+      "Verify Payment Error:",
+      error.response?.data || error.message
+    );
+
+    res.status(500).json({
+      success: false,
+      message: "Payment verification failed"
+    });
+
+  }
+});
 
 // =========================
 // START SERVER
