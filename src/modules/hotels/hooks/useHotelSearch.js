@@ -1,10 +1,11 @@
 // src/modules/hotels/hooks/useHotelSearch.js
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useHotelSearch as useHotelSearchContext } from '../context/HotelSearchContext'; // CHANGED: Renamed import
+import { useHotelSearch as useHotelSearchContext } from '../context/HotelSearchContext';
 import { searchHotels } from '../services/hotelSearchService';
+import { mapHotelSearchResults } from '../utils/hotelMapper';
 
-export const useHotelSearch = () => { // This is the hook name
+export const useHotelSearch = () => {
   const navigate = useNavigate();
   const {
     searchParams,
@@ -13,62 +14,103 @@ export const useHotelSearch = () => { // This is the hook name
     updateLoading,
     updateError,
     resetSearch,
-  } = useHotelSearchContext(); // CHANGED: Using renamed import
+  } = useHotelSearchContext();
 
   const [localLoading, setLocalLoading] = useState(false);
 
-  /**
-   * Execute hotel search with given parameters
-   * @param {Object} params - Search parameters
-   */
   const executeSearch = async (params) => {
     setLocalLoading(true);
     updateLoading(true);
     updateError(null);
 
     try {
-      // Update search params in context
       updateSearchParams(params);
-
-      // Call API
+      
       const result = await searchHotels(params);
-
+      
       if (result.success) {
-        updateHotels(result.hotels);
+        const mappedHotels = mapHotelSearchResults(result.hotels);
+        updateHotels(mappedHotels);
         
-        // Navigate to results page with search params
         navigate('/hotels/results', {
           state: { searchParams: params }
         });
+        
+        return {
+          success: true,
+          hotels: mappedHotels,
+          totalCount: result.totalCount
+        };
       } else {
         updateError(result.error);
+        return {
+          success: false,
+          error: result.error
+        };
       }
     } catch (error) {
-      updateError(error.message || 'Search failed');
+      updateError(error.message);
+      return {
+        success: false,
+        error: error.message
+      };
     } finally {
       setLocalLoading(false);
       updateLoading(false);
     }
   };
 
-  /**
-   * Retry last search
-   */
-  const retrySearch = async () => {
-    if (searchParams) {
-      await executeSearch(searchParams);
+  const executeSearchWithoutNavigation = async (params) => {
+    setLocalLoading(true);
+    updateLoading(true);
+    updateError(null);
+
+    try {
+      updateSearchParams(params);
+      const result = await searchHotels(params);
+
+      if (result.success) {
+        const mappedHotels = mapHotelSearchResults(result.hotels);
+        updateHotels(mappedHotels);
+        
+        return {
+          success: true,
+          hotels: mappedHotels,
+          totalCount: result.totalCount
+        };
+      } else {
+        updateError(result.error);
+        return {
+          success: false,
+          error: result.error
+        };
+      }
+    } catch (error) {
+      updateError(error.message);
+      return {
+        success: false,
+        error: error.message
+      };
+    } finally {
+      setLocalLoading(false);
+      updateLoading(false);
     }
   };
 
-  /**
-   * Clear search results
-   */
+  const retrySearch = async () => {
+    if (searchParams) {
+      return await executeSearch(searchParams);
+    }
+    return null;
+  };
+
   const clearSearch = () => {
     resetSearch();
   };
 
   return {
     executeSearch,
+    executeSearchWithoutNavigation,
     retrySearch,
     clearSearch,
     loading: localLoading,

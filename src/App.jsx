@@ -17,6 +17,7 @@ import { FlightMasterProvider } from "./modules/flights/providers/CarrierCodePro
 import HotelsHomeScreen from "./modules/hotels/pages/HotelsHomeScreen";
 import HotelSearchResults from "./modules/hotels/pages/HotelSearchResults";
 import { HotelSearchProvider } from "./modules/hotels/context/HotelSearchContext"; // ADD THIS
+import HotelDetails from './modules/hotels/pages/HotelDetails';
 
 import Navbar from "./globalfiles/Navbar";
 import Home from "./modules/bus/pages/HomePage";

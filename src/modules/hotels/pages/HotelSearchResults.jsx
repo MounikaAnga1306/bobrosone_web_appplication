@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useHotelSearch } from '../context/HotelSearchContext';
 import { useHotelSearch as useHotelSearchHook } from '../hooks/useHotelSearch';
+import { mapHotelSearchResults } from '../utils/hotelMapper'; // IMPORT the mapper
 import HotelSearchHeader from '../components/HotelSearchHeader';
 import HotelSortBar from '../components/HotelSortBar';
 import HotelFilters from '../components/HotelFilters';
@@ -12,7 +13,7 @@ import { FaSlidersH } from 'react-icons/fa';
 
 const HotelSearchResults = () => {
   const location = useLocation();
-  const { searchParams, hotels, loading, error, updateSearchParams } = useHotelSearch();
+  const { searchParams, hotels, loading, error, updateSearchParams, setHotels } = useHotelSearch(); // Add setHotels
   const { executeSearch } = useHotelSearchHook();
   
   // Use ref to track if initial search has been triggered
@@ -35,10 +36,24 @@ const HotelSearchResults = () => {
       // Only execute search if we haven't already and if we don't have hotels
       if (!initialSearchTriggered.current && !hotels.length && !loading) {
         initialSearchTriggered.current = true;
-        executeSearch(params);
+        
+        // Modify executeSearch to handle the response mapping
+        const searchPromise = executeSearch(params);
+        
+        // If executeSearch returns the response, map it here
+        if (searchPromise && typeof searchPromise.then === 'function') {
+          searchPromise.then((response) => {
+            if (response?.hotels) {
+              const mappedHotels = mapHotelSearchResults(response.hotels);
+              setHotels(mappedHotels);
+            }
+          }).catch(error => {
+            console.error('Search failed:', error);
+          });
+        }
       }
     }
-  }, [location.state, updateSearchParams, executeSearch]); // Removed hotels.length and loading from deps
+  }, [location.state, updateSearchParams, executeSearch, hotels.length, loading, setHotels]);
 
   // Sort hotels
   const sortedHotels = [...hotels].sort((a, b) => {
