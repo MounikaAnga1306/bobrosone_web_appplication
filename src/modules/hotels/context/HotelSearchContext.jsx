@@ -1,5 +1,5 @@
 // src/modules/hotels/contexts/HotelSearchContext.jsx
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 
 const HotelSearchContext = createContext();
 
@@ -16,39 +16,82 @@ export const HotelSearchProvider = ({ children }) => {
   const [hotels, setHotels] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  
+  // Add state for raw hotel data if needed
+  const [rawHotels, setRawHotels] = useState([]);
 
-  const updateSearchParams = (params) => {
+  const updateSearchParams = useCallback((params) => {
     setSearchParams(params);
-  };
+  }, []);
 
-  const updateHotels = (hotelsData) => {
+  const updateHotels = useCallback((hotelsData) => {
     setHotels(hotelsData);
-  };
+  }, []);
 
-  const updateLoading = (isLoading) => {
+  // Add function to update raw hotels
+  const updateRawHotels = useCallback((rawData) => {
+    setRawHotels(rawData);
+  }, []);
+
+  const updateLoading = useCallback((isLoading) => {
     setLoading(isLoading);
-  };
+  }, []);
 
-  const updateError = (errorMessage) => {
+  const updateError = useCallback((errorMessage) => {
     setError(errorMessage);
-  };
+  }, []);
 
-  const resetSearch = () => {
+  const resetSearch = useCallback(() => {
     setHotels([]);
+    setRawHotels([]);
     setError(null);
     setSearchParams(null);
-  };
+  }, []);
+
+  // Helper function to get check-in and check-out dates
+  const getCheckInDate = useCallback(() => {
+    return searchParams?.checkinDate || searchParams?.checkIn || null;
+  }, [searchParams]);
+
+  const getCheckOutDate = useCallback(() => {
+    return searchParams?.checkoutDate || searchParams?.checkOut || null;
+  }, [searchParams]);
+
+  // Helper to check if dates are available
+  const hasDates = useCallback(() => {
+    return !!(getCheckInDate() && getCheckOutDate());
+  }, [getCheckInDate, getCheckOutDate]);
 
   const value = {
+    // State
     searchParams,
     hotels,
+    rawHotels,
     loading,
     error,
+    
+    // Setters
     updateSearchParams,
     updateHotels,
+    updateRawHotels,
     updateLoading,
     updateError,
     resetSearch,
+    
+    // Direct setters (for compatibility with our earlier changes)
+    setSearchParams: updateSearchParams,
+    setHotels: updateHotels,
+    setLoading: updateLoading,
+    setError: updateError,
+    
+    // Helper functions
+    getCheckInDate,
+    getCheckOutDate,
+    hasDates,
+    
+    // Derived values
+    checkInDate: getCheckInDate(),
+    checkOutDate: getCheckOutDate(),
   };
 
   return (

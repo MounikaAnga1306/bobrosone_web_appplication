@@ -1,6 +1,7 @@
 // src/modules/hotels/components/HotelCard.jsx
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useHotelSearch } from '../context/HotelSearchContext';
 import { FaStar, FaMapMarkerAlt, FaRupeeSign, FaWifi, FaParking, FaSwimmer, FaUtensils } from 'react-icons/fa';
 import { MdLocationOn } from 'react-icons/md';
 
@@ -9,10 +10,44 @@ const PLACEHOLDER_IMAGE = "https://images.unsplash.com/photo-1566073771259-6a850
 
 const HotelCard = ({ hotel, viewMode = 'grid' }) => {
   const navigate = useNavigate();
+  const { searchParams } = useHotelSearch();
 
   const handleViewDetails = () => {
-    navigate(`/hotels/${hotel.hotelId}`, {
-      state: { hotel }
+    // Get dates from searchParams - check all possible formats
+    const checkin = searchParams?.checkinDate || searchParams?.checkIn || searchParams?.checkin;
+    const checkout = searchParams?.checkoutDate || searchParams?.checkOut || searchParams?.checkout;
+    
+    console.log("📅 Dates from searchParams:", { 
+      searchParams,
+      checkin, 
+      checkout 
+    });
+    
+    console.log("🏨 Hotel Property:", hotel.hotelProperty);
+
+    // Create the exact request body structure needed for details API
+    const detailsRequestBody = {
+      hotelProperty: {
+        hotelChain: hotel.hotelProperty?.hotelChain,
+        hotelCode: hotel.hotelProperty?.hotelCode,
+        hotelLocation: hotel.hotelProperty?.hotelLocation,
+        name: hotel.hotelProperty?.name,
+        vendorLocationKey: hotel.hotelProperty?.vendorLocationKey
+      },
+      detailsModifiers: {
+        checkin: checkin,
+        checkout: checkout
+      }
+    };
+
+    console.log("📤 Sending details request:", detailsRequestBody);
+
+    // Navigate to details page with hotel data and request body
+    navigate(`/hotels/${hotel.id}`, {
+      state: { 
+        hotelData: hotel,
+        detailsRequestBody
+      }
     });
   };
 
@@ -33,13 +68,52 @@ const HotelCard = ({ hotel, viewMode = 'grid' }) => {
     return stars;
   };
 
-  // Get random amenities for demo (in production, these would come from API)
-  const amenities = [
-    { icon: FaWifi, label: 'WiFi' },
-    { icon: FaParking, label: 'Parking' },
-    { icon: FaSwimmer, label: 'Pool' },
-    { icon: FaUtensils, label: 'Restaurant' },
-  ].slice(0, 3);
+  // Get amenities from hotel data or use defaults
+  const getAmenities = () => {
+    if (hotel.amenities && hotel.amenities.length > 0) {
+      return hotel.amenities.slice(0, 3).map(amenity => {
+        const iconMap = {
+          'wifi': FaWifi,
+          'parking': FaParking,
+          'pool': FaSwimmer,
+          'restaurant': FaUtensils
+        };
+        return {
+          icon: iconMap[amenity.toLowerCase()] || FaWifi,
+          label: amenity
+        };
+      });
+    }
+    
+    return [
+      { icon: FaWifi, label: 'WiFi' },
+      { icon: FaParking, label: 'Parking' },
+      { icon: FaSwimmer, label: 'Pool' },
+    ];
+  };
+
+  const amenities = getAmenities();
+
+  // Get display address
+  const getDisplayAddress = () => {
+    if (hotel.location?.address) {
+      return hotel.location.address;
+    }
+    if (hotel.location?.city) {
+      return hotel.location.city;
+    }
+    return hotel.hotelProperty?.hotelLocation || 'Location not specified';
+  };
+
+  // Get distance display
+  const getDistanceDisplay = () => {
+    if (hotel.distance) {
+      const { value, unit, direction } = hotel.distance;
+      const unitText = unit === 'MI' ? 'miles' : 'km';
+      return direction ? `${value} ${unitText} ${direction}` : `${value} ${unitText}`;
+    }
+    return null;
+  };
 
   if (viewMode === 'list') {
     return (
@@ -48,7 +122,7 @@ const HotelCard = ({ hotel, viewMode = 'grid' }) => {
           {/* Image Section */}
           <div className="md:w-64 h-48 md:h-auto relative overflow-hidden bg-gray-200">
             <img 
-              src={PLACEHOLDER_IMAGE}
+              src={hotel.images?.[0] || PLACEHOLDER_IMAGE}
               alt={hotel.name}
               className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
             />
@@ -73,7 +147,7 @@ const HotelCard = ({ hotel, viewMode = 'grid' }) => {
                 <h3 className="font-bold text-gray-800 text-lg mb-1">{hotel.name}</h3>
                 <div className="flex items-center text-gray-500 text-sm">
                   <MdLocationOn className="text-[#FD561E] mr-1" size={14} />
-                  <span className="truncate">{hotel.address}</span>
+                  <span className="truncate">{getDisplayAddress()}</span>
                 </div>
               </div>
               <div className="flex items-center bg-[#FD561E] text-white px-2 py-1 rounded-md">
@@ -96,10 +170,17 @@ const HotelCard = ({ hotel, viewMode = 'grid' }) => {
             </div>
 
             {/* Distance */}
-            {hotel.distance?.display && (
+            {getDistanceDisplay() && (
               <p className="text-sm text-gray-500 mb-3">
                 <FaMapMarkerAlt className="inline mr-1 text-gray-400" size={12} />
-                {hotel.distance.display}
+                {getDistanceDisplay()}
+              </p>
+            )}
+
+            {/* Availability Status */}
+            {hotel.availability && (
+              <p className={`text-xs mb-2 ${hotel.availability === 'Available' ? 'text-green-600' : 'text-orange-600'}`}>
+                {hotel.availability}
               </p>
             )}
 
@@ -122,7 +203,7 @@ const HotelCard = ({ hotel, viewMode = 'grid' }) => {
       {/* Image Section */}
       <div className="relative h-48 overflow-hidden bg-gray-200">
         <img 
-          src={PLACEHOLDER_IMAGE}
+          src={hotel.images?.[0] || PLACEHOLDER_IMAGE}
           alt={hotel.name}
           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
         />
@@ -147,6 +228,13 @@ const HotelCard = ({ hotel, viewMode = 'grid' }) => {
             <div className="text-xs text-gray-500">per night</div>
           </div>
         )}
+
+        {/* Availability Badge */}
+        {hotel.availability && hotel.availability !== 'Available' && (
+          <div className="absolute top-3 right-3 bg-orange-500 text-white px-2 py-1 rounded text-xs font-semibold">
+            {hotel.availability}
+          </div>
+        )}
       </div>
 
       <div className="p-3">
@@ -156,7 +244,7 @@ const HotelCard = ({ hotel, viewMode = 'grid' }) => {
         {/* Location */}
         <div className="flex items-center text-gray-500 text-xs mb-2">
           <MdLocationOn className="text-[#FD561E] mr-1 flex-shrink-0" size={12} />
-          <span className="truncate">{hotel.address}</span>
+          <span className="truncate">{getDisplayAddress()}</span>
         </div>
 
         {/* Rating Row */}
@@ -164,8 +252,8 @@ const HotelCard = ({ hotel, viewMode = 'grid' }) => {
           <div className="flex items-center">
             {renderStars()}
           </div>
-          {hotel.distance?.display && (
-            <span className="text-xs text-gray-400">{hotel.distance.display}</span>
+          {getDistanceDisplay() && (
+            <span className="text-xs text-gray-400">{getDistanceDisplay()}</span>
           )}
         </div>
 
