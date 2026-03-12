@@ -119,7 +119,7 @@ const CheckboxSection = ({
   );
 };
 
-const FiltersSidebar = () => {
+const FiltersSidebar = ({ onFilterChange }) => {
   const [chipSelected, setChipSelected] = useState(new Set());
   const [depTime, setDepTime] = useState(new Set());
   const [arrTime, setArrTime] = useState(new Set());
@@ -129,32 +129,102 @@ const FiltersSidebar = () => {
   const [amens, setAmens] = useState(new Set());
 
   const toggleChip = (key) => {
-    setChipSelected((prev) => {
-      const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
-      return next;
-    });
-  };
+  setChipSelected((prev) => {
 
-  const toggleSet = (setter, key) => {
-    setter((prev) => {
-      const next = new Set(prev);
-      next.has(key) ? next.delete(key) : next.add(key);
-      return next;
-    });
-  };
+    const next = new Set(prev);
+
+    if (next.has(key)) {
+      next.delete(key);
+    } else {
+      next.add(key);
+    }
+
+    // Sync Popular <-> Bus Type filters
+    if (key === "Popular__AC") {
+      next.has("Popular__AC")
+        ? next.add("Bus Type__AC")
+        : next.delete("Bus Type__AC");
+    }
+
+    if (key === "Bus Type__AC") {
+      next.has("Bus Type__AC")
+        ? next.add("Popular__AC")
+        : next.delete("Popular__AC");
+    }
+
+    if (key === "Popular__Sleeper") {
+      next.has("Popular__Sleeper")
+        ? next.add("Bus Type__Sleeper")
+        : next.delete("Bus Type__Sleeper");
+    }
+
+    if (key === "Bus Type__Sleeper") {
+      next.has("Bus Type__Sleeper")
+        ? next.add("Popular__Sleeper")
+        : next.delete("Popular__Sleeper");
+    }
+
+   const newFilters = {
+  ac: next.has("Bus Type__AC"),
+  nonAc: next.has("Bus Type__Non-AC"),
+  seater: next.has("Bus Type__Seater"),
+  sleeper: next.has("Bus Type__Sleeper"),
+  primo: next.has("Popular__Primo"),
+  evening: next.has("Popular__6PM-12AM")
+};
+
+    onFilterChange(newFilters);
+
+    return next;
+
+  });
+};
+
+  const toggleSet = (setter, key, type) => {
+  setter((prev) => {
+    const next = new Set(prev);
+    next.has(key) ? next.delete(key) : next.add(key);
+
+    const newFilters = {
+      depTime: type === "depTime" ? next : depTime,
+      arrTime: type === "arrTime" ? next : arrTime,
+      boarding: type === "boarding" ? next : boarding,
+      dropping: type === "dropping" ? next : dropping,
+      ops: type === "ops" ? next : ops,
+      amens: type === "amens" ? next : amens
+    };
+
+    onFilterChange(newFilters);
+
+    return next;
+  });
+};
 
   const clearSet = (setter) => setter(new Set());
 
-  const clearAll = () => {
-    setChipSelected(new Set());
-    setDepTime(new Set());
-    setArrTime(new Set());
-    setBoarding(new Set());
-    setDropping(new Set());
-    setOps(new Set());
-    setAmens(new Set());
-  };
+ const clearAll = () => {
+  setChipSelected(new Set());
+  setDepTime(new Set());
+  setArrTime(new Set());
+  setBoarding(new Set());
+  setDropping(new Set());
+  setOps(new Set());
+  setAmens(new Set());
+
+ onFilterChange({
+  ac: false,
+  nonAc: false,
+  seater: false,
+  sleeper: false,
+  primo: false,
+  evening: false,
+  depTime: new Set(),
+  arrTime: new Set(),
+  boarding: new Set(),
+  dropping: new Set(),
+  ops: new Set()
+});
+ }
 
   const TimeGrid = ({ title, selected, setSelected }) => (
     <div>
@@ -168,11 +238,17 @@ const FiltersSidebar = () => {
           return (
             <button
               key={slot.label}
-              onClick={() => toggleSet(setSelected, slot.label)}
+             onClick={() =>
+  toggleSet(
+    setSelected,
+    slot.label,
+    title === "Departure Time" ? "depTime" : "arrTime"
+  )
+}
               className={`flex flex-col items-center gap-1 p-3 rounded-lg border text-xs  transition-all ${
                 isActive
                   ? "border-[#FD561E] bg-[#FD561E]/10 text-[#FD561E]"
-                  : "border-gray-300 bg-gray-50 text-muted-foreground hover:border-[#FD561E]"
+                  : "border-gray-300  text-muted-foreground "
               }`}
             >
               {slot.icon}
@@ -238,10 +314,10 @@ const FiltersSidebar = () => {
                   <button
                     key={key}
                     onClick={() => toggleChip(key)}
-                    className={`flex flex-col items-center gap-1 p-3 rounded-lg border bg-gray-50  text-xs  transition-all ${
+                    className={`flex flex-col items-center gap-1 p-3 rounded-lg border   text-xs  transition-all ${
                       isActive
                         ? "border-[#FD561E] bg-[#FD561E]/10 text-[#FD561E]"
-                        : "border border-gray-300 bg-background text-muted-foreground hover:border-[#fd561e]"
+                        : "border border-gray-300 bg-background text-muted-foreground "
                     }`}
                   >
                     {opt.icon}
@@ -272,7 +348,7 @@ const FiltersSidebar = () => {
             items={boardingPoints}
             searchPlaceholder="Enter/Search boarding point"
             selected={boarding}
-            onToggle={(i) => toggleSet(setBoarding, i)}
+            onToggle={(i) => toggleSet(setBoarding, i, "boarding")}
             onClear={() => clearSet(setBoarding)}
             showMore
           />
@@ -284,7 +360,7 @@ const FiltersSidebar = () => {
             items={droppingPoints}
             searchPlaceholder="Enter/Search dropping point"
             selected={dropping}
-            onToggle={(i) => toggleSet(setDropping, i)}
+            onToggle={(i) => toggleSet(setDropping, i, "dropping")}
             onClear={() => clearSet(setDropping)}
           />
         </div>
@@ -294,7 +370,7 @@ const FiltersSidebar = () => {
             items={operators}
             searchPlaceholder="Enter/Search operator"
             selected={ops}
-            onToggle={(i) => toggleSet(setOps, i)}
+            onToggle={(i) => toggleSet(setOps, i, "ops")}
             onClear={() => clearSet(setOps)}
             showMore
           />
@@ -305,13 +381,14 @@ const FiltersSidebar = () => {
           items={amenities}
           searchPlaceholder=""
           selected={amens}
-          onToggle={(i) => toggleSet(setAmens, i)}
+          onToggle={(i) => toggleSet(setAmens, i, "amens")}
           onClear={() => clearSet(setAmens)}
           showSearch={false}
         />
       </div>
     </aside>
   );
+
 };
 
 export default FiltersSidebar;
