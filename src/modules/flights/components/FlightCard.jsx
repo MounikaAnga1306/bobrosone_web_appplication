@@ -1,37 +1,109 @@
-// src/components/FlightCard.jsx
-import React from 'react';
+// src/components/flights/FlightCard.jsx
 
-const FlightCard = ({ flight }) => {
+import React from 'react';
+import { FaClock, FaSuitcase, FaMapMarkerAlt, FaPlane } from 'react-icons/fa';
+
+const FlightCard = ({ flight, passengerCounts, onClick }) => {
+  if (!flight) return null;
+
+  // Format time from ISO to HH:MM
+  const formatTime = (isoString) => {
+    if (!isoString) return '--:--';
+    try {
+      const date = new Date(isoString);
+      return date.toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+      });
+    } catch {
+      return '--:--';
+    }
+  };
+
+  // Format duration from minutes to "Xh Ym"
+  const formatDuration = (minutes) => {
+    if (!minutes) return '0h 0m';
+    const mins = parseInt(minutes);
+    const hours = Math.floor(mins / 60);
+    const remainingMins = mins % 60;
+    return `${hours}h ${remainingMins}m`;
+  };
+
+  // Get airline name from code
+  const getAirlineName = (code) => {
+    const airlines = {
+      'AI': 'Air India',
+      '6E': 'IndiGo',
+      'SG': 'SpiceJet',
+      'UK': 'Vistara',
+      'G8': 'GoAir',
+      'I5': 'AirAsia India',
+      '9W': 'Jet Airways',
+      'S2': 'Air India Express',
+      'QP': 'Akasa Air'
+    };
+    return airlines[code] || code;
+  };
+
+  const departureTime = formatTime(flight.departureTime);
+  const arrivalTime = formatTime(flight.arrivalTime);
+  const duration = formatDuration(flight.duration);
+  const airlineName = getAirlineName(flight.airline);
+  
+  // Calculate per adult price if needed
+  const adults = passengerCounts?.adults || 1;
+  const perAdultPrice = Math.round(flight.price / adults);
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4 hover:shadow-md transition-shadow duration-200">
-      {/* Header */}
-      <div className="flex justify-between items-start mb-6">
+    <div 
+      className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all duration-200 cursor-pointer hover:border-[#FD561E] hover:border-2"
+      onClick={() => onClick?.(flight)}
+    >
+      {/* Airline & Flight Number */}
+      <div className="flex justify-between items-start mb-4">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">{flight.airline}</h3>
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-semibold text-gray-900">{airlineName}</span>
+            <span className="text-sm text-gray-500">({flight.airline})</span>
+          </div>
           <p className="text-sm text-gray-500 mt-1">{flight.flightNumber}</p>
         </div>
+        
+        {/* Price */}
         <div className="text-right">
-          <div className="text-2xl font-bold text-blue-600">₹{flight.price.toLocaleString()}</div>
-          <button className="mt-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition-colors duration-200">
-            Book
-          </button>
+          <div className="text-xs text-gray-500 mb-1">Total for {adults} Adult{adults > 1 ? 's' : ''}</div>
+          <div className="text-2xl font-bold text-[#FD561E]">
+            ₹{flight.price.toLocaleString()}
+          </div>
+          <div className="text-xs text-gray-500 mt-1">
+            ₹{perAdultPrice.toLocaleString()} per adult
+          </div>
         </div>
       </div>
 
-      {/* Flight Details */}
-      <div className="flex items-center justify-between mb-6 px-4">
+      {/* Route Visualization */}
+      <div className="flex items-center justify-between mb-4 px-4">
+        {/* Departure */}
         <div className="text-center flex-1">
-          <div className="text-2xl font-bold text-gray-900">{flight.departureTime}</div>
-          <div className="text-sm text-gray-600 mt-1">{flight.from}</div>
+          <div className="text-2xl font-bold text-gray-900">{departureTime}</div>
+          <div className="text-sm text-gray-600 mt-1 flex items-center justify-center">
+            <FaMapMarkerAlt className="mr-1 text-[#FD561E] text-xs" />
+            {flight.from}
+          </div>
         </div>
 
+        {/* Duration & Line */}
         <div className="flex-2 px-8 text-center">
-          <div className="text-sm text-gray-600 mb-2">{flight.duration}</div>
+          <div className="text-sm text-gray-600 mb-2 flex items-center justify-center">
+            <FaClock className="mr-1 text-gray-400" />
+            {duration}
+          </div>
           <div className="relative">
             <div className="flex items-center">
-              <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+              <div className="w-2 h-2 bg-[#FD561E] rounded-full"></div>
               <div className="flex-1 h-0.5 bg-gray-300 mx-2"></div>
-              <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+              <div className="w-2 h-2 bg-[#FD561E] rounded-full"></div>
             </div>
           </div>
           <div className="text-xs text-gray-500 mt-2">
@@ -39,35 +111,51 @@ const FlightCard = ({ flight }) => {
           </div>
         </div>
 
+        {/* Arrival */}
         <div className="text-center flex-1">
-          <div className="text-2xl font-bold text-gray-900">{flight.arrivalTime}</div>
-          <div className="text-sm text-gray-600 mt-1">{flight.to}</div>
+          <div className="text-2xl font-bold text-gray-900">{arrivalTime}</div>
+          <div className="text-sm text-gray-600 mt-1 flex items-center justify-center">
+            <FaMapMarkerAlt className="mr-1 text-[#FD561E] text-xs" />
+            {flight.to}
+          </div>
         </div>
       </div>
 
-      {/* Features */}
-      <div className="flex flex-wrap gap-3 mb-4 py-4 border-t border-b border-gray-200">
-        {flight.features.map((feature, index) => (
-          <span 
-            key={index}
-            className="bg-gray-50 text-gray-700 px-3 py-1 rounded-full text-sm"
-          >
-            {feature}
-          </span>
-        ))}
-      </div>
+      {/* Baggage Info */}
+      {flight.baggage && (
+        <div className="flex items-center gap-4 py-3 border-t border-gray-100">
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <FaSuitcase className="text-[#FD561E]" />
+            <span>Check-in: {flight.baggage.weight}{flight.baggage.unit}</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <FaSuitcase className="text-[#FD561E]" />
+            <span>Cabin: 7kg</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <span className="px-2 py-1 bg-gray-100 rounded text-xs">
+              {flight.seatsAvailable} seats left
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
-      <div className="flex justify-between items-center">
-        <button className="border border-blue-600 text-blue-600 hover:bg-blue-50 font-medium py-2 px-4 rounded-lg transition-colors duration-200 flex items-center">
-          Flight Details <span className="ml-1">&gt;</span>
+      <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-100">
+        <button 
+          className="text-sm text-[#FD561E] hover:text-[#e04e1b] font-medium flex items-center"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick?.(flight);
+          }}
+        >
+          View Details →
         </button>
         
-        {flight.lockPrice && (
-          <div className="flex items-center text-green-600 font-medium">
-            <span className="mr-2">🔒</span>
-            Lock Price @₹{flight.lockPrice}
-          </div>
+        {flight.brand && (
+          <span className="text-xs bg-orange-100 text-[#FD561E] px-2 py-1 rounded">
+            {flight.brand}
+          </span>
         )}
       </div>
     </div>
