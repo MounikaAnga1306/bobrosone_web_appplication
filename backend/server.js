@@ -39,18 +39,31 @@ app.use(express.static(path.join(__dirname, "public")));
 const transformSeats = (seats) => {
   if (!Array.isArray(seats)) return [];
 
-  return seats.map((seat, index) => ({
-    id: seat.id || index + 1,
-    name: seat.name || `S${index + 1}`,
-    available: seat.available ?? true,
-    ladiesSeat: seat.ladiesSeat ?? false,
+  return seats.map((seat, index) => {
 
-    // Layout fields (VERY IMPORTANT for your seat page)
-    zIndex: Number(seat.zIndex ?? 0),   // 0 = Lower, 1 = Upper
-    row: Number(seat.row ?? Math.floor(index / 4)),
-    column: Number(seat.column ?? index % 4),
-    length: Number(seat.length ?? 1),   // 1 = Seater, 2 = Sleeper
-  }));
+    const baseFare = Number(seat.baseFare ?? 0);
+    const serviceTax = Number(seat.serviceTaxAbsolute ?? 0);
+
+    return {
+      id: seat.id || index + 1,
+      name: seat.name || `S${index + 1}`,
+      available: seat.available ?? true,
+      ladiesSeat: seat.ladiesSeat ?? false,
+
+      baseFare: baseFare,
+
+      // ⭐ totalFare
+      totalFare: baseFare + serviceTax,
+
+      // Layout fields
+      zIndex: Number(seat.zIndex ?? 0),
+      row: Number(seat.row ?? Math.floor(index / 4)),
+      column: Number(seat.column ?? index % 4),
+      length: Number(seat.length ?? 1),
+      width: Number(seat.width ?? 1),
+    };
+
+  });
 };
 
 
@@ -128,7 +141,9 @@ app.get("/tripdetails", async (req, res) => {
     }
 
     const url = `${process.env.BASE_URL}/tripdetails?id=${id}`;
+
     console.log("Trip details API:", url);
+    console.log("Trip ID:", id);
 
     const requestData = { url, method: "GET" };
     const headers = oauth.toHeader(oauth.authorize(requestData));
@@ -137,7 +152,9 @@ app.get("/tripdetails", async (req, res) => {
 
     const tripData = response.data;
 
-    // 🔥 IMPORTANT PART
+    // ✅ LOG ACTUAL RESPONSE
+    //console.log("Trip Details Response:", tripData);
+
     const transformedSeats = transformSeats(tripData.seats);
 
     res.json({
@@ -150,6 +167,35 @@ app.get("/tripdetails", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch trip details" });
   }
 });
+// =========================
+// BLOCK TICKET ENDPOINT
+// =========================
+app.post("/blockTicket", async (req, res) => {
+  try {
+
+    const url = `${process.env.BASE_URL}/blockTicket`;
+
+    const requestData = {
+  url,
+  method: "POST"
+};
+
+    const headers = oauth.toHeader(oauth.authorize(requestData));
+    headers["Content-Type"] = "application/json";
+     console.log("Block Ticket Body:", req.body);
+    const response = await axios.post(url, req.body, { headers });
+
+    res.json(response.data);
+
+  } catch (error) {
+    console.error("Block Ticket Error:", error.response?.data || error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to block ticket"
+    });
+  }
+});
 
 
 // =========================
@@ -158,7 +204,140 @@ app.get("/tripdetails", async (req, res) => {
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
+// =========================
+// RAZORPAY ORDER ENDPOINT (with OAuth)
+// =========================
+app.post("/razorpayment/order", async (req, res) => {
+  try {
+    const { fare, uid, name, ticketId, email } = req.body;
 
+    if (!fare || !ticketId) {
+      return res.status(400).json({ error: "Fare and ticketId are required" });
+    }
+
+    const razorpayBody = {
+      fare,
+      uid: uid || "Not Applicable",
+      name: name || "Guest",
+      ticketId,
+      paymentfor: "BusTicket Rpay",
+      email: email || "Not Applicable",
+    };
+
+    console.log("Razorpay Order Request Body:", razorpayBody);
+
+    const url = `${process.env.BASE_URL}/razorpayment/order`; // Your OAuth-protected API
+    const requestData = { url, method: "POST" };
+
+    // ✅ Generate OAuth headers
+    const headers = oauth.toHeader(oauth.authorize(requestData));
+    headers["Content-Type"] = "application/json";
+
+    // Call the OAuth-protected Razorpay order API
+    const response = await axios.post(url, razorpayBody, { headers });
+
+    console.log("Razorpay Order Response:", response.data);
+
+    res.json(response.data);
+
+  } catch (error) {
+    console.error("Razorpay Order API Error:", error.response?.data || error.message);
+    res.status(500).json({ error: "Failed to create Razorpay order" });
+  }
+});
+// =========================
+// BILLDESK ORDER ENDPOINT
+// =========================
+app.post("/billdesk/order", async (req, res) => {
+  try {
+
+    const { fare, uid, pname, tickid } = req.body;
+
+    if (!fare || !tickid) {
+      return res.status(400).json({
+        success: false,
+        message: "fare and ticketId required"
+      });
+    }
+
+    const billdeskBody = new URLSearchParams({
+      fare: fare,
+      uid: uid || "Not Applicable",
+      pname: pname || "Guest",
+      tickid: tickid
+    });
+
+    console.log("BillDesk Order Request:", billdeskBody.toString());
+
+    const response = await axios.post(
+      "https://uat.bobros.co.in/billdesktest.php",
+      billdeskBody,
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        }
+      }
+    );
+
+    console.log("BillDesk API Response:", response.data);
+
+    res.json(response.data);
+
+  } catch (error) {
+
+    console.error(
+      "BillDesk Order Error:",
+      error.response?.data || error.message
+    );
+
+    res.status(500).json({
+      success: false,
+      message: "BillDesk order creation failed"
+    });
+  }
+});
+app.post("/verifyPayment", async (req, res) => {
+  try {
+
+    const url = `${process.env.BASE_URL}/verifyPayment`;
+
+    console.log("Verify Payment Request:", req.body);
+   
+    const requestData = {
+      url,
+      method: "POST"
+    };
+
+    // ✅ Generate OAuth headers
+    const headers = oauth.toHeader(oauth.authorize(requestData));
+    headers["Content-Type"] = "application/json";
+
+    const response = await axios.post(
+      url,
+      req.body,
+      { headers}
+        
+      
+    );
+
+    console.log("Verify Payment Response:", response.data);
+
+    res.json(response.data);
+
+  } catch (error) {
+
+    console.error(
+      "Verify Payment Error:",
+      error.response?.data || error.message
+    );
+
+    res.status(500).json({
+      success: false,
+      message: "Payment verification failed"
+    });
+
+  }
+});
 
 // =========================
 // START SERVER

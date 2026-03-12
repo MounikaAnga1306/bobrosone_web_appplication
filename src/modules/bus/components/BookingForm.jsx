@@ -17,6 +17,7 @@ import {
 
 const tabs = [
   { id: "bus", label: "Bus", icon: Bus },
+  { id: "billpayments", label: "Bill Payments", icon: Bus },
   { id: "flights", label: "Flights", icon: Plane },
   { id: "hotels", label: "Hotels", icon: Building2 },
   { id: "holidays", label: "Holidays", icon: Palmtree },
@@ -31,6 +32,7 @@ const specialFares = [
 ];
 const tabRoutes = {
   bus: "/",
+  billpayments:"/BillHomePage",
   flights: "/flights",
   hotels: "/hotels",
   holidays: "/holidays",
@@ -74,7 +76,7 @@ const BookingForm = () => {
     const formattedDate = selectedDate.toISOString().split("T")[0];
 
     // Navigate to front-end route, BusResultsPage will call API
-    //console.log(fromCity, toCity);
+    console.log(fromCity, toCity);
     navigate(
       `/results?source=${fromCity.sid}&destination=${toCity.sid}&doj=${formattedDate}`,
       {
@@ -214,7 +216,7 @@ const BookingForm = () => {
   return (
     <section className="relative h-[590px] flex items-center justify-center">
       <img
-        src="/assets/hero-bg.jpg"
+        src="/assets/bus_image.png"
         alt="hero"
         className="absolute inset-0 w-full h-[590px] object-cover"
       />

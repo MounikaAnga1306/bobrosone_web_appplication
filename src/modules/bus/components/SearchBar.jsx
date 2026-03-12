@@ -127,7 +127,12 @@ const SearchBar = () => {
       return;
     }
 
-    const formattedDate = selectedDate.toISOString().split("T")[0];
+   const formattedDate =
+  selectedDate.getFullYear() +
+  "-" +
+  String(selectedDate.getMonth() + 1).padStart(2, "0") +
+  "-" +
+  String(selectedDate.getDate()).padStart(2, "0");
 
     navigate(
       `/results?source=${fromCity.sid}&destination=${toCity.sid}&doj=${formattedDate}`,
@@ -208,9 +213,8 @@ const SearchBar = () => {
   return (
     <div className="w-full bg-[#f36b32] py-6 sticky top-0 z-40 shadow-sm">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-          {/* FROM */}
-          <div className="md:col-span-3 relative" ref={fromRef}>
+<div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_1fr_auto] gap-3 items-end">          {/* FROM */}
+          <div className=" relative" ref={fromRef}>
             <p className="text-white text-xs font-semibold mb-1">FROM</p>
 
             <input
@@ -249,7 +253,7 @@ const SearchBar = () => {
           </div>
 
           {/* SWAP */}
-          <div className="md:col-span-1 flex justify-center">
+          <div className="  flex justify-center mb-1 ">
             <button
               onClick={handleSwap}
               disabled={!fromCity || !toCity}
@@ -260,7 +264,7 @@ const SearchBar = () => {
           </div>
 
           {/* TO */}
-          <div className="md:col-span-3 relative" ref={toRef}>
+          <div className="   relative" ref={toRef}>
             <p className="text-white text-xs font-semibold mb-1">TO</p>
 
             <input
@@ -299,7 +303,7 @@ const SearchBar = () => {
           </div>
 
           {/* DATE */}
-          <div className="md:col-span-2 relative" ref={calendarRef}>
+          <div className="relative" ref={calendarRef}>
             <p className="text-white text-xs font-semibold mb-1">
               DEPARTURE DATE
             </p>
@@ -385,12 +389,12 @@ const SearchBar = () => {
           </div>
 
           {/* SEARCH */}
-          <div className="md:col-span-3 flex items-end">
+          <div >
             <button
               onClick={handleSearch}
-              className="w-full h-12 bg-white text-black font-bold rounded-md shadow cursor-pointer transition-all duration-300 hover:text-[#fd561e]"
+              className="w-[150px] h-12 bg-white text-black font-bold rounded-md shadow cursor-pointer transition-all duration-300 hover:text-[#fd561e]"
             >
-              UPDATE SEARCH
+              MODIFY SEARCH
             </button>
           </div>
         </div>

@@ -1,6 +1,6 @@
 export default function Advertisement() {
   return (
-    <div className="w-full h-[150px] flex justify-center my-10 px-4">
+    <div className="w-full h-[150px] flex justify-center my-10 px-4 relative z-0">
       <div className="relative w-full max-w-5xl aspect-[10/3] rounded-2xl overflow-hidden shadow-lg">
         {/* Background Image */}
         <img
@@ -13,7 +13,7 @@ export default function Advertisement() {
         <div className="absolute inset-0 bg-black/40"></div>
 
         {/* Content */}
-        <div className="relative z-10 h-full flex flex-col md:flex-row items-center justify-between px-8 py-6 text-white">
+        <div className="relative z-0 h-full flex flex-col md:flex-row items-center justify-between px-8 py-6 text-white">
           <div>
             <p className="text-sm font-bold uppercase tracking-wider mb-2 text-white">
               New User Offer
