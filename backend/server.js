@@ -177,33 +177,39 @@ app.post("/blockTicket", async (req, res) => {
 
     const requestData = {
   url,
-  method: "POST"
+  method: "POST",
+ body: req.body
 };
 
     const headers = oauth.toHeader(oauth.authorize(requestData));
     headers["Content-Type"] = "application/json";
      console.log("Block Ticket Body:", req.body);
     const response = await axios.post(url, req.body, { headers });
+     console.log("Block Ticket SUCCESS Response:", response.data);
 
     res.json(response.data);
 
   } catch (error) {
-    console.error("Block Ticket Error:", error.response?.data || error.message);
 
-    res.status(500).json({
-      success: false,
-      message: "Failed to block ticket"
-    });
-  }
+  console.error("Block Ticket Error FULL:", {
+    data: error.response?.data,
+    status: error.response?.status,
+    headers: error.response?.headers,
+    message: error.message
+  });
+  console.error("Block Ticket Backend Error Detail:", 
+      JSON.stringify(error.response?.data, null, 2)
+  );
+
+  res.status(500).json({
+    success: false,
+    message: error.response?.data || error.message
+  });
+}
 });
 
 
-// =========================
-// React Routing Support
-// =========================
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
+
 // =========================
 // RAZORPAY ORDER ENDPOINT (with OAuth)
 // =========================
@@ -227,7 +233,7 @@ app.post("/razorpayment/order", async (req, res) => {
     console.log("Razorpay Order Request Body:", razorpayBody);
 
     const url = `${process.env.BASE_URL}/razorpayment/order`; // Your OAuth-protected API
-    const requestData = { url, method: "POST" };
+    const requestData = { url, method: "POST",body: razorpayBody };
 
     // ✅ Generate OAuth headers
     const headers = oauth.toHeader(oauth.authorize(requestData));
@@ -337,6 +343,59 @@ app.post("/verifyPayment", async (req, res) => {
     });
 
   }
+});
+
+
+
+// =========================
+// REWARD POINTS API
+// =========================
+app.get("/rewardPoints", async (req, res) => {
+  try {
+
+    const { uid, fare } = req.query;
+
+    if (!uid || !fare) {
+      return res.status(400).json({
+        success: false,
+        message: "uid and fare required"
+      });
+    }
+
+    const url = `${process.env.BASE_URL}/rewardPoints?uid=${uid}&fare=${fare}`;
+
+    console.log("Reward Points API:", url);
+
+    const requestData = {
+      url,
+      method: "GET"
+    };
+
+    const headers = oauth.toHeader(oauth.authorize(requestData));
+
+    const response = await axios.get(url, { headers });
+
+    res.json(response.data);
+
+  } catch (error) {
+
+    console.error(
+      "Reward API Error:",
+      error.response?.data || error.message
+    );
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch reward points"
+    });
+
+  }
+});
+// =========================
+// React Routing Support
+// =========================
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 // =========================
