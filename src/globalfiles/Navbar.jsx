@@ -1,30 +1,98 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect,useRef } from "react";
 import { Menu, X, Briefcase, MapPin, User } from "lucide-react";
 import { Bus, Plane, Building2, Palmtree, Car } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import AuthModal from "../modules/bus/pages/AuthModal";
+import SignIn from "../modules/bus/pages/SignIn";
+import SignupForm from "../modules/bus/pages/SignUpForm";
+import ForgotPassword from "../modules/bus/pages/ForgotPassword";
+import VerifyOTP from "../modules/bus/pages/VerifyOTP";
+import ResetPassword from "../modules/bus/pages/ResetPassword";
 
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [openAuthModal, setOpenAuthModal] = useState(false);
+  const [authPage, setAuthPage] = useState("signin");
+  const [signupData, setSignupData] = useState(null);
+  const [resetData, setResetData] = useState(null);
+  const [openLoginDropdown, setOpenLoginDropdown] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
+  const dropdownRef = useRef(null);
+  const [user, setUser] = useState(null);
+const [openDropdown, setOpenDropdown] = useState(false);
+const closeTimeout = useRef(null);
 
-  /* ---------------- ROUTE RULES ---------------- */
+ useEffect(() => {
+  setOpenDropdown(false);
+}, [location.pathname]);
 
-  // pages that should have transparent → solid scroll navbar
+useEffect(() => {
+  const handleClickOutside = (event) => {
+    if (
+      dropdownRef.current &&
+      !dropdownRef.current.contains(event.target)
+    ) {
+      setOpenDropdown(false);
+    }
+  };
+
+  document.addEventListener("mousedown", handleClickOutside);
+
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside);
+  };
+}, []);
+
+useEffect(() => {
+  const firstVisit = sessionStorage.getItem("firstVisitDone");
+
+  if (!firstVisit) {
+    setTimeout(() => {
+      setAuthPage("signin");
+      setOpenAuthModal(true);
+    }, 1200);
+
+    sessionStorage.setItem("firstVisitDone", "true");
+  }
+}, []);
+
+ useEffect(() => {
+  const checkLogin = () => {
+    const loggedIn = localStorage.getItem("isLoggedIn") === "true";
+    const userData = JSON.parse(localStorage.getItem("user"));
+
+    setIsLoggedIn(loggedIn);
+    setUser(userData?.user || null);
+  };
+
+  checkLogin();
+
+  window.addEventListener("storage", checkLogin);
+
+  return () => window.removeEventListener("storage", checkLogin);
+}, []);
+
+const handleLogout = () => {
+  localStorage.removeItem("user");
+  localStorage.removeItem("isLoggedIn");
+  setIsLoggedIn(false);
+  setUser(null);
+  setOpenDropdown(false); 
+};
+
   const dynamicPages = ["/", "/HomePage", "/flights","/BillHomePage","/hotels","/cabs","/holidays"];
 
   const isDynamicPage = dynamicPages.includes(location.pathname);
 
-  // solid if not dynamic OR user scrolled
   const isSolid = !isDynamicPage || scrolled;
 
   const noFixedNavbarPages = ["/results"];
 
   const isNoFixedPage = noFixedNavbarPages.includes(location.pathname);
-
-  /* ---------------- SCROLL EFFECT ---------------- */
 
   useEffect(() => {
     if (!isDynamicPage) return;
@@ -37,8 +105,6 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [isDynamicPage]);
 
-  /* ---------------- NAV TABS ---------------- */
-
   const tabs = [
     { id: "bus", label: "Bus", icon: Bus, path: "/HomePage" },
     { id: "billpayment", label: "Bill Payments", icon: Bus, path: "/BillHomePage" },
@@ -48,7 +114,6 @@ const Navbar = () => {
     { id: "cabs", label: "Cabs", icon: Car, path: "/cabs" },
   ];
 
-  // auto active tab detection from URL
   const getActiveTab = () => {
     if (location.pathname === "/" || location.pathname === "/HomePage")
       return "bus";
@@ -68,15 +133,14 @@ const Navbar = () => {
 
   const activeTab = getActiveTab();
 
-  /* ---------------- JSX ---------------- */
-
   return (
     <nav
-      className={`${isNoFixedPage ? "relative" : "fixed top-0 left-0 right-0"} z-50 transition-all duration-300 cursor-pointer ${
+      className={`${isNoFixedPage ? "relative" : "fixed top-0 left-0 right-0"} z-50 transition-all duration-300  ${
         isSolid ? "bg-white shadow-md" : "bg-transparent"
       }`}
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between px-4 h-20">
+
         {/* LOGO */}
         <div
           onClick={() => navigate("/")}
@@ -89,9 +153,7 @@ const Navbar = () => {
                 : "/assets/Bobros_whitelogo.png"
             }
             alt="Bobros Logo"
-            className={`
-    ${isSolid ? "h-auto w-[300px] -ml-10" : "h-auto w-[300px] -ml-15"}
-  `}
+            className={`${isSolid ? "h-auto w-[300px] -ml-10" : "h-auto w-[300px] -ml-15"}`}
           />
         </div>
 
@@ -109,7 +171,7 @@ const Navbar = () => {
                     navigate(tab.path);
                     window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
-                  className={`flex items-center gap-2 px-6 py-2.5 rounded-full  whitespace-nowrap text-sm font-semibold transition-all duration-300 border cursor-pointer ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full  whitespace-nowrap text-sm font-semibold transition-all duration-300 border cursor-pointer ${
                     active
                       ? "bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white border-transparent shadow-lg"
                       : "border-gray-200 text-gray-600 hover:border-[#FD561E] hover:text-[#FD561E]"
@@ -125,40 +187,157 @@ const Navbar = () => {
 
         {/* RIGHT SIDE */}
         <div className="hidden md:flex items-center -mr-25 gap-4 flex-shrink-0">
-          <button
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-full border transition-all duration-300 cursor-pointer ${
+
+          <button className={`flex items-center gap-2 -mr-3 ml-2 px-4 py-2 rounded-full border transition-all duration-300 cursor-pointer ${
               isSolid
                 ? "border-gray-300 text-gray-700 hover:bg-gray-100"
                 : "border-white/40 text-white hover:bg-white/10"
-            }`}
-          >
+            }`}>
             <Briefcase className="w-4 h-4" />
             Business
           </button>
 
-          <button
-            className={`flex items-center gap-2 px-6 py-2.5   whitespace-nowrap rounded-full border transition-all duration-300 cursor-pointer ${
+          <button className={`flex items-center  -mr-2 gap-2 px-4 py-2   whitespace-nowrap rounded-full border transition-all duration-300 cursor-pointer ${
               isSolid
                 ? "border-gray-300 text-gray-700 hover:bg-gray-100"
                 : "border-white/40 text-white hover:bg-white/10"
-            }`}
-          >
+            }`}>
             <MapPin className="w-4 h-4" />
             For Travel Agent
           </button>
 
-          <button
-            className={`w-10 h-10 flex items-center justify-center rounded-full border transition-all duration-300 cursor-pointer ${
-              isSolid
-                ? "border-gray-300 text-gray-700 hover:bg-gray-100"
-                : "border-white/40 text-white hover:bg-white/10"
-            }`}
-          >
-            <User className="w-5 h-5" />
-          </button>
+{/* LOGIN AREA */}
+<div
+  className="relative"
+  ref={dropdownRef}
+  onMouseEnter={() => {
+    if (!isLoggedIn) {
+      clearTimeout(closeTimeout.current);
+      setOpenDropdown(true);
+    }
+  }}
+  onMouseLeave={() => {
+    if (!isLoggedIn) {
+      closeTimeout.current = setTimeout(() => {
+        setOpenDropdown(false);
+      }, 300);
+    }
+  }}
+>
+
+<button
+  onClick={() => {
+    if (!isLoggedIn) {
+      setAuthPage("signin");
+      setOpenAuthModal(true);
+    } else {
+      setOpenDropdown(!openDropdown);
+    }
+  }}
+  className={`flex items-center gap-2 -mr-6 px-4 py-2 rounded-full border transition-all duration-300 cursor-pointer ${
+      isSolid
+        ? "border-gray-300 text-gray-700 hover:bg-gray-100"
+        : "border-white/40 text-white hover:bg-white/10"
+    }`}
+>
+<User className="w-5 h-5" />
+
+{isLoggedIn ? (
+<>Hi {user?.uname?.split(" ")[0]}</>
+) : (
+"Login/Signup"
+)}
+
+</button>
+
+{/* GUEST DROPDOWN */}
+
+{!isLoggedIn && openDropdown && (
+<div className="absolute right-0 top-12 w-64 bg-white rounded-xl shadow-lg border border-gray-100 text-gray-700 overflow-hidden">
+ {/* HEADER */}
+
+    <div className="px-4 py-3 bg-gray-50">
+      <p className="font-semibold text-gray-800">Hey Traveller</p>
+      <p className="text-sm text-gray-500">
+        Get exclusive deals & Manage your trips
+      </p>
+    </div>
+
+<button
+  onClick={() => {
+    setAuthPage("signin");
+    setOpenAuthModal(true);
+  }}
+  className="mx-4 my-3   mt-0  w-[calc(100%-32px)] cursor-pointer bg-blue-600 text-white font-semibold py-2.5 rounded-lg hover:bg-blue-700 transition-all duration-300"
+>
+  Login / Sign Up
+</button>
+
+<button className="group w-full text-left px-4 py-3 cursor-pointer border-b border-gray-200 hover:bg-gray-50">
+  <span className="inline-block transition-all duration-200 group-hover:translate-x-2 group-hover:text-blue-600">
+    My Bookings
+  </span>
+</button>
+
+<button className="group w-full text-left px-4 py-3 cursor-pointer border-b border-gray-200 hover:bg-gray-50">
+  <span className="inline-block transition-all duration-200 group-hover:translate-x-2 group-hover:text-blue-600">
+    Print Ticket
+  </span>
+</button>
+
+<button className="group w-full text-left px-4 py-3 cursor-pointer hover:bg-gray-50">
+  <span className="inline-block transition-all duration-200 group-hover:translate-x-2 group-hover:text-blue-600">
+    Cancellation
+  </span>
+</button>
+
+</div>
+)}
+
+{/* EXISTING LOGGED IN DROPDOWN */}
+{isLoggedIn && openDropdown && (
+<div className="absolute right-0 mt-3 w-56 bg-white rounded-xl shadow-lg border border-gray-100 text-gray-700 overflow-hidden">
+
+<button className="group w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50">
+<span className="inline-block transition-all duration-200 group-hover:translate-x-2 group-hover:text-blue-600">
+My Booking
+</span>
+</button>
+
+<button className="group w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50">
+<span className="inline-block transition-all duration-200 group-hover:translate-x-2 group-hover:text-blue-600">
+My Refund
+</span>
+</button>
+
+<button className="group w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50">
+<span className="inline-block transition-all duration-200 group-hover:translate-x-2 group-hover:text-blue-600">
+My eCash
+</span>
+</button>
+
+<button className="group w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50">
+<span className="inline-block transition-all duration-200 group-hover:translate-x-2 group-hover:text-blue-600">
+My Profile
+</span>
+</button>
+
+<button
+onClick={handleLogout}
+className="group w-full text-left px-4 py-3 hover:bg-gray-50 text-red-500"
+>
+<span className="inline-block transition-all duration-200 group-hover:translate-x-2">
+Logout
+</span>
+</button>
+
+</div>
+)}
+
+</div>
+
         </div>
 
-        {/* MOBILE MENU BUTTON */}
         <button
           className="md:hidden text-black"
           onClick={() => setMobileOpen(!mobileOpen)}
@@ -198,7 +377,59 @@ const Navbar = () => {
           </button>
         </div>
       )}
+     <AuthModal
+  isOpen={openAuthModal}
+  onClose={() => setOpenAuthModal(false)}
+>
+
+  {authPage === "signin" && (
+    <SignIn
+      closeModal={() => setOpenAuthModal(false)}
+      openSignup={() => setAuthPage("signup")}
+      openForgot={() => setAuthPage("forgot")}
+    />
+  )}
+
+  {authPage === "signup" && (
+    <SignupForm
+      closeModal={() => setOpenAuthModal(false)}
+      openSignin={() => setAuthPage("signin")}
+      openVerifyOtp={(data) => {
+        setSignupData(data);
+        setAuthPage("verifyotp");
+      }}
+    />
+  )}
+
+  {authPage === "verifyotp" && (
+    <VerifyOTP
+      signupData={signupData}
+      closeModal={() => setOpenAuthModal(false)}
+    />
+  )}
+
+  {authPage === "forgot" && (
+    <ForgotPassword
+      closeModal={() => setOpenAuthModal(false)}
+      openSignin={() => setAuthPage("signin")}
+      openResetPassword={(data) => {
+        setResetData(data);
+        setAuthPage("reset");
+      }}
+    />
+  )}
+
+  {authPage === "reset" && (
+    <ResetPassword
+      resetData={resetData}
+      closeModal={() => setOpenAuthModal(false)}
+      openSignin={() => setAuthPage("signin")}
+    />
+  )}
+
+</AuthModal>
     </nav>
+    
   );
 };
 

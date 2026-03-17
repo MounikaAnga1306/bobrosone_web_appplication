@@ -145,10 +145,17 @@ const [filters, setFilters] = useState({
   });
 };
 useEffect(() => {
-  const result = filterBuses(allTrips, filters);
-  setFilteredTrips(result);
-}, [filters, allTrips]);
 
+  // 1. Apply filters
+  let result = filterBuses(allTrips, filters);
+
+  // 2. Apply sorting
+  result = sortTrips(result, sortType);
+
+  // 3. Update trips
+  setFilteredTrips(result);
+
+}, [filters, allTrips, sortType]);
 
 
   return (

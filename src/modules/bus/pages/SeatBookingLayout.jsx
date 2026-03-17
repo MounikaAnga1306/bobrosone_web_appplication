@@ -13,6 +13,10 @@ const SeatBookingLayout = ({ tripId, open, onClose,fromCity,toCity,source,destin
   const [boardingPoint, setBoardingPoint] = useState(null);
   const [droppingPoint, setDroppingPoint] = useState(null);
   const [warning, setWarning] = useState("");
+
+   const [savedPassengers, setSavedPassengers] = useState(null);
+  const [savedContact, setSavedContact] = useState(null);
+
   const showWarning = (msg) => {
   setWarning(msg);
 };
@@ -53,6 +57,10 @@ const handleStepClick = (stepNumber) => {
   setDroppingPoint(null);
   setWarning("");
 
+   // ← reset saved data too when new trip selected
+    setSavedPassengers(null);
+    setSavedContact(null);
+
   const loadTripDetails = async () => {
     const data = await fetchTripDetails(tripId);
     setTripDetails(data);
@@ -61,6 +69,17 @@ const handleStepClick = (stepNumber) => {
   loadTripDetails();
 
 }, [tripId]);
+
+ // ← ONLY ADDITION: when review page navigates back, go to step 3
+  useEffect(() => {
+    const handlePopState = () => {
+      if (open) {
+        setStep(3);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [open]);
 
   if (!open) return null;
 
@@ -108,6 +127,14 @@ const handleStepClick = (stepNumber) => {
               source={source}
               destination={destination}
               date={date}
+
+              // ← ONLY ADDITION: pass saved data as props
+              existingPassengers={savedPassengers}
+              existingContact={savedContact}
+              onPassengerSubmit={(passengers, contact) => {
+                setSavedPassengers(passengers);
+                setSavedContact(contact);
+              }}
             />
           )}
         </div>
