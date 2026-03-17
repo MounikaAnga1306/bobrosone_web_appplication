@@ -27,10 +27,17 @@ import BookingSuccess from "./modules/bus/pages/BookingSuccess";
 import RazorpayDetails from "./modules/bus/pages/RazorpayDetails";
 import BillDeskDetails from "./modules/bus/pages/BillDeskDetails";
 import PaymentStatus from "./modules/bus/pages/PaymentStatus";
-
+import SignIn from "./modules/bus/pages/SignIn";
+import SignupForm from "./modules/bus/pages/SignUpForm";
+import VerifyOTP from "./modules/bus/pages/VerifyOTP";
+import ForgotPassword from "./modules/bus/pages/ForgotPassword";
+import ResetPassword from "./modules/bus/pages/ResetPassword";
+import { GoogleOAuthProvider } from "@react-oauth/google";
+import ReviewBooking from "./modules/bus/pages/ReviewBooking";
 
 function App() {
   return (
+     <GoogleOAuthProvider clientId="429781379228-bigvifjtcvo0toouf2i08fpc3u4k3vnq.apps.googleusercontent.com">
     <FlightMasterProvider>
       <FlightSearchProvider>
         <HotelSearchProvider> {/* ADD THIS WRAPPER */}
@@ -41,6 +48,12 @@ function App() {
                 <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/HomePage" element={<Home />} />
+                  <Route path="/signin" element={<SignIn />} />
+                  <Route path="/signup" element={<SignupForm />} />
+                  <Route path="/verify-otp" element={<VerifyOTP />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/review-booking" element={<ReviewBooking />} />
                   <Route path="/results" element={<BusResultsPage />} />
                   <Route path="/flights" element={<FlightSearchScreen />} />
                   <Route path="/flights/results" element={<FlightSearchResults />} />
@@ -61,6 +74,7 @@ function App() {
         </HotelSearchProvider> {/* ADD THIS CLOSING TAG */}
       </FlightSearchProvider>
     </FlightMasterProvider>
+    </GoogleOAuthProvider>
   );
 }
 
