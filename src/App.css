@@ -1,4 +1,9 @@
 @import "tailwindcss";
+/* Remove Microsoft Edge password reveal icon */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
 
 #root {
   max-width: 1280px;
