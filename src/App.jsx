@@ -8,15 +8,17 @@ import {
 } from "react-router-dom";
 import { FlightSearchProvider } from "./modules/flights/contexts/FlightSearchContext";
 import FlightTracker from "./modules/flights/pages/FlightTracker";
-import FlightSearchScreen from "./modules/flights/pages/FlightSearchScreen";
-import FlightSearchResults from "./modules/flights/pages/FlightSearchResult";
+import SearchPage from "./modules/flights/pages/FlightSearchScreen"; // renamed from FlightSearchScreen
+import OneWayPage from "./modules/flights/pages/OneWayPage"; // renamed from FlightSearchResult
+import RoundTripPage from "./modules/flights/pages/RoundTripPage"; // renamed from RoundTripSelection
+import MultiCityPage from "./modules/flights/pages/MultiCityPage"; // renamed from MultiCitySelection
 import PNRSearch from "./modules/flights/pages/PNRSearch";
 import { FlightMasterProvider } from "./modules/flights/providers/CarrierCodeProvider";
 
 // Import Hotel components
 import HotelsHomeScreen from "./modules/hotels/pages/HotelsHomeScreen";
 import HotelSearchResults from "./modules/hotels/pages/HotelSearchResults";
-import { HotelSearchProvider } from "./modules/hotels/context/HotelSearchContext"; // ADD THIS
+import { HotelSearchProvider } from "./modules/hotels/context/HotelSearchContext";
 import HotelDetails from './modules/hotels/pages/HotelDetails';
 
 import Navbar from "./globalfiles/Navbar";
@@ -60,10 +62,16 @@ function App() {
                   <Route path="/guest-bookings" element={<GuestBookingsPage />} />
                   <Route path="/cancel-ticket" element={<CancelTicketPage />} />
                   <Route path="/results" element={<BusResultsPage />} />
-                  <Route path="/flights" element={<FlightSearchScreen />} />
-                  <Route path="/flights/results" element={<FlightSearchResults />} />
+                  
+                  {/* Flight Routes - UPDATED with new names */}
+                  <Route path="/flights" element={<SearchPage />} />
+                  <Route path="/flights/results" element={<OneWayPage />} />
+                  <Route path="/flights/round-trip" element={<RoundTripPage />} />
+                  <Route path="/flights/multi-city" element={<MultiCityPage />} />
                   <Route path="/flights/tracker" element={<FlightTracker />} />
                   <Route path="/flights/pnr-search" element={<PNRSearch />} />
+                  
+                  {/* Hotel Routes */}
                   <Route path="/hotels" element={<HotelsHomeScreen />} />
                   <Route path="/hotels/results" element={<HotelSearchResults />} />
                    <Route path="/booking-success" element={<BookingSuccess />} />

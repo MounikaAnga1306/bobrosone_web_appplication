@@ -5,7 +5,7 @@ import React, { createContext, useState, useContext, useCallback } from 'react';
 const FlightSearchContext = createContext();
 
 export const FlightSearchProvider = ({ children }) => {
-  // Store search parameters - COMPLETELY EMPTY initially
+  // Store search parameters - NOW SUPPORTS MULTIPLE LEGS
   const [searchParams, setSearchParams] = useState({
     legs: [
       {
@@ -14,8 +14,11 @@ export const FlightSearchProvider = ({ children }) => {
         departureDate: ''     
       }
     ],
-    passengers: []  // COMPLETELY EMPTY - user will select
+    passengers: []  // EMPTY - user will select
   });
+
+  // Store trip type
+  const [tripType, setTripType] = useState('one-way'); // 'one-way', 'round-trip', 'multi-city'
 
   // For UI display - EMPTY initially
   const [airportDetails, setAirportDetails] = useState({
@@ -25,7 +28,10 @@ export const FlightSearchProvider = ({ children }) => {
 
   // Store flight results from API
   const [flightResults, setFlightResults] = useState({
-    flights: [],           // Transformed flights for display
+    flights: [],           // For one-way display
+    roundTripDisplay: null, // For round trip two-column display
+    multiCity: { legs: [], combinations: [] }, // For multi-city
+    brandDetails: {},
     loading: false,
     error: null,
     searchId: null,
@@ -36,6 +42,9 @@ export const FlightSearchProvider = ({ children }) => {
   const [selectedFlight, setSelectedFlight] = useState(null);
   const [selectedFare, setSelectedFare] = useState(null);
   
+  // NEW: Selected flights for round trip and multi-city
+  const [selectedLegFlights, setSelectedLegFlights] = useState([]);
+  
   // UI state
   const [view, setView] = useState('list'); // 'list' or 'detail'
   const [sortBy, setSortBy] = useState('price'); // 'price', 'duration', 'departure'
@@ -45,22 +54,34 @@ export const FlightSearchProvider = ({ children }) => {
     setSearchParams(prev => ({ ...prev, ...newParams }));
   }, []);
 
-  // Update leg information
-  const updateLeg = useCallback((legData) => {
-    setSearchParams(prev => ({
-      ...prev,
-      legs: [{ ...prev.legs[0], ...legData }]
-    }));
+  // Update trip type
+  const updateTripType = useCallback((type) => {
+    setTripType(type);
+  }, []);
+
+  // Update leg information - NOW SUPPORTS MULTIPLE LEGS
+  const updateLeg = useCallback((index, legData) => {
+    setSearchParams(prev => {
+      const newLegs = [...prev.legs];
+      if (!newLegs[index]) {
+        // Create new leg if it doesn't exist
+        newLegs[index] = { origin: '', destination: '', departureDate: '' };
+      }
+      newLegs[index] = { ...newLegs[index], ...legData };
+      return { ...prev, legs: newLegs };
+    });
   }, []);
 
   // Update origin (store code in searchParams, details separately)
   const updateOrigin = useCallback((airport) => {
     if (!airport) return;
     
-    // Store code in searchParams (for API)
+    // Store code in searchParams (for API) - update first leg
     setSearchParams(prev => ({
       ...prev,
-      legs: [{ ...prev.legs[0], origin: airport.code }]
+      legs: prev.legs.map((leg, index) => 
+        index === 0 ? { ...leg, origin: airport.code } : leg
+      )
     }));
     
     // Store full details for UI display
@@ -71,15 +92,18 @@ export const FlightSearchProvider = ({ children }) => {
   const updateDestination = useCallback((airport) => {
     if (!airport) return;
     
+    // Store code in searchParams (for API) - update first leg
     setSearchParams(prev => ({
       ...prev,
-      legs: [{ ...prev.legs[0], destination: airport.code }]
+      legs: prev.legs.map((leg, index) => 
+        index === 0 ? { ...leg, destination: airport.code } : leg
+      )
     }));
     
     setAirportDetails(prev => ({ ...prev, destination: airport }));
   }, []);
 
-  // Update departure date
+  // Update departure date (first leg)
   const updateDepartureDate = useCallback((date) => {
     if (!date) return;
     
@@ -94,8 +118,48 @@ export const FlightSearchProvider = ({ children }) => {
     
     setSearchParams(prev => ({
       ...prev,
-      legs: [{ ...prev.legs[0], departureDate: dateString }]
+      legs: prev.legs.map((leg, index) => 
+        index === 0 ? { ...leg, departureDate: dateString } : leg
+      )
     }));
+  }, []);
+
+  // NEW: Update return date (second leg)
+  const updateReturnDate = useCallback((date) => {
+    if (!date) return;
+    
+    // Format date to YYYY-MM-DD
+    let dateString = date;
+    if (date instanceof Date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      dateString = `${year}-${month}-${day}`;
+    }
+    
+    setSearchParams(prev => {
+      // Make sure we have at least 2 legs
+      const legs = [...prev.legs];
+      if (legs.length < 2) {
+        // Add second leg if it doesn't exist
+        legs.push({ 
+          origin: legs[0]?.destination || '', 
+          destination: legs[0]?.origin || '',
+          departureDate: dateString 
+        });
+      } else {
+        // Update existing second leg
+        legs[1] = { 
+          ...legs[1], 
+          departureDate: dateString,
+          // Ensure origin/destination are correct for return
+          origin: legs[0]?.destination || legs[1]?.origin || '',
+          destination: legs[0]?.origin || legs[1]?.destination || ''
+        };
+      }
+      
+      return { ...prev, legs };
+    });
   }, []);
 
   // Update passengers - TAKES WHATEVER COMES FROM UI
@@ -139,17 +203,26 @@ export const FlightSearchProvider = ({ children }) => {
       passengers: []  // EMPTY - no defaults
     });
     
+    setTripType('one-way');
+    
     setAirportDetails({
       origin: null,
       destination: null
     });
     
     clearResults();
+    setSelectedLegFlights([]);
   }, []);
 
   // Update flight results
   const updateFlightResults = useCallback((results) => {
-    setFlightResults(prev => ({ ...prev, ...results }));
+    setFlightResults(prev => ({ 
+      ...prev, 
+      ...results,
+      flights: results.flights || prev.flights || [],
+      roundTripDisplay: results.roundTripDisplay || prev.roundTripDisplay || null,
+      multiCity: results.multiCity || prev.multiCity || { legs: [], combinations: [] }
+    }));
   }, []);
 
   // Set loading state
@@ -166,6 +239,9 @@ export const FlightSearchProvider = ({ children }) => {
   const clearResults = useCallback(() => {
     setFlightResults({
       flights: [],
+      roundTripDisplay: null,
+      multiCity: { legs: [], combinations: [] },
+      brandDetails: {},
       loading: false,
       error: null,
       searchId: null,
@@ -173,6 +249,7 @@ export const FlightSearchProvider = ({ children }) => {
     });
     setSelectedFlight(null);
     setSelectedFare(null);
+    setSelectedLegFlights([]);
     setView('list');
   }, []);
 
@@ -190,6 +267,30 @@ export const FlightSearchProvider = ({ children }) => {
     setView('list');
   }, []);
 
+  // NEW: Select flight for a specific leg (round trip/multi-city)
+  const selectFlightForLeg = useCallback((legIndex, flight) => {
+    console.log('Context: Selecting flight for leg', legIndex, flight?.id);
+    setSelectedLegFlights(prev => {
+      const newSelected = [...prev];
+      newSelected[legIndex] = flight;
+      return newSelected;
+    });
+  }, []);
+
+  // NEW: Clear selection for a specific leg
+  const clearLegSelection = useCallback((legIndex) => {
+    setSelectedLegFlights(prev => {
+      const newSelected = [...prev];
+      newSelected[legIndex] = null;
+      return newSelected;
+    });
+  }, []);
+
+  // NEW: Get total selected flights count
+  const getSelectedCount = useCallback(() => {
+    return selectedLegFlights.filter(Boolean).length;
+  }, [selectedLegFlights]);
+
   // Update sorting
   const updateSortBy = useCallback((sortOption) => {
     setSortBy(sortOption);
@@ -206,32 +307,44 @@ export const FlightSearchProvider = ({ children }) => {
 
   // Check if search is valid (has required fields)
   const isSearchValid = useCallback(() => {
-    const leg = searchParams.legs[0];
-    return (
-      leg.origin &&
-      leg.destination &&
-      leg.departureDate &&
-      leg.origin !== leg.destination && // Origin and destination should be different
-      searchParams.passengers.length > 0 // At least one passenger
+    if (searchParams.legs.length === 0) return false;
+    
+    const firstLeg = searchParams.legs[0];
+    const isValid = (
+      firstLeg.origin &&
+      firstLeg.destination &&
+      firstLeg.departureDate &&
+      firstLeg.origin !== firstLeg.destination &&
+      searchParams.passengers.length > 0
     );
-  }, [searchParams]);
+    
+    // For round trip, also check return date
+    if (tripType === 'round-trip' && searchParams.legs.length > 1) {
+      const returnLeg = searchParams.legs[1];
+      return isValid && returnLeg.departureDate;
+    }
+    
+    return isValid;
+  }, [searchParams, tripType]);
 
-  // Get search summary for display (using airport details)
+  // Get search summary for display
   const getSearchSummary = useCallback(() => {
-    const leg = searchParams.legs[0];
+    if (searchParams.legs.length === 0) return null;
+    
+    const firstLeg = searchParams.legs[0];
     
     // If no data, return empty
-    if (!leg.origin || !leg.destination || !leg.departureDate) {
+    if (!firstLeg.origin || !firstLeg.destination || !firstLeg.departureDate) {
       return null;
     }
     
-    const fromCode = leg.origin;
-    const toCode = leg.destination;
+    const fromCode = firstLeg.origin;
+    const toCode = firstLeg.destination;
     
     const fromName = airportDetails.origin?.name || fromCode;
     const toName = airportDetails.destination?.name || toCode;
     
-    const date = new Date(leg.departureDate).toLocaleDateString('en-IN', {
+    const date = new Date(firstLeg.departureDate).toLocaleDateString('en-IN', {
       day: 'numeric',
       month: 'short',
       year: 'numeric'
@@ -247,20 +360,37 @@ export const FlightSearchProvider = ({ children }) => {
     
     const passengerText = passengerParts.join(', ');
     
+    // Add return date for round trip
+    let returnDateInfo = null;
+    if (tripType === 'round-trip' && searchParams.legs.length > 1) {
+      const returnLeg = searchParams.legs[1];
+      if (returnLeg.departureDate) {
+        returnDateInfo = new Date(returnLeg.departureDate).toLocaleDateString('en-IN', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric'
+        });
+      }
+    }
+    
     return {
       fromCode,
       toCode,
       fromName,
       toName,
-      date: leg.departureDate,
+      date: firstLeg.departureDate,
       formattedDate: date,
+      returnDate: returnDateInfo,
       passengerText,
       passengerCounts: counts,
-      route: `${fromCode} → ${toCode}`,
-      routeWithNames: `${fromName} to ${toName}`,
-      fullText: `${fromCode} to ${toCode} on ${date} for ${passengerText}`
+      tripType,
+      route: tripType === 'round-trip' ? `${fromCode} ↔ ${toCode}` : `${fromCode} → ${toCode}`,
+      routeWithNames: tripType === 'round-trip' ? `${fromName} ↔ ${toName}` : `${fromName} to ${toName}`,
+      fullText: tripType === 'round-trip' 
+        ? `${fromCode} ↔ ${toCode} from ${date} to ${returnDateInfo} for ${passengerText}`
+        : `${fromCode} to ${toCode} on ${date} for ${passengerText}`
     };
-  }, [searchParams, airportDetails, getPassengerCounts]);
+  }, [searchParams, airportDetails, getPassengerCounts, tripType]);
 
   // Get the exact API request body
   const getApiRequestBody = useCallback(() => {
@@ -274,14 +404,17 @@ export const FlightSearchProvider = ({ children }) => {
     // Search data
     searchParams,
     airportDetails,
+    tripType,
     
     // Update methods
     updateSearchParams,
+    updateTripType,
     updateLeg,
     updateOrigin,
     updateDestination,
     updateDepartureDate,
-    updatePassengers,    // This takes whatever UI gives
+    updateReturnDate,
+    updatePassengers,
     addPassenger,
     removePassenger,
     resetSearch,
@@ -295,6 +428,12 @@ export const FlightSearchProvider = ({ children }) => {
     selectedFare,
     selectFlight,
     backToList,
+    
+    // NEW: Round trip & multi-city selection
+    selectedLegFlights,
+    selectFlightForLeg,
+    clearLegSelection,
+    getSelectedCount,
     
     // UI
     view,

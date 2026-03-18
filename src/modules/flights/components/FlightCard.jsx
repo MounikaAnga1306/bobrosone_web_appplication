@@ -17,10 +17,11 @@ import {
   FaTimes,
   FaCheckCircle,
   FaArrowRight,
-  FaBolt
+  FaBolt,
+  FaUserFriends
 } from 'react-icons/fa';
 
-const FlightCard = ({ flight,  onFlightSelect }) => {
+const FlightCard = ({ flight, passengerCounts = { adults: 1, children: 0, infants: 0 }, onFlightSelect }) => {
   const [showAllFares, setShowAllFares] = useState(false);
   
   if (!flight) return null;
@@ -50,13 +51,21 @@ const FlightCard = ({ flight,  onFlightSelect }) => {
   const lowestPrice = allFares.length > 0 ? Math.min(...allFares.map(f => f.price)) : 0;
   const lowestFare = allFares.find(f => f.price === lowestPrice) || allFares[0] || {};
 
+  // ============ PASSENGER INFO ============
+  const adultCount = passengerCounts?.adults || 1;
+  const childCount = passengerCounts?.children || 0;
+  const infantCount = passengerCounts?.infants || 0;
+  const totalPassengers = adultCount + childCount + infantCount;
+
+  // Calculate per adult price (total price / number of adults)
+  const calculatePerAdultPrice = (totalPrice) => {
+    return Math.round(totalPrice / adultCount);
+  };
+
   // ============ HELPER FUNCTIONS ============
 
   // Get color based on brand
  
-
-  // Get icon based on brand
-  
 
   // Get brand badge style
   const getBrandBadge = (brandName) => {
@@ -85,7 +94,7 @@ const FlightCard = ({ flight,  onFlightSelect }) => {
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-all duration-200">
       {/* Main Flight Card - Always Visible */}
       <div className="p-6">
-        {/* Top Row: Airline + Flight Number + Price */}
+        {/* Top Row: Airline + Flight Number + Price + Passenger Info */}
         <div className="flex flex-wrap items-start justify-between mb-4">
           <div className="flex items-center gap-3">
             {/* Airline Logo Placeholder */}
@@ -110,13 +119,17 @@ const FlightCard = ({ flight,  onFlightSelect }) => {
             </div>
           </div>
           
-          {/* Price */}
+          {/* Price with passenger count */}
           <div className="text-right">
             <div className="text-2xl font-bold text-[#FD561E]">
               {formatPrice(lowestPrice)}
             </div>
-            <div className="text-xs text-gray-500">
-              per adult
+            <div className="text-xs text-gray-500 flex items-center justify-end gap-1">
+              <FaUserFriends size={12} />
+              <span>for {totalPassengers} {totalPassengers === 1 ? 'passenger' : 'passengers'}</span>
+            </div>
+            <div className="text-xs text-gray-400">
+              (₹{formatPrice(calculatePerAdultPrice(lowestPrice))}/adult)
             </div>
           </div>
         </div>
@@ -154,7 +167,7 @@ const FlightCard = ({ flight,  onFlightSelect }) => {
 
         {/* Bottom Row: Quick Info */}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-gray-100">
-          {/* Left: Baggage Info */}
+          {/* Left: Baggage & Seats Info */}
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-1 text-sm text-gray-600">
               <FaSuitcase className="text-[#FD561E]" size={14} />
@@ -190,6 +203,7 @@ const FlightCard = ({ flight,  onFlightSelect }) => {
               const brandName = fare.brand?.name || 'Economy';
               const brandBadge = getBrandBadge(brandName);
               const isLowest = index === 0;
+              const perAdultPrice = calculatePerAdultPrice(fare.price);
               
               return (
                 <div 
@@ -214,7 +228,10 @@ const FlightCard = ({ flight,  onFlightSelect }) => {
                         <span className="text-lg font-bold text-[#FD561E]">
                           {formatPrice(fare.price)}
                         </span>
-                        <span className="text-xs text-gray-500 ml-1">/adult</span>
+                        <span className="text-xs text-gray-500 ml-1">total</span>
+                        <div className="text-xs text-gray-500">
+                          ₹{formatPrice(perAdultPrice)}/adult
+                        </div>
                       </div>
                     </div>
                     
