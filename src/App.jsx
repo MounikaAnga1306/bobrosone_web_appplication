@@ -27,22 +27,40 @@ import FooterBottom from "./globalfiles/FooterBottom";
 import BusResultsPage from "./modules/bus/pages/BusResultsPage";
 import BillHome from "./modules/Bill Payments/pages/BillHomeScreen";
 import BookingSuccess from "./modules/bus/pages/BookingSuccess";
-import RazorpayDetails from "./modules/bus/pages/RazorpayDetails";
-import BillDeskDetails from "./modules/bus/pages/BillDeskDetails";
 import PaymentStatus from "./modules/bus/pages/PaymentStatus";
+import SignIn from "./modules/bus/pages/SignIn";
+import SignupForm from "./modules/bus/pages/SignUpForm";
+import VerifyOTP from "./modules/bus/pages/VerifyOTP";
+import ForgotPassword from "./modules/bus/pages/ForgotPassword";
+import ResetPassword from "./modules/bus/pages/ResetPassword";
+import { GoogleOAuthProvider } from "@react-oauth/google";
+import ReviewBooking from "./modules/bus/pages/ReviewBooking";
+import MyBookings from "./modules/bus/pages/MyBookings";
+import GuestBookingsPage from "./modules/bus/pages/GuestBookingPage";
+import CancelTicketPage from "./modules/bus/pages/CancelTicketPage";
 
 function App() {
   return (
-    <Router>
-      <FlightMasterProvider>
-        <FlightSearchProvider>
-          <HotelSearchProvider>
+     <GoogleOAuthProvider clientId="429781379228-bigvifjtcvo0toouf2i08fpc3u4k3vnq.apps.googleusercontent.com">
+    <FlightMasterProvider>
+      <FlightSearchProvider>
+        <HotelSearchProvider> {/* ADD THIS WRAPPER */}
+          <Router>
             <div className="min-h-screen bg-gray-100 flex flex-col">
               <Navbar />
               <div className="flex-1">
                 <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/HomePage" element={<Home />} />
+                  <Route path="/signin" element={<SignIn />} />
+                  <Route path="/signup" element={<SignupForm />} />
+                  <Route path="/verify-otp" element={<VerifyOTP />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/review-booking" element={<ReviewBooking />} />
+                  <Route path="/my-bookings" element={<MyBookings />} />
+                  <Route path="/guest-bookings" element={<GuestBookingsPage />} />
+                  <Route path="/cancel-ticket" element={<CancelTicketPage />} />
                   <Route path="/results" element={<BusResultsPage />} />
                   
                   {/* Flight Routes - UPDATED with new names */}
@@ -56,24 +74,18 @@ function App() {
                   {/* Hotel Routes */}
                   <Route path="/hotels" element={<HotelsHomeScreen />} />
                   <Route path="/hotels/results" element={<HotelSearchResults />} />
-                  <Route path="/hotels/details/:hotelId" element={<HotelDetails />} />
-                  
-                  {/* Bus Routes */}
-                  <Route path="/booking-success" element={<BookingSuccess />} />
-                  <Route path="/razorpay-details" element={<RazorpayDetails />} />
-                  <Route path="/billdesk-details" element={<BillDeskDetails />} />
-                  <Route path="/payment-status" element={<PaymentStatus />} />
-                  
-                  {/* Fallback Route */}
+                   <Route path="/booking-success" element={<BookingSuccess />} />
+                   <Route path="/payment-status" element={<PaymentStatus />} />
                   <Route path="*" element={<Navigate to="/" />} />
                 </Routes>
               </div>
             </div>
             <FooterBottom />
-          </HotelSearchProvider>
-        </FlightSearchProvider>
-      </FlightMasterProvider>
-    </Router>
+          </Router>
+        </HotelSearchProvider> {/* ADD THIS CLOSING TAG */}
+      </FlightSearchProvider>
+    </FlightMasterProvider>
+    </GoogleOAuthProvider>
   );
 }
 

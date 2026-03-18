@@ -1,18 +1,19 @@
 import { useState } from "react";
 
-const sortOptions = [
+
+const SortBar = ({ busCount,onSortChange, }) => {
+  const [active, setActive] = useState(null);
+  const handleSort = (value) => {
+    setActive(value);
+    onSortChange(value);
+  };
+  const sortOptions = [
   { label: "Early Departure", value: "Early Departure" },
   { label: "Late Departure", value: "Late Departure" },
   { label: "Price: High to Low", value: "High to Low" },
   { label: "Price: Low to High", value: "Low to High" },
 ];
 
-const SortBar = ({ busCount,onSortChange }) => {
-  const [active, setActive] = useState(null);
-  const handleSort = (value) => {
-    setActive(value);
-    onSortChange(value);
-  };
 
  
   return (
@@ -39,7 +40,7 @@ const SortBar = ({ busCount,onSortChange }) => {
                     : "text-gray-500 hover:text-gray-800"
                 }`}
               >
-                {option.value}
+                {option.label}
               </button>
             ))}
           </div>

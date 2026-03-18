@@ -10,4 +10,19 @@ export default defineConfig({
       },
     }),
   ],
+   server: {
+    proxy: {
+      '/bookticket': 'http://localhost:5000',
+      '/guestBookings': 'http://localhost:5000',
+      '/myBookings': 'http://localhost:5000',
+      '/rewardPoints': 'http://localhost:5000',
+      '/searchTrips': 'http://localhost:5000',
+      '/tripdetails': 'http://localhost:5000',
+      '/blockTicket': 'http://localhost:5000',
+      '/razorpayment': 'http://localhost:5000',
+      '/billdesk': 'http://localhost:5000',
+      '/verifyPayment': 'http://localhost:5000',
+      '/cities': 'http://localhost:5000',
+    }
+  }
 })
