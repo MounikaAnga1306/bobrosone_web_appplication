@@ -10,6 +10,7 @@ const rateLimit = require("express-rate-limit");
 
 const app = express();
 
+
 // =========================
 // SECURITY & MIDDLEWARE
 // =========================
@@ -391,6 +392,278 @@ app.get("/rewardPoints", async (req, res) => {
 
   }
 });
+
+// =========================
+// MY BOOKINGS ENDPOINT
+// =========================
+app.post("/myBookings", async (req, res) => {
+  try {
+    const { uid, mobile } = req.body;
+
+    if (!uid && !mobile) {
+      return res.status(400).json({ success: false, message: "uid or mobile required" });
+    }
+
+    const url = `${process.env.BASE_URL}/db/select`;
+
+    const response = await axios.post(url, {
+      table: "uticket",
+      columns: ["*"],
+      conditions: {
+        or: [
+          { uid: String(uid) },
+          { uid: String(mobile) }
+        ]
+      }
+    }, {
+      headers: { "Content-Type": "application/json" }
+    });
+
+    console.log("My Bookings Response:", response.data);
+    res.json({ success: true, bookings: response.data?.rows || [] });
+
+  } catch (error) {
+    console.error("My Bookings Error:", error.response?.data || error.message);
+    res.status(500).json({ success: false, message: "Failed to fetch bookings" });
+  }
+});
+
+// =========================
+// GUEST BOOKINGS - VERIFY OTP
+// =========================
+app.post("/guestBookings/verify", async (req, res) => {
+  try {
+    const { email, mobile } = req.body;
+
+    if (!email || !mobile) {
+      return res.status(400).json({ success: false, message: "email and mobile required" });
+    }
+
+    const url = `${process.env.BASE_URL}/mybookings/verify`;  // ← env నుండి
+
+    const response = await axios.post(url, { email, mobile }, {
+      headers: { "Content-Type": "application/json" }
+    });
+
+    console.log("Guest Verify Response:", response.data);
+    res.json({ success: true, data: response.data });
+
+  } catch (error) {
+    console.error("Guest Verify Error:", error.response?.data || error.message);
+    res.status(500).json({ success: false, message: "Failed to send OTP" });
+  }
+});
+
+// =========================
+// GUEST BOOKINGS - FETCH DATA WITH OTP
+// =========================
+app.post("/guestBookings/data", async (req, res) => {
+  try {
+    const { email, mobile, otp } = req.body;
+
+    if (!email || !mobile || !otp) {
+      return res.status(400).json({ success: false, message: "email, mobile and otp required" });
+    }
+
+    // Step 1: verify OTP
+    const dataUrl = `${process.env.BASE_URL}/mybookings/data`;  // ← env నుండి
+    const dataRes = await axios.post(dataUrl, { email, mobile, otp }, {
+      headers: { "Content-Type": "application/json" }
+    });
+
+    console.log("Guest Data Response:", dataRes.data);
+
+    // Step 2: fetch tickets
+    const ticketUrl = `${process.env.BASE_URL}/db/select`;  // ← env నుండి
+    const ticketRes = await axios.post(ticketUrl, {
+      table: "uticket",
+      columns: ["*"],
+      conditions: {
+       uid: String(mobile)
+      }
+    }, {
+      headers: { "Content-Type": "application/json" }
+    });
+
+    console.log("Guest Tickets Response:", ticketRes.data);
+
+    res.json({
+      success: true,
+      bookings: ticketRes.data?.rows || []
+    });
+
+  } catch (error) {
+    console.error("Guest Data Error:", error.response?.data || error.message);
+    res.status(500).json({ success: false, message: error.response?.data?.message || "Failed to fetch bookings" });
+  }
+});
+
+// =========================
+// BOOK TICKET WITH REWARD POINTS
+// =========================
+app.post("/bookticket/rp", async (req, res) => {
+  try {
+    const { blockedTicketId, payeeid, name, email, fare, paymentfor } = req.body;
+
+    if (!blockedTicketId || !payeeid) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "blockedTicketId and payeeid required" 
+      });
+    }
+
+    const url = `${process.env.BASE_URL}/bookticket/rp`;
+
+    const requestData = { url, method: "POST", body: req.body };
+    const headers = oauth.toHeader(oauth.authorize(requestData));
+    headers["Content-Type"] = "application/json";
+
+    console.log("Book Ticket RP Body:", req.body);
+
+    const response = await axios.post(url, req.body, { headers });
+
+    console.log("Book Ticket RP Response:", response.data);
+
+    res.json(response.data);
+
+  } catch (error) {
+    console.error("Book Ticket RP Error:", error.response?.data || error.message);
+    res.status(500).json({ 
+      success: false, 
+      message: error.response?.data?.message || "Failed to book ticket with reward points" 
+    });
+  }
+});
+
+// =========================
+// CANCEL VERIFY USER
+// =========================
+app.post("/cancel/verify", async (req, res) => {
+  try {
+    const { ticket, mobile, email } = req.body;
+
+    if (!ticket || !mobile || !email) {
+      return res.status(400).json({
+        success: false,
+        message: "ticket, mobile, email required"
+      });
+    }
+
+    const url = `${process.env.BASE_URL}/cancelt/verifyuser`;
+
+    console.log("Cancel Verify Body:", req.body);
+
+   const requestData = {
+  url,
+  method: "POST",
+  body: req.body
+};
+
+const headers = oauth.toHeader(oauth.authorize(requestData));
+headers["Content-Type"] = "application/json";
+
+const response = await axios.post(url, req.body, { headers });
+    console.log("Cancel Verify Response:", response.data);
+
+    res.json(response.data);
+
+  } catch (error) {
+    console.error("Cancel Verify Error:", error.response?.data || error.message);
+
+    res.status(500).json({
+      success: false,
+      message: error.response?.data || "Verification failed"
+    });
+  }
+});
+
+// =========================
+// CANCEL DATA (OTP VERIFY)
+// =========================
+app.post("/cancel/data", async (req, res) => {
+  try {
+    const { mobile, ticketId, otp } = req.body;
+
+    if (!mobile || !ticketId || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: "mobile, ticketId, otp required"
+      });
+    }
+
+    const url = `${process.env.BASE_URL}/cancelt/cancellationData`;
+
+    console.log("Cancel Data Body:", req.body);
+
+    const requestData = {
+  url,
+  method: "POST",
+  body: req.body
+};
+
+const headers = oauth.toHeader(oauth.authorize(requestData));
+headers["Content-Type"] = "application/json";
+
+const response = await axios.post(url, req.body, { headers });
+
+    console.log("Cancel Data Response:", response.data);
+
+    res.json(response.data);
+
+  } catch (error) {
+    console.error("Cancel Data Error:", error.response?.data || error.message);
+
+    res.status(500).json({
+      success: false,
+      message: error.response?.data || "OTP verification failed"
+    });
+  }
+});
+
+// =========================
+// CANCEL TICKET
+// =========================
+app.post("/cancel/ticket", async (req, res) => {
+  try {
+    const { tin, seatsToCancel } = req.body;
+
+    if (!tin || !seatsToCancel?.length) {
+      return res.status(400).json({
+        success: false,
+        message: "tin and seatsToCancel required"
+      });
+    }
+
+    const url = `${process.env.BASE_URL}/cancelt/cancelTicket`;
+
+    console.log("Cancel Ticket Body:", req.body);
+
+   const requestData = {
+  url,
+  method: "POST",
+  body: req.body
+};
+
+const headers = oauth.toHeader(oauth.authorize(requestData));
+headers["Content-Type"] = "application/json";
+
+const response = await axios.post(url, req.body, { headers });
+
+    console.log("Cancel Ticket Response:", response.data);
+
+    res.json(response.data);
+
+  } catch (error) {
+    console.error("Cancel Ticket Error:", error.response?.data || error.message);
+
+    res.status(500).json({
+      success: false,
+      message: error.response?.data || "Cancellation failed"
+    });
+  }
+});
+
+
 // =========================
 // React Routing Support
 // =========================
