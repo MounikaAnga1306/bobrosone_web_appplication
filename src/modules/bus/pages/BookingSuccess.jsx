@@ -33,6 +33,7 @@ const BookingSuccess = () => {
   const availableRewardPoint = parseFloat(state?.availableRewardPoint) || 0; 
 
   const discountedFare = promoApplied ? totalFare - promoDiscount : totalFare;
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
   // Reward points logic
   const canPayFullWithRewards = availableRewardPoint >= discountedFare;
@@ -80,8 +81,47 @@ const BookingSuccess = () => {
 
   const handlePopupConfirm = async (useRewards) => {
     setShowPaymentPopup(false);
+    if (useRewards && canPayFullWithRewards) {
+  try {
+    const body = {
+      blockedTicketId: state?.ticketId,
+      payeeid: String(uid),
+      name: state?.passengers?.[0]?.name || "Guest",
+      email: state?.passengers?.[0]?.email || "",
+      fare: discountedFare,
+      paymentfor: "Bus Ticket RP"
+    };
 
-    if (useRewards && availableRewardPoint > 0) {
+    console.log("Full Reward Payment Body:", body);
+
+    const res = await axios.post("/bookticket/rp", body);
+
+    if (res.data?.success) {
+       setShowSuccessPopup(true);
+       setTimeout(() =>{
+      navigate("/payment-status", {
+        state: {
+          status: "success",
+          paymentData: res.data,
+          passengers: state?.passengers,
+          seats: state?.seats,
+          fromCity: state?.fromCity,
+          toCity: state?.toCity,
+          date: state?.date,
+          totalFare: discountedFare,
+          ticketId: state?.ticketId
+        }
+      });
+    },2000);
+      return; // 🟢 STOP HERE — gateway ki vellakudadhu
+    }
+
+  } catch (err) {
+    console.error("Full reward payment error:", err);
+  }
+}
+
+    if (useRewards && availableRewardPoint > 0 && !canPayFullWithRewards) {
       try {
         const body = {
           blockedTicketId: state?.ticketId,
@@ -220,17 +260,28 @@ const BookingSuccess = () => {
       <div className="w-[700px]">
         <div className="bg-white rounded-xl shadow-md p-8">
 
-          <h1 className="text-3xl text-center font-semibold text-[#fd561e] mb-6">
-            Ticket Payment Confirmation
-          </h1>
+         {/* ── HEADER ROW ── */}
+<div className="flex items-center justify-between mb-6">
+  <h1 className="text-3xl font-semibold text-[#fd561e] flex-1 text-center">
+    Ticket Payment Confirmation
+  </h1>
+
+  {/* ← Timer right side కి */}
+  <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-full px-4 py-2">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <polyline points="12 6 12 12 16 14"/>
+    </svg>
+    <span className="text-red-600 font-bold text-sm">
+      {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, "0")}
+    </span>
+  </div>
+</div>
 
           <div className="bg-blue-100 border-l-4 border-blue-500 p-4 rounded mb-4">
             Ticket is tentatively Blocked for you, please complete your payment within next <b>8 Minutes</b>.
           </div>
 
-          <p className="text-red-600 font-semibold mb-4">
-            Seat reserved for : {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, "0")}
-          </p>
 
           <p className="mb-4 text-lg">
             <span className="font-semibold">Temporary Booking Reference:</span> {state?.ticketId}
@@ -419,6 +470,26 @@ const BookingSuccess = () => {
                 </div>
               </>
             )}
+            {showSuccessPopup && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-xl p-6 w-[350px] text-center shadow-xl">
+      
+      <div className="text-green-600 text-4xl mb-3">✅</div>
+
+      <h2 className="text-xl font-bold text-gray-800 mb-2">
+        Booking Successful!
+      </h2>
+
+      <p className="text-sm text-gray-600 mb-4">
+        Your ticket has been booked successfully.
+      </p>
+
+      <p className="text-xs text-gray-400">
+        Redirecting to details...
+      </p>
+    </div>
+  </div>
+)}
 
           </div>
         </div>
