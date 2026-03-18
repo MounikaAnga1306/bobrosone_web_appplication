@@ -25,8 +25,6 @@ import FooterBottom from "./globalfiles/FooterBottom";
 import BusResultsPage from "./modules/bus/pages/BusResultsPage";
 import BillHome from "./modules/Bill Payments/pages/BillHomeScreen";
 import BookingSuccess from "./modules/bus/pages/BookingSuccess";
-import RazorpayDetails from "./modules/bus/pages/RazorpayDetails";
-import BillDeskDetails from "./modules/bus/pages/BillDeskDetails";
 import PaymentStatus from "./modules/bus/pages/PaymentStatus";
 import SignIn from "./modules/bus/pages/SignIn";
 import SignupForm from "./modules/bus/pages/SignUpForm";
@@ -35,6 +33,9 @@ import ForgotPassword from "./modules/bus/pages/ForgotPassword";
 import ResetPassword from "./modules/bus/pages/ResetPassword";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import ReviewBooking from "./modules/bus/pages/ReviewBooking";
+import MyBookings from "./modules/bus/pages/MyBookings";
+import GuestBookingsPage from "./modules/bus/pages/GuestBookingPage";
+import CancelTicketPage from "./modules/bus/pages/CancelTicketPage";
 
 function App() {
   return (
@@ -55,6 +56,9 @@ function App() {
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/review-booking" element={<ReviewBooking />} />
+                  <Route path="/my-bookings" element={<MyBookings />} />
+                  <Route path="/guest-bookings" element={<GuestBookingsPage />} />
+                  <Route path="/cancel-ticket" element={<CancelTicketPage />} />
                   <Route path="/results" element={<BusResultsPage />} />
                   <Route path="/flights" element={<FlightSearchScreen />} />
                   <Route path="/flights/results" element={<FlightSearchResults />} />
@@ -63,8 +67,6 @@ function App() {
                   <Route path="/hotels" element={<HotelsHomeScreen />} />
                   <Route path="/hotels/results" element={<HotelSearchResults />} />
                    <Route path="/booking-success" element={<BookingSuccess />} />
-                   <Route path="/razorpay-details" element={<RazorpayDetails />} />
-                   <Route path="/billdesk-details" element={<BillDeskDetails />} />
                    <Route path="/payment-status" element={<PaymentStatus />} />
                   <Route path="*" element={<Navigate to="/" />} />
                 </Routes>
