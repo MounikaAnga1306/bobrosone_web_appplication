@@ -419,8 +419,19 @@ app.post("/myBookings", async (req, res) => {
       headers: { "Content-Type": "application/json" }
     });
 
-    console.log("My Bookings Response:", response.data);
-    res.json({ success: true, bookings: response.data?.rows || [] });
+    const allRows = response.data?.rows || [];
+    
+    // ✅ ఇక్కడ add చేయి
+    console.log("All Rows:", JSON.stringify(allRows, null, 2));
+
+    const confirmedBookings = allRows.filter(b =>
+      b.tin_ticket && b.tin_ticket !== "0"
+    );
+
+    // ✅ ఇక్కడ add చేయి
+    console.log("Confirmed:", JSON.stringify(confirmedBookings, null, 2));
+
+    res.json({ success: true, bookings: confirmedBookings });
 
   } catch (error) {
     console.error("My Bookings Error:", error.response?.data || error.message);
@@ -457,6 +468,7 @@ app.post("/guestBookings/verify", async (req, res) => {
 // =========================
 // GUEST BOOKINGS - FETCH DATA WITH OTP
 // =========================
+// server.js - guestBookings/data
 app.post("/guestBookings/data", async (req, res) => {
   try {
     const { email, mobile, otp } = req.body;
@@ -465,36 +477,25 @@ app.post("/guestBookings/data", async (req, res) => {
       return res.status(400).json({ success: false, message: "email, mobile and otp required" });
     }
 
-    // Step 1: verify OTP
-    const dataUrl = `${process.env.BASE_URL}/mybookings/data`;  // ← env నుండి
+    const dataUrl = `${process.env.BASE_URL}/mybookings/data`;
     const dataRes = await axios.post(dataUrl, { email, mobile, otp }, {
       headers: { "Content-Type": "application/json" }
     });
 
     console.log("Guest Data Response:", dataRes.data);
 
-    // Step 2: fetch tickets
-    const ticketUrl = `${process.env.BASE_URL}/db/select`;  // ← env నుండి
-    const ticketRes = await axios.post(ticketUrl, {
-      table: "uticket",
-      columns: ["*"],
-      conditions: {
-       uid: String(mobile)
-      }
-    }, {
-      headers: { "Content-Type": "application/json" }
-    });
+    const allBookings = dataRes.data?.bookingDetails || dataRes.data?.bookings || dataRes.data?.rows || [];
 
-    console.log("Guest Tickets Response:", ticketRes.data);
+    const guestBookings = allBookings.filter(b => b.uid === String(mobile));
 
-    res.json({
-      success: true,
-      bookings: ticketRes.data?.rows || []
-    });
+    return res.json({ success: true, bookings: guestBookings });
 
   } catch (error) {
     console.error("Guest Data Error:", error.response?.data || error.message);
-    res.status(500).json({ success: false, message: error.response?.data?.message || "Failed to fetch bookings" });
+    res.status(500).json({
+      success: false,
+      message: error.response?.data?.message || "Failed to fetch bookings"
+    });
   }
 });
 
@@ -662,6 +663,86 @@ const response = await axios.post(url, req.body, { headers });
     });
   }
 });
+
+// =========================
+// MY ACCOUNT ENDPOINT
+// =========================
+app.post("/myAccount", async (req, res) => {
+  try {
+    const { uid } = req.body;
+    if (!uid) return res.status(400).json({ success: false, message: "uid required" });
+
+    const url = `${process.env.BASE_URL}/db/select`;
+    const response = await axios.post(url, {
+      table: "t_account",
+      columns: ["*"],
+      conditions: { id: String(uid) }
+    }, { headers: { "Content-Type": "application/json" } });
+
+    const rows = response.data?.rows || [];
+    res.json({ success: true, transactions: rows });
+  } catch (error) {
+    console.error("My Account Error:", error.response?.data || error.message);
+    res.status(500).json({ success: false, message: "Failed to fetch account data" });
+  }
+});
+
+// =========================
+// OFFER APPLY ENDPOINT
+// =========================
+app.post("/offer/apply", async (req, res) => {
+  try {
+    console.log("Offer Apply Body:", req.body);
+ 
+    const response = await axios.post(
+      "https://api.bobros.co.in/offer/apply-offer/",
+      req.body,
+      { headers: { "Content-Type": "application/json" } }
+    );
+ 
+    console.log("Offer Apply Response:", response.data);
+    res.json(response.data);
+ 
+  } catch (error) {
+    console.error("Offer Apply Error:", error.response?.data || error.message);
+ 
+    // Return backend error message to frontend (important!)
+    res.status(error.response?.status || 500).json(
+      error.response?.data || { success: false, message: "Offer apply failed" }
+    );
+  }
+});
+
+// =========================
+// PRINT TICKET ENDPOINT
+// =========================
+app.get("/printTicket", async (req, res) => {
+  try {
+    const { tin } = req.query;
+
+    if (!tin) {
+      return res.status(400).json({ success: false, message: "tin is required" });
+    }
+
+    const url = `${process.env.BASE_URL}/email/print-ticket?tin=${tin}`;
+    console.log("Print Ticket API:", url);
+
+    const requestData = { url, method: "GET" };
+    const headers = oauth.toHeader(oauth.authorize(requestData));
+
+    const response = await axios.get(url, { headers });
+
+    console.log("Print Ticket Response:", response.data);
+
+    res.json(response.data);
+
+  } catch (error) {
+    console.error("Print Ticket Error:", error.response?.data || error.message);
+    res.status(500).json({ success: false, message: "Failed to fetch ticket details" });
+  }
+});
+
+
 
 
 // =========================
