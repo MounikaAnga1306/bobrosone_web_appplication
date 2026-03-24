@@ -39,29 +39,36 @@ const SearchBar = () => {
   const fromRef = useRef(null);
   const toRef = useRef(null);
 
-  /* PREFILL WHEN COMING FROM HOME PAGE */
+  /* ✅ PREFILL FIX (IMPORTANT) */
   useEffect(() => {
     const state = location.state || {};
 
     const sourceId = params.get("source");
     const destinationId = params.get("destination");
 
+    // FROM
     if (state.sourceName) {
       setFrom(state.sourceName);
       setFromCity({
         sid: sourceId,
         cityname: state.sourceName,
       });
+    } else if (sourceId) {
+      setFromCity({ sid: sourceId });
     }
 
+    // TO
     if (state.destinationName) {
       setTo(state.destinationName);
       setToCity({
         sid: destinationId,
         cityname: state.destinationName,
       });
+    } else if (destinationId) {
+      setToCity({ sid: destinationId });
     }
 
+    // DATE
     let date = null;
 
     if (state.date) {
@@ -96,7 +103,7 @@ const SearchBar = () => {
     }
   };
 
-  /* SWAP (ONLY SWAPS VALUES) */
+  /* SWAP */
   const handleSwap = () => {
     setFrom(to);
     setTo(from);
@@ -105,17 +112,17 @@ const SearchBar = () => {
     setToCity(fromCity);
   };
 
-  /* UPDATE SEARCH BUTTON */
+  /* ✅ SEARCH BUTTON FIX */
   const handleSearch = () => {
     setFromError("");
     setToError("");
 
-    if (!fromCity) {
+    if (!fromCity || !fromCity.sid) {
       setFromError("Please select the departure city");
       return;
     }
 
-    if (!toCity) {
+    if (!toCity || !toCity.sid) {
       setToError("Please select the destination city");
       return;
     }
@@ -127,23 +134,23 @@ const SearchBar = () => {
       return;
     }
 
-   const formattedDate =
-  selectedDate.getFullYear() +
-  "-" +
-  String(selectedDate.getMonth() + 1).padStart(2, "0") +
-  "-" +
-  String(selectedDate.getDate()).padStart(2, "0");
+    const formattedDate =
+      selectedDate.getFullYear() +
+      "-" +
+      String(selectedDate.getMonth() + 1).padStart(2, "0") +
+      "-" +
+      String(selectedDate.getDate()).padStart(2, "0");
 
     navigate(
       `/results?source=${fromCity.sid}&destination=${toCity.sid}&doj=${formattedDate}`,
       {
         replace: true,
         state: {
-          sourceName: fromCity.cityname,
-          destinationName: toCity.cityname,
+          sourceName: from || "",
+          destinationName: to || "",
           date: formattedDate,
         },
-      },
+      }
     );
   };
 
@@ -152,7 +159,7 @@ const SearchBar = () => {
     const date = new Date(
       currentDate.getFullYear(),
       currentDate.getMonth(),
-      day,
+      day
     );
 
     if (date >= today) {
@@ -165,17 +172,17 @@ const SearchBar = () => {
     return date.toLocaleDateString("en-GB");
   };
 
-  /* CALENDAR CALCULATION */
+  /* CALENDAR */
   const daysInMonth = new Date(
     currentDate.getFullYear(),
     currentDate.getMonth() + 1,
-    0,
+    0
   ).getDate();
 
   const firstDay = new Date(
     currentDate.getFullYear(),
     currentDate.getMonth(),
-    1,
+    1
   ).getDay();
 
   const monthName = currentDate.toLocaleString("default", { month: "long" });
@@ -185,12 +192,12 @@ const SearchBar = () => {
     const date = new Date(
       currentDate.getFullYear(),
       currentDate.getMonth(),
-      day,
+      day
     );
     return date < today;
   };
 
-  /* CLICK OUTSIDE CLOSE */
+  /* CLICK OUTSIDE */
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (calendarRef.current && !calendarRef.current.contains(e.target)) {
@@ -213,8 +220,10 @@ const SearchBar = () => {
   return (
     <div className="w-full bg-[#f36b32] py-6 sticky top-0 z-40 shadow-sm">
       <div className="max-w-7xl mx-auto px-4">
-<div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_1fr_auto] gap-3 items-end">          {/* FROM */}
-          <div className=" relative" ref={fromRef}>
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_1fr_auto] gap-3 items-end">
+
+          {/* FROM */}
+          <div className="relative" ref={fromRef}>
             <p className="text-white text-xs font-semibold mb-1">FROM</p>
 
             <input
@@ -253,7 +262,7 @@ const SearchBar = () => {
           </div>
 
           {/* SWAP */}
-          <div className="  flex justify-center mb-1 ">
+          <div className="flex justify-center mb-1">
             <button
               onClick={handleSwap}
               disabled={!fromCity || !toCity}
@@ -264,7 +273,7 @@ const SearchBar = () => {
           </div>
 
           {/* TO */}
-          <div className="   relative" ref={toRef}>
+          <div className="relative" ref={toRef}>
             <p className="text-white text-xs font-semibold mb-1">TO</p>
 
             <input
@@ -317,79 +326,80 @@ const SearchBar = () => {
                 {formatDate(selectedDate)}
               </span>
             </div>
-            {/* CALENDAR DROPDOWN */}
-  {showCalendar && (
-    <div className="absolute top-16 left-0 bg-white rounded-md shadow-xl p-4 z-50 w-72">
-      
-      {/* HEADER */}
-      <div className="flex justify-between items-center mb-3">
-        <button
-          onClick={() =>
-            setCurrentDate(
-              new Date(currentDate.getFullYear(), currentDate.getMonth() - 1)
-            )
-          }
-        >
-          <ChevronLeft size={18} />
-        </button>
 
-        <span className="font-semibold">
-          {monthName} {year}
-        </span>
+            {showCalendar && (
+              <div className="absolute top-16 left-0 bg-white rounded-md shadow-xl p-4 z-50 w-72">
+                <div className="flex justify-between items-center mb-3">
+                  <button
+                    onClick={() =>
+                      setCurrentDate(
+                        new Date(
+                          currentDate.getFullYear(),
+                          currentDate.getMonth() - 1
+                        )
+                      )
+                    }
+                  >
+                    <ChevronLeft size={18} />
+                  </button>
 
-        <button
-          onClick={() =>
-            setCurrentDate(
-              new Date(currentDate.getFullYear(), currentDate.getMonth() + 1)
-            )
-          }
-        >
-          <ChevronRight size={18} />
-        </button>
-      </div>
+                  <span className="font-semibold">
+                    {monthName} {year}
+                  </span>
 
-      {/* DAYS GRID */}
-      <div className="grid grid-cols-7 gap-1 text-center text-sm">
-        {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((day) => (
-          <div key={day} className="font-semibold text-gray-500">
-            {day}
-          </div>
-        ))}
+                  <button
+                    onClick={() =>
+                      setCurrentDate(
+                        new Date(
+                          currentDate.getFullYear(),
+                          currentDate.getMonth() + 1
+                        )
+                      )
+                    }
+                  >
+                    <ChevronRight size={18} />
+                  </button>
+                </div>
 
-        {/* Empty spaces */}
-        {Array.from({ length: firstDay }).map((_, i) => (
-          <div key={"empty" + i}></div>
-        ))}
+                <div className="grid grid-cols-7 gap-1 text-center text-sm">
+                  {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((day) => (
+                    <div key={day} className="font-semibold text-gray-500">
+                      {day}
+                    </div>
+                  ))}
 
-        {/* Days */}
-        {Array.from({ length: daysInMonth }).map((_, index) => {
-          const day = index + 1;
-          const isPast = isPastDate(day);
-          const isSelected =
-            selectedDate.getDate() === day &&
-            selectedDate.getMonth() === currentDate.getMonth() &&
-            selectedDate.getFullYear() === currentDate.getFullYear();
+                  {Array.from({ length: firstDay }).map((_, i) => (
+                    <div key={"empty" + i}></div>
+                  ))}
 
-          return (
-            <div
-              key={day}
-              onClick={() => !isPast && handleDateSelect(day)}
-              className={`p-2 rounded cursor-pointer
-                ${isPast ? "text-gray-300 cursor-not-allowed" : ""}
-                ${isSelected ? "bg-[#f36b32] text-white" : "hover:bg-gray-100"}
-              `}
-            >
-              {day}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  )}
+                  {Array.from({ length: daysInMonth }).map((_, index) => {
+                    const day = index + 1;
+                    const isPast = isPastDate(day);
+                    const isSelected =
+                      selectedDate.getDate() === day &&
+                      selectedDate.getMonth() === currentDate.getMonth() &&
+                      selectedDate.getFullYear() === currentDate.getFullYear();
+
+                    return (
+                      <div
+                        key={day}
+                        onClick={() => !isPast && handleDateSelect(day)}
+                        className={`p-2 rounded cursor-pointer
+                          ${isPast ? "text-gray-300 cursor-not-allowed" : ""}
+                          ${isSelected ? "bg-[#f36b32] text-white" : "hover:bg-gray-100"}
+                        `}
+                      >
+                        {day}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* SEARCH */}
-          <div >
+          <div>
             <button
               onClick={handleSearch}
               className="w-[150px] h-12 bg-white text-black font-bold rounded-md shadow cursor-pointer transition-all duration-300 hover:text-[#fd561e]"

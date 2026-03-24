@@ -9,39 +9,55 @@ import cab from "../../../assets/cab.jpg";
 import bill from "../../../assets/bill.png";
 import service from "../../../assets/IT_Services.jpg";
 
-// ✅ Image hover animation (NO looping now)
+// ✅ Image hover animation - smoother and more subtle
 const imageHover = {
-  rest: { y: 0, scale: 1 },
+  rest: { y: 0, scale: 1, rotate: 0 },
   hover: {
-    y: -6,
-    scale: 1.12,
-    transition: { type: "spring", stiffness: 260, damping: 16 },
+    y: -8,
+    scale: 1.1,
+    rotate: 2,
+    transition: { 
+      type: "spring", 
+      stiffness: 300, 
+      damping: 14 
+    },
   },
 };
-// ✅ Entry animation (cards rise from bottom on load)
+
+// ✅ Entry animation - smoother fade from bottom
 const cardEntry = {
-  hidden: { opacity: 0, y: 60 }, // start BELOW
+  hidden: { opacity: 0, y: 30 },
   show: (i) => ({
     opacity: 1,
     y: 0,
     transition: {
-      delay: i * 0.08,
-      duration: 0.6,
-      ease: [0.22, 1, 0.36, 1],
+      delay: i * 0.06,
+      duration: 0.5,
+      ease: "easeOut",
     },
   }),
 };
-// ✅ Card hover animation (clean lift)
+
+// ✅ Card hover animation - maintains exact same size, only lift and shadow
 const cardHover = {
-  rest: { y: 0, boxShadow: "0 10px 20px rgba(0,0,0,0.08)" },
+  rest: { 
+    y: 0, 
+    boxShadow: "0 10px 20px rgba(0,0,0,0.08)",
+    scale: 1,
+  },
   hover: {
-    y: -10,
-    boxShadow: "0 25px 50px rgba(0,0,0,0.15)",
-    transition: { type: "spring", stiffness: 160, damping: 16 },
+    y: -8,
+    boxShadow: "0 25px 40px rgba(253,86,30,0.15)",
+    scale: 1,
+    transition: { 
+      type: "spring", 
+      stiffness: 200, 
+      damping: 18 
+    },
   },
 };
 
-// Service Card
+// Service Card - EXACT same structure, only animations changed
 function ServiceCard({ image, title, description, contain }) {
   return (
     <motion.div
@@ -61,10 +77,15 @@ function ServiceCard({ image, title, description, contain }) {
         pb-6 pt-20 sm:pt-24
         flex flex-col items-center text-center
         mt-16
-        transition-all duration-300
+        transition-colors duration-300
+        w-full
       "
+      style={{ 
+        minHeight: "280px",
+        width: "100%",
+      }}
     >
-      {/* Image */}
+      {/* Image with enhanced animation */}
       <motion.div
         variants={imageHover}
         className="
@@ -77,6 +98,7 @@ function ServiceCard({ image, title, description, contain }) {
           border-[5px] sm:border-[6px] border-white
           shadow-xl bg-white
           flex items-center justify-center
+          z-10
         "
       >
         <img
@@ -88,37 +110,61 @@ function ServiceCard({ image, title, description, contain }) {
         />
       </motion.div>
 
-      {/* Title with motion */}
+      {/* Title with enhanced animation */}
       <motion.h3
         variants={{
           rest: { y: 0, color: "#111827" },
-          hover: { y: -4, color: "#fd561e" },
+          hover: { y: -3, color: "#fd561e", scale: 1.02 },
         }}
-        transition={{ type: "spring", stiffness: 200, damping: 14 }}
+        transition={{ type: "spring", stiffness: 300, damping: 12 }}
         className="text-base sm:text-lg md:text-xl font-bold mb-2 relative"
       >
         {title}
 
-        {/* Animated underline */}
+        {/* Animated underline with smoother transition */}
         <motion.span
           variants={{
-            rest: { width: 0, opacity: 0 },
-            hover: { width: "60%", opacity: 1 },
+            rest: { width: 0, opacity: 0, left: "50%" },
+            hover: { 
+              width: "60%", 
+              opacity: 1, 
+              left: "20%",
+            },
           }}
-          transition={{ duration: 0.3 }}
-          className="absolute left-1/2 -translate-x-1/2 -bottom-1 h-[2px] bg-[#fd561e] rounded"
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className="absolute -bottom-1 h-[2.5px] bg-gradient-to-r from-[#fd561e] to-[#ff8a5c] rounded-full"
         />
       </motion.h3>
 
-      {/* Description */}
-      <p className="text-xs sm:text-sm md:text-base text-gray-600 leading-relaxed max-w-xs sm:max-w-sm">
+      {/* Description with subtle fade on hover */}
+      <motion.p
+        variants={{
+          rest: { opacity: 0.9, y: 0 },
+          hover: { opacity: 1, y: -2 },
+        }}
+        transition={{ duration: 0.2 }}
+        className="text-xs sm:text-sm md:text-base text-gray-600 leading-relaxed max-w-xs sm:max-w-sm"
+      >
         {description}
-      </p>
+      </motion.p>
+
+      {/* Subtle shine overlay on hover */}
+      <motion.div
+        variants={{
+          rest: { opacity: 0, x: "-100%" },
+          hover: { 
+            opacity: 0.2, 
+            x: "100%",
+            transition: { duration: 0.6, ease: "easeInOut" }
+          },
+        }}
+        className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent pointer-events-none rounded-2xl"
+      />
     </motion.div>
   );
 }
 
-// Main Page
+// Main Page - EXACT same structure
 export default function Service() {
   const services = [
     {
@@ -131,32 +177,32 @@ export default function Service() {
       image: flights,
       title: "Flights",
       description:
-        "Quick and hassle-free flight bookings(off-line)for domestic and international travel.For bookings, visit any of our branch or contact us",
+        "Quick and hassle-free flight bookings(off-line)for domestic and international travel. For bookings, visit any of our branch or contact us",
     },
     {
       image: bill,
-      title: "Bill Payment",
+      title: "Bill Payments",
       description:
-        "Simplifying your bill payments.Safe, fast, and convenient payments across all services.",
+        "Simplifying your bill payments. Safe, fast, and convenient payments across all services.",
       contain: true,
     },
     {
       image: hotels,
       title: "Hotels",
       description:
-        "Book comfortable stays at top hotels with ease and flexibility.Visit any branch or contact us for bookings",
+        "Book comfortable stays at top hotels with ease and flexibility. Visit any branch or contact us for bookings",
     },
     {
       image: holiday,
       title: "Holiday Package",
       description:
-        "Curated travel packages to explore the best destinations.To know more about our packages and for bookings,visit any of our branch or contact us",
+        "Curated travel packages to explore the best destinations. To know more about our packages and for bookings,visit any of our branch or contact us",
     },
     {
       image: cab,
       title: "Cab Service",
       description:
-        "Affordable cab rentals for personal travel or business commute.For bookings,visit any of our branch or contact us",
+        "Affordable cab rentals for personal travel or business commute. For bookings,visit any of our branch or contact us",
     },
     {
       image: service,
@@ -167,21 +213,22 @@ export default function Service() {
   ];
 
   return (
-    <div className=" bg-white py-16 sm:py-20 px-4 sm:px-6 ">
+    <div className="bg-white py-16 sm:py-20 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl -mt-10 sm:text-4xl md:text-5xl font-bold text-center mb-12 sm:mb-16 text-black-500">
+        <h1 className="text-3xl -mt-10 sm:text-4xl md:text-5xl font-bold text-center mb-12 sm:mb-16 text-gray-900">
           Our Services
         </h1>
 
         <div
           className="
-          grid 
-          grid-cols-1 
-          sm:grid-cols-2 
-          lg:grid-cols-3 
-          gap-x-6 sm:gap-x-10 
-          gap-y-16 sm:gap-y-20
-        "
+            grid 
+            grid-cols-1 
+            sm:grid-cols-2 
+            lg:grid-cols-3 
+            gap-x-6 sm:gap-x-10 
+            gap-y-16 sm:gap-y-20
+            justify-items-center
+          "
         >
           {services.map((service, index) => (
             <motion.div
@@ -189,8 +236,9 @@ export default function Service() {
               variants={cardEntry}
               initial="hidden"
               whileInView="show"
-              viewport={{ once: true, margin: "-80px" }}
+              viewport={{ once: true, margin: "-50px" }}
               custom={index}
+              className="w-full max-w-[350px]"
             >
               <ServiceCard {...service} />
             </motion.div>

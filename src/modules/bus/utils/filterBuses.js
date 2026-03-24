@@ -19,6 +19,7 @@ export const filterBuses = (buses, filters) => {
 
     // Primo
     if (filters.primo && !isPrimo) return false;
+
    // 6PM - 12AM popular filter
 if (filters.evening) {
   const dep = Number(bus.departureTime);
@@ -56,27 +57,23 @@ if (filters.evening) {
       if (!match) return false;
     }
 
-    // Boarding Point
+    // FIXED: boardingTimes can be array or single object
     if (filters.boarding?.size && bus.boardingTimes) {
-  const boardingPoints = bus.boardingTimes.map((bp) => bp.bpName);
+      const raw = bus.boardingTimes;
+      const arr = Array.isArray(raw) ? raw : [raw];
+      const boardingNames = arr.map((bp) => bp.bpName);
+      const match = boardingNames.some((bp) => filters.boarding.has(bp));
+      if (!match) return false;
+    }
 
-  const match = boardingPoints.some((bp) =>
-    filters.boarding.has(bp)
-  );
-
-  if (!match) return false;
-}
-
-    // Dropping Point
-   if (filters.dropping?.size && bus.droppingTimes?.length) {
-  const dropPoints = bus.droppingTimes.map((dp) => dp.bpName);
-
-  const match = dropPoints.some((dp) =>
-    filters.dropping.has(dp)
-  );
-
-  if (!match) return false;
-}
+    // FIXED: droppingTimes can be array or single object
+    if (filters.dropping?.size && bus.droppingTimes) {
+      const raw = bus.droppingTimes;
+      const arr = Array.isArray(raw) ? raw : [raw];
+      const dropNames = arr.map((dp) => dp.bpName);
+      const match = dropNames.some((dp) => filters.dropping.has(dp));
+      if (!match) return false;
+    }
 
     // Operator
     if (filters.ops?.size) {

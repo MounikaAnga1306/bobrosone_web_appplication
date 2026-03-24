@@ -12,6 +12,10 @@ export default defineConfig({
   ],
    server: {
     proxy: {
+      '/offer': 'http://localhost:5000',
+      '/cancel': 'http://localhost:5000',
+      '/myAccount': 'http://localhost:5000',
+       '/printTicket': 'http://localhost:5000',
       '/bookticket': 'http://localhost:5000',
       '/guestBookings': 'http://localhost:5000',
       '/myBookings': 'http://localhost:5000',
