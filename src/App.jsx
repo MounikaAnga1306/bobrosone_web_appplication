@@ -15,6 +15,10 @@ import MultiCityPage from "./modules/flights/pages/MultiCityPage"; // renamed fr
 import PNRSearch from "./modules/flights/pages/PNRSearch";
 import { FlightMasterProvider } from "./modules/flights/providers/CarrierCodeProvider";
 
+
+// Add this import with your other flight imports
+import BookingReviewPage from "./modules/flights/pages/BookingReviewPage";
+
 // Import Hotel components
 import HotelsHomeScreen from "./modules/hotels/pages/HotelsHomeScreen";
 import HotelSearchResults from "./modules/hotels/pages/HotelSearchResults";
@@ -70,6 +74,8 @@ function App() {
                   <Route path="/flights/multi-city" element={<MultiCityPage />} />
                   <Route path="/flights/tracker" element={<FlightTracker />} />
                   <Route path="/flights/pnr-search" element={<PNRSearch />} />
+
+                  <Route path="/flights/booking/review" element={<BookingReviewPage />} />
                   
                   {/* Hotel Routes */}
                   <Route path="/hotels" element={<HotelsHomeScreen />} />

@@ -1,20 +1,24 @@
 // src/modules/flights/pages/OneWayPage.jsx
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useFlightSearchContext } from '../contexts/FlightSearchContext';
 import OneWayFlightCard from '../components/shared/OneWayFlightCard';
 import BottomBar from '../components/shared/BottomBar';
-import FlightDetailSheet from '../components/sheet/FlightDetailSheet';
+import OneWaySheet from '../components/sheet/OneWaySheet'; // Changed import
 import FilterSidebar from '../components/shared/FilterSidebar';
 import {
   FaArrowLeft,
   FaPlane,
   FaExclamationTriangle,
-  FaSyncAlt,
-  FaChevronRight,
   FaUserFriends,
   FaFilter,
-  FaTimes
+  FaTimes,
+  FaChevronDown,
+  FaChevronRight,
+  FaCalendarAlt,
+  FaMapMarkerAlt,
+  FaInfoCircle
 } from 'react-icons/fa';
 
 const OneWayPage = () => {
@@ -33,52 +37,43 @@ const OneWayPage = () => {
   // State for detail sheet
   const [showDetailSheet, setShowDetailSheet] = useState(false);
   const [selectedFlightForSheet, setSelectedFlightForSheet] = useState(null);
-  const [selectedFareForSheet, setSelectedFareForSheet] = useState(null);
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const [sortBy, setSortBy] = useState('price-low');
 
   // Filter states
   const [priceRange, setPriceRange] = useState({ min: 0, max: 100000 });
   const [selectedAirlines, setSelectedAirlines] = useState([]);
   const [selectedStops, setSelectedStops] = useState([]);
   const [selectedTimes, setSelectedTimes] = useState([]);
-  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  // ============ ALL FUNCTIONS MUST BE DEFINED BEFORE THEY'RE USED ============
+  // Sort options
+  const sortOptions = [
+    { value: 'price-low', label: 'Price: Low to High' },
+    { value: 'price-high', label: 'Price: High to Low' },
+    { value: 'duration', label: 'Duration: Shortest' },
+    { value: 'departure', label: 'Departure: Earliest' },
+    { value: 'arrival', label: 'Arrival: Earliest' }
+  ];
 
-  // Handle close sheet - DEFINE THIS EARLY
+  // Handle close sheet
   const handleCloseSheet = () => {
-    console.log('Closing sheet');
     setShowDetailSheet(false);
     setSelectedFlightForSheet(null);
-    setSelectedFareForSheet(null);
   };
 
-  // Handle view details
- // In OneWayPage.jsx - Update the handleViewDetails function
-
-// ============ UPDATED: Handle view details with brand data ============
-const handleViewDetails = (flight) => {
-  console.log('🔍 Opening sheet for flight:', {
-    id: flight.id,
-    brand: flight.brand,
-    faresCount: flight.fares?.length
-  });
-  
-  // Ensure we have brand data - try to get from fares if not directly on flight
-  const flightWithBrand = {
-    ...flight,
-    brand: flight.brand || flight.fares?.[0]?.brand || { 
-      name: 'Economy', 
-      description: 'Standard economy fare with basic amenities.'
-    }
+  // ============ UPDATED: Handle view details - Send FULL flight with all fares ============
+  const handleViewDetails = (flight) => {
+    console.log('🔍 Opening OneWaySheet for flight:', {
+      id: flight.id,
+      faresCount: flight.fares?.length || 1
+    });
+    
+    // Send the COMPLETE flight object with all fares
+    // Don't modify or pick only the first fare
+    setSelectedFlightForSheet(flight);
+    setShowDetailSheet(true);
   };
-  
-  // If there are multiple fares, pass the first one as selected fare
-  const selectedFare = flight.fares?.[0] || flightWithBrand;
-  
-  setSelectedFlightForSheet(flightWithBrand);
-  setSelectedFareForSheet(selectedFare);
-  setShowDetailSheet(true);
-};
 
   // Handle flight selection
   const handleFlightSelect = (flight) => {
@@ -93,6 +88,7 @@ const handleViewDetails = (flight) => {
   // Handle continue to booking
   const handleContinue = () => {
     if (selectedFlight && selectedFare) {
+      // Open sheet with selected flight
       handleViewDetails(selectedFlight);
     }
   };
@@ -126,20 +122,89 @@ const handleViewDetails = (flight) => {
     
     const airlineMap = new Map();
     flights.forEach(flight => {
-      if (!airlineMap.has(flight.airline)) {
-        airlineMap.set(flight.airline, {
+      const key = flight.airline || flight.airlineCode;
+      if (!airlineMap.has(key)) {
+        airlineMap.set(key, {
           name: flight.airline,
           code: flight.airlineCode,
-          count: 1
+          count: 1,
+          logo: flight.airlineCode
         });
       } else {
-        const existing = airlineMap.get(flight.airline);
+        const existing = airlineMap.get(key);
         existing.count += 1;
       }
     });
     
-    return Array.from(airlineMap.values());
+    return Array.from(airlineMap.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [flights]);
+
+  // Apply filters and sorting to flights
+  const filteredAndSortedFlights = useMemo(() => {
+    if (!flights?.length) return [];
+
+    let filtered = [...flights];
+
+    // Apply price filter
+    if (priceRange.min > flightPriceRange.min || priceRange.max < flightPriceRange.max) {
+      filtered = filtered.filter(f => {
+        const price = f.lowestPrice || f.price;
+        return price >= priceRange.min && price <= priceRange.max;
+      });
+    }
+
+    // Apply airline filter
+    if (selectedAirlines.length > 0) {
+      filtered = filtered.filter(f => 
+        selectedAirlines.includes(f.airline)
+      );
+    }
+
+    // Apply stops filter
+    if (selectedStops.length > 0) {
+      filtered = filtered.filter(f => {
+        if (selectedStops.includes('non-stop') && f.stops === 0) return true;
+        if (selectedStops.includes('1-stop') && f.stops === 1) return true;
+        if (selectedStops.includes('2+ stops') && f.stops >= 2) return true;
+        return false;
+      });
+    }
+
+    // Apply time filter
+    if (selectedTimes.length > 0) {
+      filtered = filtered.filter(f => {
+        const hour = new Date(f.departureTime).getHours();
+        if (selectedTimes.includes('early-morning') && hour >= 0 && hour < 6) return true;
+        if (selectedTimes.includes('morning') && hour >= 6 && hour < 12) return true;
+        if (selectedTimes.includes('afternoon') && hour >= 12 && hour < 18) return true;
+        if (selectedTimes.includes('evening') && hour >= 18 && hour <= 23) return true;
+        return false;
+      });
+    }
+
+    // Apply sorting
+    switch (sortBy) {
+      case 'price-low':
+        filtered.sort((a, b) => (a.lowestPrice || 0) - (b.lowestPrice || 0));
+        break;
+      case 'price-high':
+        filtered.sort((a, b) => (b.lowestPrice || 0) - (a.lowestPrice || 0));
+        break;
+      case 'duration':
+        filtered.sort((a, b) => (a.duration || 0) - (b.duration || 0));
+        break;
+      case 'departure':
+        filtered.sort((a, b) => new Date(a.departureTime) - new Date(b.departureTime));
+        break;
+      case 'arrival':
+        filtered.sort((a, b) => new Date(a.arrivalTime) - new Date(b.arrivalTime));
+        break;
+      default:
+        break;
+    }
+
+    return filtered;
+  }, [flights, priceRange, selectedAirlines, selectedStops, selectedTimes, sortBy, flightPriceRange]);
 
   // Reset all filters
   const resetFilters = () => {
@@ -181,7 +246,7 @@ const handleViewDetails = (flight) => {
     );
   };
 
-  // Get search summary for display
+  // Get search summary
   const searchSummary = useMemo(() => {
     return getSearchSummary();
   }, [getSearchSummary]);
@@ -193,23 +258,23 @@ const handleViewDetails = (flight) => {
     }
     
     return {
-      adults: searchParams.passengers?.filter(p => p.code === 'ADT').length || 1,
-      children: searchParams.passengers?.filter(p => p.code === 'CNN').length || 0,
-      infants: searchParams.passengers?.filter(p => p.code === 'INF').length || 0
+      ADT: searchParams.passengers?.filter(p => p.code === 'ADT').length || 1,
+      CNN: searchParams.passengers?.filter(p => p.code === 'CNN').length || 0,
+      INF: searchParams.passengers?.filter(p => p.code === 'INF').length || 0
     };
   }, [passengerBreakdown, searchParams.passengers]);
 
   // Format passenger text
   const passengerText = useMemo(() => {
     const parts = [];
-    if (passengerCounts.adults > 0) {
-      parts.push(`${passengerCounts.adults} Adult${passengerCounts.adults > 1 ? 's' : ''}`);
+    if (passengerCounts.ADT > 0) {
+      parts.push(`${passengerCounts.ADT} Adult${passengerCounts.ADT > 1 ? 's' : ''}`);
     }
-    if (passengerCounts.children > 0) {
-      parts.push(`${passengerCounts.children} Child${passengerCounts.children > 1 ? 'ren' : ''}`);
+    if (passengerCounts.CNN > 0) {
+      parts.push(`${passengerCounts.CNN} Child${passengerCounts.CNN > 1 ? 'ren' : ''}`);
     }
-    if (passengerCounts.infants > 0) {
-      parts.push(`${passengerCounts.infants} Infant${passengerCounts.infants > 1 ? 's' : ''}`);
+    if (passengerCounts.INF > 0) {
+      parts.push(`${passengerCounts.INF} Infant${passengerCounts.INF > 1 ? 's' : ''}`);
     }
     return parts.join(', ');
   }, [passengerCounts]);
@@ -217,11 +282,19 @@ const handleViewDetails = (flight) => {
   // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[#FD561E] mx-auto mb-4"></div>
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">Searching for Flights</h2>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center bg-white p-8 rounded-2xl shadow-lg max-w-md">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-20 w-20 border-4 border-gray-200 border-t-[#FD561E] mx-auto mb-6"></div>
+            <FaPlane className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-[#FD561E] text-xl animate-pulse" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-800 mb-2">Searching for Flights</h2>
           <p className="text-gray-600">Finding the best options for your journey...</p>
+          <div className="mt-4 flex justify-center space-x-1">
+            <div className="w-2 h-2 bg-[#FD561E] rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
+            <div className="w-2 h-2 bg-[#FD561E] rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+            <div className="w-2 h-2 bg-[#FD561E] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+          </div>
         </div>
       </div>
     );
@@ -230,16 +303,16 @@ const handleViewDetails = (flight) => {
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center border border-gray-100">
-          <div className="text-[#FD561E] text-5xl mb-4">
-            <FaExclamationTriangle className="inline-block" />
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <FaExclamationTriangle className="text-3xl text-red-500" />
           </div>
           <h2 className="text-2xl font-bold text-gray-800 mb-3">Search Failed</h2>
           <p className="text-gray-600 mb-6">{error}</p>
           <button
             onClick={handleModifySearch}
-            className="w-full bg-[#FD561E] hover:bg-[#e04e1b] text-white font-semibold py-3 px-4 rounded-lg"
+            className="w-full bg-[#FD561E] hover:bg-[#e04e1b] text-white font-semibold py-3 px-4 rounded-xl transition-all hover:shadow-lg"
           >
             Try Search Again
           </button>
@@ -251,18 +324,18 @@ const handleViewDetails = (flight) => {
   // No flights state
   if (!loading && !error && (!flights || flights.length === 0)) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center border border-gray-100">
-          <div className="text-[#FD561E] text-5xl mb-4">
-            <FaPlane className="inline-block" />
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
+          <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <FaPlane className="text-3xl text-blue-500" />
           </div>
           <h2 className="text-2xl font-bold text-gray-800 mb-3">No Flights Found</h2>
-          <p className="text-gray-600 mb-6">We couldn't find any flights matching your search criteria.</p>
+          <p className="text-gray-600 mb-6">We couldn't find any flights matching your search criteria. Try adjusting your dates or destination.</p>
           <button
             onClick={handleModifySearch}
-            className="w-full bg-[#FD561E] hover:bg-[#e04e1b] text-white font-semibold py-3 px-4 rounded-lg"
+            className="w-full bg-[#FD561E] hover:bg-[#e04e1b] text-white font-semibold py-3 px-4 rounded-xl transition-all hover:shadow-lg"
           >
-            Search Again
+            Modify Search
           </button>
         </div>
       </div>
@@ -279,50 +352,118 @@ const handleViewDetails = (flight) => {
               onClick={handleModifySearch}
               className="flex items-center text-gray-600 hover:text-[#FD561E] transition-colors font-medium group"
             >
-              <FaArrowLeft className="mr-2 group-hover:text-[#FD561E] transition-colors" />
-              Modify Search
+              <FaArrowLeft className="mr-2 text-sm group-hover:-translate-x-1 transition-transform" />
+              <span className="hidden sm:inline">Modify</span>
             </button>
 
-            <div className="text-center">
-              <div className="flex items-center justify-center text-sm text-gray-500 mb-1">
-                <span className="bg-gray-100 px-2 py-1 rounded">One way</span>
-                <span className="mx-2">•</span>
-                <span className="flex items-center">
-                  <FaUserFriends className="mr-1 text-[#FD561E]" />
-                  {passengerText}
-                </span>
+            <div className="text-center flex-1 max-w-2xl mx-4">
+              {/* Search Summary Card */}
+              <div className="bg-orange-50 rounded-full px-4 py-2 inline-flex items-center space-x-3 text-sm">
+                <div className="flex items-center">
+                  <FaMapMarkerAlt className="text-[#FD561E] mr-1 text-xs" />
+                  <span className="font-medium">{searchSummary?.fromCode || 'DEL'}</span>
+                </div>
+                <FaChevronRight className="text-gray-400 text-xs" />
+                <div className="flex items-center">
+                  <FaMapMarkerAlt className="text-[#FD561E] mr-1 text-xs" />
+                  <span className="font-medium">{searchSummary?.toCode || 'BOM'}</span>
+                </div>
+                <div className="w-px h-4 bg-gray-300 mx-2"></div>
+                <div className="flex items-center">
+                  <FaCalendarAlt className="text-gray-400 mr-1 text-xs" />
+                  <span>{searchSummary?.formattedDate || '26 Mar'}</span>
+                </div>
+                <div className="w-px h-4 bg-gray-300 mx-2"></div>
+                <div className="flex items-center">
+                  <FaUserFriends className="text-gray-400 mr-1 text-xs" />
+                  <span>{passengerText}</span>
+                </div>
               </div>
-              <h1 className="text-xl font-bold text-gray-800">
-                {searchSummary?.route || 'Flight Search Results'}
-              </h1>
-              <p className="text-gray-600 text-sm mt-1">
-                {flights.length} {flights.length === 1 ? 'flight' : 'flights'} found
-              </p>
             </div>
 
-            {/* Mobile Filter Button */}
-            <button
-              onClick={() => setShowMobileFilters(true)}
-              className="lg:hidden flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:border-[#FD561E] hover:text-[#FD561E] transition-colors"
-            >
-              <FaFilter />
-              <span>Filters</span>
-              {activeFilterCount > 0 && (
-                <span className="bg-[#FD561E] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {activeFilterCount}
-                </span>
-              )}
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Filter Button */}
+              <button
+                onClick={() => setShowMobileFilters(true)}
+                className="lg:hidden flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg hover:border-[#FD561E] hover:text-[#FD561E] transition-colors relative"
+              >
+                <FaFilter className="text-sm" />
+                {activeFilterCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-[#FD561E] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
 
-            <div className="hidden lg:block w-24">{/* Spacer */}</div>
+              {/* Sort Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowSortDropdown(!showSortDropdown)}
+                  className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg hover:border-[#FD561E] transition-colors text-sm"
+                >
+                  <span className="hidden sm:inline">Sort by:</span>
+                  <span className="font-medium text-[#FD561E]">
+                    {sortOptions.find(o => o.value === sortBy)?.label.split(': ')[1] || 'Price'}
+                  </span>
+                  <FaChevronDown className={`text-xs transition-transform ${showSortDropdown ? 'rotate-180' : ''}`} />
+                </button>
+
+                {showSortDropdown && (
+                  <>
+                    <div 
+                      className="fixed inset-0 z-30"
+                      onClick={() => setShowSortDropdown(false)}
+                    ></div>
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border z-40 py-1">
+                      {sortOptions.map(option => (
+                        <button
+                          key={option.value}
+                          onClick={() => {
+                            setSortBy(option.value);
+                            setShowSortDropdown(false);
+                          }}
+                          className={`w-full text-left px-4 py-2.5 text-sm hover:bg-orange-50 transition-colors
+                            ${sortBy === option.value ? 'text-[#FD561E] font-medium bg-orange-50' : 'text-gray-700'}`}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         </div>
-        <div className="h-1 bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] w-full"></div>
+        
+        {/* Results Stats */}
+        <div className="bg-gray-50 border-t px-4 py-2">
+          <div className="container mx-auto flex justify-between items-center text-sm">
+            <div className="flex items-center">
+              <span className="font-bold text-[#FD561E]">{filteredAndSortedFlights.length}</span>
+              <span className="text-gray-600 ml-1">
+                {filteredAndSortedFlights.length === 1 ? 'flight' : 'flights'} found
+              </span>
+              {activeFilterCount > 0 && (
+                <button
+                  onClick={resetFilters}
+                  className="ml-4 text-xs text-gray-500 hover:text-[#FD561E] underline"
+                >
+                  Clear all filters
+                </button>
+              )}
+            </div>
+            <div className="flex items-center text-gray-500">
+              <FaInfoCircle className="mr-1 text-xs" />
+              <span className="text-xs">Prices include taxes</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="container mx-auto px-4 py-6">
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Left Sidebar - FilterSidebar */}
+          {/* Left Sidebar - FilterSidebar (Desktop) */}
           <div className="hidden lg:block lg:w-1/4">
             <FilterSidebar
               priceRange={priceRange}
@@ -350,15 +491,31 @@ const handleViewDetails = (flight) => {
 
           {/* Right Side - Flight List */}
           <div className="lg:w-3/4">
-            {flights.map((flight) => (
-              <OneWayFlightCard
-                key={flight.id}
-                flight={flight}
-                isSelected={selectedFlight?.id === flight.id}
-                onSelect={handleFlightSelect}
-                onViewDetails={handleViewDetails}
-              />
-            ))}
+            {filteredAndSortedFlights.length === 0 ? (
+              <div className="bg-white rounded-xl p-8 text-center shadow-sm">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <FaFilter className="text-2xl text-gray-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">No flights match your filters</h3>
+                <p className="text-gray-600 mb-4">Try adjusting your filter criteria</p>
+                <button
+                  onClick={resetFilters}
+                  className="text-[#FD561E] font-medium hover:underline"
+                >
+                  Clear all filters
+                </button>
+              </div>
+            ) : (
+              filteredAndSortedFlights.map((flight) => (
+                <OneWayFlightCard
+                  key={flight.id}
+                  flight={flight}
+                  isSelected={selectedFlight?.id === flight.id}
+                  onSelect={handleFlightSelect}
+                  onViewDetails={handleViewDetails}
+                />
+              ))
+            )}
           </div>
         </div>
       </div>
@@ -367,49 +524,52 @@ const handleViewDetails = (flight) => {
       {selectedFlight && (
         <BottomBar
           selectedFlights={[selectedFlight]}
-          totalPrice={selectedFare?.price || selectedFlight.lowestPrice}
+          totalPrice={selectedFare?.totalPrice || selectedFlight.lowestPrice}
           onContinue={handleContinue}
           onViewDetails={() => handleViewDetails(selectedFlight)}
           type="one-way"
+          passengerCount={passengerCounts.ADT + passengerCounts.CNN}
         />
       )}
 
-      {/* Flight Detail Sheet */}
-      {showDetailSheet && selectedFlightForSheet && selectedFareForSheet && (
-        <FlightDetailSheet 
-          flight={selectedFlightForSheet}
-          fare={selectedFareForSheet}
+      {/* ============ UPDATED: Use OneWaySheet with FULL flight data ============ */}
+      {showDetailSheet && selectedFlightForSheet && (
+        <OneWaySheet 
+          isOpen={showDetailSheet}
           onClose={handleCloseSheet}
+          flight={selectedFlightForSheet}  // Send the FULL flight with ALL fares
           passengerCounts={passengerCounts}
-          mode="details"
         />
       )}
 
       {/* Mobile Filters Modal */}
       {showMobileFilters && (
         <div className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex animate-fadeIn">
-          <div className="bg-white w-4/5 max-w-sm h-full overflow-auto shadow-xl">
-            <div className="p-4 border-b flex justify-between items-center bg-gray-50 sticky top-0">
-              <div>
-                <h3 className="font-bold text-lg text-gray-800">Filters</h3>
-                <p className="text-xs text-gray-500">{activeFilterCount} active filters</p>
+          <div className="bg-white w-full max-w-sm ml-auto h-full overflow-auto shadow-xl">
+            <div className="sticky top-0 bg-white border-b z-10">
+              <div className="flex justify-between items-center p-4">
+                <div>
+                  <h3 className="font-bold text-lg text-gray-800">Filters</h3>
+                  <p className="text-xs text-gray-500">{activeFilterCount} active filters</p>
+                </div>
+                <button
+                  onClick={() => setShowMobileFilters(false)}
+                  className="text-gray-500 hover:text-[#FD561E] p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <FaTimes />
+                </button>
               </div>
-              <button
-                onClick={() => setShowMobileFilters(false)}
-                className="text-gray-500 hover:text-[#FD561E] text-xl p-1 rounded-full hover:bg-gray-100 w-8 h-8 flex items-center justify-center"
-              >
-                <FaTimes />
-              </button>
             </div>
             
-            <div className="p-4">
+            <div className="p-4 pb-24">
               {/* Price Range */}
               <div className="mb-6">
                 <h4 className="font-medium text-gray-700 mb-3">Price Range</h4>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-sm">
-                    <span>₹{priceRange.min.toLocaleString()}</span>
-                    <span>₹{priceRange.max.toLocaleString()}</span>
+                    <span className="font-medium">₹{priceRange.min.toLocaleString()}</span>
+                    <span className="text-gray-400">—</span>
+                    <span className="font-medium">₹{priceRange.max.toLocaleString()}</span>
                   </div>
                   <input
                     type="range"
@@ -428,19 +588,21 @@ const handleViewDetails = (flight) => {
                   <h4 className="font-medium text-gray-700 mb-3">Airlines</h4>
                   <div className="space-y-2">
                     {airlines.map((airline) => (
-                      <label key={airline.code || airline.name} className="flex items-center justify-between">
+                      <label key={airline.code} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg cursor-pointer">
                         <div className="flex items-center">
                           <input
                             type="checkbox"
                             checked={selectedAirlines.includes(airline.name)}
                             onChange={() => toggleAirline(airline.name)}
-                            className="w-4 h-4 text-[#FD561E] border-gray-300 rounded"
+                            className="w-4 h-4 text-[#FD561E] border-gray-300 rounded focus:ring-[#FD561E]"
                           />
-                          <span className="ml-2 text-sm text-gray-700">
+                          <span className="ml-3 text-sm text-gray-700 font-medium">
                             {airline.name}
                           </span>
                         </div>
-                        <span className="text-xs text-gray-500">{airline.count}</span>
+                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                          {airline.count}
+                        </span>
                       </label>
                     ))}
                   </div>
@@ -451,17 +613,19 @@ const handleViewDetails = (flight) => {
               <div className="mb-6">
                 <h4 className="font-medium text-gray-700 mb-3">Stops</h4>
                 <div className="space-y-2">
-                  {['non-stop', '1-stop', '2+ stops'].map((stop) => (
-                    <label key={stop} className="flex items-center">
+                  {[
+                    { value: 'non-stop', label: 'Non-stop' },
+                    { value: '1-stop', label: '1 Stop' },
+                    { value: '2+ stops', label: '2+ Stops' }
+                  ].map((stop) => (
+                    <label key={stop.value} className="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer">
                       <input
                         type="checkbox"
-                        checked={selectedStops.includes(stop)}
-                        onChange={() => toggleStops(stop)}
-                        className="w-4 h-4 text-[#FD561E] border-gray-300 rounded"
+                        checked={selectedStops.includes(stop.value)}
+                        onChange={() => toggleStops(stop.value)}
+                        className="w-4 h-4 text-[#FD561E] border-gray-300 rounded focus:ring-[#FD561E]"
                       />
-                      <span className="ml-2 text-sm text-gray-700">
-                        {stop === 'non-stop' ? 'Non-stop' : stop === '1-stop' ? '1 Stop' : '2+ Stops'}
-                      </span>
+                      <span className="ml-3 text-sm text-gray-700">{stop.label}</span>
                     </label>
                   ))}
                 </div>
@@ -477,33 +641,34 @@ const handleViewDetails = (flight) => {
                     { value: 'afternoon', label: 'Afternoon (12-18)' },
                     { value: 'evening', label: 'Evening (18-24)' }
                   ].map((time) => (
-                    <label key={time.value} className="flex items-center">
+                    <label key={time.value} className="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer">
                       <input
                         type="checkbox"
                         checked={selectedTimes.includes(time.value)}
                         onChange={() => toggleTime(time.value)}
-                        className="w-4 h-4 text-[#FD561E] border-gray-300 rounded"
+                        className="w-4 h-4 text-[#FD561E] border-gray-300 rounded focus:ring-[#FD561E]"
                       />
-                      <span className="ml-2 text-sm text-gray-700">{time.label}</span>
+                      <span className="ml-3 text-sm text-gray-700">{time.label}</span>
                     </label>
                   ))}
                 </div>
               </div>
             </div>
 
-            <div className="p-4 border-t bg-gray-50 sticky bottom-0">
-              <div className="flex gap-2">
+            {/* Bottom Actions */}
+            <div className="sticky bottom-0 bg-white border-t p-4">
+              <div className="flex gap-3">
                 <button
                   onClick={resetFilters}
-                  className="flex-1 border border-gray-300 text-gray-700 font-semibold py-3 px-4 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex-1 border-2 border-gray-200 text-gray-700 font-semibold py-3 px-4 rounded-xl hover:bg-gray-50 transition-colors"
                 >
                   Reset
                 </button>
                 <button
                   onClick={() => setShowMobileFilters(false)}
-                  className="flex-1 bg-[#FD561E] hover:bg-[#e04e1b] text-white font-semibold py-3 px-4 rounded-lg transition-colors"
+                  className="flex-1 bg-[#FD561E] hover:bg-[#e04e1b] text-white font-semibold py-3 px-4 rounded-xl transition-colors shadow-md"
                 >
-                  Apply
+                  Show {filteredAndSortedFlights.length} flights
                 </button>
               </div>
             </div>
