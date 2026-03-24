@@ -10,6 +10,8 @@ import VerifyOTP from "../modules/bus/pages/VerifyOTP";
 import ResetPassword from "../modules/bus/pages/ResetPassword";
 import GuestBookings from "../modules/bus/pages/GuestBookings";
 import CancellationCard from "../modules/bus/pages/CancellationCard";
+import PrintTicketModal from "../modules/bus/pages/PrintTicketModal";
+
 
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -21,6 +23,8 @@ const Navbar = () => {
   const [resetData, setResetData] = useState(null);
   const [showGuestBookings, setShowGuestBookings] = useState(false);
   const [showCancel, setShowCancel] = useState(false);
+  const [showPrintTicket, setShowPrintTicket] = useState(false);
+  const [printTin, setPrintTin] = useState("");
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -59,11 +63,21 @@ const Navbar = () => {
       const loggedIn = localStorage.getItem("isLoggedIn") === "true";
       const userData = JSON.parse(localStorage.getItem("user"));
       setIsLoggedIn(loggedIn);
-      setUser(userData?.user || null);
+      setUser(userData?.user || userData || null);
     };
     checkLogin();
     window.addEventListener("storage", checkLogin);
     return () => window.removeEventListener("storage", checkLogin);
+  }, []);
+
+  // ── Listen for openAuthModal events (from BookingSuccess Sign Up / Sign In buttons) ──
+  useEffect(() => {
+    const handler = (e) => {
+      setAuthPage(e.detail === "signup" ? "signup" : "signin");
+      setOpenAuthModal(true);
+    };
+    window.addEventListener("openAuthModal", handler);
+    return () => window.removeEventListener("openAuthModal", handler);
   }, []);
 
   const handleLogout = () => {
@@ -95,21 +109,21 @@ const Navbar = () => {
   }, [isDynamicPage]);
 
   const tabs = [
-    { id: "bus", label: "Bus", icon: Bus, path: "/HomePage" },
-    { id: "billpayment", label: "Bill Payments", icon: Bus, path: "/BillHomePage" },
-    { id: "flights", label: "Flights", icon: Plane, path: "/flights" },
-    { id: "hotels", label: "Hotels", icon: Building2, path: "/hotels" },
-    { id: "holidays", label: "Holidays", icon: Palmtree, path: "/holidays" },
-    { id: "cabs", label: "Cabs", icon: Car, path: "/cabs" },
+    { id: "bus",         label: "Bus",           icon: Bus,       path: "/HomePage"    },
+    { id: "billpayment", label: "Bill Payments",  icon: Bus,       path: "/BillHomePage"},
+    { id: "flights",     label: "Flights",        icon: Plane,     path: "/flights"     },
+    { id: "hotels",      label: "Hotels",         icon: Building2, path: "/hotels"      },
+    { id: "holidays",    label: "Holidays",       icon: Palmtree,  path: "/holidays"    },
+    { id: "cabs",        label: "Cabs",           icon: Car,       path: "/cabs"        },
   ];
 
   const getActiveTab = () => {
     if (location.pathname === "/" || location.pathname === "/HomePage") return "bus";
-    if (location.pathname.startsWith("/results")) return "bus";
-    if (location.pathname.startsWith("/flights")) return "flights";
-    if (location.pathname.startsWith("/hotels")) return "hotels";
+    if (location.pathname.startsWith("/results"))  return "bus";
+    if (location.pathname.startsWith("/flights"))  return "flights";
+    if (location.pathname.startsWith("/hotels"))   return "hotels";
     if (location.pathname.startsWith("/holidays")) return "holidays";
-    if (location.pathname.startsWith("/cabs")) return "cabs";
+    if (location.pathname.startsWith("/cabs"))     return "cabs";
     return "";
   };
 
@@ -238,7 +252,10 @@ const Navbar = () => {
                     </span>
                   </button>
 
-                  <button className="group w-full text-left px-4 py-3 cursor-pointer border-b border-gray-200 hover:bg-gray-50">
+                  <button
+                    onClick={() => { setOpenDropdown(false); setPrintTin(""); setShowPrintTicket(true); }}
+                    className="group w-full text-left px-4 py-3 cursor-pointer border-b border-gray-200 hover:bg-gray-50"
+                  >
                     <span className="inline-block transition-all duration-200 group-hover:translate-x-2 group-hover:text-blue-600">
                       Print Ticket
                     </span>
@@ -267,7 +284,15 @@ const Navbar = () => {
                     </span>
                   </button>
 
-                  {/* ✅ Logged-in Cancellation — same handleOpenCancel */}
+                  <button
+                    onClick={() => { setOpenDropdown(false); navigate("/my-account"); }}
+                    className="group w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50"
+                  >
+                    <span className="inline-block transition-all duration-200 group-hover:translate-x-2 group-hover:text-blue-600">
+                      My Account
+                    </span>
+                  </button>
+
                   <button
                     onClick={handleOpenCancel}
                     className="group w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50"
@@ -277,13 +302,19 @@ const Navbar = () => {
                     </span>
                   </button>
 
-                  <button className="group w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50">
+                  <button
+                    onClick={() => { setOpenDropdown(false); setPrintTin(""); setShowPrintTicket(true); }}
+                    className="group w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50"
+                  >
                     <span className="inline-block transition-all duration-200 group-hover:translate-x-2 group-hover:text-blue-600">
-                      My eCash
+                      Print Ticket
                     </span>
                   </button>
 
-                  <button className="group w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50">
+                  <button
+                    onClick={() => { setOpenDropdown(false); navigate("/my-profile"); }}
+                    className="group w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50"
+                  >
                     <span className="inline-block transition-all duration-200 group-hover:translate-x-2 group-hover:text-blue-600">
                       My Profile
                     </span>
@@ -332,7 +363,11 @@ const Navbar = () => {
         {/* Auth Modal */}
         <AuthModal isOpen={openAuthModal} onClose={() => setOpenAuthModal(false)}>
           {authPage === "signin" && (
-            <SignIn closeModal={() => setOpenAuthModal(false)} openSignup={() => setAuthPage("signup")} openForgot={() => setAuthPage("forgot")} />
+            <SignIn
+              closeModal={() => setOpenAuthModal(false)}
+              openSignup={() => setAuthPage("signup")}
+              openForgot={() => setAuthPage("forgot")}
+            />
           )}
           {authPage === "signup" && (
             <SignupForm
@@ -352,7 +387,11 @@ const Navbar = () => {
             />
           )}
           {authPage === "reset" && (
-            <ResetPassword resetData={resetData} closeModal={() => setOpenAuthModal(false)} openSignin={() => setAuthPage("signin")} />
+            <ResetPassword
+              resetData={resetData}
+              closeModal={() => setOpenAuthModal(false)}
+              openSignin={() => setAuthPage("signin")}
+            />
           )}
         </AuthModal>
 
@@ -360,7 +399,10 @@ const Navbar = () => {
         {showGuestBookings && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white rounded-2xl shadow-2xl p-8 w-[420px] mx-4 relative max-h-[90vh] overflow-y-auto">
-              <button onClick={() => setShowGuestBookings(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 cursor-pointer">
+              <button
+                onClick={() => setShowGuestBookings(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 cursor-pointer"
+              >
                 ✕
               </button>
               <GuestBookings onClose={() => setShowGuestBookings(false)} />
@@ -369,9 +411,22 @@ const Navbar = () => {
         )}
       </nav>
 
-      {/* ✅ CancellationCard — outside nav, works for both guest & logged-in */}
+      {/* CancellationCard — outside nav */}
       {showCancel && (
         <CancellationCard onClose={() => setShowCancel(false)} />
+      )}
+
+      {/* Print Ticket Modal */}
+      {showPrintTicket && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-[420px] mx-4 relative">
+            <button
+              onClick={() => setShowPrintTicket(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 cursor-pointer"
+            >✕</button>
+            <PrintTicketModal onClose={() => setShowPrintTicket(false)} prefillTin={printTin} />
+          </div>
+        </div>
       )}
     </>
   );

@@ -1,5 +1,9 @@
 import { Bus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
+const API = import.meta.env.VITE_API_BASE_URL;
+
+// ✅ Routes data same
 const routes = [
   {
     city: "Delhi",
@@ -40,13 +44,97 @@ const routes = [
 ];
 
 export default function PopularBusRoutes() {
+  const navigate = useNavigate();
+
+  // 🔥 Cache (avoid multiple API calls)
+  const cityCache = {};
+
+  // ✅ Get city ID from API
+  const getCityId = async (cityName) => {
+    try {
+      // 🔁 check cache first
+      if (cityCache[cityName]) {
+        return cityCache[cityName];
+      }
+
+      const res = await fetch(
+        `${API}/cities?name=${encodeURIComponent(cityName)}`
+      );
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+
+      // API response: [{ sid, cityname, state }]
+      if (!Array.isArray(data) || data.length === 0) {
+        return null;
+      }
+
+      // ✅ exact match
+      const match = data.find(
+        (c) => c.cityname.toLowerCase() === cityName.toLowerCase()
+      );
+
+      const id = match?.sid || data[0]?.sid;
+
+      // 🔥 store in cache
+      cityCache[cityName] = id;
+
+      return id;
+    } catch (err) {
+      console.error("City fetch error:", err);
+      return null;
+    }
+  };
+
+  // ✅ Tomorrow date
+  const getTomorrowDate = () => {
+    const today = new Date();
+    today.setDate(today.getDate() + 1);
+    return today.toISOString().split("T")[0];
+  };
+
+  // 🔥 MAIN CLICK FUNCTION
+  const handleRouteClick = async (fromCity, toCity) => {
+    try {
+      // ✅ Fetch both IDs
+      const [sourceId, destinationId] = await Promise.all([
+        getCityId(fromCity),
+        getCityId(toCity),
+      ]);
+
+      if (!sourceId || !destinationId) {
+        console.error("City ID not found", fromCity, toCity);
+        return;
+      }
+
+      const date = getTomorrowDate();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+
+      // ✅ Navigate to results page
+      navigate(
+        `/results?source=${sourceId}&destination=${destinationId}&doj=${date}`,
+        {
+          state: {
+            sourceName: fromCity,
+            destinationName: toCity,
+          },
+        }
+      );
+    } catch (err) {
+      console.error("Navigation error:", err);
+    }
+  };
+
   return (
     <div className="w-full max-w-[82%] mx-auto -mt-8">
       <h2 className="text-2xl font-bold text-gray-900 mb-6">
         Popular Bus Routes
       </h2>
 
-      <div className="bg-white rounded-xl shadow-sm  p-4">
+      <div className="bg-white rounded-xl shadow-sm p-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8">
           {routes.map((route, index) => (
             <div key={index} className="flex gap-3">
@@ -62,13 +150,15 @@ export default function PopularBusRoutes() {
                 <p className="text-gray-600 text-sm mt-1">
                   To:{" "}
                   {route.to.map((place, i) => (
-                    <span
-                      key={i}
-                      className="text-[#fd561e] hover:underline cursor-pointer"
-                    >
-                      {place}
-                      {i !== route.to.length - 1 && ", "}
-                    </span>
+                    <button
+      key={i}
+      type="button"
+      onClick={() => handleRouteClick(route.city, place)}
+      className="text-[#fd561e] hover:underline cursor-pointer"
+    >
+      {place}
+      {i !== route.to.length - 1 && ", "}
+    </button>
                   ))}
                 </p>
               </div>
