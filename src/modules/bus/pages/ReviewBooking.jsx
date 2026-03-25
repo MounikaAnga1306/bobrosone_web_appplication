@@ -51,6 +51,18 @@ const minutesToTime = (minutes) => {
   return `${String(hrs).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
 };
 
+// CHANGED: Edit button → fire event to reopen SeatBookingLayout at step 3
+const handleEdit = () => {
+  window.dispatchEvent(new CustomEvent("reopenSeatBooking", {
+    detail: {
+      step: 3,
+      passengers,
+      contact,
+    }
+  }));
+  navigate(-1);
+};
+
 const handleConfirmBooking = async () => {
   if (isLoading) return;
   setIsLoading(true);
@@ -119,7 +131,9 @@ const handleConfirmBooking = async () => {
         seatCount: selectedSeats.length,
         uid: uid,
         rewardpoint: response.rewardpoint,               
-        availableRewardPoint: response.availableRewardPoint
+        availableRewardPoint: response.availableRewardPoint,
+        busType: tripDetails?.busType,
+        operator: tripDetails?.travels,
       }
     });
 
@@ -132,7 +146,7 @@ const handleConfirmBooking = async () => {
 };
 
 return (
-  <div className="min-h-screen bg-gray-100 flex justify-center p-6">
+  <div className="min-h-screen bg-gray-100 flex justify-center p-6 mt-25">
     <div className="bg-white rounded-xl shadow-md p-8 w-[900px]">
 
       <h2 className="text-2xl font-semibold mb-6">Review Your Booking</h2>
@@ -212,7 +226,7 @@ return (
 
       <div className="flex gap-6">
         <button
-          onClick={() => navigate(-1)}
+          onClick={handleEdit}
           disabled={isLoading}
           className={`px-6 py-3 text-white rounded ${
             isLoading ? "bg-gray-300 cursor-not-allowed" : "bg-gray-400 hover:bg-gray-500 cursor-pointer"

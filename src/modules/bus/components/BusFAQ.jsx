@@ -1,99 +1,240 @@
 import { useState } from "react";
 
-const faqs = [
+const faqData = [
   {
-    id: 1,
-    question: "What are the advantages of online flight booking?",
-    answer:
-      "Online flight booking offers convenience, competitive prices, and the ability to compare multiple airlines at once. You can book from the comfort of your home, access exclusive online deals, and receive instant confirmation of your bookings.",
+    category: "Online Booking Related",
+    questions: [
+      {
+        question: "How can I use BOBROS for booking a bus ticket?",
+        answer: "Start by selecting your departure location, destination, and travel date. Pick the bus that best suits your needs, fill in the passenger information, and proceed with the payment. Once the booking is successful, your ticket details will be sent to you via SMS and email.Start by selecting your departure location, destination, and travel date. Pick the bus that best suits your needs, fill in the passenger information, and proceed with the payment. Once the booking is successful, your ticket details will be sent to you via SMS and email."
+      },
+      {
+        question: "What happens if my schedule/service is cancelled?",
+        answer: "In case of a cancellation, you will receive a direct update from our team  or the travel operator via SMS or email. A full refund will be initiated automatically to you as BOBROS reward points.Your BOBROS Reward points can be used for you next Booking or alternatively you may contact us for a refund to your payment account/card. We strive to keep you informed at every step and appreciate your understanding."
+      },
+      {
+        question: "Will I be charged more than the offline ticket price?",
+        answer: "Not at all. BOBROS ensures that you pay the exact same fare as set by the bus operator. There are no additional charges—our prices match those of traditional offline bookings."
+      },
+      {
+        question: "Do I need to create an account to use BOBROS?",
+        answer: "No, creating an account is not required. BOBROS allows you to book tickets as a guest, making the process quick and hassle-free."
+      },
+      {
+  question: "Why do seat prices vary within the same bus?",
+  answer: "Seat prices can differ for several reasons:\n\n1. Some buses offer both AC and Non-AC options in a single vehicle.\n2. Certain buses have a mix of seater and sleeper seats, each with different comfort levels.\n3. Some operators choose to price front-row seats slightly higher than those at the back for better comfort or convenience."
+},
+      {
+        question: "Why do I need to provide my mobile number while booking tickets?",
+        answer: "Entering your mobile number is essential as it helps us send you important updates like your booking confirmation."
+      },
+      {
+        question: "What if the email and mobile number in my registered account are different from those provided in the passenger details?",
+        answer: "For your convenience and accuracy, all ticket-related communication — including confirmations and travel updates — is sent to the email address and mobile number entered in the passenger details during the booking process, not the ones linked to your registered account. Please ensure the correct contact details are provided at the time of booking to avoid missing important updates."
+      },
+      {
+        question: "I haven't received my ticket in my email. What should I do?",
+        answer: "1. If you haven’t received your ticket after booking, it could be due to one of the following reasons:\n\n2. The ticket email may have landed in your spam or junk folder—please check there.\nWe recommend first checking your bank statement to confirm if the amount was deducted.\n•	If the payment was successful but you haven’t received the ticket, please reach out to our customer support for immediate assistance.\n•	If there was no deduction, feel free to retry the booking process. For any help, our 24/7 support team is just a call away."
+      },
+      {
+        question: "I entered the wrong mobile number while booking. Can I receive my ticket on a different number?",
+        answer: "Unfortunately, we’re unable to resend tickets to a different mobile number once the booking is completed. We recommend double-checking all details before confirming your booking to avoid such issues."
+      }
+    ]
   },
   {
-    id: 2,
-    question: "When should I book to get best flight ticket prices?",
-    answer:
-      "For best flight ticket prices and flight ticket offers, it is recommended to book at least 3 to 4 weeks in advance for domestic air tickets. For international flight ticket it is recommended to book at least 7 to 8 weeks in advance, so that you can get the best flight ticket prices.",
+    category: "Cancellation Related",
+    questions: [
+      {
+        question: "Can I cancel my bus ticket?",
+        answer: "Yes, tickets booked through BOBROS can be cancelled before the scheduled departure time from the bus first boarding point. Please note that cancellation policies may vary depending on the bus operator."
+      },
+      {
+        question: "How do I cancel my ticket if needed?",
+        answer: "To cancel your ticket, simply visit our Cancellation page and enter your Booking ID, passenger mobile number, and passenger email address(provided at the time of booking) to proceed. Before confirming the cancellation, we recommend reviewing the applicable cancellation terms and conditions."
+      },
+      {
+        question: "Can I partially cancel my ticket?",
+        answer: "Partial cancellation is supported by selected bus operators. We recommend reviewing the cancellation policy of the specific bus partner during the booking process. If eligible, you can cancel part of your ticket directly through our portal by visiting our Cancellation page."
+      }
+    ]
   },
   {
-    id: 3,
-    question: "How can I book flight tickets online?",
-    answer: (
-      <>
-        With the help of BOBROS, you can easily book both domestic flight
-        tickets and{" "}
-        <a href="#" className="text-blue-500 hover:underline">
-          international air tickets
-        </a>{" "}
-        in simple steps within a few seconds.
-      </>
-    ),
+    category: "Refund Related",
+    questions: [
+      {
+        question: "I missed the bus. Can I get a refund?",
+        answer: "If the bus is missed due to reasons not attributable to BOBROS (e.g., arriving late at the pickup point or waiting at the wrong location), no refund will be issued. However, if you miss your bus due to the bus operator—such as a scheduling error or bus cancellation—you are eligible for a full refund."
+      },
+      {
+        question: "I've cancelled my booking—when will I receive my refund?",
+        answer: "If you are a registered user, your refunds are processed instantly to your BOBROS account. These reward points can be used for your next booking or alternatively you may contact us for a refund to your payment account/card. If you are not processed and credited to your payment account/card within a maximum of 15 days from the date of cancellation."
+      }
+    ]
   },
   {
-    id: 4,
-    question: "Why should I make a flight booking from BOBROS?",
-    answer: (
-      <>
-        Along with an easy flight booking process,{" "}
-        <a href="#" className="text-blue-500 hover:underline">
-          BOBROS offers
-        </a>{" "}
-        various discounts, instant EMI options and credit/ debit card related
-        offers on flight booking. By availing such benefits, you can book air
-        tickets at reasonable prices.
-      </>
-    ),
+    category: "Payment Related",
+    questions: [
+      {
+        question: "What payment methods are accepted?",
+        answer: "We accept payments through internet banking, credit, debit cards (Visa, MasterCard, American Express, and Maestro) and UPI pay. Please note that only cards issued within India are supported. Additionally, you can also book tickets offline by visiting our office and making the payment directly."
+      },
+      {
+        question: "I don’t have a credit card—can I still book tickets on BOBROS?",
+        answer: "Yes, a credit card isn’t mandatory to book your tickets. You can use any internet-enabled bank account, UPI, or popular digital wallet options to complete your payment securely on BOBROS app and website."
+      },
+       {
+        question: "How secure are online transactions on BOBROS?",
+        answer: "Your transactions on BOBROS are highly secure. We use industry-leading Secure Socket Layer (SSL) encryption to protect your data during transmission, ensuring that no sensitive information is exposed or accessible to unauthorized parties. Additionally, all credit card transactions are processed through certified secure gateways approved by Visa and MasterCard."
+      },
+       {
+        question: "Can I book and pay for someone else’s ticket?",
+        answer: "Yes, absolutely! You can book tickets on behalf of someone else—it’s not necessary for the person making the payment to be the traveller. Just ensure that you provide accurate passenger details during booking, and remind the traveller to carry a valid government-issued ID at the time of boarding to avoid any issues."
+      }
+    ]
   },
+  {
+    category: "Bus Partner Related",
+    questions: [
+      {
+        question: "Do Bus Partners have specific rules I should be aware of?",
+        answer: "Yes, each Bus Partner may have their own set of rules — including luggage limits, and possible additional charges for carrying boxes or oversized items. Travel and cancellation policies can also vary from one operator to another. For any specific queries or clarifications, we kindly request you to contact the respective Bus Operator directly, as our platform does not currently provide support for operator-specific policies."
+      }
+    ]
+  }
 ];
 
-export default function BusFAQ() {
-  const [openId, setOpenId] = useState(2);
+export default function FAQPage() {
+  const [activeTab, setActiveTab] = useState(0);
+  const [expandedQuestions, setExpandedQuestions] = useState({});
+  const [feedback, setFeedback] = useState({}); // ✅ NEW
 
-  const toggle = (id) => {
-    setOpenId(openId === id ? null : id);
+  const toggleQuestion = (questionIndex) => {
+    setExpandedQuestions(prev => ({
+      ...prev,
+      [questionIndex]: !prev[questionIndex]
+    }));
   };
 
-  return (
-    <div className="w-full  bg-gray-100 p-8 ">
-      <div className="max-w-5xl mx-auto">
-        <h2 className="font-bold text-black mb-5 text-xl">
-          Bus Booking FAQs
-        </h2>
+  const handleFeedback = (idx, type) => {
+    setFeedback(prev => ({
+      ...prev,
+      [idx]: type
+    }));
+  };
 
-        <div className="flex flex-col gap-3">
-          {faqs.map((faq) => {
-            const isOpen = openId === faq.id;
+  const currentCategory = faqData[activeTab];
+
+  return (
+    <div className="bg-white min-h-screen">
+      <div className="max-w-4xl mx-auto px-6 py-10 ml-58">
+        
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">
+          FAQs related to Bus Tickets Booking
+        </h1>
+
+        {/* Tabs */}
+        <div className="flex -ml-4 border-b border-gray-200 mb-0 relative">
+          {faqData.map((cat, idx) => (
+            <button
+              key={idx}
+              onClick={() => {
+                setActiveTab(idx);
+                setExpandedQuestions({});
+                setFeedback({}); // reset feedback
+              }}
+              className={`
+                px-4 py-3 text-sm font-medium whitespace-nowrap relative transition-all
+                ${activeTab === idx
+                  ? 'text-[#FD561E]'
+                  : 'text-gray-600 hover:text-[#FD561E]'
+                }
+              `}
+            >
+              {cat.category}
+
+              {activeTab === idx && (
+                <span
+                  className="absolute bottom-0 h-1.5 bg-[#FD561E]"
+                  style={{ width: "60%", left: "20%" }}
+                />
+              )}
+            </button>
+          ))}
+        </div>
+
+        {/* FAQ List */}
+        <div>
+          {currentCategory.questions.map((faq, idx) => {
+            const isExpanded = expandedQuestions[idx] || false;
+            const userFeedback = feedback[idx];
+
             return (
-              <div
-                key={faq.id}
-                className="bg-white border border-gray-200 rounded"
-              >
-                {/* Question Row */}
+              <div key={idx} className="border-b border-gray-200">
                 <button
-                  onClick={() => toggle(faq.id)}
-                  className="w-full flex items-center justify-between px-5 py-4 text-left"
+                  onClick={() => toggleQuestion(idx)}
+                  className="w-full flex justify-between items-center py-4 text-left"
                 >
-                  <span className="font-semibold text-gray-800 text-sm">
+                  <span className="text-gray-800 text-sm pr-6">
                     {faq.question}
                   </span>
-                  {/* Arrow with animation */}
-                  <span
-                    className="text-gray-600 text-lg ml-4 transition-transform duration-300 ease-in-out"
-                    style={{
-                      transform: isOpen ? "rotate(90deg)" : "rotate(-90deg)",
-                    }}
+                  <svg
+                    className={`w-4 h-4 text-gray-500 transition-transform ${
+                      isExpanded ? "rotate-180" : ""
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
                   >
-                    ›
-                  </span>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
                 </button>
 
-                {/* Answer with slide animation */}
-                <div
-                  className="overflow-hidden transition-all duration-300 ease-in-out"
-                  style={{ maxHeight: isOpen ? "300px" : "0px" }}
-                >
-                  <p className="px-5 pb-5 text-sm text-gray-600 leading-relaxed border-t border-gray-100 pt-3">
-                    {faq.answer}
-                  </p>
-                </div>
+                {isExpanded && (
+                  <div className="pb-4">
+                    <p className="text-gray-700 text-sm leading-relaxed">
+                      {faq.answer}
+                    </p>
+
+                    {/* Buttons */}
+                    <div className="flex space-x-6 mt-4">
+                      <button
+                        className="flex items-center space-x-1.5 text-green-600 hover:text-green-700 text-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleFeedback(idx, "helpful");
+                        }}
+                      >
+                        <span>👍</span>
+                        <span>Helpful</span>
+                      </button>
+
+                      <button
+                        className="flex items-center space-x-1.5 text-red-600 hover:text-red-700 text-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleFeedback(idx, "notHelpful");
+                        }}
+                      >
+                        <span>👎</span>
+                        <span>Not Helpful</span>
+                      </button>
+                    </div>
+
+                    {/* ✅ Feedback Message */}
+                    {userFeedback === "helpful" && (
+                      <div className="mt-4 bg-green-100 text-green-700 px-4 py-2 rounded-md text-sm">
+                        Thanks for your feedback!
+                      </div>
+                    )}
+
+                    {userFeedback === "notHelpful" && (
+                      <div className="mt-4 bg-red-100 text-red-700 px-4 py-2 rounded-md text-sm">
+                        Sorry to hear that. We'll work on it.
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}

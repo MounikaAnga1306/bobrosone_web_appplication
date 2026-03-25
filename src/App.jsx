@@ -38,10 +38,12 @@ import VerifyOTP from "./modules/bus/pages/VerifyOTP";
 import ForgotPassword from "./modules/bus/pages/ForgotPassword";
 import ResetPassword from "./modules/bus/pages/ResetPassword";
 import { GoogleOAuthProvider } from "@react-oauth/google";
-import ReviewBooking from "./modules/bus/pages/ReviewBooking";
+//import ReviewBooking from "./modules/bus/pages/ReviewBooking";
 import MyBookings from "./modules/bus/pages/MyBookings";
 import GuestBookingsPage from "./modules/bus/pages/GuestBookingPage";
 import CancelTicketPage from "./modules/bus/pages/CancelTicketPage";
+import MyAccount from "./modules/bus/pages/MyAccount";
+import MyProfile from "./modules/bus/pages/MyProfile";
 
 function App() {
   return (
@@ -61,10 +63,12 @@ function App() {
                   <Route path="/verify-otp" element={<VerifyOTP />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
-                  <Route path="/review-booking" element={<ReviewBooking />} />
+                  {/* <Route path="/review-booking" element={<ReviewBooking />} /> */}
                   <Route path="/my-bookings" element={<MyBookings />} />
                   <Route path="/guest-bookings" element={<GuestBookingsPage />} />
                   <Route path="/cancel-ticket" element={<CancelTicketPage />} />
+                  <Route path="/my-account" element={<MyAccount />} />
+                  <Route path="/my-profile" element={<MyProfile />} />
                   <Route path="/results" element={<BusResultsPage />} />
                   
                   {/* Flight Routes - UPDATED with new names */}

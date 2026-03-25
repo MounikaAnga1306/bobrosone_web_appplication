@@ -1,6 +1,6 @@
 export default function Advertisement() {
   return (
-    <div className="w-full h-[150px] flex justify-center my-10 px-4 relative z-0">
+    <div className="w-full h-[150px] flex justify-center my-10 px-4 relative -mt-18 z-0 ">
       <div className="relative w-full max-w-5xl aspect-[10/3] rounded-2xl overflow-hidden shadow-lg">
         {/* Background Image */}
         <img

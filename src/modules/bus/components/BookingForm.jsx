@@ -286,45 +286,14 @@ const BookingForm = () => {
   };
 
   return (
-    <section className="relative h-[590px] flex items-center justify-center overflow-hidden">
-      {/* Carousel Background Images */}
-      <div className="absolute inset-0 w-full h-full">
-        {backgroundImages.map((img, index) => (
-          <div
-            key={index}
-            className={`absolute inset-0 w-full h-full transition-opacity duration-500 ease-in-out ${
-              index === currentImageIndex ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            <img
-              src={img}
-              alt={`Travel background ${index + 1}`}
-              className="w-full h-full object-cover"
-              loading={index < 3 ? "eager" : "lazy"}
-            />
-          </div>
-        ))}
-      </div>
-
-      {/* Gradient Overlays - Keep existing styling */}
-      
-
-      {/* Navigation Arrows */}
-      <button
-        onClick={goToPreviousImage}
-        className="absolute left-4 z-20 p-3 rounded-full bg-black/40 hover:bg-black/60 text-white transition-all duration-300 backdrop-blur-sm hover:scale-110 cursor-pointer"
-        aria-label="Previous image"
-      >
-        <ChevronLeft className="w-6 h-6" />
-      </button>
-      
-      <button
-        onClick={goToNextImage}
-        className="absolute right-4 z-20 p-3 rounded-full bg-black/40 hover:bg-black/60 text-white transition-all duration-300 backdrop-blur-sm hover:scale-110 cursor-pointer"
-        aria-label="Next image"
-      >
-        <ChevronRight className="w-6 h-6" />
-      </button>
+    <section className="relative h-[590px] flex items-center justify-center">
+      <img
+        src="https://images.unsplash.com/photo-1570125909232-eb263c188f7e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2071&q=80"
+        alt="Modern bus fleet on highway"
+        className="absolute inset-0 w-full h-[590px] object-cover"
+      />
+      <div className="absolute inset-0 bg-gradient-to-r from-red-600/90 via-red-500/80 to-purple-600/70" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
       <div className="relative z-10 w-full max-w-6xl px-6">
         <div className="text-center mb-10 text-white">

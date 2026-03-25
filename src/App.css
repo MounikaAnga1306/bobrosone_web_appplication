@@ -50,3 +50,15 @@ input::-ms-clear {
 .read-the-docs {
   color: #888;
 }
+@keyframes busMove {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+.bus-animation {
+  animation: busMove 2.5s linear infinite;
+}
