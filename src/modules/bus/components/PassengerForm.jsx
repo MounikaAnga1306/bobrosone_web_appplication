@@ -1,6 +1,7 @@
 import { React, useState } from "react";
 import { getUserDetails } from "../../../utils/authHelper";
 
+
 const PassengerForm = ({
   selectedSeats,
   boardingPoint,
@@ -20,6 +21,7 @@ const PassengerForm = ({
 const storedUser = JSON.parse(localStorage.getItem("user"));
 const loggedUser = storedUser?.user || null;
 const user = getUserDetails();
+const [showTerms, setShowTerms] = useState(false);
 
 const [passengers, setPassengers] = useState(
   existingPassengers ||
@@ -312,8 +314,11 @@ className="accent-[#fd561e]"
 required
 />
 I accept the
-<span className="text-[#fd561e] underline ml-1">
-terms and conditions
+<span
+  onClick={() => setShowTerms(true)}
+  className="text-[#fd561e] underline ml-1 cursor-pointer"
+>
+  terms and conditions
 </span>
 </label>
 
@@ -329,10 +334,66 @@ Confirm
 </button>
 
 </div>
+{showTerms && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center">
+    
+    {/* BACKDROP */}
+    <div
+      className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+      onClick={() => setShowTerms(false)}
+    />
+
+    {/* MODAL */}
+    <div className="relative bg-white w-[90%] max-w-3xl h-[80vh] rounded-xl shadow-xl overflow-hidden">
+
+      {/* HEADER */}
+      <div className="flex justify-between items-center p-4 border-b">
+        <h2 className="text-lg font-semibold text-[#fd561e]">
+          Terms & Conditions
+        </h2>
+        <button
+          onClick={() => setShowTerms(false)}
+          className="text-gray-500 hover:text-black text-xl"
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* CONTENT (scrollable) */}
+      <div className="p-4 overflow-y-auto h-[calc(80vh-60px)] text-sm text-gray-700">
+
+        <p className="mb-2">
+                 Welcome to <span className="text-blue-800 font-semibold">www.bobrosone.com</span> website. If you continue to browse and use this website you are agreeing to comply with and be bound by the following terms and conditions of use, which together with our privacy policy and Cancellation Policy govern M/s BOBROS Consultancy Services Private Limited's relationship with you in relation to this website <span className="text-blue-800 font-semibold">www.bobrosone.com</span>
+        </p>
+
+        <p className="mb-2">
+                  The term ‘BOBROS’ or ‘BOBROS Consultancy Services Pvt. Ltd.,’ or ‘Humming wheels’ or 'us' or 'we' refers to the owner of the website whose registered office is at 1- 232, Mulakaluru, Narasaraopet, Andhra Pradesh, India - 522601.
+        </p>
+        <p className="mb-2">
+          We are registered in India under the companies act, our company registration number is U60231AP2010PTC069485. The term 'you' refers to the user or viewer of our website.
+        </p>
+        <h1 className="text-gray-800 font-semibold">
+        The use of this website is subject to the following terms of use:
+        </h1>
+
+        <ul className="list-disc pl-5 space-y-2">
+          <li>Content may change without notice</li>
+          <li>No warranty on accuracy</li>
+          <li>Use at your own risk</li>
+          <li>Unauthorized use is prohibited</li>
+        </ul>
+
+        {/* 👉 full content ikkadiki paste cheyyachu */}
+      </div>
+    </div>
+  </div>
+)}
 
 </form>
 
+
 );
+
 
 };
 
