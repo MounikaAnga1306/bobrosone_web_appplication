@@ -1,5 +1,6 @@
 // src/modules/flights/components/sheet/BaseSheet.jsx
-import React from 'react';
+
+import React, { useEffect } from 'react';
 import { FaTimes } from 'react-icons/fa';
 
 const BaseSheet = ({ 
@@ -7,38 +8,58 @@ const BaseSheet = ({
   onClose, 
   title, 
   children,
-  maxWidth = 'max-w-2xl'
+  maxWidth = 'max-w-4xl'
 }) => {
+  
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
-    <>
-      {/* Backdrop */}
+    <div className="fixed inset-0 z-50 overflow-hidden">
+      {/* Black with opacity - NOT complete black */}
       <div 
-        className="fixed inset-0 bg-black bg-opacity-30 z-40 transition-opacity"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
         onClick={onClose}
+        aria-hidden="true"
       />
       
-      {/* Sheet */}
-      <div className={`fixed inset-y-0 right-0 w-full ${maxWidth} bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out overflow-y-auto`}>
-        
-        {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex justify-between items-center z-10">
-          <h2 className="text-xl font-bold text-gray-800">{title}</h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <FaTimes className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6">
-          {children}
+      {/* Center Container */}
+      <div className="absolute inset-0 flex items-center justify-center p-4">
+        {/* Centered Sheet */}
+        <div className={`w-full ${maxWidth} bg-white rounded-2xl shadow-2xl max-h-[85vh] overflow-hidden transform transition-all duration-300 ease-out`}>
+          
+          {/* Header */}
+          <div className="flex items-center justify-between px-8 py-5 border-b border-gray-100 bg-white">
+            <h2 className="text-2xl font-bold text-gray-800">
+              <span className="text-[#FD561E] mr-2">✈️</span>
+              {title}
+            </h2>
+            <button
+              onClick={onClose}
+              className="p-2.5 hover:bg-[#FD561E] hover:bg-opacity-10 rounded-full transition-colors group"
+              aria-label="Close"
+            >
+              <FaTimes className="w-5 h-5 text-gray-400 group-hover:text-[#FD561E]" />
+            </button>
+          </div>
+          
+          {/* Content - Scrollable */}
+          <div className="overflow-y-auto p-8" style={{ maxHeight: 'calc(85vh - 80px)' }}>
+            {children}
+          </div>
         </div>
       </div>
-    </>
+    </div>
   );
 };
 
