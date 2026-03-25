@@ -21,7 +21,6 @@ const BookingSuccess = () => {
   const [showRewardConfirm, setShowRewardConfirm] = useState(false);
   const [pendingGateway, setPendingGateway]       = useState(null);
   const [showSuccessPopup, setShowSuccessPopup]   = useState(false);
-  const [showDetails, setShowDetails]             = useState(false);
 
   const [timeLeft, setTimeLeft] = useState(480);
   const BLOCK_DURATION = 480;
@@ -30,9 +29,7 @@ const BookingSuccess = () => {
   const isGuest = !user?.uid || user?.uid === "Not Applicable";
 
   useEffect(() => {
-    if (!state) {
-      navigate("/", { replace: true });
-    }
+    if (!state) navigate("/", { replace: true });
   }, [state]);
 
   const totalFare            = state?.totalFare || 0;
@@ -41,16 +38,13 @@ const BookingSuccess = () => {
   const availableRewardPoint = parseFloat(state?.availableRewardPoint) || 0;
   const passengers           = state?.passengers || [];
 
-  const discountedFare        = promoApplied ? totalFare - promoDiscount : totalFare;
-  const canPayFullWithRewards  = availableRewardPoint >= discountedFare;
-  const remainingAfterRewards  = Math.max(0, discountedFare - availableRewardPoint).toFixed(2);
+  const discountedFare       = promoApplied ? totalFare - promoDiscount : totalFare;
+  const canPayFullWithRewards = availableRewardPoint >= discountedFare;
+  const remainingAfterRewards = Math.max(0, discountedFare - availableRewardPoint).toFixed(2);
 
-  console.log("BookingSuccess state:", {
-    totalFare, rewardpoint, availableRewardPoint, uid,
-    isGuest, discountedFare, canPayFullWithRewards
-  });
+  console.log("BookingSuccess state:", { totalFare, rewardpoint, availableRewardPoint, uid, isGuest, discountedFare, canPayFullWithRewards });
 
-  // ── Timer ──
+  // Timer
   useEffect(() => {
     let startTime = localStorage.getItem("blockStartTime");
     if (!startTime) { startTime = Date.now(); localStorage.setItem("blockStartTime", startTime); }
@@ -63,44 +57,33 @@ const BookingSuccess = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // ── Intercept browser back button ──
+  // Intercept back button
   useEffect(() => {
     window.history.pushState(null, "", window.location.href);
-    const handlePopState = () => {
-      setShowBackConfirm(true);
-      window.history.pushState(null, "", window.location.href);
-    };
+    const handlePopState = () => { setShowBackConfirm(true); window.history.pushState(null, "", window.location.href); };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
   const timerStr = `${Math.floor(timeLeft / 60)}:${String(timeLeft % 60).padStart(2, "0")}`;
 
-  // ── FIXED: Go Back → navigate to results page with reopenLayout signal ──
   const handleBackConfirm = () => {
     setShowBackConfirm(false);
-    // Navigate to results page — BusResultsPage will see reopenLayout:true and open SeatBookingLayout step 1
     navigate(-1);
-    // Fire event so BusResultsPage reopens SeatBookingLayout
-    setTimeout(() => {
-      window.dispatchEvent(new CustomEvent("reopenSeatLayout", {
-        detail: { tripId: state?.tripId }
-      }));
-    }, 100);
+    setTimeout(() => window.dispatchEvent(new CustomEvent("reopenSeatLayout", { detail: { tripId: state?.tripId } })), 100);
   };
-
   const handleBackCancel = () => setShowBackConfirm(false);
 
-  // ── Apply Promo ──
+  // Apply Promo
   const handleApplyPromo = async () => {
     if (!promoCode.trim()) { setPromoError("Please enter a promo code."); return; }
     const offerBody = {
-      pmobile:    String(user?.umob || user?.mobile || user?.pmobile || ""),
-      uid:        String(uid || ""),
-      pemail:     user?.uemail || user?.email || user?.pemail || "",
+      pmobile: String(user?.umob || user?.mobile || user?.pmobile || ""),
+      uid: String(uid || ""),
+      pemail: user?.uemail || user?.email || user?.pemail || "",
       blk_ticket: state?.ticketId || "",
-      divTotal:   Number(totalFare),
-      offerCode:  promoCode.trim().toUpperCase(),
+      divTotal: Number(totalFare),
+      offerCode: promoCode.trim().toUpperCase(),
     };
     console.log("Offer API body:", offerBody);
     try {
@@ -108,66 +91,40 @@ const BookingSuccess = () => {
       console.log("Offer API response:", res.data);
       if (res.data?.success) {
         const discount = parseFloat(res.data.discount || 0);
-        setPromoDiscount(discount);
-        setPromoApplied(true);
-        setPromoError("");
+        setPromoDiscount(discount); setPromoApplied(true); setPromoError("");
         setPromoPopup({ discount, newTotal: res.data.newTotal || (totalFare - discount) });
-      } else {
-        setPromoError(res.data?.message || "Invalid promo code.");
-      }
+      } else { setPromoError(res.data?.message || "Invalid promo code."); }
     } catch (err) {
       console.error("Offer API error:", err.response?.data || err.message);
-      const msg = err.response?.data?.message || err.response?.data?.error || "Failed to apply promo code.";
-      setPromoError(msg);
+      setPromoError(err.response?.data?.message || err.response?.data?.error || "Failed to apply promo code.");
     }
   };
-
-  const handleRemovePromo = () => {
-    setPromoCode(""); setPromoApplied(false); setPromoDiscount(0); setPromoError("");
-  };
+  const handleRemovePromo = () => { setPromoCode(""); setPromoApplied(false); setPromoDiscount(0); setPromoError(""); };
 
   const handleChoosePayment = () => setShowGatewayPopup(true);
 
   const handleGatewaySelect = (gateway) => {
-    setShowGatewayPopup(false);
-    setPendingGateway(gateway);
-    if (!isGuest && availableRewardPoint > 0) {
-      setShowRewardConfirm(true);
-    } else {
-      executePayment(gateway, false);
-    }
+    setShowGatewayPopup(false); setPendingGateway(gateway);
+    if (!isGuest && availableRewardPoint > 0) setShowRewardConfirm(true);
+    else executePayment(gateway, false);
   };
 
-  const handleRewardConfirmProceed = () => {
-    setShowRewardConfirm(false);
-    executePayment(pendingGateway, true);
-  };
+  const handleRewardConfirmProceed = () => { setShowRewardConfirm(false); executePayment(pendingGateway, true); };
 
   const executePayment = async (gateway, useRewards) => {
     if (useRewards && availableRewardPoint > 0) {
       if (canPayFullWithRewards) {
         try {
-          const res = await axios.post("/bookticket/rp", {
-            blockedTicketId: state?.ticketId, payeeid: String(uid),
-            name: passengers[0]?.name || "Guest", email: passengers[0]?.email || "",
-            fare: discountedFare, paymentfor: "Bus Ticket RP"
-          });
+          const res = await axios.post("/bookticket/rp", { blockedTicketId: state?.ticketId, payeeid: String(uid), name: passengers[0]?.name || "Guest", email: passengers[0]?.email || "", fare: discountedFare, paymentfor: "Bus Ticket RP" });
           if (res.data?.success) {
             setShowSuccessPopup(true);
-            setTimeout(() => navigate("/payment-status", {
-              state: { status: "success", paymentData: res.data, passengers, seats: state?.seats, fromCity: state?.fromCity, toCity: state?.toCity, date: state?.date, totalFare: discountedFare, ticketId: state?.ticketId }
-            }), 2000);
+            setTimeout(() => navigate("/payment-status", { state: { status: "success", paymentData: res.data, passengers, seats: state?.seats, fromCity: state?.fromCity, toCity: state?.toCity, date: state?.date, totalFare: discountedFare, ticketId: state?.ticketId } }), 2000);
             return;
           }
         } catch (err) { console.error("Full reward error:", err); }
       } else {
-        try {
-          await axios.post("/bookticket/rp", {
-            blockedTicketId: state?.ticketId, payeeid: String(uid),
-            name: passengers[0]?.name || "Guest", email: passengers[0]?.email || "",
-            fare: discountedFare, paymentfor: "Bus Ticket RP"
-          });
-        } catch (err) { console.error("Partial reward error:", err); }
+        try { await axios.post("/bookticket/rp", { blockedTicketId: state?.ticketId, payeeid: String(uid), name: passengers[0]?.name || "Guest", email: passengers[0]?.email || "", fare: discountedFare, paymentfor: "Bus Ticket RP" }); }
+        catch (err) { console.error("Partial reward error:", err); }
         const fareToCharge = parseFloat(remainingAfterRewards);
         if (gateway === "razorpay") await handleRazorPayClick(fareToCharge);
         else await handleBillDeskClick(fareToCharge);
@@ -200,9 +157,7 @@ const BookingSuccess = () => {
       const rzp = new window.Razorpay(options);
       rzp.on("payment.failed", function (r) { navigate("/payment-status", { state: { status: "failed", payment: { code: "PAYMENT_ERROR", description: "Something went wrong", reason: r.error.message } } }); });
       rzp.open();
-    } catch (error) {
-      navigate("/payment-status", { state: { status: "failed", payment: { code: "PAYMENT_ERROR", description: "Something went wrong", reason: error.message } } });
-    }
+    } catch (error) { navigate("/payment-status", { state: { status: "failed", payment: { code: "PAYMENT_ERROR", description: "Something went wrong", reason: error.message } } }); }
   };
 
   const handleBillDeskClick = async (fareToCharge) => {
@@ -212,216 +167,200 @@ const BookingSuccess = () => {
       if (!response || !response.success) { alert("BillDesk order creation failed"); return; }
       if (!response.authToken) { alert("Auth Token missing"); return; }
       window.location.href = `https://uat.bobros.co.in/billdesk_checkout.php?merchantId=HYDBOBROS&bdorderid=${response.bdorderid}&authToken=${encodeURIComponent(response.authToken)}`;
-    } catch (error) {
-      navigate("/payment-status", { state: { status: "failed", payment: { description: "BillDesk payment error", reason: error.message } } });
-    }
+    } catch (error) { navigate("/payment-status", { state: { status: "failed", payment: { description: "BillDesk payment error", reason: error.message } } }); }
   };
 
-  const ValueBox = ({ value }) => (
-    <div style={{ background: "white", border: "1px solid #e0e0e0", borderRadius: 8, padding: "12px 16px", fontSize: 15, color: "#1a1a2e", fontWeight: "600" }}>
-      {value}
-    </div>
-  );
-
-  const OrangeCard = ({ children, bg = "#f5f5f5" }) => (
-    <div style={{ borderLeft: "4px solid #fd561e", background: bg, borderRadius: "0 10px 10px 0", padding: "14px 16px", marginBottom: 14 }}>
-      {children}
-    </div>
-  );
-
-  const Divider = () => <div style={{ borderTop: "1px solid #f0f0f0", margin: "14px 0" }} />;
-
   return (
-    <div style={{ minHeight: "100vh", background: "#f0f2f5", fontFamily: "'Segoe UI', sans-serif", paddingTop: 80 }}>
-      <div style={{ maxWidth: 620, margin: "0 auto", padding: "16px 14px 40px" }}>
-        <div style={{ background: "white", borderRadius: 18, boxShadow: "0 4px 20px rgba(0,0,0,0.09)", overflow: "hidden" }}>
+    <div style={{ minHeight: "100vh",  background: "#f4f6f9", fontFamily: "'Segoe UI', sans-serif",marginTop: "100px" }}>
 
-          {/* ORANGE HEADER */}
-          <div style={{ background: "linear-gradient(135deg, #fd561e 0%, #ff8c42 100%)", padding: "16px 20px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h1 style={{ color: "white", fontSize: 18, fontWeight: "800", margin: 0 }}>Payment Details</h1>
-              <div style={{ display: "flex", alignItems: "center", gap: 5, background: "rgba(255,255,255,0.2)", borderRadius: 20, padding: "5px 12px" }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-                </svg>
-                <span style={{ color: "white", fontWeight: "800", fontSize: 14 }}>{timerStr}</span>
-              </div>
-            </div>
-            <div style={{ marginTop: 8, fontSize: 12, color: "rgba(255,255,255,0.85)" }}>
-              Ticket blocked. Complete payment within <strong style={{ color: "white" }}>8 minutes</strong>.
-            </div>
-          </div>
-
-          {/* TRIP INFO */}
-          <div style={{ padding: "16px 20px" }}>
-            <div style={{ fontSize: 20, fontWeight: "800", color: "#1a1a2e", marginBottom: 10 }}>
-              {state?.fromCity} <span style={{ color: "#fd561e" }}>→</span> {state?.toCity}
-            </div>
-            {state?.busType  && <div style={{ fontSize: 14, color: "#555", marginBottom: 3 }}>Bus Type: {state.busType}</div>}
-            {state?.operator && <div style={{ fontSize: 14, color: "#555", marginBottom: 3 }}>Operator: {state.operator}</div>}
-            <div style={{ fontSize: 14, color: "#555", marginBottom: 3 }}>DOJ: {state?.date}</div>
-            <div style={{ fontSize: 14, color: "#555", marginBottom: 10 }}>
-              Booking Ref: <strong style={{ color: "#1a1a2e" }}>{state?.ticketId}</strong>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: "1px solid #f0f0f0", paddingTop: 10 }}>
-              <div style={{ fontSize: 16, fontWeight: "800", color: "#1a1a2e" }}>
-                Total Fare: <span style={{ color: "#fd561e" }}>₹{totalFare}</span>
-              </div>
-              <button onClick={() => setShowDetails(!showDetails)} style={{ background: "none", border: "none", color: "#2563eb", fontSize: 14, fontWeight: "600", cursor: "pointer" }}>
-                Details {showDetails ? "▲" : "›"}
-              </button>
-            </div>
-          </div>
-
-          {/* Collapsible passenger details */}
-          {showDetails && (
-            <div style={{ borderTop: "1px solid #f5f5f5", padding: "14px 20px", background: "#fafafa" }}>
-              <div style={{ fontSize: 11, fontWeight: "700", color: "#aaa", textTransform: "uppercase", letterSpacing: "0.7px", marginBottom: 10 }}>Passenger Details</div>
-              {passengers.map((p, i) => (
-                <div key={i} style={{ background: "white", borderRadius: 10, padding: "11px 14px", marginBottom: 8, border: "1px solid #f0f0f0" }}>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                    {[["Name", p.name], ["Seat", p.seatName || p.seat], ["Age", p.age], ["Gender", p.gender]].map(([lbl, v]) => (
-                      <div key={lbl}>
-                        <div style={{ fontSize: 10, color: "#aaa", textTransform: "uppercase", fontWeight: "700", marginBottom: 2 }}>{lbl}</div>
-                        <div style={{ fontSize: 13, fontWeight: "700", color: lbl === "Seat" ? "#fd561e" : "#1a1a2e" }}>{v || "—"}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-              <div style={{ background: "#fff8f5", border: "1px solid #ffe4d6", borderRadius: 10, padding: "11px 14px" }}>
-                <div style={{ fontSize: 11, fontWeight: "600", color: "#888", marginBottom: 8 }}>Booking details will be sent to:</div>
-                {(passengers[0]?.mobile || state?.mobile) && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5 }}>
-                    <span>📞</span><span style={{ fontSize: 13, fontWeight: "600" }}>+91 {passengers[0]?.mobile || state?.mobile}</span>
-                  </div>
-                )}
-                {(passengers[0]?.email || state?.email || user?.uemail) && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span>✉️</span><span style={{ fontSize: 13, fontWeight: "600" }}>{passengers[0]?.email || state?.email || user?.uemail}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* GUEST UI */}
-          {isGuest && (
-            <>
-              <Divider />
-              <div style={{ padding: "16px 20px 20px", textAlign: "center" }}>
-                <div style={{ fontSize: 15, fontWeight: "700", color: "#1a1a2e", marginBottom: 6 }}><strong>You are booking as a guest.</strong></div>
-                <div style={{ fontSize: 14, color: "#555", marginBottom: 20, lineHeight: 1.6 }}>Sign up with BOBROS to avail great discounts and earn reward points.</div>
-                <button onClick={() => window.dispatchEvent(new CustomEvent("openAuthModal", { detail: "signup" }))} style={{ background: "#fd561e", color: "white", border: "none", borderRadius: 12, padding: "13px 0", fontSize: 15, fontWeight: "700", cursor: "pointer", width: "65%", display: "block", margin: "0 auto 12px", boxShadow: "0 4px 12px rgba(253,86,30,0.3)" }}>Sign Up</button>
-                <div style={{ fontSize: 14, color: "#555" }}>Already registered?{" "}<span onClick={() => window.dispatchEvent(new CustomEvent("openAuthModal", { detail: "signin" }))} style={{ color: "#2563eb", fontWeight: "700", cursor: "pointer" }}>Sign In</span></div>
-              </div>
-            </>
-          )}
-
-          {/* LOGGED IN UI */}
-          {!isGuest && (
-            <div style={{ padding: "0 20px 20px" }}>
-              {rewardpoint > 0 && !promoApplied && (
-                <div style={{ borderLeft: "4px solid #fd561e", background: "#f0fdf4", borderRadius: "0 10px 10px 0", padding: "12px 14px", marginBottom: 14, fontSize: 14, color: "#333", lineHeight: 1.65 }}>
-                  Congratulations! You are eligible for earning <strong>{rewardpoint} Reward Points</strong> on this Booking. You can use this Reward Balance for future bookings. <strong>Note: Promo codes disable reward point earnings for that booking.</strong>
-                </div>
-              )}
-
-              <div style={{ display: "flex", gap: 10, marginBottom: promoError ? 6 : 14 }}>
-                {promoApplied ? (
-                  <div style={{ flex: 1, display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f0fdf4", border: "1.5px solid #86efac", borderRadius: 12, padding: "13px 16px" }}>
-                    <span style={{ color: "#16a34a", fontWeight: "700", fontSize: 14 }}>🏷️ "{promoCode}" — ₹{promoDiscount} off</span>
-                    <button onClick={handleRemovePromo} style={{ background: "none", border: "none", color: "#dc2626", fontWeight: "700", fontSize: 13, cursor: "pointer" }}>Remove</button>
-                  </div>
-                ) : (
-                  <>
-                    <input type="text" value={promoCode} onChange={e => { setPromoCode(e.target.value); setPromoError(""); }} placeholder="Add Promo Code"
-                      style={{ flex: 1, border: "1.5px solid #e0e0e0", borderRadius: 12, padding: "14px 16px", fontSize: 15, outline: "none", background: "white", boxSizing: "border-box" }}
-                      onFocus={e => e.target.style.borderColor = "#fd561e"} onBlur={e => e.target.style.borderColor = "#e0e0e0"}
-                    />
-                    <button onClick={handleApplyPromo} style={{ background: "#fd561e", color: "white", border: "none", borderRadius: 30, padding: "14px 24px", fontSize: 15, fontWeight: "700", cursor: "pointer", boxShadow: "0 3px 10px rgba(253,86,30,0.3)", whiteSpace: "nowrap" }}>Apply</button>
-                  </>
-                )}
-              </div>
-              {promoError && <div style={{ color: "#dc2626", fontSize: 13, marginBottom: 14, paddingLeft: 4 }}>{promoError}</div>}
-
-              <div style={{ borderLeft: "4px solid #fd561e", background: "#f5f5f5", borderRadius: "0 10px 10px 0", padding: "12px 14px", marginBottom: 14 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div style={{ width: 20, height: 20, borderRadius: "50%", border: "2.5px solid #2563eb", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#2563eb" }} />
-                  </div>
-                  <span style={{ fontSize: 14, color: "#333", fontWeight: "500" }}>Pay from your User Account (Rewards + Online Payment)</span>
-                </div>
-              </div>
-
-              <div style={{ borderLeft: "4px solid #fd561e", background: "#e8f0fe", borderRadius: "0 10px 10px 0", padding: "14px 16px", marginBottom: 14 }}>
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: 14, fontWeight: "700", color: "#333", marginBottom: 6 }}>Total Fare to be Paid (after promo discount if any):</div>
-                  <ValueBox value={typeof discountedFare === "number" ? discountedFare.toFixed(2) : String(discountedFare)} />
-                </div>
-                <div style={{ marginBottom: availableRewardPoint > 0 ? 14 : 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: "700", color: "#333", marginBottom: 6 }}>Reward Earnings for Current Booking</div>
-                  <ValueBox value={promoApplied ? "0.00" : (typeof rewardpoint === "number" ? rewardpoint.toFixed(2) : String(rewardpoint || 0))} />
-                  {promoApplied && <div style={{ fontSize: 11, color: "#999", marginTop: 4 }}>Promo codes disable reward point earnings.</div>}
-                </div>
-                {availableRewardPoint > 0 && (
-                  <div>
-                    <div style={{ fontSize: 14, fontWeight: "700", color: "#333", marginBottom: 6 }}>Your Reward Balance Eligible to use</div>
-                    <ValueBox value={String(availableRewardPoint)} />
-                    <div style={{ fontSize: 12, color: canPayFullWithRewards ? "#16a34a" : "#555", marginTop: 6, fontWeight: "500" }}>
-                      {canPayFullWithRewards ? "✅ Your reward balance covers the full fare! No extra charge." : `₹${availableRewardPoint} will be deducted. Remaining ₹${remainingAfterRewards} via gateway.`}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <button onClick={handleChoosePayment} style={{ width: "100%", background: "#fd561e", color: "white", border: "none", borderRadius: 30, padding: "16px", fontSize: 16, fontWeight: "700", cursor: "pointer", boxShadow: "0 4px 14px rgba(253,86,30,0.35)" }}>
-                Choose Payment Method
-              </button>
-            </div>
-          )}
-
-          {isGuest && (
-            <div style={{ padding: "0 20px 20px" }}>
-              <button onClick={handleChoosePayment} style={{ width: "100%", background: "#fd561e", color: "white", border: "none", borderRadius: 30, padding: "16px", fontSize: 16, fontWeight: "700", cursor: "pointer", boxShadow: "0 4px 14px rgba(253,86,30,0.35)" }}>
-                Choose Payment Method
-              </button>
-            </div>
-          )}
-
+      {/* TOP STICKY HEADER */}
+      <div style={{  top: 0, zIndex: 100, background: "#fff", borderBottom: "1px solid #e8e8e8", padding: "14px 32px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ fontSize: 17, fontWeight: "700", color: "#1a1a2e" }}>
+          Pay <span style={{ color: "#fd561e" }}>₹{typeof discountedFare === "number" ? discountedFare.toFixed(2) : discountedFare}</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#fd561e", fontWeight: "700", fontSize: 15 }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fd561e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          {timerStr}
         </div>
       </div>
 
-      {/* GATEWAY PICKER POPUP */}
-      {showGatewayPopup && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300, padding: 16 }}>
-          <div style={{ background: "white", borderRadius: 20, padding: "26px 22px", width: "100%", maxWidth: 360 }}>
-            <h2 style={{ fontSize: 17, fontWeight: "800", color: "#1a1a2e", textAlign: "center", marginBottom: 6 }}>Choose Payment Method</h2>
-            <p style={{ fontSize: 13, color: "#888", textAlign: "center", marginBottom: 20 }}>
-              Amount to pay: <strong style={{ color: "#fd561e" }}>
-                {!isGuest && canPayFullWithRewards ? "₹0 (Full Rewards)" : `₹${!isGuest && availableRewardPoint > 0 ? remainingAfterRewards : (typeof discountedFare === "number" ? discountedFare.toFixed(2) : discountedFare)}`}
-              </strong>
-            </p>
-            <button onClick={() => handleGatewaySelect("razorpay")}
-              onMouseEnter={e => { e.currentTarget.style.background = "#fd561e"; e.currentTarget.style.color = "white"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "white"; e.currentTarget.style.color = "#fd561e"; }}
-              style={{ width: "100%", marginBottom: 12, background: "white", color: "#fd561e", border: "2px solid #fd561e", borderRadius: 14, padding: "16px 18px", fontSize: 15, fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, transition: "background 0.2s, color 0.2s" }}>
-              <span style={{ fontSize: 24 }}>💳</span>
-              <div style={{ textAlign: "left" }}><div>RazorPay</div><div style={{ fontSize: 11, fontWeight: "400", opacity: 0.7 }}>Cards · UPI · Net Banking · Wallets</div></div>
-              <span style={{ marginLeft: "auto", fontSize: 18, opacity: 0.7 }}>›</span>
-            </button>
-            <button onClick={() => handleGatewaySelect("billdesk")}
-              onMouseEnter={e => { e.currentTarget.style.background = "#fd561e"; e.currentTarget.style.color = "white"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "white"; e.currentTarget.style.color = "#fd561e"; }}
-              style={{ width: "100%", marginBottom: 16, background: "white", color: "#fd561e", border: "2px solid #fd561e", borderRadius: 14, padding: "16px 18px", fontSize: 15, fontWeight: "700", cursor: "pointer", display: "flex", alignItems: "center", gap: 12, transition: "background 0.2s, color 0.2s" }}>
-              <span style={{ fontSize: 24 }}>🏦</span>
-              <div style={{ textAlign: "left" }}><div>BillDesk</div><div style={{ fontSize: 11, fontWeight: "400", opacity: 0.7 }}>Net Banking · Debit Cards</div></div>
-              <span style={{ marginLeft: "auto", fontSize: 18, opacity: 0.4 }}>›</span>
-            </button>
-            <button onClick={() => setShowGatewayPopup(false)} style={{ width: "100%", background: "none", border: "none", color: "#aaa", fontSize: 14, cursor: "pointer", padding: 6 }}>Cancel</button>
-          </div>
+      {/* TRUST BADGES */}
+      <div style={{ background: "#fff", borderBottom: "1px solid #f0f0f0", padding: "10px 32px" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", gap: 32, alignItems: "center" }}>
+          {[["🔒", "Secure Payment"], ["⚡", "Fast Confirmation"], ["✅", "Trusted Booking"]].map(([icon, label]) => (
+            <div key={label} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#666" }}>
+              <span style={{ fontSize: 14 }}>{icon}</span>{label}
+            </div>
+          ))}
         </div>
-      )}
+      </div>
+
+      {/* MAIN TWO-COLUMN LAYOUT */}
+      <div style={{ maxWidth: 1100, margin: "24px auto", padding: "0 24px", display: "grid", gridTemplateColumns: "1fr 360px", gap: 24, alignItems: "start" }}>
+
+        {/* ── LEFT COLUMN: Payment / Guest UI ── */}
+        <div>
+
+          {/* Promo Code (logged in only) */}
+          {!isGuest && (
+            <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e8e8e8", padding: "16px 20px", marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: "600", color: "#333", marginBottom: 10, display: "flex", alignItems: "center", gap: 8 }}>
+                <span>🏷️</span> Have a coupon code?
+              </div>
+              {promoApplied ? (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f0fdf4", border: "1.5px solid #86efac", borderRadius: 10, padding: "12px 16px" }}>
+                  <span style={{ color: "#16a34a", fontWeight: "700", fontSize: 14 }}>"{promoCode}" — ₹{promoDiscount} off applied!</span>
+                  <button onClick={handleRemovePromo} style={{ background: "none", border: "none", color: "#dc2626", fontWeight: "700", fontSize: 13, cursor: "pointer" }}>Remove</button>
+                </div>
+              ) : (
+                <>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <input type="text" value={promoCode} onChange={e => { setPromoCode(e.target.value); setPromoError(""); }} placeholder="Enter promo code"
+                      style={{ flex: 1, border: "1.5px solid #e0e0e0", borderRadius: 8, padding: "11px 14px", fontSize: 14, outline: "none", boxSizing: "border-box" }}
+                      onFocus={e => e.target.style.borderColor = "#fd561e"} onBlur={e => e.target.style.borderColor = "#e0e0e0"} />
+                    <button onClick={handleApplyPromo} style={{ background: "#fd561e", color: "white", border: "none", borderRadius: 8, padding: "11px 22px", fontSize: 14, fontWeight: "700", cursor: "pointer" }}>Apply</button>
+                  </div>
+                  {promoError && <div style={{ color: "#dc2626", fontSize: 12, marginTop: 6 }}>{promoError}</div>}
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Reward Points info (logged in only) */}
+          {!isGuest && rewardpoint > 0 && !promoApplied && (
+            <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: 12, padding: "14px 18px", marginBottom: 16, fontSize: 13, color: "#92400e", lineHeight: 1.6 }}>
+              🎉 You'll earn <strong>{rewardpoint} Reward Points</strong> on this booking.
+              {availableRewardPoint > 0 && (
+                <div style={{ marginTop: 6, color: canPayFullWithRewards ? "#16a34a" : "#555", fontWeight: "600" }}>
+                  {canPayFullWithRewards
+                    ? `✅ Your ₹${availableRewardPoint} reward balance covers the full fare!`
+                    : `₹${availableRewardPoint} reward balance will be deducted. Remaining ₹${remainingAfterRewards} via gateway.`}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Payment Method Selection */}
+          <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e8e8e8", padding: "20px", marginBottom: 16 }}>
+            <div style={{ fontSize: 15, fontWeight: "700", color: "#1a1a2e", marginBottom: 16 }}>Payment Method</div>
+
+            {/* Razorpay option */}
+            <div onClick={() => handleGatewaySelect("razorpay")} style={{ border: "1.5px solid #e8e8e8", borderRadius: 10, padding: "16px 18px", marginBottom: 12, cursor: "pointer", transition: "border-color 0.2s" }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = "#fd561e"}
+              onMouseLeave={e => e.currentTarget.style.borderColor = "#e8e8e8"}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontWeight: "700", fontSize: 14, color: "#1a1a2e", marginBottom: 3 }}>💳 RazorPay</div>
+                  <div style={{ fontSize: 12, color: "#888" }}>UPI · Cards · Net Banking · Wallets</div>
+                </div>
+                <span style={{ color: "#aaa", fontSize: 18 }}>›</span>
+              </div>
+            </div>
+
+            {/* BillDesk option */}
+            <div onClick={() => handleGatewaySelect("billdesk")} style={{ border: "1.5px solid #e8e8e8", borderRadius: 10, padding: "16px 18px", cursor: "pointer", transition: "border-color 0.2s" }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = "#fd561e"}
+              onMouseLeave={e => e.currentTarget.style.borderColor = "#e8e8e8"}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontWeight: "700", fontSize: 14, color: "#1a1a2e", marginBottom: 3 }}>🏦 BillDesk</div>
+                  <div style={{ fontSize: 12, color: "#888" }}>Net Banking · Debit Cards</div>
+                </div>
+                <span style={{ color: "#aaa", fontSize: 18 }}>›</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Guest UI */}
+          {isGuest && (
+            <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e8e8e8", padding: "20px", textAlign: "center" }}>
+              <div style={{ fontSize: 15, fontWeight: "700", color: "#1a1a2e", marginBottom: 6 }}>You are booking as a guest.</div>
+              <div style={{ fontSize: 13, color: "#666", marginBottom: 16, lineHeight: 1.6 }}>Sign up with BOBROS to avail great discounts and earn reward points.</div>
+              <button onClick={() => window.dispatchEvent(new CustomEvent("openAuthModal", { detail: "signup" }))}
+                style={{ background: "#fd561e", color: "white", border: "none", borderRadius: 8, padding: "11px 32px", fontSize: 14, fontWeight: "700", cursor: "pointer", marginRight: 10, boxShadow: "0 3px 10px rgba(253,86,30,0.3)" }}>
+                Sign Up
+              </button>
+              <span style={{ fontSize: 13, color: "#666" }}>
+                Already registered?{" "}
+                <span onClick={() => window.dispatchEvent(new CustomEvent("openAuthModal", { detail: "signin" }))} style={{ color: "#2563eb", fontWeight: "700", cursor: "pointer" }}>Sign In</span>
+              </span>
+            </div>
+          )}
+
+        </div>
+
+        {/* ── RIGHT COLUMN: Trip Summary ── */}
+        <div style={{ position: "sticky", top: 80 }}>
+
+          {/* Fare Breakup */}
+          <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e8e8e8", padding: "20px", marginBottom: 16 }}>
+            <div style={{ fontSize: 15, fontWeight: "700", color: "#1a1a2e", marginBottom: 14 }}>Fare Breakup</div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, fontSize: 14, color: "#555" }}>
+              <span>Base Fare ({passengers.length} seat{passengers.length > 1 ? "s" : ""})</span>
+              <span style={{ fontWeight: "600", color: "#1a1a2e" }}>₹{totalFare}</span>
+            </div>
+            {promoApplied && (
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, fontSize: 14, color: "#16a34a" }}>
+                <span>Promo Discount ({promoCode})</span>
+                <span style={{ fontWeight: "600" }}>− ₹{promoDiscount}</span>
+              </div>
+            )}
+            {!isGuest && availableRewardPoint > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, fontSize: 14, color: "#16a34a" }}>
+                <span>Reward Balance</span>
+                <span style={{ fontWeight: "600" }}>− ₹{Math.min(availableRewardPoint, discountedFare).toFixed(2)}</span>
+              </div>
+            )}
+            <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: 12, display: "flex", justifyContent: "space-between", fontSize: 16, fontWeight: "800", color: "#1a1a2e" }}>
+              <span>Total</span>
+              <span style={{ color: "#fd561e" }}>
+                ₹{!isGuest && availableRewardPoint > 0 ? remainingAfterRewards : (typeof discountedFare === "number" ? discountedFare.toFixed(2) : discountedFare)}
+              </span>
+            </div>
+          </div>
+
+          {/* Trip Info */}
+          <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e8e8e8", padding: "20px", marginBottom: 16 }}>
+            <div style={{ fontSize: 17, fontWeight: "800", color: "#1a1a2e", marginBottom: 4 }}>
+              {state?.fromCity} <span style={{ color: "#fd561e" }}>→</span> {state?.toCity}
+            </div>
+            {state?.operator && <div style={{ fontSize: 13, color: "#888", marginBottom: 2 }}>{state.operator}</div>}
+            {state?.busType && <div style={{ fontSize: 13, color: "#888", marginBottom: 8 }}>{state.busType}</div>}
+            <div style={{ fontSize: 13, color: "#555", marginBottom: 2 }}>📅 {state?.date}</div>
+            <div style={{ fontSize: 13, color: "#555" }}>🎫 Ref: <strong>{state?.ticketId}</strong></div>
+          </div>
+
+          {/* Passenger Details */}
+          <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e8e8e8", padding: "20px" }}>
+            <div style={{ fontSize: 14, fontWeight: "700", color: "#1a1a2e", marginBottom: 12 }}>Passengers</div>
+            {passengers.map((p, i) => (
+              <div key={i} style={{ marginBottom: i < passengers.length - 1 ? 12 : 0, paddingBottom: i < passengers.length - 1 ? 12 : 0, borderBottom: i < passengers.length - 1 ? "1px solid #f5f5f5" : "none" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                  {[["Name", p.name], ["Seat", p.seatName || p.seat], ["Age", p.age], ["Gender", p.gender]].map(([lbl, v]) => (
+                    <div key={lbl}>
+                      <div style={{ fontSize: 10, color: "#aaa", textTransform: "uppercase", fontWeight: "700", marginBottom: 2 }}>{lbl}</div>
+                      <div style={{ fontSize: 13, fontWeight: "700", color: lbl === "Seat" ? "#fd561e" : "#1a1a2e" }}>{v || "—"}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {/* Contact info */}
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #f5f5f5" }}>
+              <div style={{ fontSize: 11, color: "#aaa", marginBottom: 6 }}>Booking details will be sent to:</div>
+              {(passengers[0]?.mobile || state?.mobile) && (
+                <div style={{ fontSize: 13, color: "#444", marginBottom: 3 }}>📞 +91 {passengers[0]?.mobile || state?.mobile}</div>
+              )}
+              {(passengers[0]?.email || state?.email || user?.uemail) && (
+                <div style={{ fontSize: 13, color: "#444" }}>✉️ {passengers[0]?.email || state?.email || user?.uemail}</div>
+              )}
+            </div>
+          </div>
+
+        </div>
+      </div>
 
       {/* REWARD CONFIRMATION POPUP */}
       {showRewardConfirm && (
@@ -499,9 +438,7 @@ const BookingSuccess = () => {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 500 }}>
           <div style={{ background: "white", padding: "24px", borderRadius: "16px", width: "320px", textAlign: "center" }}>
             <h3 style={{ fontSize: "18px", fontWeight: "700", marginBottom: "10px" }}>⚠️ Go Back?</h3>
-            <p style={{ fontSize: "14px", color: "#666", marginBottom: "20px" }}>
-              If you go back, your selected seats may be lost.
-            </p>
+            <p style={{ fontSize: "14px", color: "#666", marginBottom: "20px" }}>If you go back, your selected seats may be lost.</p>
             <div style={{ display: "flex", gap: "10px" }}>
               <button onClick={handleBackCancel} style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "1px solid #ccc", cursor: "pointer" }}>Stay</button>
               <button onClick={handleBackConfirm} style={{ flex: 1, padding: "10px", borderRadius: "8px", background: "#fd561e", color: "white", border: "none", cursor: "pointer" }}>Go Back</button>
