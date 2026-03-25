@@ -37,6 +37,10 @@ import GuestBookingsPage from "./modules/bus/pages/GuestBookingPage";
 import CancelTicketPage from "./modules/bus/pages/CancelTicketPage";
 import MyAccount from "./modules/bus/pages/MyAccount";
 import MyProfile from "./modules/bus/pages/MyProfile";
+import AboutUs from "./modules/bus/pages/AboutUs";
+import ContactUs from "./modules/bus/pages/ContactUs";
+import PrivacyPolicy from "./modules/bus/pages/PrivacyPolicy";
+import TermsAndConditions from "./modules/bus/pages/TermsAndConditions";
 
 function App() {
   return (
@@ -51,6 +55,10 @@ function App() {
                 <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/HomePage" element={<Home />} />
+                  <Route path="/about" element={<AboutUs />} />
+                  <Route path="/contact" element={<ContactUs />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
+                  <Route path="/terms" element={<TermsAndConditions />} />
                   <Route path="/signin" element={<SignIn />} />
                   <Route path="/signup" element={<SignupForm />} />
                   <Route path="/verify-otp" element={<VerifyOTP />} />
