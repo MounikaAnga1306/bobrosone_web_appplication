@@ -1,12 +1,17 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import PrintTicketModal from "./PrintTicketModal";
+
+
 
 const MyBookings = () => {
   const navigate = useNavigate();
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [showPrint, setShowPrint] = useState(false);
+  
 
   const storedUser = JSON.parse(localStorage.getItem("user"));
   const uid = storedUser?.user?.uid || "";
@@ -96,6 +101,7 @@ const MyBookings = () => {
 // ─────────────────────────────────────────
 const BookingCard = ({ booking }) => {
   const [hovered, setHovered] = useState(false);
+   const [showPrint, setShowPrint] = useState(false);
 
   // ← ptrip = "Hyderabad, Nizamabad" — split చేయి
   const ptripParts = (booking.ptrip || "").split(",").map(s => s.trim());
@@ -103,7 +109,7 @@ const BookingCard = ({ booking }) => {
   const destination = ptripParts[1] || "—";
 
   const doj       = booking.pdoj     || "—";
-  const ticketId  = booking.tic_id   || booking.blk_ticket || "—";
+  const ticketId  = booking.tin_ticket || "—";
   const fare      = booking.fare     || booking.tcost       || "—";
   const pname     = booking.pname    || "Guest";
   const pmobile   = booking.pmobile  || "—";
@@ -305,15 +311,39 @@ const formatDate = (d) => {
 
       {/* ── PRINT BUTTON ── */}
       <div style={{ padding: "12px 20px", display: "flex", justifyContent: "flex-end" }}>
-        <button
-          onClick={handlePrint}
-          style={{ display: "flex", alignItems: "center", gap: "6px", background: "white", border: "1.5px solid #fd561e", color: "#fd561e", borderRadius: "8px", padding: "8px 20px", fontSize: "13px", fontWeight: "600", cursor: "pointer", transition: "all 0.2s" }}
-          onMouseEnter={e => { e.currentTarget.style.background = "#fd561e"; e.currentTarget.style.color = "white"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "white"; e.currentTarget.style.color = "#fd561e"; }}
-        >
-          🖨️ Print Ticket
-        </button>
-      </div>
+  <button
+    onClick={() => setShowPrint(true)}
+    style={{
+      display: "flex", alignItems: "center", gap: "6px",
+      background: "white", border: "1.5px solid #fd561e", color: "#fd561e",
+      borderRadius: "8px", padding: "8px 20px", fontSize: "13px",
+      fontWeight: "600", cursor: "pointer", transition: "all 0.2s"
+    }}
+    onMouseEnter={e => { e.currentTarget.style.background = "#fd561e"; e.currentTarget.style.color = "white"; }}
+    onMouseLeave={e => { e.currentTarget.style.background = "white"; e.currentTarget.style.color = "#fd561e"; }}
+  >
+    🖨️ Print Ticket
+  </button>
+</div>
+{/* Print Modal */}
+{showPrint && (
+  <div style={{
+    position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
+    display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999
+  }}>
+    <div style={{ background: "white", borderRadius: "16px", padding: "32px", width: "420px", position: "relative" }}>
+      <button
+        onClick={() => setShowPrint(false)}
+        style={{ position: "absolute", top: "16px", right: "16px", background: "none", border: "none", fontSize: "18px", cursor: "pointer", color: "#999" }}
+      >✕</button>
+      {/* ✅ tin_ticket prefill చేయి — captcha skip చేయి direct print */}
+      <PrintTicketModal
+        onClose={() => setShowPrint(false)}
+        prefillTin={booking.tin_ticket || ""}
+      />
+    </div>
+  </div>
+)}
 
     </div>
   );

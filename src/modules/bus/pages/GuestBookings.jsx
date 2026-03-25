@@ -227,7 +227,7 @@ const GuestBookingCard = ({ booking }) => {
   const source      = ptripParts[0] || "—";
   const destination = ptripParts[1] || "—";
   const doj         = booking.pdoj   || "—";
-  const ticketId    = booking.tic_id || booking.blk_ticket || "—";
+  const ticketId    = booking.tic_id || "—";
   const fare        = booking.fare   || booking.tcost       || "—";
   const pname       = booking.pname  || "Guest";
   const pmobile     = booking.pmobile || "—";

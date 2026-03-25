@@ -25,28 +25,51 @@ import cab from "../../../assets/cab.jpg";
 import bill from "../../../assets/bill.png";
 import service from "../../../assets/IT_Services.jpg";
 
-const services = [
-  {
-    id: "bus",
-    icon: Bus,
-    image: bus,
-    title: "Bus Ticketing",
-    description: "Seamless travel across 1000+ routes with instant booking and best price guarantee.",
-    gradient: "from-orange-500 to-red-500",
-    bgColor: "bg-orange-50",
-    iconColor: "text-orange-600",
-    stat: "1,000+ Routes",
+// ✅ Image hover animation - smoother and more subtle
+const imageHover = {
+  rest: { y: 0, scale: 1, rotate: 0 },
+  hover: {
+    y: -8,
+    scale: 1.1,
+    rotate: 2,
+    transition: { 
+      type: "spring", 
+      stiffness: 300, 
+      damping: 14 
+    },
   },
-  {
-    id: "flights",
-    icon: Plane,
-    image: flights,
-    title: "Flight Booking",
-    description: "Global flight network with exclusive deals and flexible payment options.",
-    gradient: "from-blue-500 to-cyan-500",
-    bgColor: "bg-blue-50",
-    iconColor: "text-blue-600",
-    stat: "50+ Airlines",
+};
+
+// ✅ Entry animation - smoother fade from bottom
+const cardEntry = {
+  hidden: { opacity: 0, y: 30 },
+  show: (i) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      delay: i * 0.06,
+      duration: 0.5,
+      ease: "easeOut",
+    },
+  }),
+};
+
+// ✅ Card hover animation - maintains exact same size, only lift and shadow
+const cardHover = {
+  rest: { 
+    y: 0, 
+    boxShadow: "0 10px 20px rgba(0,0,0,0.08)",
+    scale: 1,
+  },
+  hover: {
+    y: -8,
+    boxShadow: "0 25px 40px rgba(253,86,30,0.15)",
+    scale: 1,
+    transition: { 
+      type: "spring", 
+      stiffness: 200, 
+      damping: 18 
+    },
   },
   {
     id: "hotels",
@@ -140,22 +163,82 @@ function PremiumServiceCard({ service, index, isLarge = false }) {
   const [isHovered, setIsHovered] = useState(false);
   const Icon = service.icon;
 
+// Service Card - EXACT same structure, only animations changed
+function ServiceCard({ image, title, description, contain }) {
   return (
     <motion.div
-      ref={ref}
-      initial={{ opacity: 0, y: 50 }}
-      animate={isInView ? { opacity: 1, y: 0 } : {}}
-      transition={{ delay: index * 0.1, duration: 0.7, ease: [0.21, 0.68, 0.34, 1.02] }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className={`group ${isLarge ? "lg:col-span-2" : "lg:col-span-1"}`}
+      initial="rest"
+      whileHover="hover"
+      animate="rest"
+      variants={cardHover}
+      className="
+        group
+        relative bg-white 
+        hover:bg-gradient-to-br 
+        hover:from-[#fff1ea] 
+        hover:via-[#ffe2d6] 
+        hover:to-[#ffd2c1]
+        rounded-2xl
+        px-5 sm:px-6
+        pb-6 pt-20 sm:pt-24
+        flex flex-col items-center text-center
+        mt-16
+        transition-colors duration-300
+        w-full
+      "
+      style={{ 
+        minHeight: "280px",
+        width: "100%",
+      }}
     >
-      <div className="relative h-full">
-        {/* Gradient Border Effect */}
-        <motion.div
-          animate={{ opacity: isHovered ? 1 : 0 }}
-          transition={{ duration: 0.3 }}
-          className={`absolute -inset-0.5 bg-gradient-to-r ${service.gradient} rounded-2xl blur-xl opacity-0`}
+      {/* Image with enhanced animation */}
+      <motion.div
+        variants={imageHover}
+        className="
+          absolute -top-14 sm:-top-16
+          left-1/2 -translate-x-1/2
+          w-28 h-20
+          sm:w-36 sm:h-24
+          md:w-40 md:h-28
+          rounded-xl overflow-hidden
+          border-[5px] sm:border-[6px] border-white
+          shadow-xl bg-white
+          flex items-center justify-center
+          z-10
+        "
+      >
+        <img
+          src={image}
+          alt={title}
+          className={`w-full h-full ${
+            contain ? "object-contain p-2" : "object-cover"
+          }`}
+        />
+      </motion.div>
+
+      {/* Title with enhanced animation */}
+      <motion.h3
+        variants={{
+          rest: { y: 0, color: "#111827" },
+          hover: { y: -3, color: "#fd561e", scale: 1.02 },
+        }}
+        transition={{ type: "spring", stiffness: 300, damping: 12 }}
+        className="text-base sm:text-lg md:text-xl font-bold mb-2 relative"
+      >
+        {title}
+
+        {/* Animated underline with smoother transition */}
+        <motion.span
+          variants={{
+            rest: { width: 0, opacity: 0, left: "50%" },
+            hover: { 
+              width: "60%", 
+              opacity: 1, 
+              left: "20%",
+            },
+          }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
+          className="absolute -bottom-1 h-[2.5px] bg-gradient-to-r from-[#fd561e] to-[#ff8a5c] rounded-full"
         />
         
         {/* Card Content */}
@@ -184,146 +267,113 @@ function PremiumServiceCard({ service, index, isLarge = false }) {
             </motion.div>
           </div>
 
-          {/* Content */}
-          <div className="p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className={`w-12 h-12 rounded-xl ${service.bgColor} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-                  <Icon className={`w-6 h-6 ${service.iconColor}`} />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900">{service.title}</h3>
-                  <div className="w-8 h-0.5 bg-gradient-to-r from-gray-300 to-transparent mt-1" />
-                </div>
-              </div>
-            </div>
-            
-            <p className="text-gray-500 text-sm leading-relaxed mb-4">
-              {service.description}
-            </p>
-            
-            <motion.button
-              animate={{ x: isHovered ? 5 : 0 }}
-              transition={{ duration: 0.2 }}
-              className="inline-flex items-center gap-2 text-sm font-semibold text-gray-900 group-hover:text-[#FD561E] transition-colors"
-            >
-              Explore Service
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </motion.button>
-          </div>
-        </div>
-      </div>
+      {/* Description with subtle fade on hover */}
+      <motion.p
+        variants={{
+          rest: { opacity: 0.9, y: 0 },
+          hover: { opacity: 1, y: -2 },
+        }}
+        transition={{ duration: 0.2 }}
+        className="text-xs sm:text-sm md:text-base text-gray-600 leading-relaxed max-w-xs sm:max-w-sm"
+      >
+        {description}
+      </motion.p>
+
+      {/* Subtle shine overlay on hover */}
+      <motion.div
+        variants={{
+          rest: { opacity: 0, x: "-100%" },
+          hover: { 
+            opacity: 0.2, 
+            x: "100%",
+            transition: { duration: 0.6, ease: "easeInOut" }
+          },
+        }}
+        className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent pointer-events-none rounded-2xl"
+      />
     </motion.div>
   );
 }
 
-// Main Component
-export default function Services() {
-  const sectionRef = useRef(null);
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start start", "end start"],
-  });
-  
-  const y = useTransform(scrollYProgress, [0, 1], [0, 200]);
-  const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
-
-  // Split services for asymmetric layout
-  const leftColumn = services.slice(0, 3);
-  const rightColumn = services.slice(3, 7);
+// Main Page - EXACT same structure
+export default function Service() {
+  const services = [
+    {
+      image: bus,
+      title: "Bus Ticketing",
+      description:
+        "Convenient and affordable bus ticket booking through our website and BOBROS mobile app(Get it on Google Play Store).",
+    },
+    {
+      image: flights,
+      title: "Flights",
+      description:
+        "Quick and hassle-free flight bookings(off-line)for domestic and international travel. For bookings, visit any of our branch or contact us",
+    },
+    {
+      image: bill,
+      title: "Bill Payments",
+      description:
+        "Simplifying your bill payments. Safe, fast, and convenient payments across all services.",
+      contain: true,
+    },
+    {
+      image: hotels,
+      title: "Hotels",
+      description:
+        "Book comfortable stays at top hotels with ease and flexibility. Visit any branch or contact us for bookings",
+    },
+    {
+      image: holiday,
+      title: "Holiday Package",
+      description:
+        "Curated travel packages to explore the best destinations. To know more about our packages and for bookings,visit any of our branch or contact us",
+    },
+    {
+      image: cab,
+      title: "Cab Service",
+      description:
+        "Affordable cab rentals for personal travel or business commute. For bookings,visit any of our branch or contact us",
+    },
+    {
+      image: service,
+      title: "IT Services",
+      description:
+        "Reliable IT services to support and enhance your business operations. Visit any branch or contact our analyst.",
+    },
+  ];
 
   return (
-    <div ref={sectionRef} className="relative bg-gradient-to-b from-gray-50 to-white overflow-hidden">
-      {/* Premium Background Elements */}
-      <div className="absolute inset-0">
-        <div className="absolute top-0 left-0 w-full h-full">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-orange-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob" />
-          <div className="absolute top-40 right-10 w-72 h-72 bg-purple-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000" />
-          <div className="absolute bottom-20 left-1/2 w-72 h-72 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-4000" />
-        </div>
-        <FloatingParticles />
-      </div>
+    <div className="bg-white py-16 sm:py-20 px-4 sm:px-6">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-3xl -mt-10 sm:text-4xl md:text-5xl font-bold text-center mb-12 sm:mb-16 text-gray-900">
+          Our Services
+        </h1>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 sm:py-32">
-        {/* Hero Section - Bold & Premium */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="text-center mb-20"
+        <div
+          className="
+            grid 
+            grid-cols-1 
+            sm:grid-cols-2 
+            lg:grid-cols-3 
+            gap-x-6 sm:gap-x-10 
+            gap-y-16 sm:gap-y-20
+            justify-items-center
+          "
         >
-          {/* Premium Badge */}
-          <motion.div
-            initial={{ scale: 0.9 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full shadow-sm border border-gray-100 mb-6"
-          >
-            <Sparkles className="w-4 h-4 text-[#FD561E]" />
-            <span className="text-sm font-medium text-gray-700">Premium Services</span>
-          </motion.div>
-
-          {/* Main Heading with Gradient */}
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.6 }}
-            className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-6 tracking-tight"
-          >
-            <span className="bg-gradient-to-r from-gray-900 via-gray-800 to-[#FD561E] bg-clip-text text-transparent">
-              Comprehensive
-            </span>
-            <br />
-            <span className="text-gray-900">Solutions for You</span>
-          </motion.h1>
-
-          {/* Description */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4, duration: 0.6 }}
-            className="text-lg text-gray-500 max-w-2xl mx-auto"
-          >
-            From travel essentials to business solutions — discover a world of premium services designed to elevate your experience.
-          </motion.p>
-
-          {/* Trust Indicators */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5, duration: 0.6 }}
-            className="flex flex-wrap justify-center gap-8 mt-10"
-          >
-            {[
-              { icon: Shield, text: "Secure Transactions", color: "text-green-500" },
-              { icon: Clock, text: "24/7 Support", color: "text-blue-500" },
-              { icon: Star, text: "10,000+ Happy Customers", color: "text-yellow-500" },
-            ].map((item, idx) => (
-              <div key={idx} className="flex items-center gap-2">
-                <item.icon className={`w-4 h-4 ${item.color}`} />
-                <span className="text-sm text-gray-600">{item.text}</span>
-              </div>
-            ))}
-          </motion.div>
-        </motion.div>
-
-        {/* Asymmetric Services Layout - Breaking the Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-          {/* Left Column - 3 Services */}
-          <div className="space-y-8">
-            {leftColumn.map((service, idx) => (
-              <PremiumServiceCard key={service.id} service={service} index={idx} />
-            ))}
-          </div>
-
-          {/* Right Column - 4 Services (2x2 grid) */}
-          <div className="lg:col-span-2">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {rightColumn.map((service, idx) => (
-                <PremiumServiceCard key={service.id} service={service} index={idx + 3} />
-              ))}
-            </div>
-          </div>
+          {services.map((service, index) => (
+            <motion.div
+              key={index}
+              variants={cardEntry}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, margin: "-50px" }}
+              custom={index}
+              className="w-full max-w-[350px]"
+            >
+              <ServiceCard {...service} />
+            </motion.div>
+          ))}
         </div>
 
         {/* Premium CTA Section */}

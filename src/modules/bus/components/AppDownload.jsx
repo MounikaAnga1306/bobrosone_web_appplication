@@ -61,40 +61,46 @@ export default function AppDownload() {
             {/* QR */}
             <motion.div
               whileHover={{ scale: 1.05 }}
-              className="w-30 h-30 -mt-6 bg-white p-4 rounded-3xl shadow-2xl border border-gray-100 flex items-center justify-center"
+              className="w-30 h-30 -mt-6 bg-white p-4 rounded-2xl shadow-2xl border border-gray-100 flex items-center justify-center"
             >
               <img
-                src="/assets/QR_code.png"
+                src="/assets/Scanner.png"
                 alt="Scan to download app"
-                className="w-full h-full object-contain"
+                className=" w-full h-full object-cover"
               />
             </motion.div>
 
-            <div className="flex flex-col items-start">
-              {/* GOOGLE PLAY */}
-              <motion.div
-                whileHover={{ y: -2, scale: 1.04 }}
-                className="cursor-pointer"
-              >
-                <img
-                  src="/assets/google_play2.png"
-                  alt="Get it on Google Play"
-                  className="w-44"
-                />
-              </motion.div>
+           <div className="flex flex-col items-start">
+  {/* GOOGLE PLAY */}
+  <motion.a
+    href="https://play.google.com/store/apps/details?id=app.bobrosone.android"
+    target="_blank"
+    rel="noopener noreferrer"
+    whileHover={{ y: -2, scale: 1.04 }}
+    className="cursor-pointer"
+  >
+    <img
+      src="/assets/google_play2.png"
+      alt="Get it on Google Play"
+      className="w-44"
+    />
+  </motion.a>
 
-              {/* APP STORE */}
-              <motion.div
-                whileHover={{ y: -2, scale: 1.04 }}
-                className="cursor-pointer"
-              >
-                <img
-                  src="/assets/App-Store.png"
-                  alt="Download on App Store"
-                  className="w-66 -ml-7 mt-2 object-contain"
-                />
-              </motion.div>
-            </div>
+  {/* APP STORE */}
+  <motion.a
+    href="https://apps.apple.com/in/app/bobros/id6504723845"
+    target="_blank"
+    rel="noopener noreferrer"
+    whileHover={{ y: -2, scale: 1.04 }}
+    className="cursor-pointer"
+  >
+    <img
+      src="/assets/App-Store.png"
+      alt="Download on App Store"
+      className="w-66 -ml-7 mt-2 object-contain"
+    />
+  </motion.a>
+</div>
           </div>
         </motion.div>
       </div>

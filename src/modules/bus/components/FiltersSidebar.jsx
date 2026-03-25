@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Search,
   Sun,
@@ -38,15 +38,7 @@ const timeSlots = [
   { label: "6 PM - 12 midnight", icon: <Sunset className="h-4 w-4" /> },
 ];
 
-const boardingPoints = [
-  "Abids",
-  "Abids Pickup VanBus",
-  "Afzalgunj Pickup VanBus",
-];
-const droppingPoints = ["Vemulawada", "VEMULAWADA BS"];
-const operators = ["BSR Tours And Travels", "Sai Sri Krishna Travels"];
-const amenities = ["Blankets", "Charging Point", "Reading Light"];
-
+// CHANGED: added initialShow + showAll logic, removed showMore prop
 const CheckboxSection = ({
   title,
   items,
@@ -55,13 +47,22 @@ const CheckboxSection = ({
   onToggle,
   onClear,
   showSearch = true,
-  showMore = false,
+  initialShow = 4,
 }) => {
   const [search, setSearch] = useState("");
+  const [showAll, setShowAll] = useState(false);
 
   const filtered = items.filter((i) =>
     i.toLowerCase().includes(search.toLowerCase()),
   );
+
+  const visible = search.trim()
+    ? filtered
+    : showAll
+    ? filtered
+    : filtered.slice(0, initialShow);
+
+  const hasMore = !search.trim() && filtered.length > initialShow;
 
   return (
     <div>
@@ -96,30 +97,40 @@ const CheckboxSection = ({
       )}
 
       <div className="space-y-2.5">
-        {filtered.map((item) => (
-          <label
-            key={item}
-            className="flex items-center gap-2.5 cursor-pointer"
-          >
-            <Checkbox
-              checked={selected.has(item)}
-              onChange={() => onToggle(item)}
-            />
-            <span className="text-sm text-foreground">{item}</span>
-          </label>
-        ))}
+        {visible.length === 0 ? (
+          <p className="text-xs text-gray-400">No results found.</p>
+        ) : (
+          visible.map((item) => (
+            <label
+              key={item}
+              className="flex items-center gap-2.5 cursor-pointer"
+            >
+              <Checkbox
+                checked={selected.has(item)}
+                onChange={() => onToggle(item)}
+              />
+              <span className="text-sm text-foreground">{item}</span>
+            </label>
+          ))
+        )}
       </div>
 
-      {showMore && (
-        <button className="text-xs font-medium text-[#FD561E] mt-2 hover:underline">
-          + Show all {title.toLowerCase()}
+      {hasMore && (
+        <button
+          onClick={() => setShowAll((v) => !v)}
+          className="text-xs font-medium text-[#FD561E] mt-2 hover:underline cursor-pointer"
+        >
+          {showAll
+            ? "− Show less"
+            : `+ Show all ${filtered.length} ${title.toLowerCase()}`}
         </button>
       )}
     </div>
   );
 };
 
-const FiltersSidebar = ({ onFilterChange }) => {
+// CHANGED: added trips = [] prop
+const FiltersSidebar = ({ onFilterChange, trips = [] }) => {
   const [chipSelected, setChipSelected] = useState(new Set());
   const [depTime, setDepTime] = useState(new Set());
   const [arrTime, setArrTime] = useState(new Set());
@@ -128,72 +139,127 @@ const FiltersSidebar = ({ onFilterChange }) => {
   const [ops, setOps] = useState(new Set());
   const [amens, setAmens] = useState(new Set());
 
+  // CHANGED: dynamic from trips instead of static arrays
+  // boardingTimes: array or object → extract bpName
+  const boardingPoints = useMemo(() => {
+    const set = new Set();
+    trips.forEach((t) => {
+      const raw = t.boardingTimes || [];
+      const arr = Array.isArray(raw) ? raw : [raw];
+      arr.forEach((p) => {
+        const name = p?.bpName || p?.name || p?.pointName || null;
+        if (name && name.trim()) set.add(name.trim());
+      });
+    });
+    return [...set].sort();
+  }, [trips]);
+
+  // droppingTimes: array or object → extract bpName
+  const droppingPoints = useMemo(() => {
+    const set = new Set();
+    trips.forEach((t) => {
+      const raw = t.droppingTimes || [];
+      const arr = Array.isArray(raw) ? raw : [raw];
+      arr.forEach((p) => {
+        const name = p?.bpName || p?.name || p?.pointName || null;
+        if (name && name.trim()) set.add(name.trim());
+      });
+    });
+    return [...set].sort();
+  }, [trips]);
+
+  // operators: from travels field
+  const operators = useMemo(() => {
+    const set = new Set();
+    trips.forEach((t) => {
+      const name = t.travels || null;
+      if (name && name.trim()) set.add(name.trim());
+    });
+    return [...set].sort();
+  }, [trips]);
+
   const toggleChip = (key) => {
-  setChipSelected((prev) => {
+    // Build next chip set directly (no nested setState)
+    const next = new Set(chipSelected);
+    next.has(key) ? next.delete(key) : next.add(key);
 
-    const next = new Set(prev);
-
-    if (next.has(key)) {
-      next.delete(key);
-    } else {
-      next.add(key);
-    }
-
-    // Sync Popular <-> Bus Type filters
+    // Popular ↔ Bus Type cross-sync
     if (key === "Popular__AC") {
-      next.has("Popular__AC")
-        ? next.add("Bus Type__AC")
-        : next.delete("Bus Type__AC");
+      next.has("Popular__AC") ? next.add("Bus Type__AC") : next.delete("Bus Type__AC");
     }
-
     if (key === "Bus Type__AC") {
-      next.has("Bus Type__AC")
-        ? next.add("Popular__AC")
-        : next.delete("Popular__AC");
+      next.has("Bus Type__AC") ? next.add("Popular__AC") : next.delete("Popular__AC");
     }
-
     if (key === "Popular__Sleeper") {
-      next.has("Popular__Sleeper")
-        ? next.add("Bus Type__Sleeper")
-        : next.delete("Bus Type__Sleeper");
+      next.has("Popular__Sleeper") ? next.add("Bus Type__Sleeper") : next.delete("Bus Type__Sleeper");
     }
-
     if (key === "Bus Type__Sleeper") {
-      next.has("Bus Type__Sleeper")
-        ? next.add("Popular__Sleeper")
-        : next.delete("Popular__Sleeper");
+      next.has("Bus Type__Sleeper") ? next.add("Popular__Sleeper") : next.delete("Popular__Sleeper");
     }
 
-   const newFilters = {
-  ac: next.has("Bus Type__AC"),
-  nonAc: next.has("Bus Type__Non-AC"),
-  seater: next.has("Bus Type__Seater"),
-  sleeper: next.has("Bus Type__Sleeper"),
-  primo: next.has("Popular__Primo"),
-  evening: next.has("Popular__6PM-12AM")
-};
+    // Popular "6PM-12AM" → sync depTime
+    let nextDep = depTime;
+    if (key === "Popular__6PM-12AM") {
+      nextDep = new Set(depTime);
+      next.has("Popular__6PM-12AM")
+        ? nextDep.add("6 PM - 12 midnight")
+        : nextDep.delete("6 PM - 12 midnight");
+      setDepTime(nextDep);
+    }
 
-    onFilterChange(newFilters);
+    setChipSelected(next);
 
-    return next;
-
-  });
-};
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    onFilterChange({
+      ac:      next.has("Bus Type__AC"),
+      nonAc:   next.has("Bus Type__Non-AC"),
+      seater:  next.has("Bus Type__Seater"),
+      sleeper: next.has("Bus Type__Sleeper"),
+      primo:   next.has("Popular__Primo"),
+      evening: next.has("Popular__6PM-12AM"),
+      depTime: nextDep,
+      arrTime,
+      boarding,
+      dropping,
+      ops,
+      amens,
+    });
+  };
 
   const toggleSet = (setter, key, type) => {
   setter((prev) => {
     const next = new Set(prev);
     next.has(key) ? next.delete(key) : next.add(key);
 
+    // CHANGED: Departure "6 PM - 12 midnight" → sync Popular chip
+    if (type === "depTime" && key === "6 PM - 12 midnight") {
+      setChipSelected((prevChips) => {
+        const nextChips = new Set(prevChips);
+        next.has("6 PM - 12 midnight")
+          ? nextChips.add("Popular__6PM-12AM")
+          : nextChips.delete("Popular__6PM-12AM");
+        return nextChips;
+      });
+    }
+
     const newFilters = {
-      depTime: type === "depTime" ? next : depTime,
-      arrTime: type === "arrTime" ? next : arrTime,
+      ac:       chipSelected.has("Bus Type__AC"),
+      nonAc:    chipSelected.has("Bus Type__Non-AC"),
+      seater:   chipSelected.has("Bus Type__Seater"),
+      sleeper:  chipSelected.has("Bus Type__Sleeper"),
+      primo:    chipSelected.has("Popular__Primo"),
+      evening:  type === "depTime" && key === "6 PM - 12 midnight"
+                  ? next.has("6 PM - 12 midnight")
+                  : chipSelected.has("Popular__6PM-12AM"),
+      depTime:  type === "depTime"  ? next : depTime,
+      arrTime:  type === "arrTime"  ? next : arrTime,
       boarding: type === "boarding" ? next : boarding,
       dropping: type === "dropping" ? next : dropping,
-      ops: type === "ops" ? next : ops,
-      amens: type === "amens" ? next : amens
+      ops:      type === "ops"      ? next : ops,
+      amens:    type === "amens"    ? next : amens,
     };
 
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     onFilterChange(newFilters);
 
     return next;
@@ -211,6 +277,7 @@ const FiltersSidebar = ({ onFilterChange }) => {
   setOps(new Set());
   setAmens(new Set());
 
+ window.scrollTo({ top: 0, behavior: 'smooth' });
  onFilterChange({
   ac: false,
   nonAc: false,
@@ -350,18 +417,18 @@ const FiltersSidebar = ({ onFilterChange }) => {
             selected={boarding}
             onToggle={(i) => toggleSet(setBoarding, i, "boarding")}
             onClear={() => clearSet(setBoarding)}
-            showMore
+            initialShow={4}
           />
         </div>
         <div className="pb-4 mb-4 border-b border-gray-200 -mx-5 px-5">
           <CheckboxSection
-            checkboxClass="border-gray-200"
             title="Dropping Point"
             items={droppingPoints}
             searchPlaceholder="Enter/Search dropping point"
             selected={dropping}
             onToggle={(i) => toggleSet(setDropping, i, "dropping")}
             onClear={() => clearSet(setDropping)}
+            initialShow={4}
           />
         </div>
         <div className="pb-4 mb-4 border-b border-gray-200 -mx-5 px-5">
@@ -372,13 +439,13 @@ const FiltersSidebar = ({ onFilterChange }) => {
             selected={ops}
             onToggle={(i) => toggleSet(setOps, i, "ops")}
             onClear={() => clearSet(setOps)}
-            showMore
+            initialShow={4}
           />
         </div>
 
         <CheckboxSection
           title="Amenities"
-          items={amenities}
+          items={["Blankets", "Charging Point", "Reading Light"]}
           searchPlaceholder=""
           selected={amens}
           onToggle={(i) => toggleSet(setAmens, i, "amens")}
