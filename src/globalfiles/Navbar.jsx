@@ -238,7 +238,7 @@ const Navbar = () => {
                       setAuthPage("signin");
                       setOpenAuthModal(true);
                     }}
-                    className="mx-4 my-3 mt-2 w-[calc(100%-32px)] cursor-pointer bg-blue-600 text-white font-semibold py-2.5 rounded-lg hover:bg-blue-700 transition-all duration-300"
+                    className="mx-4 my-3 mt-2 w-[calc(100%-32px)] cursor-pointer bg-[#fd561e] text-white font-semibold py-2.5 rounded-lg hover:bg-blue-700 transition-all duration-300"
                   >
                     Login / Sign Up
                   </button>
