@@ -2,13 +2,14 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { createRazorpayOrder, verifyRazorpayPayment } from "../services/razorpayService";
 import { createBillDeskOrder } from "../services/billdeskService";
-import { useEffect, useState } from "react";
+import { useEffect, useState,useRef } from "react";
 import { getUserDetails } from "../../../utils/authHelper";
 import axios from "axios";
 
 const BookingSuccess = () => {
   const { state } = useLocation();
   const navigate  = useNavigate();
+  const savedState = useRef(state);
   const [showBackConfirm, setShowBackConfirm] = useState(false);
 
   const [promoCode, setPromoCode]         = useState("");
@@ -28,10 +29,9 @@ const BookingSuccess = () => {
   const user    = getUserDetails();
   const isGuest = !user?.uid || user?.uid === "Not Applicable";
 
-  useEffect(() => {
-    if (!state) navigate("/", { replace: true });
-  }, [state]);
-
+ useEffect(() => {
+  if (!state) navigate("/", { replace: true });
+}, []);
   const totalFare            = state?.totalFare || 0;
   const uid                  = user?.uid || state?.uid;
   const rewardpoint          = parseFloat(state?.rewardpoint) || 0;
@@ -41,7 +41,7 @@ const BookingSuccess = () => {
   const discountedFare       = promoApplied ? totalFare - promoDiscount : totalFare;
   const canPayFullWithRewards = availableRewardPoint >= discountedFare;
   const remainingAfterRewards = Math.max(0, discountedFare - availableRewardPoint).toFixed(2);
-
+  console.log("BookingSuccess state:", state);
   console.log("BookingSuccess state:", { totalFare, rewardpoint, availableRewardPoint, uid, isGuest, discountedFare, canPayFullWithRewards });
 
   // Timer
@@ -58,20 +58,44 @@ const BookingSuccess = () => {
   }, []);
 
   // Intercept back button
-  useEffect(() => {
-    window.history.pushState(null, "", window.location.href);
-    const handlePopState = () => { setShowBackConfirm(true); window.history.pushState(null, "", window.location.href); };
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
-
+ useEffect(() => {
+  window.history.pushState({ bookingState: true }, "", window.location.href);
+  const handlePopState = () => {
+    window.history.pushState({ bookingState: true }, "", window.location.href);
+    setShowBackConfirm(true);
+  };
+  window.addEventListener("popstate", handlePopState);
+  return () => window.removeEventListener("popstate", handlePopState);
+}, []);
   const timerStr = `${Math.floor(timeLeft / 60)}:${String(timeLeft % 60).padStart(2, "0")}`;
 
-  const handleBackConfirm = () => {
-    setShowBackConfirm(false);
-    navigate(-1);
-    setTimeout(() => window.dispatchEvent(new CustomEvent("reopenSeatLayout", { detail: { tripId: state?.tripId } })), 100);
-  };
+useEffect(() => {
+  if (state && state.source) {
+    localStorage.setItem("bookingNavState", JSON.stringify({
+      source: state.source,
+      destination: state.destination,
+      date: state.date,
+      fromCity: state.fromCity,
+      toCity: state.toCity,
+      tripId: state.tripId,
+    }));
+  }
+}, []);
+const handleBackConfirm = () => {
+  setShowBackConfirm(false);
+   const saved = JSON.parse(localStorage.getItem("bookingNavState") || "{}");
+  navigate(
+    `/results?source=${saved?.source || ""}&destination=${saved?.destination || ""}&doj=${saved?.date || ""}&fromName=${encodeURIComponent(saved?.fromCity || "")}&toName=${encodeURIComponent(saved?.toCity || "")}`,
+    {
+      state: {
+        sourceName: saved?.fromCity,
+        destinationName: saved?.toCity,
+        reopenSeat: true,
+        tripId: saved?.tripId,
+      },
+    }
+  );
+};
   const handleBackCancel = () => setShowBackConfirm(false);
 
   // Apply Promo

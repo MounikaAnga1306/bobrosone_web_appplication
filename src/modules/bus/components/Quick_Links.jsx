@@ -62,12 +62,21 @@ export default function Quick_Links() {
                   Privacy Policy
                 </a>
               </li>
-
               <li>
-                <a href="#" className="text-gray-700 text-sm hover:text-orange-500">
-                  Careers
-                </a>
+                <Link
+                  to="/cancel"  className="text-gray-700 text-sm hover:text-orange-500">
+                      Cancellation & Refund Policy
+                </Link>
               </li>
+              <li>
+                <Link
+                  to="/disclaimer"  className="text-gray-700 text-sm hover:text-orange-500">
+                      Disclaimer Policy
+                </Link>
+              </li>
+
+
+              
 
             </ul>
           </div>

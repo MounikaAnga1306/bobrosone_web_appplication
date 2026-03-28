@@ -1,50 +1,125 @@
 // src/modules/bus/pages/MyAccount.jsx
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
+import { Calendar as CalendarIcon, Gift } from "lucide-react";
+import SidebarLayout from "../pages/SidebarLayout";
+import CancellationCard from "./CancellationCard";
+import PrintTicketModal from "./PrintTicketModal";
+import ForgotPassword from "./ForgotPassword";
+import ResetPassword from "./ResetPassword";
+import AuthModal from "./AuthModal";
+import SignIn from "./SignIn";
+import SignupForm from "./SignUpForm";
 
 const MyAccount = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [transactions, setTransactions] = useState([]);
+  const [rewardBalance, setRewardBalance] = useState("0.00");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const storedUser = JSON.parse(localStorage.getItem("user"));
-  const uid = storedUser?.user?.uid || "";
-  const uname = storedUser?.user?.uname || "User";
+  const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+  const uid = storedUser?.user?.uid || storedUser?.uid || "";
+  const uname = storedUser?.user?.uname || storedUser?.uname || "User";
   const umob = storedUser?.user?.umob || "";
   const uemail = storedUser?.user?.uemail || "";
 
+  // Modal States
+  const [openAuthModal, setOpenAuthModal] = useState(false);
+  const [authPage, setAuthPage] = useState("signin");
+  const [signupData, setSignupData] = useState(null);
+  const [resetData, setResetData] = useState(null);
+  const [showCancel, setShowCancel] = useState(false);
+  const [showPrintTicket, setShowPrintTicket] = useState(false);
+  const [printTin, setPrintTin] = useState("");
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
+
+  // Login State
+  const [isLoggedIn, setIsLoggedIn] = useState(localStorage.getItem("isLoggedIn") === "true");
+
+  // Check login status on mount and when storage changes
   useEffect(() => {
-    if (!uid) { navigate("/"); return; }
-    fetchTransactions();
-  }, []);
+    const checkLoginStatus = () => {
+      const loggedIn = localStorage.getItem("isLoggedIn") === "true";
+      setIsLoggedIn(loggedIn);
+      if (!loggedIn) {
+        navigate("/");
+      }
+    };
+    
+    checkLoginStatus();
+    window.addEventListener("storage", checkLoginStatus);
+    
+    return () => {
+      window.removeEventListener("storage", checkLoginStatus);
+    };
+  }, [navigate]);
+
+  // Fetch real reward balance from ulogin table
+  const fetchRealBalance = async (userId) => {
+    if (!userId) return;
+    try {
+      const res = await axios.post("https://api.bobros.co.in/db/select", {
+        table: "ulogin",
+        columns: ["ubal"],
+        conditions: {
+          uid: String(userId)
+        }
+      });
+
+      if (res.data?.rows?.length > 0) {
+        const bal = parseFloat(res.data.rows[0].ubal || 0).toFixed(2);
+        setRewardBalance(bal);
+      }
+    } catch (err) {
+      console.error("Failed to fetch ubal from ulogin:", err);
+    }
+  };
 
   const fetchTransactions = async () => {
     try {
-      setLoading(true);
       const res = await axios.post("/myAccount", { uid: String(uid) });
       if (res.data?.success) {
-        // Sort by tid descending (latest first)
         const sorted = [...(res.data.transactions || [])].sort((a, b) => b.tid - a.tid);
         setTransactions(sorted);
-      } else {
-        setError("Failed to load transactions.");
       }
-    } catch {
-      setError("Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
+    } catch (err) {
+      console.error(err);
     }
   };
+
+  useEffect(() => {
+    if (!uid && !isLoggedIn) {
+      navigate("/");
+      return;
+    }
+
+    setLoading(true);
+    Promise.all([
+      fetchRealBalance(uid),
+      fetchTransactions()
+    ]).finally(() => setLoading(false));
+  }, [location.key, isLoggedIn]);
 
   const formatDate = (dt) => {
     if (!dt) return "—";
     try {
       const d = new Date(dt);
       if (isNaN(d)) return dt;
-      return d.toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" })
-        + "  " +
+      return d.toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" });
+    } catch { return dt; }
+  };
+
+  const formatDateTime = (dt) => {
+    if (!dt) return "—";
+    try {
+      const d = new Date(dt);
+      if (isNaN(d)) return dt;
+      return d.toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" }) +
+        "  " +
         d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
     } catch { return dt; }
   };
@@ -52,142 +127,326 @@ const MyAccount = () => {
   const getTransactionType = (tx) => {
     const ref = (tx.treference || "").toLowerCase();
     if (ref.includes("cancellation")) return { label: "Cancellation Refund", color: "#16a34a", icon: "↩️" };
-    if (ref.includes("reversal"))     return { label: "Reward Reversal",     color: "#dc2626", icon: "🔄" };
+    if (ref.includes("reversal")) return { label: "Reward Reversal", color: "#dc2626", icon: "🔄" };
     if (ref.includes("signup") || ref.includes("sign_up") || ref.includes("bonus"))
-                                       return { label: "Sign Up Bonus",       color: "#16a34a", icon: "🎁" };
-    if (parseFloat(tx.tamount_cr) > 0) return { label: "Credit",             color: "#16a34a", icon: "⬆️" };
-    if (parseFloat(tx.tamount_dr) > 0) return { label: "Debit",              color: "#dc2626", icon: "⬇️" };
+      return { label: "Sign Up Bonus", color: "#16a34a", icon: "🎁" };
+    if (parseFloat(tx.tamount_cr) > 0) return { label: "Credit", color: "#16a34a", icon: "⬆️" };
+    if (parseFloat(tx.tamount_dr) > 0) return { label: "Debit", color: "#dc2626", icon: "⬇️" };
     return { label: "Transaction", color: "#888", icon: "💳" };
   };
 
-  // Current balance = newbal of latest transaction (smallest tid after sort = last in original)
-  const currentBalance = transactions.length > 0 ? parseFloat(transactions[0]?.newbal || 0).toFixed(2) : "0.00";
+  const getTotalCredits = () => {
+    return transactions.reduce((sum, tx) => sum + parseFloat(tx.tamount_cr || 0), 0).toFixed(2);
+  };
+
+  const getTotalDebits = () => {
+    return transactions.reduce((sum, tx) => sum + parseFloat(tx.tamount_dr || 0), 0).toFixed(2);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    localStorage.removeItem("isLoggedIn");
+    setIsLoggedIn(false);
+    // Force storage event to update other components
+    window.dispatchEvent(new Event("storage"));
+    // Navigate to home
+    navigate("/");
+  };
+
+  const handleOpenCancel = () => {
+    setShowCancel(true);
+  };
+
+  const handleOpenPrintTicket = () => {
+    setPrintTin("");
+    setShowPrintTicket(true);
+  };
+
+  const handleOpenAuth = () => {
+    setAuthPage("signin");
+    setOpenAuthModal(true);
+  };
+
+  const handleCloseAuth = () => {
+    setOpenAuthModal(false);
+    setAuthPage("signin");
+  };
+
+  const handleOpenForgotPassword = () => {
+    setOpenAuthModal(false);
+    setShowForgotPassword(true);
+  };
+
+  const handleCloseForgotPassword = () => {
+    setShowForgotPassword(false);
+  };
+
+  const handleOpenResetPassword = (data) => {
+    setResetData(data);
+    setShowForgotPassword(false);
+    setShowResetPasswordModal(true);
+  };
+
+  const handleCloseResetPassword = () => {
+    setShowResetPasswordModal(false);
+  };
 
   if (loading) {
     return (
-      <div style={{ minHeight: "100vh", background: "#f0f2f5", display: "flex", alignItems: "center", justifyContent: "center", paddingTop: "80px" }}>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      <div style={{ minHeight: "100vh", background: "#f5f7fa", display: "flex", alignItems: "center", justifyContent: "center", paddingTop: "80px" }}>
         <div style={{ textAlign: "center" }}>
           <div style={{ width: "48px", height: "48px", border: "4px solid #fd561e", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 16px" }} />
-          <p style={{ color: "#666", fontSize: "15px", fontFamily: "Segoe UI, sans-serif" }}>Loading your account...</p>
+          <p style={{ color: "#666", fontSize: "15px" }}>Loading your account...</p>
         </div>
       </div>
     );
   }
 
+  if (!isLoggedIn) {
+    return null;
+  }
+
   return (
-    <div style={{ minHeight: "100vh", background: "#f0f2f5", paddingTop: "80px", paddingBottom: "40px", fontFamily: "'Segoe UI', sans-serif" }}>
+    <>
+      <SidebarLayout
+        isLoggedIn={isLoggedIn}
+        user={storedUser?.user || storedUser}
+        onLogout={handleLogout}
+        onOpenAuthModal={handleOpenAuth}
+        onOpenCancel={handleOpenCancel}
+        onOpenPrintTicket={handleOpenPrintTicket}
+        onOpenForgotPassword={handleOpenForgotPassword}
+      >
+        <div style={{ padding: "24px 32px" }}>
+          {/* Page Header */}
+          <div style={{ marginBottom: "28px" }}>
+            <h1 style={{ fontSize: "26px", fontWeight: "700", color: "#1a1a2e", marginBottom: "6px" }}>
+              Transaction Details
+            </h1>
+            <p style={{ color: "#666", fontSize: "14px" }}>
+              View all your reward point transactions
+            </p>
+          </div>
 
-      {/* ── HEADER ── */}
-      <div style={{ background: "linear-gradient(135deg, #fd561e 0%, #ff8c42 100%)", padding: "28px 0 64px" }}>
-        <div style={{ maxWidth: "860px", margin: "0 auto", padding: "0 20px" }}>
-          <h1 style={{ color: "white", fontSize: "24px", fontWeight: "700", margin: "0 0 20px" }}>My Account</h1>
+          {/* Stats Cards */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "20px", marginBottom: "32px" }}>
+            <div style={{
+              background: "white",
+              borderRadius: "16px",
+              padding: "20px",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+              border: "1px solid #f0f0f0"
+            }}>
+              <div style={{ fontSize: "12px", color: "#888", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <span>⬆️</span> Total Credits
+              </div>
+              <div style={{ fontSize: "28px", fontWeight: "700", color: "#16a34a" }}>+₹{getTotalCredits()}</div>
+            </div>
+            <div style={{
+              background: "white",
+              borderRadius: "16px",
+              padding: "20px",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+              border: "1px solid #f0f0f0"
+            }}>
+              <div style={{ fontSize: "12px", color: "#888", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <span>⬇️</span> Total Debits
+              </div>
+              <div style={{ fontSize: "28px", fontWeight: "700", color: "#dc2626" }}>-₹{getTotalDebits()}</div>
+            </div>
+            <div style={{
+              background: "linear-gradient(135deg, #fff5f0 0%, #ffffff 100%)",
+              borderRadius: "16px",
+              padding: "20px",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+              border: "1px solid #ffe4d6"
+            }}>
+              <div style={{ fontSize: "12px", color: "#fd561e", marginBottom: "8px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <Gift size={14} /> Current Balance
+              </div>
+              <div style={{ fontSize: "28px", fontWeight: "700", color: "#fd561e" }}>₹{rewardBalance}</div>
+            </div>
+          </div>
 
-          {/* Profile + Balance card */}
-          <div style={{ background: "rgba(255,255,255,0.15)", borderRadius: "16px", padding: "20px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-              <div style={{ width: "52px", height: "52px", borderRadius: "50%", background: "rgba(255,255,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "22px", fontWeight: "800", color: "white" }}>
-                {uname[0]?.toUpperCase()}
-              </div>
-              <div>
-                <div style={{ fontSize: "18px", fontWeight: "700", color: "white" }}>{uname}</div>
-                <div style={{ fontSize: "12px", color: "rgba(255,255,255,0.8)", marginTop: "2px" }}>{uemail || umob}</div>
-              </div>
+          {/* Transactions List */}
+          <div style={{
+            background: "white",
+            borderRadius: "20px",
+            padding: "24px",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+            border: "1px solid #f0f0f0"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <h2 style={{ fontSize: "16px", fontWeight: "700", color: "#1a1a2e", margin: 0 }}>
+                Transaction History
+              </h2>
+              <span style={{ fontSize: "12px", color: "#888", background: "#f5f5f5", padding: "4px 10px", borderRadius: "20px" }}>
+                {transactions.length} records
+              </span>
             </div>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "0.8px" }}>Reward Balance</div>
-              <div style={{ fontSize: "28px", fontWeight: "800", color: "white" }}>₹{currentBalance}</div>
-            </div>
+
+            {transactions.length === 0 && !error ? (
+              <div style={{ textAlign: "center", padding: "60px 20px" }}>
+                <div style={{ fontSize: "56px", marginBottom: "16px" }}>💳</div>
+                <h3 style={{ fontSize: "18px", color: "#333", marginBottom: "8px" }}>No transactions yet</h3>
+                <p style={{ color: "#888", fontSize: "13px" }}>Your reward point transactions will appear here.</p>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {transactions.map((tx, i) => {
+                  const type = getTransactionType(tx);
+                  const isCredit = parseFloat(tx.tamount_cr) > 0;
+                  const isDebit = parseFloat(tx.tamount_dr) > 0;
+
+                  return (
+                    <div key={tx.tid || i} style={{
+                      padding: "16px",
+                      border: "1px solid #f0f0f0",
+                      borderRadius: "12px",
+                      transition: "all 0.2s",
+                      cursor: "pointer"
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)";
+                      e.currentTarget.style.borderColor = "#ffe4d6";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow = "none";
+                      e.currentTarget.style.borderColor = "#f0f0f0";
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+                        <div>
+                          <div style={{ fontSize: "14px", fontWeight: "600", color: "#333", marginBottom: "4px" }}>{type.label}</div>
+                          <div style={{ fontSize: "11px", color: "#888", display: "flex", alignItems: "center", gap: "4px" }}>
+                            <CalendarIcon size={11} /> {formatDateTime(tx.datetime)}
+                          </div>
+                        </div>
+                        <div>
+                          {isCredit && <div style={{ fontSize: "18px", fontWeight: "700", color: "#16a34a" }}>+₹{parseFloat(tx.tamount_cr).toFixed(2)}</div>}
+                          {isDebit && <div style={{ fontSize: "18px", fontWeight: "700", color: "#dc2626" }}>-₹{parseFloat(tx.tamount_dr).toFixed(2)}</div>}
+                        </div>
+                      </div>
+                      <div style={{ borderTop: "1px solid #f5f5f5", marginTop: "8px", paddingTop: "8px", display: "flex", justifyContent: "space-between" }}>
+                        <span style={{ fontSize: "10px", color: "#aaa" }}>Ref: {tx.treference || "—"}</span>
+                        <span style={{ fontSize: "10px", fontWeight: "500", color: "#fd561e" }}>Balance: ₹{parseFloat(tx.newbal || 0).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      </SidebarLayout>
 
-      {/* ── CONTENT ── */}
-      <div style={{ maxWidth: "860px", margin: "-36px auto 0", padding: "0 20px" }}>
+      {/* Cancellation Modal */}
+      {showCancel && (
+        <CancellationCard onClose={() => setShowCancel(false)} />
+      )}
 
-        {error && (
-          <div style={{ background: "#fff1f0", border: "1px solid #ffccc7", borderRadius: "10px", padding: "14px 18px", marginBottom: "16px", color: "#cf1322", fontSize: "14px" }}>
-            {error}
+      {/* Print Ticket Modal */}
+      {showPrintTicket && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999
+        }}>
+          <div style={{
+            background: "white",
+            borderRadius: "20px",
+            padding: "32px",
+            width: "460px",
+            maxWidth: "90%",
+            position: "relative",
+            maxHeight: "90vh",
+            overflowY: "auto"
+          }}>
+            <button
+              onClick={() => setShowPrintTicket(false)}
+              style={{
+                position: "absolute",
+                top: "16px",
+                right: "16px",
+                background: "none",
+                border: "none",
+                fontSize: "20px",
+                cursor: "pointer",
+                color: "#999"
+              }}
+            >
+              ✕
+            </button>
+            <PrintTicketModal
+              onClose={() => setShowPrintTicket(false)}
+              prefillTin={printTin}
+            />
           </div>
-        )}
-
-        {/* Section header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
-          <h2 style={{ fontSize: "16px", fontWeight: "700", color: "#1a1a2e", margin: 0 }}>
-            Transaction History
-          </h2>
-          <span style={{ fontSize: "13px", color: "#888" }}>{transactions.length} records</span>
         </div>
+      )}
 
-        {transactions.length === 0 && !error ? (
-          <div style={{ background: "white", borderRadius: "16px", boxShadow: "0 2px 16px rgba(0,0,0,0.08)", padding: "60px 20px", textAlign: "center" }}>
-            <div style={{ fontSize: "48px", marginBottom: "12px" }}>💳</div>
-            <h3 style={{ fontSize: "16px", color: "#333", marginBottom: "6px" }}>No transactions yet</h3>
-            <p style={{ color: "#888", fontSize: "13px" }}>Your reward point transactions will appear here.</p>
-          </div>
+      {/* Sign In / Sign Up Modal */}
+      <AuthModal isOpen={openAuthModal}>
+        {authPage === "signin" ? (
+          <SignIn
+            closeModal={handleCloseAuth}
+            openSignup={() => setAuthPage("signup")}
+            openForgot={() => {
+              handleCloseAuth();
+              handleOpenForgotPassword();
+            }}
+          />
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {transactions.map((tx, i) => {
-              const type = getTransactionType(tx);
-              const isCredit = parseFloat(tx.tamount_cr) > 0;
-              const isDebit  = parseFloat(tx.tamount_dr) > 0;
-
-              return (
-                <div key={tx.tid || i} style={{
-                  background: "white", borderRadius: "14px",
-                  boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
-                  border: "1px solid #f0f0f0",
-                  overflow: "hidden"
-                }}>
-                  {/* TOP ROW */}
-                  <div style={{ padding: "14px 18px 10px", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: type.color + "18", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px", flexShrink: 0 }}>
-                        {type.icon}
-                      </div>
-                      <div>
-                        <div style={{ fontSize: "13px", fontWeight: "700", color: "#1a1a2e" }}>{type.label}</div>
-                        <div style={{ fontSize: "11px", color: "#aaa", marginTop: "2px", display: "flex", alignItems: "center", gap: "4px" }}>
-                          <span>📅</span> {formatDate(tx.datetime)}
-                        </div>
-                      </div>
-                    </div>
-                    {/* Net change */}
-                    <div style={{ textAlign: "right" }}>
-                      {isCredit && (
-                        <div style={{ fontSize: "15px", fontWeight: "800", color: "#16a34a" }}>
-                          +₹{parseFloat(tx.tamount_cr).toFixed(2)}
-                        </div>
-                      )}
-                      {isDebit && (
-                        <div style={{ fontSize: "15px", fontWeight: "800", color: "#dc2626" }}>
-                          -₹{parseFloat(tx.tamount_dr).toFixed(2)}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* DIVIDER */}
-                  <div style={{ borderTop: "1px solid #f5f5f5", margin: "0 18px" }} />
-
-                  {/* BOTTOM ROW */}
-                  <div style={{ padding: "10px 18px 14px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "8px" }}>
-                    <div>
-                      <div style={{ fontSize: "10px", color: "#bbb", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "2px" }}>Reference</div>
-                      <div style={{ fontSize: "12px", fontWeight: "600", color: "#555", fontFamily: "monospace" }}>{tx.treference || "—"}</div>
-                    </div>
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: "10px", color: "#bbb", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "2px" }}>Balance After</div>
-                      <div style={{ fontSize: "13px", fontWeight: "700", color: "#fd561e" }}>₹{parseFloat(tx.newbal || 0).toFixed(2)}</div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <SignupForm
+            closeModal={handleCloseAuth}
+            openSignin={() => setAuthPage("signin")}
+            openVerifyOtp={(data) => {
+              setSignupData(data);
+              handleCloseAuth();
+            }}
+          />
         )}
-      </div>
-    </div>
+      </AuthModal>
+
+      {/* Forgot Password Modal */}
+      <AuthModal isOpen={showForgotPassword}>
+        <ForgotPassword
+          closeModal={handleCloseForgotPassword}
+          openSignin={() => {
+            handleCloseForgotPassword();
+            handleOpenAuth();
+          }}
+          openResetPassword={handleOpenResetPassword}
+        />
+      </AuthModal>
+
+      {/* Reset Password Modal */}
+      <AuthModal isOpen={showResetPasswordModal}>
+        <ResetPassword
+          resetData={resetData}
+          closeModal={handleCloseResetPassword}
+          openSignin={() => {
+            handleCloseResetPassword();
+            handleOpenAuth();
+          }}
+        />
+      </AuthModal>
+
+      <style>
+        {`
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}
+      </style>
+    </>
   );
 };
 

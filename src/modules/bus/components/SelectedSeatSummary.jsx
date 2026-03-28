@@ -67,7 +67,7 @@ const SelectedSeatSummary = ({ selectedSeats, onProceed }) => {
           <button
             onClick={onProceed}
             disabled={seatCount === 0}
-            className={`px-6 py-2 rounded-lg font-medium transition
+            className={`px-6 py-2 rounded-lg  cursor-pointer font-medium transition
               ${seatCount === 0 
                 ? "bg-gray-400 cursor-not-allowed text-white" 
                 : "bg-[#fd561e] text-white hover:opacity-90"
