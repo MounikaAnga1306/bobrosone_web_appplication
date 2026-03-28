@@ -153,7 +153,7 @@ const BoardingDropping = ({
     
     <button
       onClick={onNext}
-      className="bg-[#fd561e] text-white px-8 py-3 rounded-lg font-semibold hover:opacity-90"
+      className="bg-[#fd561e] text-white cursor-pointer px-8 py-3 rounded-lg font-semibold hover:opacity-90"
     >
       Continue
     </button>

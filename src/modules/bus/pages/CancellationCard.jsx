@@ -183,7 +183,7 @@ const CancellationCard = ({ onClose }) => {
             <div className="w-full space-y-2">
               <button
                 onClick={onClose}
-                className="w-full text-white font-bold py-3 rounded-xl text-sm transition-all"
+                className="w-full text-white cursor-pointer font-bold py-3 rounded-xl text-sm transition-all"
                 style={{
                   background: "linear-gradient(135deg, #f97316, #ef4444)",
                   boxShadow: "0 6px 16px rgba(249,115,22,0.3)",
@@ -199,7 +199,7 @@ const CancellationCard = ({ onClose }) => {
                   setOtp("");
                   setMessage("");
                 }}
-                className="w-full text-gray-400 hover:text-gray-600 text-xs py-1 transition-all"
+                className="w-full text-gray-400 cursor-pointer hover:text-gray-600 text-xs py-1 transition-all"
               >
                 Try another booking
               </button>
@@ -340,7 +340,7 @@ const CancellationCard = ({ onClose }) => {
                 </div>
               </div>
               <button onClick={handleVerify} disabled={loading}
-                className="w-full text-white font-bold py-3.5 rounded-xl mt-1 transition-all text-sm disabled:opacity-60 flex items-center justify-center gap-2"
+                className="w-full text-white font-bold py-3.5 cursor-pointer rounded-xl mt-1 transition-all text-sm disabled:opacity-60 flex items-center justify-center gap-2"
                 style={{ background: "linear-gradient(135deg, #f43f5e, #fb923c)", boxShadow: "0 6px 18px rgba(244,63,94,0.3)" }}>
                 {loading ? (
                   <><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
@@ -386,7 +386,7 @@ const CancellationCard = ({ onClose }) => {
                   <span className="text-gray-400">Resend in <span className="font-bold" style={{ color: "#f43f5e" }}>{timer}s</span></span>
                 ) : (
                   <span className="text-gray-500">Didn't get it?{" "}
-                    <button onClick={handleResend} disabled={loading} className="font-bold hover:underline" style={{ color: "#fb923c" }}>
+                    <button onClick={handleResend} disabled={loading} className="font-bold cursor-pointer hover:underline" style={{ color: "#fb923c" }}>
                       Resend OTP
                     </button>
                   </span>
@@ -394,7 +394,7 @@ const CancellationCard = ({ onClose }) => {
               </div>
 
               <button onClick={handleOTPVerify} disabled={loading}
-                className="w-full text-white font-bold py-3.5 rounded-xl transition-all text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full text-white cursor-pointer font-bold py-3.5 rounded-xl transition-all text-sm disabled:opacity-50 flex items-center justify-center gap-2"
                 style={{ background: "linear-gradient(135deg, #f43f5e, #fb923c)", boxShadow: "0 6px 18px rgba(244,63,94,0.3)" }}>
                 {loading ? (
                   <><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
@@ -404,7 +404,7 @@ const CancellationCard = ({ onClose }) => {
               </button>
 
               <button onClick={() => { setStep(1); setMessage(""); setOtp(""); }}
-                className="w-full text-gray-400 hover:text-gray-600 text-xs py-1 transition-all">
+                className="w-full text-gray-400 cursor-pointer hover:text-gray-600 text-xs py-1 transition-all">
                 ← Change booking details
               </button>
             </div>
