@@ -1,4 +1,5 @@
 // src/modules/flights/components/FlightHeroSection.jsx
+
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import DatePicker from "react-datepicker";
@@ -43,24 +44,81 @@ const tabRoutes = {
 
 const FlightHeroSection = () => {
   const navigate = useNavigate();
-  const { updateSearchParams, updateFlightResults, flightResults } =
-    useFlightSearchContext();
+  const { 
+    updateSearchParams, 
+    updateFlightResults, 
+    flightResults,
+    updateOrigin,
+    updateDestination,
+    updateDepartureDate,
+    updateReturnDate,
+    updateTripType,
+    updatePassengers,
+    addLeg: contextAddLeg,
+    removeLeg: contextRemoveLeg,
+    updateLeg,
+  } = useFlightSearchContext();
 
-  // State
+  // ============ STATE MANAGEMENT ============
+  
+  // Trip type
   const [tripType, setTripType] = useState("one-way");
+  
+  // Multi-city legs - Start with 2 legs
+  const [legs, setLegs] = useState([
+    {
+      id: 1,
+      from: "",
+      to: "",
+      fromDisplay: "",
+      toDisplay: "",
+      fromAirport: null,
+      toAirport: null,
+      date: new Date(),
+      showFromDropdown: false,
+      showToDropdown: false,
+      fromAirports: [],
+      toAirports: [],
+      fromLoading: false,
+      toLoading: false,
+    },
+    {
+      id: 2,
+      from: "",
+      to: "",
+      fromDisplay: "",
+      toDisplay: "",
+      fromAirport: null,
+      toAirport: null,
+      date: null,
+      showFromDropdown: false,
+      showToDropdown: false,
+      fromAirports: [],
+      toAirports: [],
+      fromLoading: false,
+      toLoading: false,
+    }
+  ]);
+
+  // One-way/round-trip state
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [fromDisplay, setFromDisplay] = useState("");
   const [toDisplay, setToDisplay] = useState("");
+  const [selectedFromAirport, setSelectedFromAirport] = useState(null);
+  const [selectedToAirport, setSelectedToAirport] = useState(null);
+  
+  // Dates
   const [departureDate, setDepartureDate] = useState(new Date());
-  const [returnDate, setReturnDate] = useState(null);
+  const [returnDate, setReturnDate] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 3);
+    return date;
+  });
+  
   const [activeTab, setActiveTab] = useState("flights");
   
-  // Multi-city legs state
-  const [flightLegs, setFlightLegs] = useState([
-    { id: 1, origin: "", destination: "", departureDate: new Date() }
-  ]);
-  
+  // Special fares
   const [specialFares, setSpecialFares] = useState({
     regular: false,
     student: false,
@@ -70,66 +128,261 @@ const FlightHeroSection = () => {
   });
   
   // Traveller state
-  const [travellers, setTravellers] = useState({
-    adults: 1,
-    children: 0,
-    infants: 0,
-    class: "Economy",
-  });
+  const [passengers, setPassengers] = useState([{ code: 'ADT' }]);
   const [showTravellerModal, setShowTravellerModal] = useState(false);
+  const [tempPassengers, setTempPassengers] = useState([]);
+  const [travelClass, setTravelClass] = useState("Economy");
 
-  // Dropdown states for airport search
+  // Dropdown states for one-way/round-trip
   const [showFromDropdown, setShowFromDropdown] = useState(false);
   const [showToDropdown, setShowToDropdown] = useState(false);
   const [fromAirports, setFromAirports] = useState([]);
   const [toAirports, setToAirports] = useState([]);
   const [fromLoading, setFromLoading] = useState(false);
   const [toLoading, setToLoading] = useState(false);
-  const [fromSearchError, setFromSearchError] = useState(null);
-  const [toSearchError, setToSearchError] = useState(null);
-  const [selectedFromAirport, setSelectedFromAirport] = useState(null);
-  const [selectedToAirport, setSelectedToAirport] = useState(null);
-  
-  // Multi-city airport selection states
-  const [legAirports, setLegAirports] = useState({});
-  const [legDropdowns, setLegDropdowns] = useState({});
-  const [legLoading, setLegLoading] = useState({});
-  const [legSearchError, setLegSearchError] = useState({});
 
   // Refs
   const travellerRef = useRef(null);
   const fromRef = useRef(null);
   const toRef = useRef(null);
+  const legRefs = useRef({});
+  
+  // Timeouts
   const fromSearchTimeout = useRef(null);
   const toSearchTimeout = useRef(null);
   const legSearchTimeouts = useRef({});
 
-  // Travel classes
-  const travelClasses = ["Economy", "Premium Economy", "Business", "First"];
+  // ============ HELPER FUNCTIONS ============
 
-  // Calculate total travellers
-  const totalTravellers =
-    travellers.adults + travellers.children + travellers.infants;
+  const getPassengerCounts = useCallback(() => {
+    return {
+      adults: passengers.filter(p => p.code === 'ADT').length,
+      children: passengers.filter(p => p.code === 'CNN').length,
+      infants: passengers.filter(p => p.code === 'INF').length
+    };
+  }, [passengers]);
+
+  const counts = getPassengerCounts();
   const maxTravellers = 9;
 
-  // Format travellers text
   const formatTravellersText = () => {
-    const total = totalTravellers;
-    return `${total} Traveller${total > 1 ? "s" : ""}, ${travellers.class}`;
+    const parts = [];
+    if (counts.adults > 0) parts.push(`${counts.adults} Adult${counts.adults > 1 ? 's' : ''}`);
+    if (counts.children > 0) parts.push(`${counts.children} Child${counts.children > 1 ? 'ren' : ''}`);
+    if (counts.infants > 0) parts.push(`${counts.infants} Infant${counts.infants > 1 ? 's' : ''}`);
+    return `${parts.join(', ')} · ${travelClass}`;
   };
 
-  // Airport search function
-  const searchAirportsAPI = async (searchTerm, type, legId = null) => {
+  const formatDate = (date) => {
+    if (!date) return null;
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // ============ TRIP TYPE HANDLER ============
+
+  const handleTripTypeChange = (type) => {
+    setTripType(type);
+    updateTripType(type);
+    
+    if (type === 'multi-city') {
+      setLegs([
+        {
+          id: 1,
+          from: "",
+          to: "",
+          fromDisplay: "",
+          toDisplay: "",
+          fromAirport: null,
+          toAirport: null,
+          date: new Date(),
+          showFromDropdown: false,
+          showToDropdown: false,
+          fromAirports: [],
+          toAirports: [],
+          fromLoading: false,
+          toLoading: false,
+        },
+        {
+          id: 2,
+          from: "",
+          to: "",
+          fromDisplay: "",
+          toDisplay: "",
+          fromAirport: null,
+          toAirport: null,
+          date: null,
+          showFromDropdown: false,
+          showToDropdown: false,
+          fromAirports: [],
+          toAirports: [],
+          fromLoading: false,
+          toLoading: false,
+        }
+      ]);
+    }
+    
+    if (type === 'round-trip' && !returnDate) {
+      const defaultReturn = new Date(departureDate);
+      defaultReturn.setDate(defaultReturn.getDate() + 3);
+      setReturnDate(defaultReturn);
+      updateReturnDate(defaultReturn);
+    }
+  };
+
+  // ============ MULTI-CITY HANDLERS ============
+
+  const addNewLeg = () => {
+    if (legs.length >= 6) {
+      alert("Maximum 6 legs allowed");
+      return;
+    }
+
+    const newLeg = {
+      id: Date.now(),
+      from: "",
+      to: "",
+      fromDisplay: "",
+      toDisplay: "",
+      fromAirport: null,
+      toAirport: null,
+      date: null,
+      showFromDropdown: false,
+      showToDropdown: false,
+      fromAirports: [],
+      toAirports: [],
+      fromLoading: false,
+      toLoading: false,
+    };
+
+    setLegs([...legs, newLeg]);
+    contextAddLeg();
+  };
+
+  const removeLegHandler = (index) => {
+    if (legs.length <= 2) {
+      alert("Minimum 2 legs required");
+      return;
+    }
+    setLegs(legs.filter((_, i) => i !== index));
+    contextRemoveLeg(index);
+  };
+
+  const updateLegField = (index, field, value) => {
+    setLegs(prev => {
+      const newLegs = [...prev];
+      newLegs[index] = { ...newLegs[index], [field]: value };
+      return newLegs;
+    });
+  };
+
+  // Airport search for multi-city
+  const searchLegAirports = async (searchTerm, legIndex, type) => {
+    if (searchTerm.length < 3) {
+      updateLegField(legIndex, type === 'from' ? 'fromAirports' : 'toAirports', []);
+      updateLegField(legIndex, type === 'from' ? 'fromLoading' : 'toLoading', false);
+      return;
+    }
+
+    try {
+      updateLegField(legIndex, type === 'from' ? 'fromLoading' : 'toLoading', true);
+      const results = await searchAirports(searchTerm);
+      updateLegField(legIndex, type === 'from' ? 'fromAirports' : 'toAirports', results);
+      updateLegField(legIndex, type === 'from' ? 'fromLoading' : 'toLoading', false);
+    } catch (error) {
+      updateLegField(legIndex, type === 'from' ? 'fromLoading' : 'toLoading', false);
+      updateLegField(legIndex, type === 'from' ? 'fromAirports' : 'toAirports', []);
+    }
+  };
+
+  const debouncedLegSearch = useCallback((value, legIndex, type) => {
+    const key = `${legIndex}-${type}`;
+    if (legSearchTimeouts.current[key]) {
+      clearTimeout(legSearchTimeouts.current[key]);
+    }
+
+    if (value.length >= 3) {
+      legSearchTimeouts.current[key] = setTimeout(() => {
+        searchLegAirports(value, legIndex, type);
+      }, 500);
+    } else {
+      updateLegField(legIndex, type === 'from' ? 'fromAirports' : 'toAirports', []);
+      updateLegField(legIndex, type === 'from' ? 'fromLoading' : 'toLoading', false);
+    }
+  }, []);
+
+  // ============ MULTI-CITY SELECTION HANDLERS ============
+
+  const handleLegFromChange = (e, index) => {
+    const value = e.target.value;
+    updateLegField(index, 'fromDisplay', value);
+    updateLegField(index, 'fromAirport', null);
+    updateLegField(index, 'from', '');
+    updateLegField(index, 'showFromDropdown', true);
+    debouncedLegSearch(value, index, 'from');
+  };
+
+  const handleLegToChange = (e, index) => {
+    const value = e.target.value;
+    updateLegField(index, 'toDisplay', value);
+    updateLegField(index, 'toAirport', null);
+    updateLegField(index, 'to', '');
+    updateLegField(index, 'showToDropdown', true);
+    debouncedLegSearch(value, index, 'to');
+  };
+
+  const handleLegAirportSelect = (airport, index, type) => {
+    if (type === 'from') {
+      updateLegField(index, 'fromAirport', airport);
+      updateLegField(index, 'from', airport.location_code);
+      updateLegField(index, 'fromDisplay', `${airport.name} (${airport.location_code})`);
+      updateLegField(index, 'showFromDropdown', false);
+      updateLegField(index, 'fromAirports', []);
+      updateLegField(index, 'fromLoading', false);
+      
+      // Auto-populate next leg's from if this leg has a destination
+      const currentLeg = legs[index];
+      if (currentLeg.toAirport && index < legs.length - 1) {
+        const nextLeg = legs[index + 1];
+        if (!nextLeg.fromAirport) {
+          updateLegField(index + 1, 'fromAirport', currentLeg.toAirport);
+          updateLegField(index + 1, 'from', currentLeg.toAirport.location_code);
+          updateLegField(index + 1, 'fromDisplay', `${currentLeg.toAirport.name} (${currentLeg.toAirport.location_code})`);
+        }
+      }
+    } else {
+      updateLegField(index, 'toAirport', airport);
+      updateLegField(index, 'to', airport.location_code);
+      updateLegField(index, 'toDisplay', `${airport.name} (${airport.location_code})`);
+      updateLegField(index, 'showToDropdown', false);
+      updateLegField(index, 'toAirports', []);
+      updateLegField(index, 'toLoading', false);
+      
+      // Auto-populate next leg's from
+      if (index < legs.length - 1) {
+        const nextLeg = legs[index + 1];
+        if (!nextLeg.fromAirport) {
+          updateLegField(index + 1, 'fromAirport', airport);
+          updateLegField(index + 1, 'from', airport.location_code);
+          updateLegField(index + 1, 'fromDisplay', `${airport.name} (${airport.location_code})`);
+        }
+      }
+    }
+  };
+
+  // ============ ONE-WAY/ROUND-TRIP HANDLERS ============
+
+  const searchAirportsAPI = async (searchTerm, type) => {
     if (searchTerm.length < 3) {
       if (type === "from") {
         setFromAirports([]);
         setFromLoading(false);
-      } else if (type === "to") {
+      } else {
         setToAirports([]);
         setToLoading(false);
-      } else if (legId) {
-        setLegLoading(prev => ({ ...prev, [legId]: false }));
-        setLegAirports(prev => ({ ...prev, [legId]: [] }));
       }
       return;
     }
@@ -137,61 +390,30 @@ const FlightHeroSection = () => {
     try {
       if (type === "from") {
         setFromLoading(true);
-        setFromSearchError(null);
-      } else if (type === "to") {
-        setToLoading(true);
-        setToSearchError(null);
-      } else if (legId) {
-        setLegLoading(prev => ({ ...prev, [legId]: true }));
-        setLegSearchError(prev => ({ ...prev, [legId]: null }));
-      }
-
-      const results = await searchAirports(searchTerm);
-
-      if (type === "from") {
+        const results = await searchAirports(searchTerm);
         setFromAirports(results);
         setFromLoading(false);
-      } else if (type === "to") {
+      } else {
+        setToLoading(true);
+        const results = await searchAirports(searchTerm);
         setToAirports(results);
         setToLoading(false);
-      } else if (legId) {
-        setLegAirports(prev => ({ ...prev, [legId]: results }));
-        setLegLoading(prev => ({ ...prev, [legId]: false }));
       }
     } catch (error) {
       if (type === "from") {
-        setFromSearchError("Failed to search airports. Please try again.");
         setFromLoading(false);
         setFromAirports([]);
-      } else if (type === "to") {
-        setToSearchError("Failed to search airports. Please try again.");
+      } else {
         setToLoading(false);
         setToAirports([]);
-      } else if (legId) {
-        setLegSearchError(prev => ({ 
-          ...prev, 
-          [legId]: "Failed to search airports. Please try again." 
-        }));
-        setLegLoading(prev => ({ ...prev, [legId]: false }));
-        setLegAirports(prev => ({ ...prev, [legId]: [] }));
       }
     }
   };
 
-  // Debounced search handlers
   const debouncedFromSearch = useCallback((value) => {
-    if (fromSearchTimeout.current) {
-      clearTimeout(fromSearchTimeout.current);
-    }
-
+    if (fromSearchTimeout.current) clearTimeout(fromSearchTimeout.current);
     if (value.length >= 3) {
-      setFromLoading(true);
-      fromSearchTimeout.current = setTimeout(() => {
-        searchAirportsAPI(value, "from");
-      }, 500);
-    } else if (value.length > 0) {
-      setFromAirports([]);
-      setFromLoading(false);
+      fromSearchTimeout.current = setTimeout(() => searchAirportsAPI(value, "from"), 500);
     } else {
       setFromAirports([]);
       setFromLoading(false);
@@ -199,120 +421,20 @@ const FlightHeroSection = () => {
   }, []);
 
   const debouncedToSearch = useCallback((value) => {
-    if (toSearchTimeout.current) {
-      clearTimeout(toSearchTimeout.current);
-    }
-
+    if (toSearchTimeout.current) clearTimeout(toSearchTimeout.current);
     if (value.length >= 3) {
-      setToLoading(true);
-      toSearchTimeout.current = setTimeout(() => {
-        searchAirportsAPI(value, "to");
-      }, 500);
-    } else if (value.length > 0) {
-      setToAirports([]);
-      setToLoading(false);
+      toSearchTimeout.current = setTimeout(() => searchAirportsAPI(value, "to"), 500);
     } else {
       setToAirports([]);
       setToLoading(false);
     }
   }, []);
 
-  const debouncedLegSearch = useCallback((value, legId, field) => {
-    if (legSearchTimeouts.current[legId]) {
-      clearTimeout(legSearchTimeouts.current[legId]);
-    }
-
-    if (value.length >= 3) {
-      setLegLoading(prev => ({ ...prev, [legId]: true }));
-      legSearchTimeouts.current[legId] = setTimeout(() => {
-        searchAirportsAPI(value, field, legId);
-      }, 500);
-    } else if (value.length > 0) {
-      setLegAirports(prev => ({ ...prev, [legId]: [] }));
-      setLegLoading(prev => ({ ...prev, [legId]: false }));
-    } else {
-      setLegAirports(prev => ({ ...prev, [legId]: [] }));
-      setLegLoading(prev => ({ ...prev, [legId]: false }));
-    }
-  }, []);
-
-  // Input handlers for multi-city
-  const handleLegInputChange = (legId, field, value) => {
-    setFlightLegs(prev => 
-      prev.map(leg => 
-        leg.id === legId ? { ...leg, [field]: value } : leg
-      )
-    );
-
-    // Clear selected airport for this leg and field
-    setLegAirports(prev => ({ ...prev, [legId]: [] }));
-    
-    // Show dropdown
-    setLegDropdowns(prev => ({ ...prev, [legId]: true }));
-    
-    // Debounced search
-    debouncedLegSearch(value, legId, field);
-  };
-
-  const handleLegAirportSelect = (legId, field, airport) => {
-    setFlightLegs(prev => 
-      prev.map(leg => 
-        leg.id === legId 
-          ? { 
-              ...leg, 
-              [field]: airport.location_code,
-              [`${field}Display`]: `${airport.name} (${airport.location_code})`,
-              [`${field}Selected`]: airport 
-            }
-          : leg
-      )
-    );
-    
-    setLegDropdowns(prev => ({ ...prev, [legId]: false }));
-    setLegAirports(prev => ({ ...prev, [legId]: [] }));
-  };
-
-  const handleLegDateChange = (legId, date) => {
-    setFlightLegs(prev => 
-      prev.map(leg => 
-        leg.id === legId ? { ...leg, departureDate: date } : leg
-      )
-    );
-  };
-
-  const addFlightLeg = () => {
-    const newId = Math.max(...flightLegs.map(l => l.id), 0) + 1;
-    setFlightLegs(prev => [
-      ...prev,
-      { 
-        id: newId, 
-        origin: "", 
-        destination: "", 
-        departureDate: new Date(),
-        originDisplay: "",
-        destinationDisplay: "",
-        originSelected: null,
-        destinationSelected: null
-      }
-    ]);
-  };
-
-  const removeFlightLeg = (legId) => {
-    if (flightLegs.length > 1) {
-      setFlightLegs(prev => prev.filter(leg => leg.id !== legId));
-    }
-  };
-
-  // Original input handlers
   const handleFromInputChange = (e) => {
     const value = e.target.value;
     setFromDisplay(value);
-
-    if (selectedFromAirport) {
-      setSelectedFromAirport(null);
-      setFrom("");
-    }
-
+    setSelectedFromAirport(null);
+    setFrom("");
     debouncedFromSearch(value);
     setShowFromDropdown(true);
   };
@@ -320,12 +442,8 @@ const FlightHeroSection = () => {
   const handleToInputChange = (e) => {
     const value = e.target.value;
     setToDisplay(value);
-
-    if (selectedToAirport) {
-      setSelectedToAirport(null);
-      setTo("");
-    }
-
+    setSelectedToAirport(null);
+    setTo("");
     debouncedToSearch(value);
     setShowToDropdown(true);
   };
@@ -337,16 +455,20 @@ const FlightHeroSection = () => {
       setFromDisplay(`${airport.name} (${airport.location_code})`);
       setShowFromDropdown(false);
       setFromAirports([]);
+      updateOrigin(airport);
     } else {
       setSelectedToAirport(airport);
       setTo(airport.location_code);
       setToDisplay(`${airport.name} (${airport.location_code})`);
       setShowToDropdown(false);
       setToAirports([]);
+      updateDestination(airport);
     }
   };
 
   const handleSwapCities = () => {
+    if (tripType !== 'one-way' && tripType !== 'round-trip') return;
+    
     const tempDisplay = fromDisplay;
     setFromDisplay(toDisplay);
     setToDisplay(tempDisplay);
@@ -358,220 +480,181 @@ const FlightHeroSection = () => {
     const tempCode = from;
     setFrom(to);
     setTo(tempCode);
+
+    if (selectedToAirport) updateOrigin(selectedToAirport);
+    if (selectedFromAirport) updateDestination(selectedFromAirport);
   };
 
-  // Traveller handlers
-  const updateTravellers = (type, action) => {
-    setTravellers((prev) => {
-      const currentTotal = prev.adults + prev.children + prev.infants;
-      const currentValue = prev[type];
+  // ============ PASSENGER HANDLERS ============
 
-      let newValue;
-      if (action === "increment") {
-        if (currentTotal >= maxTravellers) return prev;
-        newValue = currentValue + 1;
-      } else {
-        if (type === "adults" && currentValue <= 1) return prev;
-        if ((type === "children" || type === "infants") && currentValue <= 0)
-          return prev;
-        newValue = currentValue - 1;
-      }
+  const openTravellerModal = () => {
+    setTempPassengers([...passengers]);
+    setShowTravellerModal(true);
+  };
 
-      // For infants, we don't auto-adjust anymore
-      return {
-        ...prev,
-        [type]: newValue,
-      };
+  const addTempPassenger = (code) => {
+    if (tempPassengers.length >= maxTravellers) return;
+    const newPassenger = { code };
+    if (code === 'CNN') newPassenger.age = 8;
+    if (code === 'INF') newPassenger.age = 1;
+    setTempPassengers([...tempPassengers, newPassenger]);
+  };
+
+  const removeTempPassenger = (index) => {
+    setTempPassengers(tempPassengers.filter((_, i) => i !== index));
+  };
+
+  const updateTempPassengerAge = (index, age) => {
+    setTempPassengers(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], age: parseInt(age) };
+      return updated;
     });
   };
 
-  const setTravelClass = (travelClass) => {
-    setTravellers((prev) => ({
-      ...prev,
-      class: travelClass,
-    }));
+  const applyPassengerChanges = () => {
+    if (!tempPassengers.some(p => p.code === 'ADT')) {
+      alert("At least one adult is required");
+      return;
+    }
+    setPassengers(tempPassengers);
+    updatePassengers(tempPassengers);
+    setShowTravellerModal(false);
   };
 
-  // Close dropdowns on outside click
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        travellerRef.current &&
-        !travellerRef.current.contains(event.target)
-      ) {
-        setShowTravellerModal(false);
-      }
-      if (fromRef.current && !fromRef.current.contains(event.target)) {
-        setShowFromDropdown(false);
-      }
-      if (toRef.current && !toRef.current.contains(event.target)) {
-        setShowToDropdown(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Cleanup timeouts
-  useEffect(() => {
-    return () => {
-      if (fromSearchTimeout.current) {
-        clearTimeout(fromSearchTimeout.current);
-      }
-      if (toSearchTimeout.current) {
-        clearTimeout(toSearchTimeout.current);
-      }
-      Object.values(legSearchTimeouts.current).forEach(timeout => {
-        clearTimeout(timeout);
-      });
-    };
-  }, []);
-
-  // Format date to YYYY-MM-DD
-  const formatDate = (date) => {
-    if (!date) return null;
-    const d = new Date(date);
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
+  const cancelPassengerChanges = () => {
+    setTempPassengers([]);
+    setShowTravellerModal(false);
   };
 
-  // Build passengers array
-  const buildPassengersArray = () => {
-    const passengers = [];
-    
-    // Add adults
-    for (let i = 0; i < travellers.adults; i++) {
-      passengers.push({ code: "ADT" });
-    }
-    
-    // Add children with default age 10
-    for (let i = 0; i < travellers.children; i++) {
-      passengers.push({ code: "CNN", age: 10 });
-    }
-    
-    // Add infants (typically under 2 years)
-    for (let i = 0; i < travellers.infants; i++) {
-      passengers.push({ code: "INF" });
-    }
-    
-    return passengers;
-  };
+  // ============ SEARCH HANDLER ============
 
-  // Build legs array based on trip type
-  const buildLegsArray = () => {
-    switch(tripType) {
-      case "one-way":
-        return [{
-          origin: selectedFromAirport?.location_code,
-          destination: selectedToAirport?.location_code,
-          departureDate: formatDate(departureDate)
-        }];
-        
-      case "round-trip":
-        return [
-          {
-            origin: selectedFromAirport?.location_code,
-            destination: selectedToAirport?.location_code,
-            departureDate: formatDate(departureDate)
-          },
-          {
-            origin: selectedToAirport?.location_code,
-            destination: selectedFromAirport?.location_code,
-            departureDate: formatDate(returnDate)
-          }
-        ];
-        
-      case "multi-city":
-        return flightLegs.map(leg => ({
-          origin: leg.origin,
-          destination: leg.destination,
-          departureDate: formatDate(leg.departureDate)
-        }));
-        
-      default:
-        return [];
-    }
-  };
-
-  // Validate search inputs
   const validateSearch = () => {
-    if (tripType === "one-way" || tripType === "round-trip") {
+    if (tripType === 'multi-city') {
+      for (let i = 0; i < legs.length; i++) {
+        const leg = legs[i];
+        if (!leg.fromAirport || !leg.toAirport) {
+          alert(`Please select both cities for flight ${i + 1}`);
+          return false;
+        }
+        if (leg.fromAirport.location_code === leg.toAirport.location_code) {
+          alert(`Departure and arrival cannot be same for flight ${i + 1}`);
+          return false;
+        }
+        if (!leg.date) {
+          alert(`Please select a date for flight ${i + 1}`);
+          return false;
+        }
+      }
+    } else {
       if (!selectedFromAirport || !selectedToAirport) {
-        alert("Please select both departure and arrival cities");
+        alert("Please select both cities");
         return false;
       }
-      
       if (selectedFromAirport.location_code === selectedToAirport.location_code) {
-        alert("Departure and arrival cities cannot be the same");
+        alert("Departure and arrival cannot be same");
         return false;
       }
-      
+      if (!departureDate) {
+        alert("Please select departure date");
+        return false;
+      }
       if (tripType === "round-trip" && !returnDate) {
-        alert("Please select a return date");
+        alert("Please select return date");
         return false;
       }
-    } else if (tripType === "multi-city") {
-      for (let i = 0; i < flightLegs.length; i++) {
-        const leg = flightLegs[i];
-        if (!leg.origin || !leg.destination) {
-          alert(`Please select both origin and destination for leg ${i + 1}`);
-          return false;
-        }
-        if (leg.origin === leg.destination) {
-          alert(`Origin and destination cannot be the same for leg ${i + 1}`);
-          return false;
-        }
-      }
+    }
+    
+    if (!passengers.some(p => p.code === 'ADT')) {
+      alert("At least one adult is required");
+      return false;
     }
     
     return true;
   };
 
-  // Handle search
   const handleSearch = async () => {
-    if (!validateSearch()) {
-      return;
+    if (!validateSearch()) return;
+
+    let searchLegs = [];
+
+    if (tripType === 'multi-city') {
+      searchLegs = legs.map(leg => ({
+        origin: leg.fromAirport.location_code,
+        destination: leg.toAirport.location_code,
+        departureDate: formatDate(leg.date)
+      }));
+    } else {
+      searchLegs = [{
+        origin: selectedFromAirport.location_code,
+        destination: selectedToAirport.location_code,
+        departureDate: formatDate(departureDate)
+      }];
+      
+      if (tripType === "round-trip") {
+        searchLegs.push({
+          origin: selectedToAirport.location_code,
+          destination: selectedFromAirport.location_code,
+          departureDate: formatDate(returnDate)
+        });
+      }
     }
 
-    updateFlightResults({ loading: true, error: null });
-
-    const searchData = {
-      legs: buildLegsArray(),
-      passengers: buildPassengersArray()
+    const searchData = { 
+      legs: searchLegs, 
+      passengers: passengers,
+      tripType: tripType
     };
 
-    // Store search params in context for reference
-    updateSearchParams({
-      tripType,
-      legs: searchData.legs,
-      travellers,
-      searchData // Store the full API request data
+    console.log("🔍 Search Data:", searchData);
+
+    updateSearchParams({ 
+      tripType, 
+      legs: searchLegs, 
+      passengers 
     });
+    
+    updateFlightResults({ loading: true, error: null });
 
     try {
       const result = await searchFlights(searchData);
-
+      console.log("📦 Search Result:", result);
+      
       if (result.success) {
         updateFlightResults({
-          flights: result.flights,
-          rawFlights: result.rawFlights,
-          count: result.count,
+          flights: result.flights || [],
+          roundTripDisplay: result.roundTripDisplay || null,
+          multiCity: result.multiCity || { legs: [], combinations: [] },
+          brandDetails: result.brandDetails || {},
+          count: result.count || 0,
           loading: false,
           error: null,
+          searchId: result.searchId
         });
 
-        navigate("/flights/results");
+        setTimeout(() => {
+          if (tripType === "round-trip") {
+            console.log("➡️ Navigating to round-trip page");
+            navigate("/flights/round-trip");
+          } else if (tripType === "multi-city") {
+            console.log("➡️ Navigating to multi-city page");
+            navigate("/flights/multi-city");
+          } else {
+            console.log("➡️ Navigating to one-way results page");
+            navigate("/flights/results");
+          }
+        }, 100);
+        
       } else {
+        console.error("❌ Search failed:", result.error);
         updateFlightResults({
           loading: false,
-          error: result.error,
+          error: result.error || "Search failed",
         });
-        alert(`Search failed: ${result.error}`);
+        alert(`Search failed: ${result.error || "Unknown error"}`);
       }
     } catch (error) {
+      console.error("❌ Search Error:", error);
       updateFlightResults({
         loading: false,
         error: error.message,
@@ -580,85 +663,447 @@ const FlightHeroSection = () => {
     }
   };
 
-  // Render airport dropdown for multi-city legs
-  const renderLegAirportDropdown = (legId, field, displayValue) => {
-    if (!legDropdowns[legId]) return null;
-    
-    const airports = legAirports[legId] || [];
-    const loading = legLoading[legId];
-    const error = legSearchError[legId];
-    
-    return (
-      <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-64 overflow-y-auto">
-        <div className="p-3">
-          {loading ? (
-            <div className="flex items-center justify-center py-4">
-              <FaSpinner className="animate-spin text-[#FD561E] mr-2" />
-              <span className="text-gray-600">Searching airports...</span>
-            </div>
-          ) : error ? (
-            <div className="text-center py-4 text-red-500">{error}</div>
-          ) : displayValue.length < 3 && displayValue.length > 0 ? (
-            <div className="text-center py-4 text-gray-500">
-              Type at least 3 characters to search
-            </div>
-          ) : airports.length === 0 && displayValue.length >= 3 ? (
-            <div className="text-center py-4 text-gray-500">No airports found</div>
-          ) : (
-            <div className="space-y-1">
-              {airports.map((airport) => (
-                <div
-                  key={`${legId}-${airport.location_code}`}
-                  className="flex items-center justify-between p-2 hover:bg-orange-50 rounded cursor-pointer transition-colors"
-                  onClick={() => handleLegAirportSelect(legId, field, airport)}
-                >
-                  <div>
-                    <div className="font-medium text-gray-900">{airport.name}</div>
-                    <div className="text-xs text-gray-500">{airport.location_code}</div>
-                  </div>
-                  <div className="text-sm font-bold text-gray-700">
-                    {airport.location_code}
-                  </div>
+  // ============ EFFECTS ============
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (fromRef.current && !fromRef.current.contains(event.target)) {
+        setShowFromDropdown(false);
+      }
+      if (toRef.current && !toRef.current.contains(event.target)) {
+        setShowToDropdown(false);
+      }
+      if (travellerRef.current && !travellerRef.current.contains(event.target)) {
+        setShowTravellerModal(false);
+        setTempPassengers([]);
+      }
+      
+      legs.forEach((_, index) => {
+        const fromDropdown = document.getElementById(`leg-from-${index}`);
+        const toDropdown = document.getElementById(`leg-to-${index}`);
+        
+        if (fromDropdown && !fromDropdown.contains(event.target)) {
+          updateLegField(index, 'showFromDropdown', false);
+        }
+        if (toDropdown && !toDropdown.contains(event.target)) {
+          updateLegField(index, 'showToDropdown', false);
+        }
+      });
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [legs]);
+
+  useEffect(() => {
+    return () => {
+      if (fromSearchTimeout.current) clearTimeout(fromSearchTimeout.current);
+      if (toSearchTimeout.current) clearTimeout(toSearchTimeout.current);
+      Object.values(legSearchTimeouts.current).forEach(clearTimeout);
+    };
+  }, []);
+
+  const handleTabClick = (tab) => {
+    setActiveTab(tab.id);
+    navigate(tabRoutes[tab.id]);
+  };
+
+  // ============ RENDER FUNCTIONS ============
+
+  const renderMultiCityForm = () => (
+    <div className="space-y-4">
+      {legs.map((leg, index) => (
+        <div key={leg.id} className="relative bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <div className="flex justify-between items-center mb-3">
+            <h4 className="font-medium text-gray-700">Flight {index + 1}</h4>
+            {index >= 2 && (
+              <button
+                onClick={() => removeLegHandler(index)}
+                className="text-red-500 hover:text-red-700 p-1"
+              >
+                <FaTrash className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+            {/* From Field */}
+            <div className="md:col-span-5 relative" id={`leg-from-${index}`}>
+              <label className="block text-xs font-medium text-gray-500 mb-1">From</label>
+              <div className="relative">
+                <FaMapMarkerAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  value={leg.fromDisplay}
+                  onChange={(e) => handleLegFromChange(e, index)}
+                  onFocus={() => updateLegField(index, 'showFromDropdown', true)}
+                  placeholder="City or airport"
+                  className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FD561E] text-sm"
+                />
+                {leg.fromLoading && (
+                  <FaSpinner className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 animate-spin" />
+                )}
+              </div>
+
+              {/* From Dropdown */}
+              {leg.showFromDropdown && leg.fromAirports.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-64 overflow-y-auto">
+                  {leg.fromAirports.map((airport) => (
+                    <div
+                      key={airport.location_code}
+                      className="flex items-center justify-between p-3 hover:bg-orange-50 cursor-pointer border-b last:border-b-0"
+                      onClick={() => handleLegAirportSelect(airport, index, 'from')}
+                    >
+                      <div>
+                        <div className="font-medium text-gray-900">{airport.name}</div>
+                        <div className="text-xs text-gray-500">{airport.location_code}</div>
+                      </div>
+                      <div className="text-sm font-bold text-gray-700">{airport.location_code}</div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
+            </div>
+
+            {/* To Field */}
+            <div className="md:col-span-5 relative" id={`leg-to-${index}`}>
+              <label className="block text-xs font-medium text-gray-500 mb-1">To</label>
+              <div className="relative">
+                <FaMapMarkerAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  value={leg.toDisplay}
+                  onChange={(e) => handleLegToChange(e, index)}
+                  onFocus={() => updateLegField(index, 'showToDropdown', true)}
+                  placeholder="City or airport"
+                  className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FD561E] text-sm"
+                />
+                {leg.toLoading && (
+                  <FaSpinner className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 animate-spin" />
+                )}
+              </div>
+
+              {/* To Dropdown */}
+              {leg.showToDropdown && leg.toAirports.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-64 overflow-y-auto">
+                  {leg.toAirports.map((airport) => (
+                    <div
+                      key={airport.location_code}
+                      className="flex items-center justify-between p-3 hover:bg-orange-50 cursor-pointer border-b last:border-b-0"
+                      onClick={() => handleLegAirportSelect(airport, index, 'to')}
+                    >
+                      <div>
+                        <div className="font-medium text-gray-900">{airport.name}</div>
+                        <div className="text-xs text-gray-500">{airport.location_code}</div>
+                      </div>
+                      <div className="text-sm font-bold text-gray-700">{airport.location_code}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Date Field */}
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium text-gray-500 mb-1">Departure</label>
+              <div className="relative">
+                <FaCalendarAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10" />
+                <DatePicker
+                  selected={leg.date}
+                  onChange={(date) => updateLegField(index, 'date', date)}
+                  className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FD561E] text-sm cursor-pointer"
+                  dateFormat="EEE, dd MMM"
+                  minDate={index === 0 ? new Date() : legs[index - 1]?.date}
+                  placeholderText="Select date"
+                  popperClassName="z-50"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {legs.length < 6 && (
+        <button
+          onClick={addNewLeg}
+          className="flex items-center gap-2 text-[#FD561E] hover:text-[#e54d1a] font-medium text-sm"
+        >
+          <FaPlus className="w-3 h-3" />
+          Add Another Flight
+        </button>
+      )}
+    </div>
+  );
+
+  const renderOneWayRoundTripForm = () => (
+    <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+      {/* From - 3 columns */}
+      <div className="md:col-span-3 relative" ref={fromRef}>
+        <label className="block text-xs font-medium text-gray-500 mb-1">From</label>
+        <div className="relative">
+          <FaMapMarkerAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={fromDisplay}
+            onChange={handleFromInputChange}
+            onFocus={() => setShowFromDropdown(true)}
+            placeholder="City or airport"
+            className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FD561E]"
+          />
+          {fromLoading && <FaSpinner className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 animate-spin" />}
+        </div>
+        
+        {/* From Dropdown */}
+        {showFromDropdown && fromAirports.length > 0 && (
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-64 overflow-y-auto">
+            {fromAirports.map((airport) => (
+              <div
+                key={airport.location_code}
+                className="flex items-center justify-between p-3 hover:bg-orange-50 cursor-pointer border-b last:border-b-0"
+                onClick={() => handleAirportSelect(airport, "from")}
+              >
+                <div>
+                  <div className="font-medium">{airport.name}</div>
+                  <div className="text-xs text-gray-500">{airport.location_code}</div>
+                </div>
+                <div className="text-sm font-bold">{airport.location_code}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Swap Button */}
+      <div className="md:col-span-1 flex items-end justify-center pb-3">
+        <button
+          className="bg-white border rounded-full p-3 hover:bg-gray-50 shadow-sm transition-transform hover:scale-110"
+          onClick={handleSwapCities}
+          disabled={!selectedFromAirport || !selectedToAirport}
+        >
+          <FaExchangeAlt className="text-gray-500 text-sm" />
+        </button>
+      </div>
+
+      {/* To - 3 columns */}
+      <div className="md:col-span-3 relative" ref={toRef}>
+        <label className="block text-xs font-medium text-gray-500 mb-1">To</label>
+        <div className="relative">
+          <FaMapMarkerAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={toDisplay}
+            onChange={handleToInputChange}
+            onFocus={() => setShowToDropdown(true)}
+            placeholder="City or airport"
+            className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FD561E]"
+          />
+          {toLoading && <FaSpinner className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 animate-spin" />}
+        </div>
+        
+        {/* To Dropdown */}
+        {showToDropdown && toAirports.length > 0 && (
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-64 overflow-y-auto">
+            {toAirports.map((airport) => (
+              <div
+                key={airport.location_code}
+                className="flex items-center justify-between p-3 hover:bg-orange-50 cursor-pointer border-b last:border-b-0"
+                onClick={() => handleAirportSelect(airport, "to")}
+              >
+                <div>
+                  <div className="font-medium">{airport.name}</div>
+                  <div className="text-xs text-gray-500">{airport.location_code}</div>
+                </div>
+                <div className="text-sm font-bold">{airport.location_code}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Departure Date - 2 columns */}
+      <div className="md:col-span-2">
+        <label className="block text-xs font-medium text-gray-500 mb-1">Departure</label>
+        <div className="relative">
+          <FaCalendarAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10" />
+          <DatePicker
+            selected={departureDate}
+            onChange={(date) => {
+              setDepartureDate(date);
+              updateDepartureDate(date);
+            }}
+            className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FD561E] cursor-pointer"
+            dateFormat="EEE, dd MMM"
+            minDate={new Date()}
+            popperClassName="z-50"
+          />
+        </div>
+      </div>
+
+      {/* Return Date - 2 columns (only for round-trip) */}
+      {tripType === "round-trip" && (
+        <div className="md:col-span-2">
+          <label className="block text-xs font-medium text-gray-500 mb-1">Return</label>
+          <div className="relative">
+            <FaCalendarAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10" />
+            <DatePicker
+              selected={returnDate}
+              onChange={(date) => {
+                setReturnDate(date);
+                updateReturnDate(date);
+              }}
+              className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FD561E] cursor-pointer"
+              dateFormat="EEE, dd MMM"
+              minDate={departureDate}
+              popperClassName="z-50"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Travellers & Class - 3 columns for one-way, 2 columns for round-trip */}
+      <div className={`${tripType === "round-trip" ? "md:col-span-2" : "md:col-span-3"} relative`} ref={travellerRef}>
+        <label className="block text-xs font-medium text-gray-500 mb-1">Travellers & Class</label>
+        <div className="relative">
+          <div
+            className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg bg-white cursor-pointer flex items-center hover:border-[#FD561E]"
+            onClick={openTravellerModal}
+          >
+            <FaUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <span className="truncate text-sm">{formatTravellersText()}</span>
+            <FaChevronDown className={`absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 transition ${
+              showTravellerModal ? "rotate-180" : ""
+            }`} />
+          </div>
+
+          {/* Traveller Modal */}
+          {showTravellerModal && (
+            <div className="absolute top-full left-0 mt-2 w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 p-5">
+              <div className="flex justify-between mb-4">
+                <h3 className="font-bold">Select Travellers</h3>
+                <button onClick={cancelPassengerChanges}><FaTimes /></button>
+              </div>
+              <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium">Max {maxTravellers} travellers</span>
+                  <span className={`text-sm font-bold ${
+                    tempPassengers.length >= maxTravellers ? "text-red-600" : "text-green-600"
+                  }`}>
+                    {tempPassengers.length}/{maxTravellers}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Passenger List */}
+              <div className="space-y-3 mb-4 max-h-60 overflow-y-auto">
+                {tempPassengers.map((p, i) => (
+                  <div key={i} className="flex gap-2 p-2 bg-gray-50 rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex justify-between">
+                        <span className="font-medium">
+                          {p.code === 'ADT' && 'Adult'}
+                          {p.code === 'CNN' && 'Child'}
+                          {p.code === 'INF' && 'Infant'}
+                        </span>
+                        <button onClick={() => removeTempPassenger(i)} className="text-red-500">
+                          <FaTimes className="w-3 h-3" />
+                        </button>
+                      </div>
+                      {(p.code === 'CNN' || p.code === 'INF') && (
+                        <select
+                          value={p.age || (p.code === 'CNN' ? 8 : 1)}
+                          onChange={(e) => updateTempPassengerAge(i, e.target.value)}
+                          className="w-full mt-1 px-2 py-1 text-sm border rounded"
+                        >
+                          {p.code === 'CNN' && [...Array(11)].map((_, a) => (
+                            <option key={a+2} value={a+2}>{a+2} years</option>
+                          ))}
+                          {p.code === 'INF' && [...Array(3)].map((_, a) => (
+                            <option key={a} value={a}>{a} year{a !== 1 ? 's' : ''}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add Buttons */}
+              <div className="flex flex-wrap gap-2 mb-6">
+                {['ADT', 'CNN', 'INF'].map(code => (
+                  <button
+                    key={code}
+                    className={`px-3 py-2 text-sm rounded-lg border ${
+                      tempPassengers.length >= maxTravellers
+                        ? "border-gray-200 text-gray-300 cursor-not-allowed"
+                        : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                    }`}
+                    onClick={() => addTempPassenger(code)}
+                    disabled={tempPassengers.length >= maxTravellers}
+                  >
+                    + {code === 'ADT' ? 'Adult' : code === 'CNN' ? 'Child' : 'Infant'}
+                  </button>
+                ))}
+              </div>
+
+              {/* Class Selection */}
+              <div className="mb-6">
+                <h4 className="font-medium mb-3">Travel Class</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {["Economy", "Premium Economy", "Business", "First"].map(cls => (
+                    <button
+                      key={cls}
+                      className={`py-2 px-3 rounded-lg text-sm font-medium ${
+                        travelClass === cls
+                          ? "bg-[#FD561E] text-white"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      }`}
+                      onClick={() => setTravelClass(cls)}
+                    >
+                      {cls}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <button className="flex-1 bg-gray-100 py-3 rounded-lg font-bold hover:bg-gray-200" onClick={cancelPassengerChanges}>Cancel</button>
+                <button className="flex-1 bg-[#FD561E] text-white py-3 rounded-lg font-bold hover:bg-[#e54d1a]" onClick={applyPassengerChanges}>Apply</button>
+              </div>
             </div>
           )}
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+
+  // ============ MAIN RENDER ============
 
   return (
     <div className="w-full bg-gray-50">
-      {/* Hero Section - Full width image */}
+      {/* Hero Image */}
       <div className="relative w-full h-[630px] overflow-hidden">
         <div className="absolute inset-0 w-screen left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]">
           <img
             src="https://images.unsplash.com/photo-1436491865332-7a61a109cc05?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
-            alt="Airplane wing view during daytime"
+            alt="Airplane"
             className="w-full h-full object-cover"
           />
         </div>
       </div>
 
-      {/* Search Section - Overlapping card */}
+      {/* Search Card */}
       <div className="relative max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 -mt-130">
-        {/* Flight Booking Card */}
-        <div className="relative bg-white rounded-2xl shadow-xl p-6 pb-16 border border-gray-200">
-          {/* Service Tabs */}
+        <div className="bg-white rounded-2xl shadow-xl p-6 pb-16 border border-gray-200">
+          {/* Tabs */}
           <div className="flex gap-4 mb-10">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;
-
               return (
                 <button
                   key={tab.id}
-                  onClick={() => {
-                    setActiveTab(tab.id);
-                    navigate(tabRoutes[tab.id]);
-                  }}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300 border ${
+                  onClick={() => handleTabClick(tab)}
+                  className={`flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold transition border ${
                     active
                       ? "bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white border-transparent shadow-lg scale-105"
                       : "border-gray-200 text-gray-600 hover:border-[#FD561E] hover:text-[#FD561E]"
@@ -671,39 +1116,36 @@ const FlightHeroSection = () => {
             })}
           </div>
 
-          {/* Trip Type Toggle */}
+          {/* Trip Type */}
           <div className="flex items-center mb-6">
-            <div className="flex items-center bg-gray-100 rounded-lg p-1 border border-gray-200">
+            <div className="flex bg-gray-100 rounded-lg p-1 border border-gray-200">
               <button
-                className={`px-5 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                className={`px-5 py-2 text-sm font-medium rounded-md transition ${
                   tripType === "one-way"
-                    ? "bg-white text-gray-900 shadow-sm border border-gray-300"
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    ? "bg-white text-gray-900 shadow-sm border"
+                    : "text-gray-600 hover:bg-gray-50"
                 }`}
-                onClick={() => setTripType("one-way")}
+                onClick={() => handleTripTypeChange("one-way")}
               >
                 One Way
               </button>
               <button
-                className={`px-5 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                className={`px-5 py-2 text-sm font-medium rounded-md transition ${
                   tripType === "round-trip"
-                    ? "bg-white text-gray-900 shadow-sm border border-gray-300"
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    ? "bg-white text-gray-900 shadow-sm border"
+                    : "text-gray-600 hover:bg-gray-50"
                 }`}
-                onClick={() => {
-                  setTripType("round-trip");
-                  setReturnDate(new Date(departureDate.getTime() + 7 * 24 * 60 * 60 * 1000)); // Default to 7 days later
-                }}
+                onClick={() => handleTripTypeChange("round-trip")}
               >
                 Round Trip
               </button>
               <button
-                className={`px-5 py-2 text-sm font-medium rounded-md transition-all duration-200 ${
+                className={`px-5 py-2 text-sm font-medium rounded-md transition ${
                   tripType === "multi-city"
-                    ? "bg-white text-gray-900 shadow-sm border border-gray-300"
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    ? "bg-white text-gray-900 shadow-sm border"
+                    : "text-gray-600 hover:bg-gray-50"
                 }`}
-                onClick={() => setTripType("multi-city")}
+                onClick={() => handleTripTypeChange("multi-city")}
               >
                 Multi City
               </button>
@@ -712,482 +1154,18 @@ const FlightHeroSection = () => {
 
           {/* Search Form */}
           <div className="space-y-6">
-            {/* One Way and Round Trip Form */}
-            {(tripType === "one-way" || tripType === "round-trip") && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
-                {/* From Field */}
-                <div className="lg:col-span-3 relative" ref={fromRef}>
-                  <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">
-                    From
-                  </label>
-                  <div className="relative">
-                    <FaMapMarkerAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="text"
-                      value={fromDisplay}
-                      onChange={handleFromInputChange}
-                      onFocus={() => {
-                        setShowFromDropdown(true);
-                        if (selectedFromAirport) {
-                          setFromDisplay("");
-                          setSelectedFromAirport(null);
-                          setFrom("");
-                        }
-                      }}
-                      placeholder="Type city or airport (min 3 characters)"
-                      className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FD561E] focus:border-transparent text-gray-800 transition-all duration-200 hover:border-gray-400"
-                    />
-                    {fromLoading && (
-                      <FaSpinner className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 animate-spin" />
-                    )}
-
-                    {/* From Dropdown */}
-                    {showFromDropdown && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-64 overflow-y-auto">
-                        <div className="p-3">
-                          {fromLoading ? (
-                            <div className="flex items-center justify-center py-4">
-                              <FaSpinner className="animate-spin text-[#FD561E] mr-2" />
-                              <span className="text-gray-600">
-                                Searching airports...
-                              </span>
-                            </div>
-                          ) : fromSearchError ? (
-                            <div className="text-center py-4 text-red-500">
-                              {fromSearchError}
-                            </div>
-                          ) : fromDisplay.length < 3 && fromDisplay.length > 0 ? (
-                            <div className="text-center py-4 text-gray-500">
-                              Type at least 3 characters to search
-                            </div>
-                          ) : fromAirports.length === 0 &&
-                            fromDisplay.length >= 3 ? (
-                            <div className="text-center py-4 text-gray-500">
-                              No airports found
-                            </div>
-                          ) : (
-                            <div className="space-y-1">
-                              {fromAirports.map((airport) => (
-                                <div
-                                  key={`from-${airport.location_code}`}
-                                  className="flex items-center justify-between p-2 hover:bg-orange-50 rounded cursor-pointer transition-colors"
-                                  onClick={() =>
-                                    handleAirportSelect(airport, "from")
-                                  }
-                                >
-                                  <div>
-                                    <div className="font-medium text-gray-900">
-                                      {airport.name}
-                                    </div>
-                                    <div className="text-xs text-gray-500">
-                                      {airport.location_code}
-                                    </div>
-                                  </div>
-                                  <div className="text-sm font-bold text-gray-700">
-                                    {airport.location_code}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* To Field */}
-                <div className="lg:col-span-3 relative" ref={toRef}>
-                  <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">
-                    To
-                  </label>
-                  <div className="relative">
-                    <button
-                      className="absolute -left-4 top-1/2 transform -ml-2 -translate-y-1/2 z-10 bg-white border border-gray-300 rounded-full p-2 hover:bg-gray-50 transition-colors shadow-sm"
-                      onClick={handleSwapCities}
-                      title="Swap cities"
-                    >
-                      <FaExchangeAlt className="text-gray-500 text-sm" />
-                    </button>
-
-                    <FaMapMarkerAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                    <input
-                      type="text"
-                      value={toDisplay}
-                      onChange={handleToInputChange}
-                      onFocus={() => {
-                        setShowToDropdown(true);
-                        if (selectedToAirport) {
-                          setToDisplay("");
-                          setSelectedToAirport(null);
-                          setTo("");
-                        }
-                      }}
-                      placeholder="Type city or airport (min 3 characters)"
-                      className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FD561E] focus:border-transparent text-gray-800 transition-all duration-200 hover:border-gray-400"
-                    />
-                    {toLoading && (
-                      <FaSpinner className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 animate-spin" />
-                    )}
-
-                    {/* To Dropdown */}
-                    {showToDropdown && (
-                      <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-64 overflow-y-auto">
-                        <div className="p-3">
-                          {toLoading ? (
-                            <div className="flex items-center justify-center py-4">
-                              <FaSpinner className="animate-spin text-[#FD561E] mr-2" />
-                              <span className="text-gray-600">
-                                Searching airports...
-                              </span>
-                            </div>
-                          ) : toSearchError ? (
-                            <div className="text-center py-4 text-red-500">
-                              {toSearchError}
-                            </div>
-                          ) : toDisplay.length < 3 && toDisplay.length > 0 ? (
-                            <div className="text-center py-4 text-gray-500">
-                              Type at least 3 characters to search
-                            </div>
-                          ) : toAirports.length === 0 && toDisplay.length >= 3 ? (
-                            <div className="text-center py-4 text-gray-500">
-                              No airports found
-                            </div>
-                          ) : (
-                            <div className="space-y-1">
-                              {toAirports.map((airport) => (
-                                <div
-                                  key={`to-${airport.location_code}`}
-                                  className="flex items-center justify-between p-2 hover:bg-orange-50 rounded cursor-pointer transition-colors"
-                                  onClick={() =>
-                                    handleAirportSelect(airport, "to")
-                                  }
-                                >
-                                  <div>
-                                    <div className="font-medium text-gray-900">
-                                      {airport.name}
-                                    </div>
-                                    <div className="text-xs text-gray-500">
-                                      {airport.location_code}
-                                    </div>
-                                  </div>
-                                  <div className="text-sm font-bold text-gray-700">
-                                    {airport.location_code}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Departure Date */}
-                <div className="lg:col-span-2">
-                  <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">
-                    Departure
-                  </label>
-                  <div className="relative">
-                    <FaCalendarAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10" />
-                    <DatePicker
-                      selected={departureDate}
-                      onChange={(date) => setDepartureDate(date)}
-                      className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FD561E] focus:border-transparent text-gray-800 transition-all duration-200 hover:border-gray-400 cursor-pointer"
-                      dateFormat="EEE, dd MMM"
-                      minDate={new Date()}
-                      popperClassName="z-50"
-                    />
-                  </div>
-                </div>
-
-                {/* Return Date */}
-                {tripType === "round-trip" && (
-                  <div className="lg:col-span-2">
-                    <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">
-                      Return
-                    </label>
-                    <div className="relative">
-                      <FaCalendarAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10" />
-                      <DatePicker
-                        selected={returnDate}
-                        onChange={(date) => setReturnDate(date)}
-                        className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FD561E] focus:border-transparent text-gray-800 transition-all duration-200 hover:border-gray-400 cursor-pointer"
-                        dateFormat="EEE, dd MMM"
-                        minDate={departureDate}
-                        placeholderText="Select return date"
-                        popperClassName="z-50"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Multi-City Form */}
-            {tripType === "multi-city" && (
-              <div className="space-y-4">
-                {flightLegs.map((leg, index) => (
-                  <div key={leg.id} className="relative bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                      {/* From Field for Multi-city */}
-                      <div className="md:col-span-2 relative">
-                        <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">
-                          From {index + 1}
-                        </label>
-                        <div className="relative">
-                          <FaMapMarkerAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                          <input
-                            type="text"
-                            value={leg.originDisplay || leg.origin || ""}
-                            onChange={(e) => handleLegInputChange(leg.id, 'origin', e.target.value)}
-                            onFocus={() => {
-                              setLegDropdowns(prev => ({ ...prev, [leg.id]: true }));
-                            }}
-                            placeholder="Type city or airport"
-                            className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FD561E] focus:border-transparent text-gray-800"
-                          />
-                          {legLoading[leg.id] && (
-                            <FaSpinner className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 animate-spin" />
-                          )}
-                        </div>
-                        {renderLegAirportDropdown(leg.id, 'origin', leg.originDisplay || leg.origin || '')}
-                      </div>
-
-                      {/* To Field for Multi-city */}
-                      <div className="md:col-span-2 relative">
-                        <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">
-                          To {index + 1}
-                        </label>
-                        <div className="relative">
-                          <FaMapMarkerAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                          <input
-                            type="text"
-                            value={leg.destinationDisplay || leg.destination || ""}
-                            onChange={(e) => handleLegInputChange(leg.id, 'destination', e.target.value)}
-                            onFocus={() => {
-                              setLegDropdowns(prev => ({ ...prev, [leg.id]: true }));
-                            }}
-                            placeholder="Type city or airport"
-                            className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FD561E] focus:border-transparent text-gray-800"
-                          />
-                          {legLoading[leg.id] && (
-                            <FaSpinner className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 animate-spin" />
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Date Field for Multi-city */}
-                      <div className="md:col-span-1">
-                        <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">
-                          Date
-                        </label>
-                        <div className="relative">
-                          <FaCalendarAlt className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 z-10" />
-                          <DatePicker
-                            selected={leg.departureDate}
-                            onChange={(date) => handleLegDateChange(leg.id, date)}
-                            className="w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FD561E] focus:border-transparent text-gray-800"
-                            dateFormat="EEE, dd MMM"
-                            minDate={index === 0 ? new Date() : flightLegs[index - 1]?.departureDate}
-                            popperClassName="z-50"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Remove Leg Button */}
-                      {flightLegs.length > 1 && (
-                        <button
-                          onClick={() => removeFlightLeg(leg.id)}
-                          className="absolute -right-2 -top-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors shadow-md"
-                          title="Remove leg"
-                        >
-                          <FaTrash className="w-3 h-3" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-
-                {/* Add Another Leg Button */}
-                {flightLegs.length < 5 && (
-                  <button
-                    onClick={addFlightLeg}
-                    className="flex items-center gap-2 text-[#FD561E] hover:text-[#e54d1a] font-medium transition-colors"
-                  >
-                    <FaPlus className="w-4 h-4" />
-                    Add Another Flight
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Travellers & Class - Common for all trip types */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
-              <div className="lg:col-span-3 relative" ref={travellerRef}>
-                <label className="block text-xs font-medium text-gray-500 mb-1 uppercase tracking-wide">
-                  Travellers & Class
-                </label>
-                <div className="relative">
-                  <div
-                    className="w-full pl-10 pr-10 py-3 border border-gray-300 rounded-lg bg-white cursor-pointer flex items-center text-gray-800 hover:border-[#FD561E] transition-all duration-200"
-                    onClick={() => setShowTravellerModal(!showTravellerModal)}
-                  >
-                    <FaUser className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                    <span className="truncate">{formatTravellersText()}</span>
-                    <FaChevronDown
-                      className={`absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 transition-all duration-200 ${
-                        showTravellerModal ? "rotate-180" : ""
-                      }`}
-                    />
-                  </div>
-
-                  {/* Traveller Modal */}
-                  {showTravellerModal && (
-                    <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 p-5">
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="font-bold text-gray-800">
-                          Travellers & Class
-                        </h3>
-                        <button
-                          onClick={() => setShowTravellerModal(false)}
-                          className="text-gray-400 hover:text-gray-600 transition-colors"
-                        >
-                          <FaTimes />
-                        </button>
-                      </div>
-
-                      {/* Max Limit Indicator */}
-                      <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                        <div className="flex justify-between items-center">
-                          <span className="text-sm font-medium text-gray-700">
-                            Max {maxTravellers} travellers allowed
-                          </span>
-                          <span
-                            className={`text-sm font-bold ${
-                              totalTravellers >= maxTravellers
-                                ? "text-red-600"
-                                : "text-green-600"
-                            }`}
-                          >
-                            {totalTravellers}/{maxTravellers}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Passenger Selection */}
-                      <div className="space-y-4 mb-6">
-                        {[
-                          { type: "adults", label: "Adults (12+ yrs)", min: 1 },
-                          {
-                            type: "children",
-                            label: "Children (2-12 yrs)",
-                            min: 0,
-                          },
-                          {
-                            type: "infants",
-                            label: "Infants (Below 2 yrs)",
-                            min: 0,
-                          },
-                        ].map(({ type, label, min }) => (
-                          <div
-                            key={type}
-                            className="flex justify-between items-center"
-                          >
-                            <div>
-                              <div className="font-medium text-gray-800">
-                                {label}
-                              </div>
-                            </div>
-                            <div className="flex items-center space-x-3">
-                              <button
-                                className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${
-                                  travellers[type] <= min
-                                    ? "border-gray-200 text-gray-300 cursor-not-allowed"
-                                    : "border-gray-300 text-gray-600 hover:bg-gray-50 hover:border-gray-400"
-                                }`}
-                                onClick={() =>
-                                  updateTravellers(type, "decrement")
-                                }
-                                disabled={travellers[type] <= min}
-                              >
-                                <span>−</span>
-                              </button>
-                              <span className="font-bold text-gray-800 min-w-[20px] text-center">
-                                {travellers[type]}
-                              </span>
-                              <button
-                                className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${
-                                  totalTravellers >= maxTravellers
-                                    ? "border-gray-200 text-gray-300 cursor-not-allowed"
-                                    : "border-gray-300 text-gray-600 hover:bg-gray-50 hover:border-gray-400"
-                                }`}
-                                onClick={() =>
-                                  updateTravellers(type, "increment")
-                                }
-                                disabled={totalTravellers >= maxTravellers}
-                              >
-                                <span>+</span>
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Class Selection */}
-                      <div className="mb-6">
-                        <h4 className="font-medium text-gray-800 mb-3">
-                          Travel Class
-                        </h4>
-                        <div className="grid grid-cols-2 gap-2">
-                          {travelClasses.map((travelClass) => (
-                            <button
-                              key={travelClass}
-                              className={`py-2.5 px-3 rounded-lg text-sm font-medium transition-all ${
-                                travellers.class === travelClass
-                                  ? "bg-[#FD561E] text-white shadow-sm"
-                                  : "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-transparent hover:border-gray-300"
-                              }`}
-                              onClick={() => setTravelClass(travelClass)}
-                            >
-                              {travelClass}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <button
-                        className="w-full bg-[#FD561E] text-white py-3 rounded-lg font-bold hover:bg-[#e54d1a] transition-all duration-200 shadow-md hover:shadow-lg"
-                        onClick={() => setShowTravellerModal(false)}
-                      >
-                        Apply
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+            {/* Dynamic Form based on trip type */}
+            {tripType === 'multi-city' ? renderMultiCityForm() : renderOneWayRoundTripForm()}
 
             {/* Special Fares */}
-            <SpecialFares
-              specialFares={specialFares}
-              setSpecialFares={setSpecialFares}
-            />
+            <SpecialFares specialFares={specialFares} setSpecialFares={setSpecialFares} />
 
             {/* Search Button */}
             <div className="absolute -bottom-6 left-1/2 -translate-x-1/2">
               <button
                 onClick={handleSearch}
                 disabled={flightResults.loading}
-                className="bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] 
-                  text-white px-10 py-4 
-                  rounded-full font-bold text-lg 
-                  shadow-xl hover:shadow-2xl
-                  transition-all duration-300 
-                  hover:scale-105
-                  flex items-center space-x-2
-                  disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                className="bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white px-10 py-4 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl transition hover:scale-105 flex items-center gap-2 disabled:opacity-50"
               >
                 {flightResults.loading ? (
                   <>
@@ -1206,13 +1184,11 @@ const FlightHeroSection = () => {
         </div>
       </div>
       
-      {/* Additional Content Section */}
-      <div className="max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 mt-8">
-        <DoMoreWithBobros />
-        <PopularFlightRoutes />
-        <Quick_Links />
-        <FlightFAQ />
-      </div>
+      {/* Additional Components */}
+      <DoMoreWithBobros />
+      <PopularFlightRoutes />
+      <FlightFAQ />
+      <Quick_Links />
     </div>
   );
 };
