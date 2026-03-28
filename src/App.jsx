@@ -48,6 +48,8 @@ import AboutUs from "./modules/bus/pages/AboutUs";
 import ContactUs from "./modules/bus/pages/ContactUs";
 import PrivacyPolicy from "./modules/bus/pages/PrivacyPolicy";
 import TermsAndConditions from "./modules/bus/pages/TermsAndConditions";
+import CancellationPolicy from "./modules/bus/pages/CancellationPolicy";
+import DisclaimerPolicy from "./modules/bus/pages/DisclaimerPolicy";
 
 function App() {
   return (
@@ -66,6 +68,8 @@ function App() {
                   <Route path="/contact" element={<ContactUs />} />
                   <Route path="/privacy" element={<PrivacyPolicy />} />
                   <Route path="/terms" element={<TermsAndConditions />} />
+                  <Route path="/cancel" element={<CancellationPolicy />} />
+                  <Route path="/disclaimer" element={<DisclaimerPolicy />} />
                   <Route path="/signin" element={<SignIn />} />
                   <Route path="/signup" element={<SignupForm />} />
                   <Route path="/verify-otp" element={<VerifyOTP />} />

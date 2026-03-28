@@ -86,6 +86,8 @@ const Navbar = () => {
     setIsLoggedIn(false);
     setUser(null);
     setOpenDropdown(false);
+    window.dispatchEvent(new Event("storage"));
+    navigate("/");
   };
 
   // ✅ Used by BOTH guest and logged-in dropdowns
@@ -238,7 +240,7 @@ const Navbar = () => {
                       setAuthPage("signin");
                       setOpenAuthModal(true);
                     }}
-                    className="mx-4 my-3 mt-2 w-[calc(100%-32px)] cursor-pointer bg-[#fd561e] text-white font-semibold py-2.5 rounded-lg hover:bg-blue-700 transition-all duration-300"
+                    className="mx-4 my-3 mt-2 w-[calc(100%-32px)] cursor-pointer bg-[#fd561e] text-white font-semibold py-2.5 rounded-lg  transition-all duration-300"
                   >
                     Login / Sign Up
                   </button>

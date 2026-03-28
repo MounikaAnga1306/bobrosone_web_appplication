@@ -191,7 +191,7 @@ const GuestBookings = ({ onClose }) => {
             <label style={{ display: "block", fontSize: "12px", color: "#555", fontWeight: "600", marginBottom: "6px" }}>Enter OTP</label>
             <input
               type="text" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-              placeholder="● ● ● ● ● ●" maxLength="6" required autoFocus
+              placeholder="● ● ● ● " maxLength="6" required autoFocus
               style={{ width: "100%", border: "1.5px solid #e5e7eb", borderRadius: "8px", padding: "12px 14px", fontSize: "24px", fontWeight: "700", letterSpacing: "10px", textAlign: "center", outline: "none", boxSizing: "border-box" }}
               onFocus={e => e.target.style.borderColor = "#fd561e"}
               onBlur={e => e.target.style.borderColor = "#e5e7eb"}
