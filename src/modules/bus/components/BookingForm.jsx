@@ -41,9 +41,42 @@ const tabRoutes = {
   cabs: "/cabs",
 };
 
+// 15 travel-related background images
+// 15 carefully curated, high-quality travel-related background images
+const backgroundImages = [
+  // Modern buses & transportation
+  "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", // Modern luxury bus on highway at sunset
+  "https://images.unsplash.com/photo-1504215680859-0262fb1e90c3?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", // Red bus on winding mountain road
+  "https://images.unsplash.com/photo-1533105079780-92b9be482077?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", // Winding mountain road with morning light
+  
+  // Epic landscapes
+  "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", // Majestic mountain peak with snow
+  "https://images.unsplash.com/photo-1469474968028-56623f02e42e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2074&q=80", // Lush green forest with sunlight rays
+  "https://images.unsplash.com/photo-1433086966358-54859d0ed716?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", // Beautiful waterfall in forest
+  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2073&q=80", // Tropical paradise beach with palm trees
+  "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?ixlib=rb-4.0.3&auto=format&fit=crop&w=2074&q=80", // Misty mountain valley at sunrise
+  
+  // Cityscapes & urban travel
+  "https://images.unsplash.com/photo-1444723121867-7a241cacace9?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", // Modern city skyline at golden hour
+  "https://images.unsplash.com/photo-1519501025264-65ba15a82390?ixlib=rb-4.0.3&auto=format&fit=crop&w=2064&q=80", // Vibrant city street with energy
+  "https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", // City skyline with bridge at dusk
+  
+  // Coastal & water views
+  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2073&q=80", // Pristine beach with turquoise water
+  "https://images.unsplash.com/photo-1483683804023-6ccdb62f86ef?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", // Coastal cliffs with ocean waves
+  "https://images.unsplash.com/photo-1493246507139-91e8fad2088c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", // Sunrise over ocean with golden light
+  
+  // Adventure & road trips
+  "https://images.unsplash.com/photo-1551632811-561732d1e306?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", // Adventure road through desert landscape
+  "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", // Scenic coastal highway
+  "https://images.unsplash.com/photo-1501785888041-af3ef285b470?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", // Morning mist over tranquil lake
+];
+
 const BookingForm = () => {
   const [activeTab, setActiveTab] = useState("bus");
   const [activeFare, setActiveFare] = useState("regular");
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // ===== CALENDAR STATES =====
   const [showCalendar, setShowCalendar] = useState(false);
@@ -77,6 +110,25 @@ const BookingForm = () => {
   const toDebounce = useRef(null);
 
   const navigate = useNavigate();
+
+  // Carousel navigation handlers
+  const goToPreviousImage = () => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    setCurrentImageIndex((prevIndex) =>
+      prevIndex === 0 ? backgroundImages.length - 1 : prevIndex - 1
+    );
+    setTimeout(() => setIsTransitioning(false), 500);
+  };
+
+  const goToNextImage = () => {
+    if (isTransitioning) return;
+    setIsTransitioning(true);
+    setCurrentImageIndex((prevIndex) =>
+      prevIndex === backgroundImages.length - 1 ? 0 : prevIndex + 1
+    );
+    setTimeout(() => setIsTransitioning(false), 500);
+  };
 
   const handleSearch = () => {
     // Reset all errors
@@ -356,7 +408,7 @@ const BookingForm = () => {
             {/* SWAP */}
             <div className="md:col-span-1 flex justify-center pt-8">
               <button
-                className="p-3 rounded-full bg-gray-100 hover:bg-gray-200 transition-all duration-500 hover:rotate-180"
+                className="p-3 rounded-full bg-gray-100 hover:bg-gray-200 transition-all duration-500 hover:rotate-180 cursor-pointer"
                 onClick={handleSwap}
               >
                 <ArrowRightLeft className="w-5 h-5 text-gray-600" />
