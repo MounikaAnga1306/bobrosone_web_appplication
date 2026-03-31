@@ -1,7 +1,7 @@
 // src/modules/flights/pages/FlightSearchScreen.jsx
 import React from "react";
 import FlightHeroSection from "../components/FlightHeroSection";
-import Services from "../../bus/components/Services";
+import Services from "../../bus/components/OurServices";
 import WhyBobros from "../../bus/components/WhyBobros";
 import AppDownload from "../../bus/components/AppDownload";
 import PopularFlightRoutes from "../components/PopularFlightRoutes";

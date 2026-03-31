@@ -8,7 +8,7 @@ const SeatBookingHeader = ({ step, handleStepClick, onClose, fromCity, toCity,da
         {/* CLOSE BUTTON */}
         <button
           onClick={onClose}
-          className="text-lg text-gray-600 hover:text-gray-800 hover:bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center transition"
+          className="text-lg text-gray-600 cursor-pointer hover:text-gray-800 hover:bg-gray-200 rounded-full w-8 h-8 flex items-center justify-center transition"
         >
           ✕
         </button>

@@ -298,20 +298,20 @@ const handleBackConfirm = () => {
           </div>
 
           {/* Guest UI */}
-          {isGuest && (
-            <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e8e8e8", padding: "20px", textAlign: "center" }}>
-              <div style={{ fontSize: 15, fontWeight: "700", color: "#1a1a2e", marginBottom: 6 }}>You are booking as a guest.</div>
-              <div style={{ fontSize: 13, color: "#666", marginBottom: 16, lineHeight: 1.6 }}>Sign up with BOBROS to avail great discounts and earn reward points.</div>
-              <button onClick={() => window.dispatchEvent(new CustomEvent("openAuthModal", { detail: "signup" }))}
-                style={{ background: "#fd561e", color: "white", border: "none", borderRadius: 8, padding: "11px 32px", fontSize: 14, fontWeight: "700", cursor: "pointer", marginRight: 10, boxShadow: "0 3px 10px rgba(253,86,30,0.3)" }}>
-                Sign Up
-              </button>
-              <span style={{ fontSize: 13, color: "#666" }}>
-                Already registered?{" "}
-                <span onClick={() => window.dispatchEvent(new CustomEvent("openAuthModal", { detail: "signin" }))} style={{ color: "#2563eb", fontWeight: "700", cursor: "pointer" }}>Sign In</span>
-              </span>
-            </div>
-          )}
+{isGuest && (
+  <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e8e8e8", padding: "20px", textAlign: "center" }}>
+    <div style={{ fontSize: 15, fontWeight: "700", color: "#1a1a2e", marginBottom: 6 }}>You are booking as a guest.</div>
+    <div style={{ fontSize: 13, color: "#666", marginBottom: 16, lineHeight: 1.6 }}>Sign up with BOBROS to avail great discounts and earn reward points.</div>
+    <button onClick={() => window.dispatchEvent(new CustomEvent("openAuthModal", { detail: "signup" }))}
+      style={{ background: "#fd561e", color: "white", border: "none", borderRadius: 8, padding: "11px 32px", fontSize: 14, fontWeight: "700", cursor: "pointer", display: "block", margin: "0 auto 12px", boxShadow: "0 3px 10px rgba(253,86,30,0.3)" }}>
+      Sign Up
+    </button>
+    <div style={{ fontSize: 13, color: "#666" }}>
+      Already registered?{" "}
+      <span onClick={() => window.dispatchEvent(new CustomEvent("openAuthModal", { detail: "signin" }))} style={{ color: "#2563eb", fontWeight: "700", cursor: "pointer" }}>Sign In</span>
+    </div>
+  </div>
+)}
 
         </div>
 
