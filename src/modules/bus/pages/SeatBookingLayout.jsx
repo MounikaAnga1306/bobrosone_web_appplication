@@ -41,7 +41,7 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
 
   useEffect(() => {
     if (selectedSeats.length > 0 && warning === "Please select at least one seat") setWarning("");
-    if (boardingPoint && droppingPoint && warning === "Please select boarding and dropping points") setWarning("");
+    if ((boardingPoint || droppingPoint) && warning === "Please select boarding and dropping points") setWarning("");
   }, [selectedSeats, boardingPoint, droppingPoint]);
 
   const handleStepClick = (stepNumber) => {

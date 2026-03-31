@@ -316,9 +316,9 @@ required
 I accept the
 <span
   onClick={() => setShowTerms(true)}
-  className="text-[#fd561e] underline ml-1 cursor-pointer"
+  className="text-[#fd561e] underline ml-0 cursor-pointer"
 >
-  terms and conditions
+terms and conditions
 </span>
 </label>
 
