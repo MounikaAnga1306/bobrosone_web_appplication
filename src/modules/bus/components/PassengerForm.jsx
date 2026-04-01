@@ -1,6 +1,7 @@
 import { React, useState } from "react";
 import { getUserDetails } from "../../../utils/authHelper";
 
+
 const PassengerForm = ({
   selectedSeats,
   boardingPoint,
@@ -20,6 +21,7 @@ const PassengerForm = ({
 const storedUser = JSON.parse(localStorage.getItem("user"));
 const loggedUser = storedUser?.user || null;
 const user = getUserDetails();
+const [showTerms, setShowTerms] = useState(false);
 
 const [passengers, setPassengers] = useState(
   existingPassengers ||
@@ -312,7 +314,10 @@ className="accent-[#fd561e]"
 required
 />
 I accept the
-<span className="text-[#fd561e] underline ml-1">
+<span
+  onClick={() => setShowTerms(true)}
+  className="text-[#fd561e] underline ml-0 cursor-pointer"
+>
 terms and conditions
 </span>
 </label>
@@ -329,10 +334,131 @@ Confirm
 </button>
 
 </div>
+{showTerms && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center">
+    
+    {/* BACKDROP */}
+    <div
+      className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+      onClick={() => setShowTerms(false)}
+    />
+
+    {/* MODAL */}
+    <div className="relative bg-white w-[90%] max-w-3xl h-[80vh] rounded-xl shadow-xl overflow-hidden">
+
+      {/* HEADER */}
+      <div className="flex justify-between items-center p-4 border-b">
+        <h2 className="text-lg font-semibold text-[#fd561e]">
+          Terms & Conditions
+        </h2>
+        <button
+          onClick={() => setShowTerms(false)}
+          className="text-gray-500 hover:text-black text-xl"
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* CONTENT (scrollable) */}
+      <div className="p-4 overflow-y-auto h-[calc(80vh-60px)] text-sm text-gray-700">
+
+        <p className="mb-2">
+                 Welcome to <span className="text-blue-800 font-semibold">www.bobrosone.com</span> website. If you continue to browse and use this website you are agreeing to comply with and be bound by the following terms and conditions of use, which together with our privacy policy and Cancellation Policy govern M/s BOBROS Consultancy Services Private Limited's relationship with you in relation to this website <span className="text-blue-800 font-semibold">www.bobrosone.com</span>
+        </p>
+
+        <p className="mb-2">
+                  The term ‘BOBROS’ or ‘BOBROS Consultancy Services Pvt. Ltd.,’ or ‘Humming wheels’ or 'us' or 'we' refers to the owner of the website whose registered office is at 1- 232, Mulakaluru, Narasaraopet, Andhra Pradesh, India - 522601.
+        </p>
+        <p className="mb-2">
+          We are registered in India under the companies act, our company registration number is U60231AP2010PTC069485. The term 'you' refers to the user or viewer of our website.
+        </p>
+        <h1 className="text-gray-800 font-semibold mb-2">
+        The use of this website is subject to the following terms of use:
+        </h1>
+
+        <ul className="list-disc pl-5 space-y-2">
+          <li>The content on the pages of this website is for your general information and use only. It is subject to change without notice.</li>
+          <li>Neither we nor any third parties provide any warranty or guarantee as to the accuracy, timeliness, performance, completeness or suitability of the information and materials found or offered on this website for any particular purpose. You acknowledge that such information and materials may contain inaccuracies or errors and we expressly exclude liability for any such inaccuracies or errors to the fullest extent permitted by law</li>
+          <li>Your use of any information or materials on this website is entirely at your own risk, for which we shall not be liable. It shall be your own responsibility to ensure that any products, services or information available through this website meet your specific requirements.</li>
+          <li>This website contains material which is owned by or licensed to us. This material includes, but is not limited to, the design, layout, look, appearance and graphics. Reproduction is prohibited other than in accordance with the copyright notice, which forms part of these terms and conditions.</li>
+          <li>All trademarks reproduced in this website which are not the property of, or licensed to, the operator is acknowledged on the website.</li>
+          <li>Unauthorised use of this website may give rise to a claim for damages and/or be a criminal offence.</li>
+          <li>From time to time this website may also include links to other websites. These links are provided for your convenience to provide further information. They do not signify that we endorse the website(s). We have no responsibility for the content of the linked website(s).</li>
+          <li>You may not create a link to this website from another website or document without BOBROS Consultancy Services Private Limited's prior written consent.</li>
+          <li>When you become a registered user on our website by signing up, we reserve the right to contact you on your registered mobile number, registered email address and the postal address provided to us with reference to your user account related purposes and the information provided to you in any of the one above mode to be treated as delivered to you.</li>
+          <li>You are responsible for providing your correct contact details and safe keeping of your mobile device and access to your mail and post box, we may provide your BOBROS registered user account sensitive information on your registered mobile, registered email and the postal address provided to us in your user sign up form.</li>
+          <li>From time to time, we may require making changes to our website in order to comply with applicable laws and regulations, in this case we may not be able to provide any prior notice to you.</li>
+          <li>Our website www.bobrosone.com uses API’s from various external third parties to provide you the information and services for travel and ticket booking, while making any ticket bookings through our website you are required to ensure that you have received all the information i.e. required for you to take an informed decision on your booking which includes but not limited to the information on cancellation charges. The terms and conditions of any external service provider whose services are booked through our website apply to you in addition to these terms and conditions.</li>
+          <li className="mb-2">In case of ticket cancellations from the time less than 48 hours from the Boarding time of your travel, you are required to make cancellations either online on our website or contact the service provider / Bus Operator directly.</li>
+        </ul>
+        <h1 className="text-gray-800 font-semibold mb-2">
+       BOBROS FREQUENT TRAVELER REWARD PROGRAM:
+        </h1>
+
+        <ul className="list-disc pl-5 space-y-2">
+          <li>
+            We may sometime offer Frequent Traveler Reward Points on your ticket or travel bookings with us, we call this the BOBROS Frequent Traveler Reward Program, we reserve all rights in running this program.
+          </li>
+          <li>
+            We can make changes to the BOBROS Frequent Traveler Reward Program including but not limited to the offer period and the number of BOBROS Frequent Traveler Reward Points (henceforth referred as reward points) that we offer any time without any prior notice
+          </li>
+          <li>
+            Only registered users on our website are eligible to participate in this frequent travel reward program.
+          </li>
+          <li>
+            If we are running the BOBROS Frequent Traveler Reward Program, you can see the eligible reward points on your ticket booking before you make the booking, up on successful completion of your ticket booking the eligible reward points will be credited to your frequent traveler user account with us
+          </li>
+          <li>
+            In case of cancellations, the reward points received if any on the booking will be debited from your reward points balance or from your refund amount on the booking at a rate of one reward point equals to one rupee of your ticket booking amount.
+          </li>
+          <li>
+            Each BOBROS frequent travel reward point can be used to get one rupee discount on your future bookings, you can use your reward points to make a full or partial payment on your ticket bookings with BOBROS and you cannot redeem these points for any other purposes or claim refund.
+          </li>
+          <li className="mb-2">
+            Sometimes BOBROS may credit your eligible cancellation refund into your Frequent Traveler Reward Balance, in these cases you can use the reward balance for your future bookings or receive refund.
+          </li>
+        </ul>
+         <h1 className="text-gray-800 font-semibold mb-2">
+            How you can contact us:
+        </h1>
+        <h2 className="text-[#fd561e] font-semibold mb-2">
+            By Post:
+        </h2>
+         <p className="mb-2">
+          BOBROS Consultancy Services Private Limited, 1-232, Mulakaluru, Narasaraopet, Andhra Pradesh, India – 522601
+        </p>
+        <h2 className="text-[#fd561e] font-semibold mb-2">
+            By Email:
+        </h2>
+        <p className="mb-2 text-blue-800 font-semibold">
+          customersupport@bobrosone.com
+        </p>
+         <h2 className="text-[#fd561e] font-semibold mb-2">
+            By Telephone:
+        </h2>
+        <p className="mb-2 text-gray-800 font-semibold">
+         91-9133 133 456
+        </p>
+        <p className="mb-2 ">
+         (Between 9:30AM to 7:30PM from Monday to Saturday except Holidays)
+        </p>
+        <p className="mb-2 ">
+         Your use of this website and any dispute arising out of such use of the website is subject to the laws of India or other regulatory authorities of India Terms & Conditions BOBROS Consultancy Services Pvt. Ltd., and comes under the jurisdiction of Narasaraopet, Palanadu District in Andhra Pradesh, India - 522601.
+        </p>
+         <p className="mb-2 text-[#fd561e] ">
+        BOBROS Consultancy Services Private Limited (Erstwhile Humming Wheels Private Limited) is registered in India under the companies act, 1956 (CIN: U60231AP2010PTC069485) and having its Registered Office at 1-232, Mulakaluru, Narasaraopet, Andhra Pradesh – 522 601, India.
+        </p>
+
+      </div>
+    </div>
+  </div>
+)}
 
 </form>
 
+
 );
+
 
 };
 

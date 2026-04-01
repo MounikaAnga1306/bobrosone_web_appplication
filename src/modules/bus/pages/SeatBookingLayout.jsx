@@ -24,6 +24,8 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
   const [isBooking, setIsBooking]             = useState(false);
   const [showBackConfirm, setShowBackConfirm] = useState(false);  // Only for final review page
   const [showBookConfirm, setShowBookConfirm] = useState(false);
+  const [showErrorPopup, setShowErrorPopup] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const showWarning = (msg) => setWarning(msg);
 
@@ -39,7 +41,7 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
 
   useEffect(() => {
     if (selectedSeats.length > 0 && warning === "Please select at least one seat") setWarning("");
-    if (boardingPoint && droppingPoint && warning === "Please select boarding and dropping points") setWarning("");
+    if ((boardingPoint || droppingPoint) && warning === "Please select boarding and dropping points") setWarning("");
   }, [selectedSeats, boardingPoint, droppingPoint]);
 
   const handleStepClick = (stepNumber) => {
@@ -92,6 +94,7 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
     const mins = minutes % 60;
     return `${String(hrs).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
   };
+  console.log("SeatBookingLayout PROPS:", { fromCity, toCity, source, destination, date });
 
   const handleConfirmBooking = async () => {
     if (isBooking) return;
@@ -146,6 +149,15 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
       }
 
       localStorage.setItem("blockStartTime", Date.now());
+      console.log("NAVIGATE STATE:", {
+  totalFare,
+  fromCity,
+  toCity,
+  date,
+  source,
+  destination,
+  ticketId: response.blockedTicketId,
+});
 
       navigate("/booking-success", {
         state: {
@@ -167,13 +179,22 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
           availableRewardPoint: response.availableRewardPoint,
           busType:              tripDetails?.busType,
           operator:             tripDetails?.travels,
+          source,
+          destination,
         }
       });
 
     } catch (err) {
       console.error("Block ticket error:", err);
-      alert("Seat already booked by another user.");
-      setIsBooking(false);
+      const msg = err?.response?.data?.message 
+    || err?.response?.data?.error 
+    || (err?.message?.includes("500") || err?.response?.status === 500 
+        ? "This seat was just booked by another user. Please select a different seat." 
+        : err?.message)
+    || "This seat was just booked by another user. Please select a different seat.";
+  setErrorMessage(msg);
+  setIsBooking(false);
+  setShowErrorPopup(true);
     }
   };
 
@@ -401,6 +422,31 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
           </div>
         </div>
       )}
+      {showErrorPopup && (
+  <div className="fixed inset-0 bg-black/55 flex items-center justify-center z-[600] p-4">
+    <div className="bg-white rounded-2xl p-8 w-full max-w-sm text-center shadow-2xl">
+      <div className="text-5xl mb-4">😕</div>
+      <h2 className="text-lg font-bold text-gray-900 mb-3">Seat Unavailable</h2>
+      <p className="text-sm text-gray-600 leading-relaxed mb-6">{errorMessage}</p>
+      <button
+        onClick={() => { 
+          setShowErrorPopup(false);
+          setSelectedSeats([]);
+          setBoardingPoint(null);
+          setDroppingPoint(null);
+          setSavedPassengers(null);
+          setSavedContact(null);
+          setIsBooking(false);
+          setStep(1); 
+          
+           }}
+        className="w-full py-3 rounded-xl bg-[#fd561e] text-white font-bold text-base cursor-pointer hover:bg-[#e24c16] transition"
+      >
+        Choose Another Seat
+      </button>
+    </div>
+  </div>
+)}
 
     </div>
   );
