@@ -1,5 +1,5 @@
-import { motion, useInView, useScroll, useTransform } from "framer-motion";
-import { useRef, useEffect, useState } from "react";
+import { motion, useInView } from "framer-motion";
+import { useRef, useState } from "react";
 import {
   Bus,
   Plane,
@@ -8,11 +8,6 @@ import {
   Car,
   CreditCard,
   Monitor,
-  ArrowRight,
-  Sparkles,
-  Shield,
-  Clock,
-  Star,
   ChevronRight,
 } from "lucide-react";
 
@@ -25,22 +20,21 @@ import cab from "../../../assets/cab.jpg";
 import bill from "../../../assets/bill.png";
 import service from "../../../assets/IT_Services.jpg";
 
-// ✅ Image hover animation - smoother and more subtle
+// Animations
 const imageHover = {
   rest: { y: 0, scale: 1, rotate: 0 },
   hover: {
     y: -8,
     scale: 1.1,
     rotate: 2,
-    transition: { 
-      type: "spring", 
-      stiffness: 300, 
-      damping: 14 
+    transition: {
+      type: "spring",
+      stiffness: 300,
+      damping: 14,
     },
   },
 };
 
-// ✅ Entry animation - smoother fade from bottom
 const cardEntry = {
   hidden: { opacity: 0, y: 30 },
   show: (i) => ({
@@ -54,10 +48,9 @@ const cardEntry = {
   }),
 };
 
-// ✅ Card hover animation - maintains exact same size, only lift and shadow
 const cardHover = {
-  rest: { 
-    y: 0, 
+  rest: {
+    y: 0,
     boxShadow: "0 10px 20px rgba(0,0,0,0.08)",
     scale: 1,
   },
@@ -65,105 +58,15 @@ const cardHover = {
     y: -8,
     boxShadow: "0 25px 40px rgba(253,86,30,0.15)",
     scale: 1,
-    transition: { 
-      type: "spring", 
-      stiffness: 200, 
-      damping: 18 
+    transition: {
+      type: "spring",
+      stiffness: 200,
+      damping: 18,
     },
   },
-  {
-    id: "hotels",
-    icon: Building2,
-    image: hotels,
-    title: "Hotel Stays",
-    description: "Premium accommodations with best rates and instant confirmation.",
-    gradient: "from-purple-500 to-pink-500",
-    bgColor: "bg-purple-50",
-    iconColor: "text-purple-600",
-    stat: "5,000+ Hotels",
-  },
-  {
-    id: "holidays",
-    icon: Umbrella,
-    image: holiday,
-    title: "Holiday Packages",
-    description: "Curated experiences to breathtaking destinations worldwide.",
-    gradient: "from-green-500 to-emerald-500",
-    bgColor: "bg-green-50",
-    iconColor: "text-green-600",
-    stat: "100+ Destinations",
-  },
-  {
-    id: "cabs",
-    icon: Car,
-    image: cab,
-    title: "Cab Services",
-    description: "Reliable rides for airport transfers and outstation travel.",
-    gradient: "from-teal-500 to-cyan-500",
-    bgColor: "bg-teal-50",
-    iconColor: "text-teal-600",
-    stat: "24/7 Availability",
-  },
-  {
-    id: "bills",
-    icon: CreditCard,
-    image: bill,
-    title: "Bill Payments",
-    description: "Secure, instant payments for all utilities and services.",
-    gradient: "from-yellow-500 to-orange-500",
-    bgColor: "bg-yellow-50",
-    iconColor: "text-yellow-600",
-    stat: "Instant Processing",
-    contain: true,
-  },
-  {
-    id: "it",
-    icon: Monitor,
-    image: service,
-    title: "IT Services",
-    description: "Enterprise solutions for digital transformation.",
-    gradient: "from-indigo-500 to-purple-500",
-    bgColor: "bg-indigo-50",
-    iconColor: "text-indigo-600",
-    stat: "99.9% Uptime",
-    contain: true,
-  },
-];
+};
 
-// Floating particles background component
-const FloatingParticles = () => (
-  <div className="absolute inset-0 overflow-hidden pointer-events-none">
-    {[...Array(20)].map((_, i) => (
-      <motion.div
-        key={i}
-        className="absolute w-1 h-1 bg-orange-200 rounded-full"
-        initial={{
-          x: Math.random() * window.innerWidth,
-          y: Math.random() * window.innerHeight,
-        }}
-        animate={{
-          y: [null, -100, -200],
-          opacity: [0, 0.5, 0],
-        }}
-        transition={{
-          duration: Math.random() * 10 + 10,
-          repeat: Infinity,
-          ease: "linear",
-          delay: Math.random() * 10,
-        }}
-      />
-    ))}
-  </div>
-);
-
-// Premium Service Card with unique design
-function PremiumServiceCard({ service, index, isLarge = false }) {
-  const ref = useRef(null);
-  const isInView = useInView(ref, { once: true, margin: "-100px" });
-  const [isHovered, setIsHovered] = useState(false);
-  const Icon = service.icon;
-
-// Service Card - EXACT same structure, only animations changed
+// Service Card
 function ServiceCard({ image, title, description, contain }) {
   return (
     <motion.div
@@ -186,12 +89,12 @@ function ServiceCard({ image, title, description, contain }) {
         transition-colors duration-300
         w-full
       "
-      style={{ 
+      style={{
         minHeight: "280px",
         width: "100%",
       }}
     >
-      {/* Image with enhanced animation */}
+      {/* Image */}
       <motion.div
         variants={imageHover}
         className="
@@ -216,7 +119,7 @@ function ServiceCard({ image, title, description, contain }) {
         />
       </motion.div>
 
-      {/* Title with enhanced animation */}
+      {/* Title */}
       <motion.h3
         variants={{
           rest: { y: 0, color: "#111827" },
@@ -227,47 +130,21 @@ function ServiceCard({ image, title, description, contain }) {
       >
         {title}
 
-        {/* Animated underline with smoother transition */}
         <motion.span
           variants={{
             rest: { width: 0, opacity: 0, left: "50%" },
-            hover: { 
-              width: "60%", 
-              opacity: 1, 
+            hover: {
+              width: "60%",
+              opacity: 1,
               left: "20%",
             },
           }}
           transition={{ duration: 0.3, ease: "easeOut" }}
           className="absolute -bottom-1 h-[2.5px] bg-gradient-to-r from-[#fd561e] to-[#ff8a5c] rounded-full"
         />
-        
-        {/* Card Content */}
-        <div className="relative bg-white rounded-2xl overflow-hidden h-full shadow-lg hover:shadow-2xl transition-all duration-500">
-          {/* Image Section with Parallax */}
-          <div className="relative h-64 overflow-hidden">
-            <motion.img
-              src={service.image}
-              alt={service.title}
-              className={`w-full h-full ${
-                service.contain ? "object-contain p-8 bg-gray-50" : "object-cover"
-              }`}
-              animate={{ scale: isHovered ? 1.05 : 1 }}
-              transition={{ duration: 0.6 }}
-            />
-            <div className={`absolute inset-0 bg-gradient-to-t ${service.gradient} opacity-0 group-hover:opacity-20 transition-opacity duration-500`} />
-            
-            {/* Stat Badge */}
-            <motion.div
-              initial={{ x: -20, opacity: 0 }}
-              animate={{ x: isHovered ? 0 : -20, opacity: isHovered ? 1 : 0 }}
-              transition={{ duration: 0.3 }}
-              className="absolute bottom-4 left-4 bg-black/70 backdrop-blur-sm rounded-lg px-3 py-1.5"
-            >
-              <span className="text-white text-xs font-medium">{service.stat}</span>
-            </motion.div>
-          </div>
+      </motion.h3>
 
-      {/* Description with subtle fade on hover */}
+      {/* Description */}
       <motion.p
         variants={{
           rest: { opacity: 0.9, y: 0 },
@@ -279,14 +156,14 @@ function ServiceCard({ image, title, description, contain }) {
         {description}
       </motion.p>
 
-      {/* Subtle shine overlay on hover */}
+      {/* Shine */}
       <motion.div
         variants={{
           rest: { opacity: 0, x: "-100%" },
-          hover: { 
-            opacity: 0.2, 
+          hover: {
+            opacity: 0.2,
             x: "100%",
-            transition: { duration: 0.6, ease: "easeInOut" }
+            transition: { duration: 0.6, ease: "easeInOut" },
           },
         }}
         className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent pointer-events-none rounded-2xl"
@@ -295,7 +172,7 @@ function ServiceCard({ image, title, description, contain }) {
   );
 }
 
-// Main Page - EXACT same structure
+// Main Component
 export default function Service() {
   const services = [
     {
@@ -376,7 +253,7 @@ export default function Service() {
           ))}
         </div>
 
-        {/* Premium CTA Section */}
+        {/* CTA */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -385,9 +262,6 @@ export default function Service() {
           className="mt-20"
         >
           <div className="relative bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl overflow-hidden">
-            {/* Background Pattern */}
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%239C92AC" fill-opacity="0.05"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-10" />
-            
             <div className="relative px-8 py-12 sm:px-12 sm:py-16 text-center">
               <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
                 Ready to Get Started?
@@ -407,23 +281,6 @@ export default function Service() {
           </div>
         </motion.div>
       </div>
-
-      <style jsx>{`
-        @keyframes blob {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(30px, -50px) scale(1.1); }
-          66% { transform: translate(-20px, 20px) scale(0.9); }
-        }
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-        .animation-delay-4000 {
-          animation-delay: 4s;
-        }
-      `}</style>
     </div>
   );
 }
