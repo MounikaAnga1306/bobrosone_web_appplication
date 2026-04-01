@@ -6,14 +6,11 @@ import { useFlightSearchContext } from '../contexts/FlightSearchContext';
 import { searchFlights } from '../services/flightSearchService';
 import { searchAirports } from '../services/airportSearchService';
 import OneWayFlightCard from '../components/shared/OneWayFlightCard';
-import BottomBar from '../components/shared/BottomBar';
-import OneWaySheet from '../components/sheet/OneWaySheet';
+import OneWaySheet from '../components/sheet/OneWaySheet'; // ← ADD THIS BACK
 import FilterSidebar from '../components/shared/FilterSidebar';
 import {
-  FaArrowLeft,
   FaPlane,
   FaExclamationTriangle,
-  FaUserFriends,
   FaFilter,
   FaTimes,
   FaChevronDown,
@@ -22,12 +19,11 @@ import {
   FaMapMarkerAlt,
   FaInfoCircle,
   FaSpinner,
-  FaEdit,
   FaExchangeAlt,
   FaUser
 } from 'react-icons/fa';
 
-// ============ PREMIUM FLIGHT LOADING COMPONENT WITH REALISTIC TAKEOFF ============
+// ============ PREMIUM FLIGHT LOADING COMPONENT ============
 const FlightLoadingAnimation = ({ searchSummary }) => {
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
@@ -189,10 +185,7 @@ const OneWayPage = () => {
   const location = useLocation();
   const { 
     updateFlightResults, 
-    flightResults,
-    selectFlight,
-    selectedFlight,
-    selectedFare
+    flightResults
   } = useFlightSearchContext();
 
   // ============ State for URL parameters and API loading ============
@@ -235,9 +228,11 @@ const OneWayPage = () => {
   const maxTravellers = 9;
   const travellerRef = useRef(null);
   
-  // State for detail sheet
+  // ============ SHEET STATE (RESTORED) ============
   const [showDetailSheet, setShowDetailSheet] = useState(false);
   const [selectedFlightForSheet, setSelectedFlightForSheet] = useState(null);
+  
+  // State for mobile filters
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [sortBy, setSortBy] = useState('price-low');
@@ -603,7 +598,7 @@ const OneWayPage = () => {
   const monthName = currentDate.toLocaleString("default", { month: "long" });
   const year = currentDate.getFullYear();
 
-  // ============ FLIGHT HANDLERS ============
+  // ============ FLIGHT HANDLERS (RESTORED) ============
   
   const handleCloseSheet = () => {
     setShowDetailSheet(false);
@@ -613,29 +608,20 @@ const OneWayPage = () => {
   const handleViewDetails = (flight) => {
     console.log('🔍 Opening OneWaySheet for flight:', {
       id: flight.id,
-      faresCount: flight.fares?.length || 1
+      airline: flight.airline,
+      price: flight.fares?.[0]?.totalPrice
     });
     
     setSelectedFlightForSheet(flight);
     setShowDetailSheet(true);
   };
-
-  const handleFlightSelect = (flight) => {
-    selectFlight(flight, flight.fares?.[0]);
-  };
-
+  
   const handleModifySearch = () => {
     navigate('/flights');
   };
 
-  const handleContinue = () => {
-    if (selectedFlight && selectedFare) {
-      handleViewDetails(selectedFlight);
-    }
-  };
-
   // Get flights from context
-  const { flights, loading, error, passengerBreakdown } = flightResults;
+  const { flights, error, passengerBreakdown } = flightResults;
   
   // Get price range from flights
   const flightPriceRange = useMemo(() => {
@@ -914,184 +900,222 @@ const OneWayPage = () => {
   // ============ MAIN RENDER ============
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b sticky top-0 z-20">
-       
-
-        {/* ============ EDIT SEARCH BAR ============ */}
-        <div className="w-full bg-[#f36b32] py-3 sticky top-0 z-40 shadow-sm">
-  <div className="container mx-auto px-4">
-    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_auto_1fr_auto] lg:grid-cols-[1fr_auto_1fr_140px_160px_auto] items-end gap-3">
-      
-      {/* From Field */}
-      <div className="relative" ref={fromRef}>
-        <p className="text-white text-xs font-semibold mb-1">FROM</p>
-        <div className="relative">
-          <div className="flex items-center gap-2 px-4 h-12 rounded-md bg-white shadow-sm">
-            <FaMapMarkerAlt className="text-[#f36b32] w-4 h-4" />
-            <input
-              type="text"
-              value={isEditing ? editFromDisplay : (searchSummary?.fromName || '')}
-              onChange={isEditing ? handleFromInputChange : undefined}
-              onFocus={isEditing ? () => setShowFromDropdown(true) : undefined}
-              placeholder="City or airport"
-              readOnly={!isEditing}
-              className={`w-full text-sm font-semibold outline-none bg-transparent ${!isEditing ? 'cursor-pointer' : ''}`}
-              onClick={!isEditing ? openEditMode : undefined}
-            />
-            {fromLoading && <FaSpinner className="animate-spin text-gray-400" />}
-          </div>
-          {showFromDropdown && isEditing && fromAirports.length > 0 && (
-            <div className="absolute left-0 top-full w-full bg-white shadow-lg rounded-md max-h-60 overflow-y-auto z-50 border border-gray-100 mt-1">
-              {fromAirports.map((airport) => (
-                <div
-                  key={airport.location_code}
-                  className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
-                  onClick={() => handleFromSelect(airport)}
-                >
-                  <div className="font-medium">{airport.name}</div>
-                  <div className="text-xs text-gray-500">{airport.location_code}</div>
+      {/* ============ EDIT SEARCH BAR ============ */}
+      <div className="w-full bg-[#f36b32] py-3 sticky top-0 z-40 shadow-sm">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_auto_1fr_auto] lg:grid-cols-[1fr_auto_1fr_140px_160px_auto] items-end gap-3">
+            
+            {/* From Field */}
+            <div className="relative" ref={fromRef}>
+              <p className="text-white text-xs font-semibold mb-1">FROM</p>
+              <div className="relative">
+                <div className="flex items-center gap-2 px-4 h-12 rounded-md bg-white shadow-sm">
+                  <FaMapMarkerAlt className="text-[#f36b32] w-4 h-4" />
+                  <input
+                    type="text"
+                    value={isEditing ? editFromDisplay : (searchSummary?.fromName || '')}
+                    onChange={isEditing ? handleFromInputChange : undefined}
+                    onFocus={isEditing ? () => setShowFromDropdown(true) : undefined}
+                    placeholder="City or airport"
+                    readOnly={!isEditing}
+                    className={`w-full text-sm font-semibold outline-none bg-transparent ${!isEditing ? 'cursor-pointer' : ''}`}
+                    onClick={!isEditing ? openEditMode : undefined}
+                  />
+                  {fromLoading && <FaSpinner className="animate-spin text-gray-400" />}
                 </div>
-              ))}
+                {showFromDropdown && isEditing && fromAirports.length > 0 && (
+                  <div className="absolute left-0 top-full w-full bg-white shadow-lg rounded-md max-h-60 overflow-y-auto z-50 border border-gray-100 mt-1">
+                    {fromAirports.map((airport) => (
+                      <div
+                        key={airport.location_code}
+                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                        onClick={() => handleFromSelect(airport)}
+                      >
+                        <div className="font-medium">{airport.name}</div>
+                        <div className="text-xs text-gray-500">{airport.location_code}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          )}
-        </div>
-      </div>
 
-      {/* Swap Button */}
-      <div className="flex justify-center mb-1">
-        <button
-          onClick={isEditing ? handleSwap : openEditMode}
-          className="bg-white w-10 h-10 rounded-full flex items-center justify-center shadow hover:scale-110 transition-all duration-300"
-        >
-          <FaExchangeAlt className="w-4 h-4 text-[#f36b32]" />
-        </button>
-      </div>
-
-      {/* To Field */}
-      <div className="relative" ref={toRef}>
-        <p className="text-white text-xs font-semibold mb-1">TO</p>
-        <div className="relative">
-          <div className="flex items-center gap-2 px-4 h-12 rounded-md bg-white shadow-sm">
-            <FaMapMarkerAlt className="text-[#f36b32] w-4 h-4" />
-            <input
-              type="text"
-              value={isEditing ? editToDisplay : (searchSummary?.toName || '')}
-              onChange={isEditing ? handleToInputChange : undefined}
-              onFocus={isEditing ? () => setShowToDropdown(true) : undefined}
-              placeholder="City or airport"
-              readOnly={!isEditing}
-              className={`w-full text-sm font-semibold outline-none bg-transparent ${!isEditing ? 'cursor-pointer' : ''}`}
-              onClick={!isEditing ? openEditMode : undefined}
-            />
-            {toLoading && <FaSpinner className="animate-spin text-gray-400" />}
-          </div>
-          {showToDropdown && isEditing && toAirports.length > 0 && (
-            <div className="absolute left-0 top-full w-full bg-white shadow-lg rounded-md max-h-60 overflow-y-auto z-50 border border-gray-100 mt-1">
-              {toAirports.map((airport) => (
-                <div
-                  key={airport.location_code}
-                  className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
-                  onClick={() => handleToSelect(airport)}
-                >
-                  <div className="font-medium">{airport.name}</div>
-                  <div className="text-xs text-gray-500">{airport.location_code}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Date Field */}
-      <div className="relative">
-        <p className="text-white text-xs font-semibold mb-1">DEPARTURE DATE</p>
-        <div
-          onClick={isEditing ? () => setShowDepartureCalendar(!showDepartureCalendar) : openEditMode}
-          className="flex items-center gap-2 px-4 h-12 rounded-md bg-white shadow-sm cursor-pointer"
-        >
-          <FaCalendarAlt className="text-[#f36b32] w-4 h-4" />
-          <input
-            type="text"
-            value={isEditing ? (editDepartureDate ? formatDate(editDepartureDate) : "") : (searchSummary?.formattedDate || '')}
-            placeholder="Select date"
-            readOnly
-            className="w-full text-sm font-semibold outline-none bg-transparent cursor-pointer"
-          />
-        </div>
-        {showDepartureCalendar && isEditing && (
-          <div 
-            ref={departureCalendarRef}
-            className="absolute top-full left-0 mt-2 bg-white rounded-md shadow-xl p-4 w-72 z-50"
-          >
-            <div className="flex justify-between items-center mb-3">
-              <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}>
-                <FaChevronLeft className="text-gray-600" />
-              </button>
-              <h2 className="font-semibold text-sm">{monthName} {year}</h2>
-              <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}>
-                <FaChevronRight className="text-gray-600" />
+            {/* Swap Button */}
+            <div className="flex justify-center mb-1">
+              <button
+                onClick={isEditing ? handleSwap : openEditMode}
+                className="bg-white w-10 h-10 rounded-full flex items-center justify-center shadow hover:scale-110 transition-all duration-300"
+              >
+                <FaExchangeAlt className="w-4 h-4 text-[#f36b32]" />
               </button>
             </div>
-            <div className="grid grid-cols-7 text-center text-xs text-gray-500 mb-2">
-              {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(day => <div key={day}>{day}</div>)}
+
+            {/* To Field */}
+            <div className="relative" ref={toRef}>
+              <p className="text-white text-xs font-semibold mb-1">TO</p>
+              <div className="relative">
+                <div className="flex items-center gap-2 px-4 h-12 rounded-md bg-white shadow-sm">
+                  <FaMapMarkerAlt className="text-[#f36b32] w-4 h-4" />
+                  <input
+                    type="text"
+                    value={isEditing ? editToDisplay : (searchSummary?.toName || '')}
+                    onChange={isEditing ? handleToInputChange : undefined}
+                    onFocus={isEditing ? () => setShowToDropdown(true) : undefined}
+                    placeholder="City or airport"
+                    readOnly={!isEditing}
+                    className={`w-full text-sm font-semibold outline-none bg-transparent ${!isEditing ? 'cursor-pointer' : ''}`}
+                    onClick={!isEditing ? openEditMode : undefined}
+                  />
+                  {toLoading && <FaSpinner className="animate-spin text-gray-400" />}
+                </div>
+                {showToDropdown && isEditing && toAirports.length > 0 && (
+                  <div className="absolute left-0 top-full w-full bg-white shadow-lg rounded-md max-h-60 overflow-y-auto z-50 border border-gray-100 mt-1">
+                    {toAirports.map((airport) => (
+                      <div
+                        key={airport.location_code}
+                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                        onClick={() => handleToSelect(airport)}
+                      >
+                        <div className="font-medium">{airport.name}</div>
+                        <div className="text-xs text-gray-500">{airport.location_code}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="grid grid-cols-7 gap-1 text-center">
-              {[...Array(firstDay)].map((_, i) => <div key={i}></div>)}
-              {[...Array(daysInMonth)].map((_, i) => {
-                const day = i + 1;
-                const isPast = new Date(currentDate.getFullYear(), currentDate.getMonth(), day) < new Date();
-                return (
+
+            {/* Date Field */}
+            <div className="relative">
+              <p className="text-white text-xs font-semibold mb-1">DEPARTURE DATE</p>
+              <div
+                onClick={isEditing ? () => setShowDepartureCalendar(!showDepartureCalendar) : openEditMode}
+                className="flex items-center gap-2 px-4 h-12 rounded-md bg-white shadow-sm cursor-pointer"
+              >
+                <FaCalendarAlt className="text-[#f36b32] w-4 h-4" />
+                <input
+                  type="text"
+                  value={isEditing ? (editDepartureDate ? formatDate(editDepartureDate) : "") : (searchSummary?.formattedDate || '')}
+                  placeholder="Select date"
+                  readOnly
+                  className="w-full text-sm font-semibold outline-none bg-transparent cursor-pointer"
+                />
+              </div>
+              {showDepartureCalendar && isEditing && (
+                <div 
+                  ref={departureCalendarRef}
+                  className="absolute top-full left-0 mt-2 bg-white rounded-md shadow-xl p-4 w-72 z-50"
+                >
+                  <div className="flex justify-between items-center mb-3">
+                    <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}>
+                      <FaChevronLeft className="text-gray-600" />
+                    </button>
+                    <h2 className="font-semibold text-sm">{monthName} {year}</h2>
+                    <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}>
+                      <FaChevronRight className="text-gray-600" />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-7 text-center text-xs text-gray-500 mb-2">
+                    {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(day => <div key={day}>{day}</div>)}
+                  </div>
+                  <div className="grid grid-cols-7 gap-1 text-center">
+                    {[...Array(firstDay)].map((_, i) => <div key={i}></div>)}
+                    {[...Array(daysInMonth)].map((_, i) => {
+                      const day = i + 1;
+                      const isPast = new Date(currentDate.getFullYear(), currentDate.getMonth(), day) < new Date();
+                      return (
+                        <button
+                          key={day}
+                          onClick={() => !isPast && handleDateSelect(day)}
+                          disabled={isPast}
+                          className={`p-2 rounded text-sm ${isPast ? 'text-gray-300' : 'hover:bg-gray-100'}`}
+                        >
+                          {day}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Travellers Field */}
+            <div className="relative" ref={travellerRef}>
+              <p className="text-white text-xs font-semibold mb-1">TRAVELLERS</p>
+              <div
+                onClick={isEditing ? openTravellerModalEdit : openEditMode}
+                className="flex items-center gap-2 px-4 h-12 rounded-md bg-white shadow-sm cursor-pointer"
+              >
+                <FaUser className="text-[#f36b32] w-4 h-4" />
+                <span className="text-sm font-semibold text-gray-700 flex-1 truncate">
+                  {isEditing ? (
+                    editPassengers ? `${editPassengers.ADT} Adult${editPassengers.ADT !== 1 ? 's' : ''} · ${editTravelClass}` : 'Select'
+                  ) : (
+                    passengerText
+                  )}
+                </span>
+                <FaChevronDown className="text-gray-400 w-3 h-3" />
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <div>
+              <button
+                onClick={isEditing ? handleEditSearch : openEditMode}
+                disabled={isEditing && (!editFrom || !editTo || !editDepartureDate)}
+                className="w-[150px] h-12 bg-white text-black font-bold rounded-md shadow cursor-pointer transition-all duration-300 hover:text-[#fd561e] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isEditing ? 'UPDATE SEARCH' : 'MODIFY SEARCH'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sort and Filter Bar */}
+      <div className="container mx-auto px-4 py-4">
+        <div className="flex items-center justify-between gap-4">
+          {/* Results Count */}
+          
+
+          {/* Sort Dropdown */}
+          <div className="relative">
+           
+            
+            {showSortDropdown && (
+              <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                {sortOptions.map(option => (
                   <button
-                    key={day}
-                    onClick={() => !isPast && handleDateSelect(day)}
-                    disabled={isPast}
-                    className={`p-2 rounded text-sm ${isPast ? 'text-gray-300' : 'hover:bg-gray-100'}`}
+                    key={option.value}
+                    onClick={() => {
+                      setSortBy(option.value);
+                      setShowSortDropdown(false);
+                    }}
+                    className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
+                      sortBy === option.value ? 'text-[#FD561E] font-medium' : 'text-gray-700'
+                    }`}
                   >
-                    {day}
+                    {option.label}
                   </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Travellers Field */}
-      <div className="relative" ref={travellerRef}>
-        <p className="text-white text-xs font-semibold mb-1">TRAVELLERS</p>
-        <div
-          onClick={isEditing ? openTravellerModalEdit : openEditMode}
-          className="flex items-center gap-2 px-4 h-12 rounded-md bg-white shadow-sm cursor-pointer"
-        >
-          <FaUser className="text-[#f36b32] w-4 h-4" />
-          <span className="text-sm font-semibold text-gray-700 flex-1 truncate">
-            {isEditing ? (
-              editPassengers ? `${editPassengers.ADT} Adult${editPassengers.ADT !== 1 ? 's' : ''} · ${editTravelClass}` : 'Select'
-            ) : (
-              passengerText
+                ))}
+              </div>
             )}
-          </span>
-          <FaChevronDown className="text-gray-400 w-3 h-3" />
+          </div>
+
+          {/* Mobile Filter Button */}
+          <button
+            onClick={() => setShowMobileFilters(true)}
+            className="lg:hidden flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium"
+          >
+            <FaFilter className="text-[#FD561E]" />
+            Filters
+            {activeFilterCount > 0 && (
+              <span className="bg-[#FD561E] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
         </div>
-      </div>
-
-      {/* Submit Button */}
-      <div>
-        <button
-          onClick={isEditing ? handleEditSearch : openEditMode}
-          disabled={isEditing && (!editFrom || !editTo || !editDepartureDate)}
-          className="w-[150px] h-12 bg-white text-black font-bold rounded-md shadow cursor-pointer transition-all duration-300 hover:text-[#fd561e] disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isEditing ? 'UPDATE SEARCH' : 'MODIFY SEARCH'}
-        </button>
-      </div>
-    </div>
-  </div>
-</div>
-
-        {/* Results Stats */}
-        
       </div>
 
       {/* Main Content */}
@@ -1144,9 +1168,10 @@ const OneWayPage = () => {
                 <OneWayFlightCard
                   key={flight.id}
                   flight={flight}
-                  isSelected={selectedFlight?.id === flight.id}
-                  onSelect={handleFlightSelect}
-                  onViewDetails={handleViewDetails}
+                  isSelected={false}
+                  onSelect={() => {}}
+                  onViewDetails={handleViewDetails}  // ← IMPORTANT: Passing the handler
+                  passengerCounts={passengerCounts}   // ← Also passing passenger counts
                 />
               ))
             )}
@@ -1154,19 +1179,7 @@ const OneWayPage = () => {
         </div>
       </div>
 
-      {/* Bottom Bar */}
-      {selectedFlight && (
-        <BottomBar
-          selectedFlights={[selectedFlight]}
-          totalPrice={selectedFare?.totalPrice || selectedFlight.lowestPrice}
-          onContinue={handleContinue}
-          onViewDetails={() => handleViewDetails(selectedFlight)}
-          type="one-way"
-          passengerCount={passengerCounts.ADT + passengerCounts.CNN}
-        />
-      )}
-
-      {/* OneWaySheet */}
+      {/* OneWaySheet - RESTORED */}
       {showDetailSheet && selectedFlightForSheet && (
         <OneWaySheet 
           isOpen={showDetailSheet}
