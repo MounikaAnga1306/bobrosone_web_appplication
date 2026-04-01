@@ -242,9 +242,9 @@ const Navbar = () => {
                     <p className="text-sm text-gray-500">Get exclusive deals & Manage your trips</p>
                   </div>
                   <button onClick={() => { setOpenDropdown(false); setAuthPage("signin"); setOpenAuthModal(true); }} className="mx-4 my-3 w-[calc(100%-32px)] cursor-pointer bg-[#fd561e] text-white font-semibold py-2.5 rounded-lg">Login / Sign Up</button>
-                  <button onClick={() => { setOpenDropdown(false); setShowGuestBookings(true); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50">My Bookings</button>
-                  <button onClick={() => { setOpenDropdown(false); setPrintTin(""); setShowPrintTicket(true); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50">Print Ticket</button>
-                  <button onClick={handleOpenCancel} className="w-full text-left px-4 py-3 hover:bg-gray-50">Cancellation</button>
+                  <button onClick={() => { setOpenDropdown(false); setShowGuestBookings(true); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer">My Bookings</button>
+                  <button onClick={() => { setOpenDropdown(false); setPrintTin(""); setShowPrintTicket(true); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer">Print Ticket</button>
+                  <button onClick={handleOpenCancel} className="w-full text-left px-4 py-3 hover:bg-gray-50 cursor-pointer">Cancellation</button>
                 </div>
               )}
 
@@ -324,14 +324,20 @@ const Navbar = () => {
                 
                 <div className="border-t border-gray-200 my-3 mx-4"></div>
                 
+                {/* Mobile User Section - WITH DROPDOWN FOR BOTH GUEST AND LOGGED IN USERS */}
                 <div ref={mobileDropdownRef} className="px-4">
-                  <button onClick={() => setMobileDropdownOpen(!mobileDropdownOpen)} className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">
+                  <button 
+                    onClick={() => setMobileDropdownOpen(!mobileDropdownOpen)} 
+                    className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+                  >
                     <div className="flex items-center gap-2">
                       <User className="w-4 h-4" />
                       <span className="text-sm font-medium">{isLoggedIn ? `Hi ${user?.uname?.split(" ")[0]}` : "Login/Signup"}</span>
                     </div>
                     <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${mobileDropdownOpen ? "rotate-180" : ""}`} />
                   </button>
+                  
+                  {/* Dropdown for both guest and logged in users */}
                   {mobileDropdownOpen && (
                     <div className="mt-2 bg-white rounded-lg border border-gray-200 overflow-hidden">
                       {!isLoggedIn ? (
@@ -349,7 +355,7 @@ const Navbar = () => {
                         <>
                           <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-bookings"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Booking</button>
                           <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-account"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Account</button>
-                          <button onClick={handleOpenCancel} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Cancellation</button>
+                          <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); handleOpenCancel(); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Cancellation</button>
                           <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); setPrintTin(""); setShowPrintTicket(true); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Print Ticket</button>
                           <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-profile"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Profile</button>
                           <button onClick={handleLogout} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-red-500 text-sm">Logout</button>
