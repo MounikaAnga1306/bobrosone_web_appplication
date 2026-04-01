@@ -376,7 +376,7 @@ const CancellationCard = ({ onClose }) => {
                 <input type="text" inputMode="numeric" pattern="[0-9]*" name="one-time-code"
                   autoComplete="one-time-code" maxLength={4} value={otp} placeholder="• • • •"
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3.5 text-center text-3xl font-bold tracking-[1em] focus:outline-none bg-gray-50 focus:bg-white transition-all"
+                  className="w-full border border-gray-200 rounded-xl  py-3.5 text-center text-3xl font-bold tracking-[1em] focus:outline-none bg-gray-50 focus:bg-white transition-all"
                   onFocus={(e) => { e.target.style.boxShadow = "0 0 0 3px rgba(251,146,60,0.2)"; e.target.style.borderColor = "#fb923c"; }}
                   onBlur={(e) => { e.target.style.boxShadow = "none"; e.target.style.borderColor = "#e5e7eb"; }} />
               </div>

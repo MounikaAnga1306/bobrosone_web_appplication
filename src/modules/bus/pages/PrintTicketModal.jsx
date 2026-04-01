@@ -73,13 +73,11 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
     const operatorContact = d.pickUpContactNo   || d.operatorContact     || "—";
 
     // ── Passenger parsing — handles BOTH single object AND array ──
-    // Priority: inventoryItems (array or object), then passengers array, then top-level
     let passengers = [];
 
     const inv = d.inventoryItems;
 
     if (Array.isArray(inv)) {
-      // inventoryItems is an array of passengers
       passengers = inv.map((item) => ({
         name:     item.passenger?.name     || item.name     || item.pname  || "—",
         mobile:   item.passenger?.mobile   || item.mobile   || item.pmob   || "—",
@@ -91,8 +89,6 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
         totalFare: item.grandTotalFare     || item.totalFare|| item.fare   || "0",
       }));
     } else if (inv && typeof inv === "object") {
-      // inventoryItems is a single object
-      // Check if passenger inside is an array
       if (Array.isArray(inv.passenger)) {
         passengers = inv.passenger.map((p, i) => ({
           name:     p.name     || p.pname  || "—",
@@ -105,7 +101,6 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
           totalFare:  inv.grandTotalFare || inv.totalFare || inv.fare || "0",
         }));
       } else {
-        // Single passenger object
         const p = inv.passenger || {};
         passengers = [{
           name:     p.name     || inv.pname  || d.pname  || "—",
@@ -119,7 +114,6 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
         }];
       }
     } else if (Array.isArray(d.passengers)) {
-      // Top-level passengers array
       passengers = d.passengers.map((p) => ({
         name:     p.name     || p.pname   || "—",
         mobile:   p.mobile   || p.pmob    || "—",
@@ -131,7 +125,6 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
         totalFare:  p.grandTotalFare || p.totalFare || p.fare || d.totalFare || "0",
       }));
     } else {
-      // Fallback: top-level single passenger fields
       passengers = [{
         name:     d.pname    || d.passengerName  || "—",
         mobile:   d.pmob     || d.mobile         || "—",
@@ -144,28 +137,23 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
       }];
     }
 
-    // ── Aggregate fare across all passengers ──
     const totalBaseFare   = passengers.reduce((sum, p) => sum + parseFloat(p.baseFare   || 0), 0);
     const totalServiceTax = passengers.reduce((sum, p) => sum + parseFloat(p.serviceTax || 0), 0);
     const totalGrandFare  = passengers.reduce((sum, p) => sum + parseFloat(p.totalFare  || 0), 0);
 
-    // ── Boarding ──
     const boardingPoint    = d.pickupLocation         || d.boardingPoint    || "—";
     const boardingAddress  = d.pickUpLocationAddress  || d.boardingAddress  || "—";
     const boardingLandmark = d.pickupLocationLandmark || d.boardingLandmark || "—";
     const boardingContact  = d.pickUpContactNo        || d.boardingContact  || "—";
 
-    // ── Drop ──
     const dropPoint        = d.dropLocation           || d.dropPoint        || destCity  || "—";
     const dropAddress      = d.dropLocationAddress    || d.dropAddress      || "—";
     const dropLandmark     = d.dropLocationLandmark   || d.dropLandmark     || "—";
 
-    // ── Times ──
     const departureTime  = toTime(d.pickupTime             || d.primeDepartureTime     || d.firstBoardingPointTime);
     const dropTime       = toTime(d.dropTime               || d.arrivalTime);
     const reportingTime  = toTime(d.firstBoardingPointTime || d.reportingTime          || d.pickupTime);
 
-    // ── Dates ──
     const dojFormatted   = formatDate(doj);
     const printTimestamp = new Date().toLocaleString("en-IN", {
       day: "2-digit", month: "2-digit", year: "numeric",
@@ -175,9 +163,8 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
     const statusColor = status === "CANCELLED" ? "#dc2626" : status === "CONFIRMED" || status === "BOOKED" ? "#16a34a" : "#d97706";
     const logoUrl     = `${window.location.origin}/assets/Bobros_logo.png`;
 
-    // ── Build passenger rows for table ──
     const passengerRows = passengers.map(p => `
-      <tr>
+       <tr>
         <td>${p.name}</td>
         <td>${p.gender}</td>
         <td>${p.age}</td>
@@ -185,29 +172,36 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
         <td>${busType}</td>
         <td class="status">${status}</td>
         <td class="orange">${pnr}</td>
-      </tr>
+       </tr>
     `).join("");
 
     const printContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
   <title>Ticket - ${pnr}</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+    * { 
+      box-sizing: border-box; 
+      margin: 0; 
+      padding: 0; 
+    }
+    
     body {
       font-family: 'Arial', sans-serif;
       background: #f5f5f5;
-      padding: 20px;
+      padding: 10px;
       color: #333;
       font-size: 13px;
     }
+    
     .page {
       background: white;
       max-width: 780px;
       margin: 0 auto;
       border: 1px solid #ddd;
+      width: 100%;
     }
 
     /* ── HEADER ── */
@@ -215,60 +209,106 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 18px 24px;
+      padding: 15px 16px;
       border-bottom: 2px solid #eee;
+      flex-wrap: wrap;
+      gap: 12px;
     }
-    .logo-img { height: 36px; width: auto; object-fit: contain; }
+    
+    .logo-img { 
+      height: 32px; 
+      width: auto; 
+      object-fit: contain; 
+    }
+    
     .logo-fallback {
-      font-size: 28px; font-weight: 900;
-      color: #fd561e; letter-spacing: -1px; display: none;
+      font-size: 24px; 
+      font-weight: 900;
+      color: #fd561e; 
+      letter-spacing: -1px; 
+      display: none;
     }
-    .logo-fallback sup { font-size: 10px; color: #fd561e; }
+    
+    .logo-fallback sup { 
+      font-size: 9px; 
+      color: #fd561e; 
+    }
+    
     .company-info {
       text-align: right;
-      font-size: 11px;
+      font-size: 10px;
       color: #555;
-      line-height: 1.6;
+      line-height: 1.5;
     }
-    .company-info strong { color: #333; font-size: 12px; }
+    
+    .company-info strong { 
+      color: #333; 
+      font-size: 11px; 
+    }
 
     /* ── ROUTE BAR ── */
     .route-bar {
       background: #fafafa;
       border-bottom: 1px solid #eee;
-      padding: 14px 24px;
+      padding: 12px 16px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
     }
+    
     .route-cities {
-      font-size: 20px;
+      font-size: 16px;
       font-weight: 800;
       color: #1a1a2e;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 6px;
+      flex-wrap: wrap;
     }
-    .route-arrow { color: #fd561e; font-size: 18px; }
-    .route-meta { text-align: right; font-size: 12px; color: #555; line-height: 1.8; }
-    .route-meta strong { color: #1a1a2e; }
+    
+    .route-arrow { 
+      color: #fd561e; 
+      font-size: 14px; 
+    }
+    
+    .route-meta { 
+      text-align: right; 
+      font-size: 11px; 
+      color: #555; 
+      line-height: 1.6; 
+    }
+    
+    .route-meta strong { 
+      color: #1a1a2e; 
+    }
 
     /* ── OPERATOR ── */
     .operator-bar {
-      padding: 8px 24px;
+      padding: 8px 16px;
       background: #fff8f5;
       border-bottom: 1px solid #ffe4d6;
-      font-size: 12px;
+      font-size: 11px;
       color: #555;
       display: flex;
       justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
     }
-    .operator-bar strong { color: #fd561e; }
+    
+    .operator-bar strong { 
+      color: #fd561e; 
+    }
 
     /* ── SECTION ── */
-    .section { padding: 14px 24px; border-bottom: 1px solid #eee; }
+    .section { 
+      padding: 12px 16px; 
+      border-bottom: 1px solid #eee; 
+    }
+    
     .section-title {
-      font-size: 11px;
+      font-size: 10px;
       color: #999;
       text-transform: uppercase;
       letter-spacing: 0.8px;
@@ -277,133 +317,197 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
       border-bottom: 1px solid #f0f0f0;
     }
 
-    /* ── PASSENGER TABLE ── */
+    /* ── PASSENGER TABLE - MOBILE RESPONSIVE ── */
     .passenger-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 12px;
+      font-size: 11px;
+      display: block;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
+    
     .passenger-table th {
-      font-size: 10px;
+      font-size: 9px;
       color: #999;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       font-weight: 600;
       text-align: left;
-      padding: 6px 10px;
+      padding: 8px 6px;
       background: #f8f9ff;
       border: 1px solid #eee;
       white-space: nowrap;
     }
+    
     .passenger-table td {
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
       color: #1a1a2e;
-      padding: 8px 10px;
+      padding: 8px 6px;
       border: 1px solid #eee;
     }
-    .passenger-table td.orange { color: #fd561e; }
-    .passenger-table td.status { color: ${statusColor}; font-weight: 800; }
-    .passenger-table tbody tr:nth-child(even) td { background: #fafafa; }
+    
+    .passenger-table td.orange { 
+      color: #fd561e; 
+    }
+    
+    .passenger-table td.status { 
+      color: ${statusColor}; 
+      font-weight: 800; 
+    }
+    
+    .passenger-table tbody tr:nth-child(even) td { 
+      background: #fafafa; 
+    }
 
-    /* ── INFO TABLE ── */
+    /* ── INFO TABLE - MOBILE RESPONSIVE ── */
     .info-table {
       width: 100%;
       border-collapse: collapse;
+      display: block;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
+    
     .info-table th {
-      font-size: 10px;
+      font-size: 9px;
       color: #999;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       font-weight: 600;
       text-align: left;
-      padding: 4px 8px 4px 0;
+      padding: 6px 8px 6px 0;
       white-space: nowrap;
     }
+    
     .info-table td {
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
       color: #1a1a2e;
-      padding: 4px 8px 4px 0;
+      padding: 6px 8px 6px 0;
     }
-    .info-table td.orange { color: #fd561e; }
+    
+    .info-table td.orange { 
+      color: #fd561e; 
+    }
+    
     .info-table tr:not(:last-child) td,
     .info-table tr:not(:last-child) th {
       border-bottom: 1px solid #f9f9f9;
     }
 
-    /* ── FARE TABLE ── */
-    .fare-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 4px;
-    }
-    .fare-table th {
-      background: #f8f9ff;
-      font-size: 10px;
-      color: #888;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      padding: 8px 12px;
-      text-align: left;
-      border: 1px solid #eee;
-    }
-    .fare-table td {
-      padding: 8px 12px;
-      font-size: 13px;
-      font-weight: 700;
-      color: #1a1a2e;
-      border: 1px solid #eee;
-    }
-    .fare-table td.total { color: #fd561e; font-size: 14px; }
-
-    /* ── ADDRESS GRID ── */
+    /* ── ADDRESS GRID - MOBILE RESPONSIVE ── */
     .address-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr;
       gap: 12px;
       margin-top: 4px;
     }
+    
+    @media (min-width: 640px) {
+      .address-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+    
     .address-block {
       background: #f8f9ff;
       border-radius: 6px;
-      padding: 10px 14px;
-      font-size: 12px;
-      line-height: 1.7;
+      padding: 10px 12px;
+      font-size: 11px;
+      line-height: 1.6;
       color: #444;
+      word-break: break-word;
     }
-    .address-block.drop { background: #f0fff4; }
+    
+    .address-block.drop { 
+      background: #f0fff4; 
+    }
+    
     .address-block .label {
-      font-size: 10px;
+      font-size: 9px;
       color: #999;
       text-transform: uppercase;
       letter-spacing: 0.6px;
       font-weight: 700;
       margin-bottom: 4px;
     }
-    .address-block strong { color: #fd561e; display: block; margin-bottom: 2px; }
-    .address-block.drop strong { color: #16a34a; }
+    
+    .address-block strong { 
+      color: #fd561e; 
+      display: block; 
+      margin-bottom: 2px; 
+      font-size: 12px;
+    }
+    
+    .address-block.drop strong { 
+      color: #16a34a; 
+    }
+
+    /* ── FARE TABLE - MOBILE RESPONSIVE ── */
+    .fare-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 4px;
+      display: block;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    .fare-table th {
+      background: #f8f9ff;
+      font-size: 9px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 8px 10px;
+      text-align: left;
+      border: 1px solid #eee;
+      white-space: nowrap;
+    }
+    
+    .fare-table td {
+      padding: 8px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #1a1a2e;
+      border: 1px solid #eee;
+    }
+    
+    .fare-table td.total { 
+      color: #fd561e; 
+      font-size: 13px; 
+    }
 
     /* ── TERMS ── */
     .terms {
-      padding: 14px 24px;
+      padding: 12px 16px;
       border-top: 2px solid #eee;
-      font-size: 11px;
+      font-size: 10px;
       color: #555;
-      line-height: 1.7;
+      line-height: 1.6;
     }
+    
     .terms h3 {
-      font-size: 12px;
+      font-size: 11px;
       color: #1a1a2e;
-      margin: 10px 0 4px;
+      margin: 8px 0 4px;
     }
-    .terms ul { padding-left: 18px; margin: 4px 0; }
-    .terms ul li { margin-bottom: 3px; }
+    
+    .terms ul { 
+      padding-left: 18px; 
+      margin: 4px 0; 
+    }
+    
+    .terms ul li { 
+      margin-bottom: 3px; 
+    }
+    
     .not-responsible {
       border: 1px solid #eee;
       border-radius: 6px;
-      padding: 10px 14px;
+      padding: 10px 12px;
       margin-top: 8px;
     }
 
@@ -411,10 +515,11 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
     .footer {
       background: #f9f9f9;
       border-top: 1px solid #eee;
-      padding: 10px 24px;
-      font-size: 10px;
+      padding: 8px 16px;
+      font-size: 9px;
       color: #aaa;
       text-align: center;
+      line-height: 1.4;
     }
 
     /* ── DOWNLOAD BUTTON ── */
@@ -426,20 +531,86 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
       color: white;
       border: none;
       border-radius: 10px;
-      padding: 14px;
-      font-size: 15px;
+      padding: 12px 16px;
+      font-size: 14px;
       font-weight: 700;
       cursor: pointer;
       text-align: center;
       font-family: 'Arial', sans-serif;
+      width: 100%;
     }
-    .download-btn:hover { opacity: 0.92; }
-    .download-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    
+    .download-btn:hover { 
+      opacity: 0.92; 
+    }
+    
+    .download-btn:disabled { 
+      opacity: 0.6; 
+      cursor: not-allowed; 
+    }
 
     @media print {
-      body { background: white; padding: 0; }
-      .page { border: none; }
-      .download-btn { display: none !important; }
+      body { 
+        background: white; 
+        padding: 0; 
+        margin: 0;
+      }
+      .page { 
+        border: none; 
+        max-width: 100%;
+      }
+      .download-btn { 
+        display: none !important; 
+      }
+      .passenger-table,
+      .info-table,
+      .fare-table {
+        overflow: visible;
+      }
+    }
+
+    /* Small mobile adjustments */
+    @media (max-width: 480px) {
+      body {
+        padding: 5px;
+      }
+      
+      .header {
+        padding: 12px;
+      }
+      
+      .route-bar {
+        padding: 10px 12px;
+      }
+      
+      .route-cities {
+        font-size: 14px;
+      }
+      
+      .operator-bar {
+        padding: 6px 12px;
+        font-size: 10px;
+      }
+      
+      .section {
+        padding: 10px 12px;
+      }
+      
+      .passenger-table th,
+      .passenger-table td {
+        padding: 6px 4px;
+        font-size: 10px;
+      }
+      
+      .address-block {
+        padding: 8px 10px;
+        font-size: 10px;
+      }
+      
+      .terms {
+        padding: 10px 12px;
+        font-size: 9px;
+      }
     }
   </style>
 </head>
@@ -466,7 +637,7 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
   <div class="route-bar">
     <div class="route-cities">
       ${sourceCity} <span class="route-arrow">⇒</span> ${destCity}
-      <span style="font-size:11px;color:${statusColor};background:${statusColor}18;padding:2px 10px;border-radius:20px;font-weight:700;margin-left:6px;">${status}</span>
+      <span style="font-size:10px;color:${statusColor};background:${statusColor}18;padding:2px 8px;border-radius:20px;font-weight:700;">${status}</span>
     </div>
     <div class="route-meta">
       <strong>DOJ: ${dojFormatted}</strong><br/>
@@ -478,7 +649,7 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
   <div class="operator-bar">
     <span>Operator: <strong>${travels}</strong></span>
     <span>Bus Type: <strong>${busType}</strong></span>
-    <span>Operator Contact: <strong>${operatorContact}</strong></span>
+    <span>Contact: <strong>${operatorContact}</strong></span>
   </div>
 
   <!-- PASSENGER DETAILS TABLE -->
@@ -677,7 +848,13 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
   };
 
   return (
-    <div style={{ fontFamily: "'Segoe UI', sans-serif", minWidth: "340px" }}>
+    <div style={{ 
+      fontFamily: "'Segoe UI', sans-serif", 
+      minWidth: "auto", 
+      width: "100%",
+      maxWidth: "100%",
+      padding: "0"
+    }}>
       {/* HEADER */}
       <div style={{ textAlign: "center", marginBottom: "24px" }}>
         <div style={{ fontSize: "40px", marginBottom: "8px" }}>🎟️</div>
@@ -686,12 +863,21 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
       </div>
 
       {error && (
-        <div style={{ background: "#fff1f0", border: "1px solid #ffccc7", borderRadius: "8px", padding: "10px 14px", marginBottom: "16px", color: "#cf1322", fontSize: "13px" }}>
+        <div style={{ 
+          background: "#fff1f0", 
+          border: "1px solid #ffccc7", 
+          borderRadius: "8px", 
+          padding: "10px 14px", 
+          marginBottom: "16px", 
+          color: "#cf1322", 
+          fontSize: "13px",
+          wordBreak: "break-word"
+        }}>
           {error}
         </div>
       )}
 
-      <form onSubmit={handlePrint}>
+      <form onSubmit={handlePrint} style={{ width: "100%" }}>
         {/* Ticket ID */}
         <div style={{ marginBottom: "14px" }}>
           <label style={{ display: "block", fontSize: "12px", color: "#555", fontWeight: "600", marginBottom: "6px" }}>
@@ -705,9 +891,15 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
             required
             readOnly={!!prefillTin}
             style={{
-              width: "100%", border: "1.5px solid #e5e7eb", borderRadius: "8px",
-              padding: "10px 14px", fontSize: "14px", outline: "none",
-              boxSizing: "border-box", fontWeight: "700", letterSpacing: "2px",
+              width: "100%", 
+              border: "1.5px solid #e5e7eb", 
+              borderRadius: "8px",
+              padding: "12px 14px", 
+              fontSize: "14px", 
+              outline: "none",
+              boxSizing: "border-box", 
+              fontWeight: "700", 
+              letterSpacing: "1px",
               background: prefillTin ? "#f9f9f9" : "white"
             }}
             onFocus={e => { if (!prefillTin) e.target.style.borderColor = "#fd561e"; }}
@@ -727,8 +919,13 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
             placeholder="Enter answer"
             required
             style={{
-              width: "100%", border: "1.5px solid #e5e7eb", borderRadius: "8px",
-              padding: "10px 14px", fontSize: "14px", outline: "none", boxSizing: "border-box"
+              width: "100%", 
+              border: "1.5px solid #e5e7eb", 
+              borderRadius: "8px",
+              padding: "12px 14px", 
+              fontSize: "14px", 
+              outline: "none", 
+              boxSizing: "border-box"
             }}
             onFocus={e => e.target.style.borderColor = "#fd561e"}
             onBlur={e => e.target.style.borderColor = "#e5e7eb"}
@@ -741,8 +938,12 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
           style={{
             width: "100%",
             background: loading ? "#ffb89d" : "linear-gradient(135deg, #fd561e, #ff8c42)",
-            color: "white", border: "none", borderRadius: "10px",
-            padding: "13px", fontSize: "15px", fontWeight: "700",
+            color: "white", 
+            border: "none", 
+            borderRadius: "10px",
+            padding: "14px", 
+            fontSize: "15px", 
+            fontWeight: "700",
             cursor: loading ? "not-allowed" : "pointer"
           }}
         >

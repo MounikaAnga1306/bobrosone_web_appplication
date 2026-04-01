@@ -38,7 +38,6 @@ const ResetPassword = ({ resetData, closeModal, openSignin }) => {
     }
 
     try {
-
       await axios.post(
         "https://api.bobros.co.in/forgotpassword/changepassword",
         {
@@ -59,7 +58,6 @@ const ResetPassword = ({ resetData, closeModal, openSignin }) => {
       });
 
     } catch (err) {
-
       console.log("RESET PASSWORD ERROR:", err.response?.data);
 
       let message =
@@ -85,7 +83,6 @@ const ResetPassword = ({ resetData, closeModal, openSignin }) => {
         text: message,
         confirmButtonColor: "#FD561E"
       });
-
     }
   };
 
@@ -96,41 +93,42 @@ const ResetPassword = ({ resetData, closeModal, openSignin }) => {
       focus-within:shadow-[0_0_6px_rgba(253, 86, 30, 0.35)]
       transition-all duration-200"
     >
-      <Icon className="w-5 h-5 text-black mr-2" />
-
-      <input {...props} className="w-full outline-none" />
+      <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-black mr-2 flex-shrink-0" />
+      <input 
+        {...props} 
+        className="w-full outline-none text-sm sm:text-base" 
+      />
     </div>
   );
 
   return (
-    <div className="flex items-center justify-center">
-      <div className="relative bg-white p-8 rounded-2xl shadow-xl w-[420px]">
-
+    <div className="flex items-center justify-center min-h-screen px-4 py-6 sm:px-6 md:px-8">
+      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-[420px] mx-auto p-5 sm:p-6 md:p-8">
+        
         <button
           onClick={closeModal}
-          className="absolute top-4 right-4 text-gray-500 hover:text-black"
+          className="absolute top-3 right-3 sm:top-4 sm:right-4 text-gray-500 hover:text-black z-10"
         >
-          <X size={22} />
+          <X size={20} className="sm:w-[22px] sm:h-[22px]" />
         </button>
 
-        <h2 className="text-2xl font-bold text-center text-gray-800">
+        <h2 className="text-xl sm:text-2xl font-bold text-center text-gray-800">
           Reset Password
         </h2>
 
-        <p className="text-center text-[#fd561e] text-lg mt-2">
+        <p className="text-center text-[#fd561e] text-base sm:text-lg mt-2">
           Secure your BOBROS Account
         </p>
 
-        <p className="text-center text-gray-500 text-sm mt-2 mb-6">
+        <p className="text-center text-gray-500 text-xs sm:text-sm mt-2 mb-4 sm:mb-6">
           Enter the OTP sent to your mobile and create a new password
         </p>
 
         {error && (
-          <p className="text-red-500 text-sm mb-4 text-center">{error}</p>
+          <p className="text-red-500 text-xs sm:text-sm mb-4 text-center">{error}</p>
         )}
 
         <form onSubmit={handleResetPassword}>
-
           {/* MOBILE NUMBER */}
           <InputField
             icon={Phone}
@@ -166,9 +164,9 @@ const ResetPassword = ({ resetData, closeModal, openSignin }) => {
             <button
               type="button"
               onClick={() => setShowNewPassword(!showNewPassword)}
-              className="absolute right-3 top-3 text-black"
+              className="absolute right-3 top-2.5 sm:top-3 text-black focus:outline-none"
             >
-              {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              {showNewPassword ? <EyeOff size={16} className="sm:w-[18px] sm:h-[18px]" /> : <Eye size={16} className="sm:w-[18px] sm:h-[18px]" />}
             </button>
           </div>
 
@@ -186,21 +184,19 @@ const ResetPassword = ({ resetData, closeModal, openSignin }) => {
             <button
               type="button"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-3 top-3 text-black"
+              className="absolute right-3 top-2.5 sm:top-3 text-black focus:outline-none"
             >
-              {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              {showConfirmPassword ? <EyeOff size={16} className="sm:w-[18px] sm:h-[18px]" /> : <Eye size={16} className="sm:w-[18px] sm:h-[18px]" />}
             </button>
           </div>
 
           <button
             type="submit"
-            className="w-full bg-[#FD561E] text-white cursor-pointer py-2 rounded-lg font-semibold hover:bg-[#e64d19] transition"
+            className="w-full bg-[#FD561E] text-white cursor-pointer py-2.5 sm:py-2 rounded-lg font-semibold hover:bg-[#e64d19] transition text-sm sm:text-base"
           >
             Reset Password
           </button>
-
         </form>
-
       </div>
     </div>
   );
