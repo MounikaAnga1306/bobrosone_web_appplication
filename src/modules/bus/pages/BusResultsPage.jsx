@@ -38,8 +38,8 @@ export default function BusResultsPage() {
   const date = searchParams.get("doj");
 
   // Names for display
-  const fromName = location.state?.sourceName || "";
-  const toName = location.state?.destinationName || "";
+  const fromName = location.state?.sourceName || searchParams.get("fromName") || "";
+const toName = location.state?.destinationName || searchParams.get("toName") || "";
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -61,7 +61,9 @@ export default function BusResultsPage() {
   };
 
   useEffect(() => {
+    console.log("FETCH EFFECT TRIGGERED", { fromId, toId, date, fromName, toName });
     if (!fromName || !toName || !date) {
+       console.log("BLOCKED - missing:", { fromName, toName, date });
       setError("Missing search parameters");
       setLoading(false);
       return;
@@ -84,10 +86,10 @@ export default function BusResultsPage() {
 
           // ── DEBUG: check what fields API returns ──
           // Remove these logs once boarding/dropping field names are confirmed
-          console.log("=== TRIP DEBUG ===");
-          console.log("Total trips:", data.length);
-          console.log("Trip[0] ALL KEYS:", Object.keys(data[0] || {}));
-          console.log("Trip[0] FULL DATA:", JSON.stringify(data[0], null, 2));
+          //console.log("=== TRIP DEBUG ===");
+          //console.log("Total trips:", data.length);
+          //console.log("Trip[0] ALL KEYS:", Object.keys(data[0] || {}));
+          //console.log("Trip[0] FULL DATA:", JSON.stringify(data[0], null, 2));
           // ─────────────────────────────────────────
         }
       } catch (err) {
@@ -103,7 +105,7 @@ export default function BusResultsPage() {
     };
 
     fetchTrips();
-  }, [fromId, toId, date, fromName, toName]);
+  }, [fromId, toId, date]);
 
   const applyFilters = (trips, filters) => {
     return trips.filter((trip) => {
@@ -137,8 +139,14 @@ export default function BusResultsPage() {
     setSelectedTripId(location.state.tripId);
     setSeatPanelOpen(true);
 
-    // 🔥 IMPORTANT: clear state so it doesn't reopen again on refresh
-    window.history.replaceState({}, document.title);
+    // state preserve chestuney reopenSeat clear cheyyali
+    window.history.replaceState(
+      { 
+        sourceName: location.state.sourceName, 
+        destinationName: location.state.destinationName 
+      }, 
+      document.title
+    );
   }
 }, [location.state]);
   return (

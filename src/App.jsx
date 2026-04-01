@@ -44,57 +44,71 @@ import GuestBookingsPage from "./modules/bus/pages/GuestBookingPage";
 import CancelTicketPage from "./modules/bus/pages/CancelTicketPage";
 import MyAccount from "./modules/bus/pages/MyAccount";
 import MyProfile from "./modules/bus/pages/MyProfile";
+import AboutUs from "./modules/bus/pages/AboutUs";
+import ContactUs from "./modules/bus/pages/ContactUs";
+import PrivacyPolicy from "./modules/bus/pages/PrivacyPolicy";
+import TermsAndConditions from "./modules/bus/pages/TermsAndConditions";
+import CancellationPolicy from "./modules/bus/pages/CancellationPolicy";
+import DisclaimerPolicy from "./modules/bus/pages/DisclaimerPolicy";
+import Advertisement from "./modules/bus/components/Advertisement";
 
 function App() {
   return (
-     <GoogleOAuthProvider clientId="429781379228-bigvifjtcvo0toouf2i08fpc3u4k3vnq.apps.googleusercontent.com">
-    <FlightMasterProvider>
-      <FlightSearchProvider>
-        <HotelSearchProvider> {/* ADD THIS WRAPPER */}
-          <Router>
-            <div className="min-h-screen bg-gray-100 flex flex-col">
-              <Navbar />
-              <div className="flex-1">
-                <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/HomePage" element={<Home />} />
-                  <Route path="/signin" element={<SignIn />} />
-                  <Route path="/signup" element={<SignupForm />} />
-                  <Route path="/verify-otp" element={<VerifyOTP />} />
-                  <Route path="/forgot-password" element={<ForgotPassword />} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
-                  {/* <Route path="/review-booking" element={<ReviewBooking />} /> */}
-                  <Route path="/my-bookings" element={<MyBookings />} />
-                  <Route path="/guest-bookings" element={<GuestBookingsPage />} />
-                  <Route path="/cancel-ticket" element={<CancelTicketPage />} />
-                  <Route path="/my-account" element={<MyAccount />} />
-                  <Route path="/my-profile" element={<MyProfile />} />
-                  <Route path="/results" element={<BusResultsPage />} />
-                  
-                  {/* Flight Routes - UPDATED with new names */}
-                  <Route path="/flights" element={<SearchPage />} />
-                  <Route path="/flights/results" element={<OneWayPage />} />
-                  <Route path="/flights/round-trip" element={<RoundTripPage />} />
-                  <Route path="/flights/multi-city" element={<MultiCityPage />} />
-                  <Route path="/flights/tracker" element={<FlightTracker />} />
-                  <Route path="/flights/pnr-search" element={<PNRSearch />} />
+    <GoogleOAuthProvider clientId="429781379228-bigvifjtcvo0toouf2i08fpc3u4k3vnq.apps.googleusercontent.com">
+      <FlightMasterProvider>
+        <FlightSearchProvider>
+          <HotelSearchProvider>
+            <Router>
+              <div className="min-h-screen bg-gray-100 flex flex-col w-full overflow-x-hidden">
+                <Navbar />
+                <main className="flex-1 w-full">
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/HomePage" element={<Home />} />
+                    <Route path="/about" element={<AboutUs />} />
+                    <Route path="/contact" element={<ContactUs />} />
+                    <Route path="/privacy" element={<PrivacyPolicy />} />
+                    <Route path="/terms" element={<TermsAndConditions />} />
+                    <Route path="/cancel" element={<CancellationPolicy />} />
+                    <Route path="/disclaimer" element={<DisclaimerPolicy />} />
+                    <Route path="/signin" element={<SignIn />} />
+                    <Route path="/signup" element={<SignupForm />} />
+                    <Route path="/verify-otp" element={<VerifyOTP />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
+                    {/* <Route path="/review-booking" element={<ReviewBooking />} /> */}
+                    <Route path="/my-bookings" element={<MyBookings />} />
+                    <Route path="/guest-bookings" element={<GuestBookingsPage />} />
+                    <Route path="/cancel-ticket" element={<CancelTicketPage />} />
+                    <Route path="/my-account" element={<MyAccount />} />
+                    <Route path="/my-profile" element={<MyProfile />} />
+                    <Route path="/results" element={<BusResultsPage />} />
+                    
+                    {/* Flight Routes - UPDATED with new names */}
+                    <Route path="/flights" element={<SearchPage />} />
+                    <Route path="/flights/results" element={<OneWayPage />} />
+                    <Route path="/flights/round-trip" element={<RoundTripPage />} />
+                    <Route path="/flights/multi-city" element={<MultiCityPage />} />
+                    <Route path="/flights/tracker" element={<FlightTracker />} />
+                    <Route path="/flights/pnr-search" element={<PNRSearch />} />
 
-                  <Route path="/flights/booking/review" element={<BookingReviewPage />} />
-                  
-                  {/* Hotel Routes */}
-                  <Route path="/hotels" element={<HotelsHomeScreen />} />
-                  <Route path="/hotels/results" element={<HotelSearchResults />} />
-                   <Route path="/booking-success" element={<BookingSuccess />} />
-                   <Route path="/payment-status" element={<PaymentStatus />} />
-                  <Route path="*" element={<Navigate to="/" />} />
-                </Routes>
+                    <Route path="/flights/booking/review" element={<BookingReviewPage />} />
+                    
+                    {/* Hotel Routes */}
+                    <Route path="/hotels" element={<HotelsHomeScreen />} />
+                    <Route path="/hotels/results" element={<HotelSearchResults />} />
+                    <Route path="/booking-success" element={<BookingSuccess />} />
+                    <Route path="/payment-status" element={<PaymentStatus />} />
+                    <Route path="*" element={<Navigate to="/" />} />
+                  </Routes>
+                </main>
+                <Advertisement />
+                <FooterBottom />
               </div>
-            </div>
-            <FooterBottom />
-          </Router>
-        </HotelSearchProvider> {/* ADD THIS CLOSING TAG */}
-      </FlightSearchProvider>
-    </FlightMasterProvider>
+            </Router>
+          </HotelSearchProvider>
+        </FlightSearchProvider>
+      </FlightMasterProvider>
     </GoogleOAuthProvider>
   );
 }
