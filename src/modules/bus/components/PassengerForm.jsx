@@ -1,7 +1,6 @@
 import { React, useState } from "react";
 import { getUserDetails } from "../../../utils/authHelper";
 
-
 const PassengerForm = ({
   selectedSeats,
   boardingPoint,
@@ -97,14 +96,14 @@ return (
 
 <form
 onSubmit={handleSubmit}
-className="max-w-6xl mx-auto bg-white p-8 rounded-2xl shadow-lg border border-gray-100"
+className="max-w-6xl mx-auto bg-white p-4 sm:p-6 md:p-8 rounded-2xl shadow-lg border border-gray-100"
 >
 
-<div className="grid grid-cols-4 gap-10">
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 lg:gap-10">
 
-<div className="col-span-2">
+<div className="lg:col-span-1">
 
-<h2 className="text-xl font-semibold mb-6 text-gray-800">
+<h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6 text-gray-800">
 Passenger Details
 </h2>
 
@@ -112,7 +111,7 @@ Passenger Details
 
 <div
 key={seat.name}
-className={`mb-8 pb-6 ${
+className={`mb-6 sm:mb-8 pb-4 sm:pb-6 ${
 index !== selectedSeats.length - 1
 ? "border-b border-gray-200"
 : ""
@@ -123,14 +122,14 @@ index !== selectedSeats.length - 1
 Name <span className="text-red-500">*</span>
 </label>
 
-<div className="flex gap-3 mb-4">
+<div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-4">
 
 <select
 value={passengers[index]?.title}
 onChange={(e) =>
 handleChange(index, "title", e.target.value)
 }
-className="border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] transition"
+className="border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] transition w-full sm:w-auto"
 >
 <option>Mr</option>
 <option>Mrs</option>
@@ -144,7 +143,7 @@ value={passengers[index]?.name}
 onChange={(e) =>
 handleChange(index, "name", e.target.value)
 }
-className="flex-1 border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] transition"
+className="flex-1 border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] transition w-full"
 required
 />
 
@@ -154,7 +153,7 @@ required
 Gender <span className="text-red-500">*</span>
 </label>
 
-<div className="flex gap-6 mb-4">
+<div className="flex gap-4 sm:gap-6 mb-4">
 
 <label className="flex items-center gap-2 cursor-pointer">
 <input
@@ -164,10 +163,10 @@ checked={passengers[index]?.gender === "Male"}
 onChange={() =>
 handleChange(index, "gender", "Male")
 }
-className="accent-[#fd561e]"
+className="accent-[#fd561e] w-4 h-4"
 required
 />
-Male
+<span className="text-sm sm:text-base">Male</span>
 </label>
 
 <label className="flex items-center gap-2 cursor-pointer">
@@ -178,9 +177,9 @@ checked={passengers[index]?.gender === "Female"}
 onChange={() =>
 handleChange(index, "gender", "Female")
 }
-className="accent-[#fd561e]"
+className="accent-[#fd561e] w-4 h-4"
 />
-Female
+<span className="text-sm sm:text-base">Female</span>
 </label>
 
 </div>
@@ -200,7 +199,7 @@ className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-4 outline-none 
 required
 />
 
-<div className="text-sm">
+<div className="text-sm space-y-1">
 
 <p>
 Seat Number :
@@ -225,9 +224,9 @@ Seat Fare :
 </div>
 
 {/* CONTACT */}
-<div className="col-span-2">
+<div className="lg:col-span-1">
 
-<h2 className="text-xl font-semibold mb-6 text-gray-800">
+<h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6 text-gray-800">
 Contact Details
 </h2>
 
@@ -239,6 +238,7 @@ Address <span className="text-red-500">*</span>
 </label>
 <textarea
 placeholder="Enter your address"
+rows="3"
 className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] transition"
 required
 value={contact.address}
@@ -264,8 +264,9 @@ onChange={(e)=>handleContactChange("city",e.target.value)}
 <label className="block text-sm font-medium mb-1">
 Mobile <span className="text-red-500">*</span>
 </label>
-<div className="flex">
-<span className="border border-gray-300 rounded-l-lg px-3 py-2 bg-gray-100">
+<div className="flex flex-col sm:flex-row">
+<div className="flex w-full sm:w-auto">
+<span className="border border-gray-300 rounded-l-lg px-3 py-2 bg-gray-100 text-sm">
 +91
 </span>
 <input
@@ -278,6 +279,7 @@ pattern="[0-9]{10}"
 required
 onChange={(e)=>handleContactChange("mobile",e.target.value)}
 />
+</div>
 </div>
 </div>
 
@@ -300,42 +302,43 @@ onChange={(e)=>handleContactChange("email",e.target.value)}
 </div>
 </div>
 
-<div className="mt-8 text-center">
-<p className="text-gray-600 mb-4">
+<div className="mt-6 sm:mt-8 text-center">
+<p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
 You will receive booking-related SMS updates on the mobile number provided above.
 </p>
 
-<label className="flex items-center justify-center gap-2 mb-5 cursor-pointer">
+<label className="flex items-center justify-center gap-2 mb-4 sm:mb-5 cursor-pointer flex-wrap">
 <input
 type="checkbox"
 checked={termsAccepted}
 onChange={(e) => setTermsAccepted(e.target.checked)}
-className="accent-[#fd561e]"
+className="accent-[#fd561e] w-4 h-4"
 required
 />
-I accept the
+<span className="text-sm">I accept the</span>
 <span
   onClick={() => setShowTerms(true)}
-  className="text-[#fd561e] underline ml-0 cursor-pointer"
+  className="text-[#fd561e] underline cursor-pointer text-sm"
 >
 terms and conditions
 </span>
 </label>
 
 {error && (
-<p className="text-red-500 mb-3">{error}</p>
+<p className="text-red-500 mb-3 text-sm">{error}</p>
 )}
 
 <button
 type="submit"
-className="bg-[#fd561e] text-white px-12 py-3 rounded-xl cursor-pointer hover:bg-[#e14d1a] transition transform hover:scale-105 shadow-md"
+className="bg-[#fd561e] text-white px-8 sm:px-12 py-2.5 sm:py-3 rounded-xl cursor-pointer hover:bg-[#e14d1a] transition transform hover:scale-105 shadow-md text-sm sm:text-base w-full sm:w-auto"
 >
-Confirm
+Confirm Booking
 </button>
 
 </div>
+
 {showTerms && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center">
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
     
     {/* BACKDROP */}
     <div
@@ -344,23 +347,23 @@ Confirm
     />
 
     {/* MODAL */}
-    <div className="relative bg-white w-[90%] max-w-3xl h-[80vh] rounded-xl shadow-xl overflow-hidden">
+    <div className="relative bg-white w-full max-w-3xl h-[85vh] sm:h-[80vh] rounded-xl shadow-xl overflow-hidden">
 
       {/* HEADER */}
-      <div className="flex justify-between items-center p-4 border-b">
-        <h2 className="text-lg font-semibold text-[#fd561e]">
+      <div className="flex justify-between items-center p-3 sm:p-4 border-b">
+        <h2 className="text-base sm:text-lg font-semibold text-[#fd561e]">
           Terms & Conditions
         </h2>
         <button
           onClick={() => setShowTerms(false)}
-          className="text-gray-500 hover:text-black text-xl"
+          className="text-gray-500 hover:text-black text-xl sm:text-2xl cursor-pointer"
         >
           ✕
         </button>
       </div>
 
       {/* CONTENT (scrollable) */}
-      <div className="p-4 overflow-y-auto h-[calc(80vh-60px)] text-sm text-gray-700">
+      <div className="p-3 sm:p-4 overflow-y-auto h-[calc(85vh-60px)] sm:h-[calc(80vh-60px)] text-xs sm:text-sm text-gray-700">
 
         <p className="mb-2">
                  Welcome to <span className="text-blue-800 font-semibold">www.bobrosone.com</span> website. If you continue to browse and use this website you are agreeing to comply with and be bound by the following terms and conditions of use, which together with our privacy policy and Cancellation Policy govern M/s BOBROS Consultancy Services Private Limited's relationship with you in relation to this website <span className="text-blue-800 font-semibold">www.bobrosone.com</span>
@@ -372,11 +375,11 @@ Confirm
         <p className="mb-2">
           We are registered in India under the companies act, our company registration number is U60231AP2010PTC069485. The term 'you' refers to the user or viewer of our website.
         </p>
-        <h1 className="text-gray-800 font-semibold mb-2">
+        <h1 className="text-gray-800 font-semibold mb-2 text-sm sm:text-base">
         The use of this website is subject to the following terms of use:
         </h1>
 
-        <ul className="list-disc pl-5 space-y-2">
+        <ul className="list-disc pl-4 sm:pl-5 space-y-2">
           <li>The content on the pages of this website is for your general information and use only. It is subject to change without notice.</li>
           <li>Neither we nor any third parties provide any warranty or guarantee as to the accuracy, timeliness, performance, completeness or suitability of the information and materials found or offered on this website for any particular purpose. You acknowledge that such information and materials may contain inaccuracies or errors and we expressly exclude liability for any such inaccuracies or errors to the fullest extent permitted by law</li>
           <li>Your use of any information or materials on this website is entirely at your own risk, for which we shall not be liable. It shall be your own responsibility to ensure that any products, services or information available through this website meet your specific requirements.</li>
@@ -391,11 +394,11 @@ Confirm
           <li>Our website www.bobrosone.com uses API’s from various external third parties to provide you the information and services for travel and ticket booking, while making any ticket bookings through our website you are required to ensure that you have received all the information i.e. required for you to take an informed decision on your booking which includes but not limited to the information on cancellation charges. The terms and conditions of any external service provider whose services are booked through our website apply to you in addition to these terms and conditions.</li>
           <li className="mb-2">In case of ticket cancellations from the time less than 48 hours from the Boarding time of your travel, you are required to make cancellations either online on our website or contact the service provider / Bus Operator directly.</li>
         </ul>
-        <h1 className="text-gray-800 font-semibold mb-2">
+        <h1 className="text-gray-800 font-semibold mb-2 text-sm sm:text-base">
        BOBROS FREQUENT TRAVELER REWARD PROGRAM:
         </h1>
 
-        <ul className="list-disc pl-5 space-y-2">
+        <ul className="list-disc pl-4 sm:pl-5 space-y-2">
           <li>
             We may sometime offer Frequent Traveler Reward Points on your ticket or travel bookings with us, we call this the BOBROS Frequent Traveler Reward Program, we reserve all rights in running this program.
           </li>
@@ -418,34 +421,34 @@ Confirm
             Sometimes BOBROS may credit your eligible cancellation refund into your Frequent Traveler Reward Balance, in these cases you can use the reward balance for your future bookings or receive refund.
           </li>
         </ul>
-         <h1 className="text-gray-800 font-semibold mb-2">
+         <h1 className="text-gray-800 font-semibold mb-2 text-sm sm:text-base">
             How you can contact us:
         </h1>
-        <h2 className="text-[#fd561e] font-semibold mb-2">
+        <h2 className="text-[#fd561e] font-semibold mb-2 text-sm sm:text-base">
             By Post:
         </h2>
          <p className="mb-2">
           BOBROS Consultancy Services Private Limited, 1-232, Mulakaluru, Narasaraopet, Andhra Pradesh, India – 522601
         </p>
-        <h2 className="text-[#fd561e] font-semibold mb-2">
+        <h2 className="text-[#fd561e] font-semibold mb-2 text-sm sm:text-base">
             By Email:
         </h2>
-        <p className="mb-2 text-blue-800 font-semibold">
+        <p className="mb-2 text-blue-800 font-semibold text-sm">
           customersupport@bobrosone.com
         </p>
-         <h2 className="text-[#fd561e] font-semibold mb-2">
+         <h2 className="text-[#fd561e] font-semibold mb-2 text-sm sm:text-base">
             By Telephone:
         </h2>
-        <p className="mb-2 text-gray-800 font-semibold">
+        <p className="mb-2 text-gray-800 font-semibold text-sm">
          91-9133 133 456
         </p>
-        <p className="mb-2 ">
+        <p className="mb-2 text-xs sm:text-sm">
          (Between 9:30AM to 7:30PM from Monday to Saturday except Holidays)
         </p>
-        <p className="mb-2 ">
+        <p className="mb-2 text-xs sm:text-sm">
          Your use of this website and any dispute arising out of such use of the website is subject to the laws of India or other regulatory authorities of India Terms & Conditions BOBROS Consultancy Services Pvt. Ltd., and comes under the jurisdiction of Narasaraopet, Palanadu District in Andhra Pradesh, India - 522601.
         </p>
-         <p className="mb-2 text-[#fd561e] ">
+         <p className="mb-2 text-xs sm:text-sm text-[#fd561e]">
         BOBROS Consultancy Services Private Limited (Erstwhile Humming Wheels Private Limited) is registered in India under the companies act, 1956 (CIN: U60231AP2010PTC069485) and having its Registered Office at 1-232, Mulakaluru, Narasaraopet, Andhra Pradesh – 522 601, India.
         </p>
 
