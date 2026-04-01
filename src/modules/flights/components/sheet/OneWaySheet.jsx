@@ -76,56 +76,64 @@ const OneWaySheet = ({ isOpen, onClose, flight, passengerCounts }) => {
   }, [flight]);
 
   // ============ NEW: Handle fare selection with pricing API ============
-  const handleSelectFare = async (fare, e) => {
-    e.stopPropagation();
+  // In OneWaySheet.jsx - Update the handleSelectFare function
+
+const handleSelectFare = async (fare, e) => {
+  e.stopPropagation();
+  
+  // Prevent multiple clicks
+  if (loadingFareId) return;
+  
+  setLoadingFareId(fare.id);
+  
+  try {
+    // Show loading toast
+    const loadingToast = toast.loading('Getting fare details...');
     
-    // Prevent multiple clicks
-    if (loadingFareId) return;
+    // Build pricing request
+    const pricingRequest = buildOneWayPricingRequest(flight, fare, passengerCounts);
     
-    setLoadingFareId(fare.id);
+    // Call pricing API
+    const result = await getFlightPricing(pricingRequest);
     
-    try {
-      // Show loading toast
-      const loadingToast = toast.loading('Getting fare details...');
+    // Dismiss loading toast
+    toast.dismiss(loadingToast);
+    
+    if (result.success) {
+      // ✅ Store both transformed data and raw response
+      const transformedData = result.data;      // For UI display
+      const rawResponse = result.rawResponse;   // Raw SOAP response for booking
       
-      // Build pricing request
-      const pricingRequest = buildOneWayPricingRequest(flight, fare, passengerCounts);
+      // Success toast
+      toast.success('Fare confirmed! Proceed with booking.');
       
-      // Call pricing API
-      const result = await getFlightPricing(pricingRequest);
+      // Close the sheet
+      onClose();
       
-      // Dismiss loading toast
-      toast.dismiss(loadingToast);
-      
-      if (result.success) {
-        // Success toast
-        toast.success('Fare confirmed! Proceed with booking.');
-        
-        // Close the sheet
-        onClose();
-        
-        // Navigate to booking review with all data
-        navigate('/booking/review', { 
-          state: { 
-            pricingResult: result.data,
-            selectedFare: fare,
-            flight: flight,
-            passengerCounts: passengerCounts,
-            tripType: 'one-way'
-          } 
-        });
-      } else {
-        // Error toast
-        toast.error(result.error || 'Failed to get pricing. Please try again.');
-        console.error('Pricing failed:', result.error);
-      }
-    } catch (error) {
-      toast.error('An unexpected error occurred. Please try again.');
-      console.error('Fare selection error:', error);
-    } finally {
-      setLoadingFareId(null);
+      // ✅ Navigate to booking review with BOTH transformed data and raw response
+      navigate('/flights/booking/review', { 
+        state: { 
+          pricingResult: transformedData,           // Transformed data for UI display
+          rawPricingResponse: rawResponse,          // Raw response for building booking request
+          selectedFare: fare,                      // Selected fare option
+          flight: flight,                          // Flight details
+          passengerCounts: passengerCounts,        // Passenger counts
+          tripType: 'one-way',                     // Trip type
+          totalPrice: fare.totalPrice              // Total price
+        } 
+      });
+    } else {
+      // Error toast
+      toast.error(result.error || 'Failed to get pricing. Please try again.');
+      console.error('Pricing failed:', result.error);
     }
-  };
+  } catch (error) {
+    toast.error('An unexpected error occurred. Please try again.');
+    console.error('Fare selection error:', error);
+  } finally {
+    setLoadingFareId(null);
+  }
+};
 
   // Check if it's a connecting flight
   const isConnecting = flight.segments?.length > 1 || flight.stops > 0;

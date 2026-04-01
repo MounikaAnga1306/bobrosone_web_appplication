@@ -59,6 +59,28 @@ const formatDate = (isoString) => {
   }
 };
 
+// Helper function to safely calculate taxes
+const calculateTotalTaxes = (fare) => {
+  if (!fare?.taxes) return 0;
+  
+  // If taxes is an array
+  if (Array.isArray(fare.taxes)) {
+    return fare.taxes.reduce((sum, tax) => sum + (tax.amount || 0), 0);
+  }
+  
+  // If taxes is a single tax object
+  if (typeof fare.taxes === 'object') {
+    return fare.taxes.amount || 0;
+  }
+  
+  // If taxes is a number
+  if (typeof fare.taxes === 'number') {
+    return fare.taxes;
+  }
+  
+  return 0;
+};
+
 // Brand color utility
 const brandColor = '#FD561E';
 
@@ -139,24 +161,30 @@ const OneWayFlightCard = ({
       toast.dismiss(loadingToast);
       
       if (result.success) {
+        // ✅ Store both transformed data and raw response
+        const transformedData = result.data;      // For UI display
+        const rawResponse = result.rawResponse;   // Raw SOAP response for booking
+        
         // Success toast
         toast.success('Fare confirmed! Proceed with booking.');
         
-        // Navigate to booking review with all data
+        // ✅ Navigate to booking review with BOTH transformed data and raw response
         navigate('/flights/booking/review', { 
           state: { 
-            pricingResult: result.data,
-            selectedFare: fare,
-            flight: flight,
-            passengerCounts: passengerCounts,
-            tripType: 'one-way'
+            pricingResult: transformedData,           // Transformed data for UI display
+            rawPricingResponse: rawResponse,          // Raw response for building booking request
+            selectedFare: fare,                      // Selected fare option
+            flight: flight,                          // Flight details
+            passengerCounts: passengerCounts,        // Passenger counts
+            tripType: 'one-way',                     // Trip type
+            totalPrice: fare.totalPrice              // Total price
           } 
         });
       } else {
-  // Show specific error message from the API
-  toast.error(result.userMessage || result.error || 'Failed to get pricing. Please try again.');
-  console.error('Pricing failed:', result.error);
-}
+        // Show specific error message from the API
+        toast.error(result.userMessage || result.error || 'Failed to get pricing. Please try again.');
+        console.error('Pricing failed:', result.error);
+      }
     } catch (error) {
       toast.error('An unexpected error occurred. Please try again.');
       console.error('Fare selection error:', error);
@@ -411,7 +439,7 @@ const OneWayFlightCard = ({
                             <div className="flex justify-between text-sm">
                               <span className="text-gray-600">Taxes & Fees:</span>
                               <span className="font-medium">
-                                ₹{fare.taxes?.reduce((sum, t) => sum + (t.amount || 0), 0).toLocaleString() || Math.round(fare.totalPrice * 0.15).toLocaleString()}
+                                ₹{(calculateTotalTaxes(fare) || Math.round(fare.totalPrice * 0.15)).toLocaleString()}
                               </span>
                             </div>
                             <div className="flex justify-between font-bold text-[#FD561E] pt-2 border-t mt-2">
@@ -730,7 +758,7 @@ const FareComparisonModal = ({ flight, fares, onClose, onSelect }) => {
                   </td>
                 ))}
               </tr>
-              <tr>
+              <tr className="border-b">
                 <td className="p-4 font-medium text-gray-700">Cancellation Fee</td>
                 {fares.map((fare, idx) => (
                   <td key={idx} className="p-4 text-center border-l">
