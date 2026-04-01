@@ -1,6 +1,6 @@
 export default function Advertisement() {
   return (
-    <div className="w-full flex justify-center my-6 sm:my-8 md:my-10 px-3 sm:px-4 relative z-0">
+    <div className="w-full h-[150px] flex justify-center -mt-6 sm:mt-8 md:-mt-18  px-3 sm:px-4  relative z-0">
       <div className="relative w-full max-w-6xl rounded-xl sm:rounded-2xl overflow-hidden shadow-lg">
         {/* Background Image */}
         <img
@@ -15,7 +15,7 @@ export default function Advertisement() {
         {/* Content */}
         <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-3 sm:gap-4 md:gap-6 px-4 sm:px-6 md:px-8 py-4 sm:py-5 md:py-6 text-white">
           <div className="text-center md:text-left flex-1">
-            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1 text-white/90">
+            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider mt-5 text-white/90">
               New User Offer
             </p>
 
@@ -29,7 +29,7 @@ export default function Advertisement() {
 
             <p className="text-[11px] sm:text-xs md:text-sm mt-1 opacity-90">
               Use promocode{" "}
-              <span className="font-bold text-[#FD561E] bg-white/20 px-1.5 py-0.5 rounded inline-block text-[10px] sm:text-xs">
+              <span className="font-bold text-[#FD561E]  px-1.5 py-0.5 rounded inline-block text-[10px] sm:text-xs">
                 JOINBOBROS
               </span>{" "}
               at checkout
