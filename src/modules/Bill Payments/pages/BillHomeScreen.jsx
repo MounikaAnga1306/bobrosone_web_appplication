@@ -1,4 +1,4 @@
-import Services from "../../bus/components/Services";
+import Services from "../../bus/components/OurServices";
 import WhyBobros from "../../bus/components/WhyBobros";
 import AppDownload from "../../bus/components/AppDownload";
 import PopularBusRoutes from "../../bus/components/PopularBusRoutes";

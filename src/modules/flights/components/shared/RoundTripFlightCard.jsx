@@ -1,27 +1,51 @@
 // src/modules/flights/components/flight/RoundTripFlightCard.jsx
 
 import React, { useState, useMemo } from 'react';
-import BaseFlightCard from './BaseFlightCard';
 import { 
-  FaChevronDown, 
-  FaChevronUp, 
-  FaSuitcase, 
-  FaChair, 
-  FaTag,
-  FaClock,
   FaPlane,
-  FaArrowLeft,
-  FaStar,
-  FaCrown,
-  FaGem
+  FaCheckCircle,
+  FaClock,
+  FaCalendarAlt,
+  FaMapMarkerAlt,
+  FaRegClock
 } from 'react-icons/fa';
 
-// Helper functions
+// ============================================================================
+// AIRLINE MAPPING
+// ============================================================================
+const AIRLINE_MAPPING = {
+  '6E': { name: 'IndiGo', code: '6E', color: '#0D47A1', logo: '/airlines/6e.png' },
+  'AI': { name: 'Air India', code: 'AI', color: '#B71C1C', logo: '/airlines/ai.png' },
+  'SG': { name: 'SpiceJet', code: 'SG', color: '#D32F2F', logo: '/airlines/sg.png' },
+  'UK': { name: 'Vistara', code: 'UK', color: '#5D4037', logo: '/airlines/uk.png' },
+  'I5': { name: 'AirAsia India', code: 'I5', color: '#E53935', logo: '/airlines/i5.png' },
+  'G8': { name: 'Go First', code: 'G8', color: '#1976D2', logo: '/airlines/g8.png' },
+  'IX': { name: 'Air India Express', code: 'IX', color: '#B71C1C', logo: '/airlines/ix.png' },
+  'S2': { name: 'JetLite', code: 'S2', color: '#FF9800', logo: '/airlines/s2.png' },
+  'EK': { name: 'Emirates', code: 'EK', color: '#D4AF37', logo: '/airlines/ek.png' },
+  'QR': { name: 'Qatar Airways', code: 'QR', color: '#5D4037', logo: '/airlines/qr.png' },
+  'SQ': { name: 'Singapore Airlines', code: 'SQ', color: '#0D47A1', logo: '/airlines/sq.png' },
+  'BA': { name: 'British Airways', code: 'BA', color: '#0D47A1', logo: '/airlines/ba.png' },
+  'LH': { name: 'Lufthansa', code: 'LH', color: '#0D47A1', logo: '/airlines/lh.png' },
+  'AA': { name: 'American Airlines', code: 'AA', color: '#B71C1C', logo: '/airlines/aa.png' },
+};
+
+const getAirlineInfo = (code) => {
+  if (!code) return { name: 'Unknown', code: '', color: '#757575', logo: null };
+  if (AIRLINE_MAPPING[code]) return AIRLINE_MAPPING[code];
+  const upperCode = code.toUpperCase();
+  if (AIRLINE_MAPPING[upperCode]) return AIRLINE_MAPPING[upperCode];
+  return { name: code, code: code, color: '#6B7280', logo: null };
+};
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
 const formatTime = (isoString) => {
   if (!isoString) return '--:--';
   try {
     const date = new Date(isoString);
-    if (isNaN(date.getTime())) return '--:--';
     return date.toLocaleTimeString('en-IN', { 
       hour: '2-digit', 
       minute: '2-digit',
@@ -43,218 +67,235 @@ const formatDate = (isoString) => {
   if (!isoString) return '';
   try {
     const date = new Date(isoString);
-    if (isNaN(date.getTime())) return '';
     return date.toLocaleDateString('en-IN', {
       day: 'numeric',
-      month: 'short',
-      year: 'numeric'
+      month: 'short'
     });
   } catch {
     return '';
   }
 };
 
-// Brand color
-const brandColor = '#FD561E';
-
-// Get badge color based on fare type
-const getFareBadgeStyle = (fareName) => {
-  const name = fareName?.toLowerCase() || '';
-  if (name.includes('flex')) return 'bg-blue-50 text-blue-700 border-blue-200';
-  if (name.includes('super')) return 'bg-purple-50 text-purple-700 border-purple-200';
-  if (name.includes('plus') || name.includes('stretch')) return 'bg-green-50 text-green-700 border-green-200';
-  if (name.includes('business')) return 'bg-amber-50 text-amber-700 border-amber-200';
-  return 'bg-gray-50 text-gray-700 border-gray-200';
+const parsePrice = (price) => {
+  if (typeof price === 'number') return price;
+  if (!price) return 0;
+  const match = price.toString().match(/(\d+\.?\d*)/);
+  return match ? parseFloat(match[1]) : 0;
 };
 
-// Get fare icon based on brand
-const getFareIcon = (brandName) => {
-  const name = brandName?.toLowerCase() || '';
-  if (name.includes('business')) return <FaCrown className="text-[#FD561E]" size={14} />;
-  if (name.includes('super')) return <FaStar className="text-[#FD561E]" size={14} />;
-  return <FaTag className="text-[#FD561E]" size={12} />;
+// ============================================================================
+// AIRLINE LOGO COMPONENT
+// ============================================================================
+const AirlineLogo = ({ code, name }) => {
+  const info = getAirlineInfo(code);
+  const [imageError, setImageError] = useState(false);
+  
+  return (
+    <div className="relative">
+      {!imageError && info.logo ? (
+        <img 
+          src={info.logo} 
+          alt={name}
+          className="w-12 h-12 object-contain rounded-xl border border-gray-100 bg-white shadow-sm"
+          onError={() => setImageError(true)}
+        />
+      ) : (
+        <div 
+          className="w-12 h-12 rounded-xl flex items-center justify-center text-white font-semibold text-base shadow-sm"
+          style={{ backgroundColor: info.color }}
+        >
+          {info.code || code?.substring(0, 2) || name?.substring(0, 2)}
+        </div>
+      )}
+    </div>
+  );
 };
+
+// ============================================================================
+// STOP BADGE COMPONENT
+// ============================================================================
+const StopBadge = ({ stops }) => {
+  if (stops === 0) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-medium">
+        <FaPlane size={10} className="rotate-45" />
+        Direct
+      </span>
+    );
+  }
+  if (stops === 1) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 text-xs font-medium">
+        <FaMapMarkerAlt size={10} />
+        1 Stop
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-medium">
+      <FaMapMarkerAlt size={10} />
+      {stops} Stops
+    </span>
+  );
+};
+
+// ============================================================================
+// MAIN COMPONENT
+// ============================================================================
 
 const RoundTripFlightCard = ({ 
   flight, 
   isSelected, 
-  onSelect, 
-  onViewDetails,
+  onSelect,
   legIndex 
 }) => {
-  const [showFareSummary, setShowFareSummary] = useState(false);
-  
-  // Ensure we have valid time
-  const flightWithValidTime = {
-    ...flight,
-    departureTime: flight.departureTime || flight.departureISO || flight.departure,
-    arrivalTime: flight.arrivalTime || flight.arrivalISO || flight.arrival,
-    departureISO: flight.departureISO || flight.departureTime || flight.departure,
-    arrivalISO: flight.arrivalISO || flight.arrivalTime || flight.arrival,
-  };
-
-  // Get unique fares
-  const uniqueFares = useMemo(() => {
-    if (!flight.fares || flight.fares.length === 0) return [];
+  const flightWithValidData = useMemo(() => {
+    if (!flight) return null;
     
-    const fareMap = new Map();
-    flight.fares.forEach(fare => {
-      const key = `${fare.brand?.name}-${fare.totalPrice}-${fare.baggage?.weight}`;
-      if (!fareMap.has(key)) {
-        fareMap.set(key, fare);
+    let airlineCode = null;
+    let airlineName = null;
+    
+    if (flight.airlineCode) {
+      airlineCode = flight.airlineCode;
+      airlineName = flight.airline;
+    } else if (flight.airline) {
+      if (AIRLINE_MAPPING[flight.airline]) {
+        airlineCode = flight.airline;
+        airlineName = AIRLINE_MAPPING[flight.airline].name;
+      } else {
+        airlineName = flight.airline;
       }
-    });
+    } else if (flight.flightNumber) {
+      const match = flight.flightNumber.match(/^([A-Z0-9]{2})-?(\d+)/);
+      if (match) airlineCode = match[1];
+    }
     
-    return Array.from(fareMap.values()).sort((a, b) => a.totalPrice - b.totalPrice);
-  }, [flight.fares]);
+    const airlineInfo = getAirlineInfo(airlineCode);
+    const finalAirlineName = airlineName || airlineInfo.name;
+    
+    return {
+      ...flight,
+      airline: finalAirlineName,
+      airlineCode: airlineInfo.code,
+      departureTime: flight.departureTime || flight.departureISO,
+      arrivalTime: flight.arrivalTime || flight.arrivalISO,
+    };
+  }, [flight]);
 
-  const lowestFare = uniqueFares[0];
-  const hasMultipleFares = uniqueFares.length > 1;
+  if (!flightWithValidData) return null;
 
-  const handleSelect = (e) => {
-    e.stopPropagation();
-    if (onSelect) {
-      onSelect(flightWithValidTime);
-    }
-  };
+  const handleSelect = () => onSelect?.(flightWithValidData);
 
-  const handleViewDetails = (e) => {
-    e.stopPropagation();
-    if (onViewDetails) {
-      onViewDetails(flightWithValidTime);
-    }
-  };
-
-  const toggleFareSummary = (e) => {
-    e.stopPropagation();
-    setShowFareSummary(!showFareSummary);
-  };
+  const lowestPrice = flightWithValidData.lowestPrice || flightWithValidData.price || 0;
+  const stops = flightWithValidData.stops || 0;
+  const duration = flightWithValidData.duration || 0;
+  
+  const legColor = legIndex === 0 ? 'blue' : 'emerald';
+  const selectedStyles = isSelected 
+    ? `border-${legColor}-500 ring-2 ring-${legColor}-200 ring-offset-2`
+    : 'border-gray-200 hover:border-gray-300 hover:shadow-lg';
 
   return (
-    <div className="relative mb-4">
-      {/* Radio Button */}
-      <div className="absolute left-0 top-1/2 -translate-y-1/2 z-10">
-        <div 
-          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center cursor-pointer transition-all ${
-            isSelected 
-              ? 'border-[#FD561E]' 
-              : 'border-gray-300 hover:border-[#FD561E]'
-          }`}
-          onClick={handleSelect}
-          role="radio"
-          aria-checked={isSelected}
-        >
-          {isSelected && (
-            <div className="w-3 h-3 rounded-full bg-[#FD561E]"></div>
-          )}
-        </div>
-      </div>
-      
-      {/* Main Card */}
-      <div className="pl-8">
-        {/* Leg Indicator */}
-        <div className="mb-2">
-          <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium
-            ${legIndex === 0 ? 'bg-blue-50 text-blue-700' : 'bg-green-50 text-green-700'}`}>
-            {legIndex === 0 ? (
-              <>
-                <FaPlane className="rotate-45" size={10} />
-                Outbound
-              </>
-            ) : (
-              <>
-                <FaArrowLeft className="rotate-45" size={10} />
-                Return
-              </>
-            )}
-          </span>
-        </div>
-
-        {/* Base Flight Card */}
-        <div onClick={handleSelect}>
-          <BaseFlightCard
-            flight={flightWithValidTime}
-            isSelected={isSelected}
-            onViewDetails={handleViewDetails}
-            type="round-trip"
-            legIndex={legIndex}
-            showViewDetails={false}
-          />
-        </div>
-
-        {/* Fare Summary Section */}
-        <div className="mt-2">
-          {/* Price Summary Bar */}
-          <div 
-            onClick={toggleFareSummary}
-            className="flex items-center justify-between p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors border border-gray-200"
-          >
-            <div className="flex items-center gap-2">
-              <FaTag className="text-[#FD561E]" />
-              <span className="font-medium text-gray-700">
-                {hasMultipleFares ? `${uniqueFares.length} fares available` : 'Fare details'}
-              </span>
+    <div className="relative">
+      {/* Card */}
+      <div 
+        onClick={handleSelect}
+        className={`
+          bg-white rounded-2xl border-2 transition-all duration-300 cursor-pointer
+          shadow-sm hover:shadow-xl ${selectedStyles}
+        `}
+      >
+        {/* Main Content */}
+        <div className="p-5">
+          {/* Header Section */}
+          <div className="flex items-start justify-between mb-5">
+            <div className="flex items-center gap-4">
+              {/* Radio Button */}
+              <div className={`
+                w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all
+                ${isSelected 
+                  ? 'border-[#FD561E] bg-[#FD561E] shadow-sm' 
+                  : 'border-gray-300 bg-white group-hover:border-[#FD561E]'
+                }
+              `}>
+                {isSelected && <FaCheckCircle className="text-white" size={12} />}
+              </div>
+              
+              {/* Airline Logo & Info */}
+              <AirlineLogo code={flightWithValidData.airlineCode} name={flightWithValidData.airline} />
+              <div>
+                <h3 className="font-semibold text-gray-900 text-base">{flightWithValidData.airline}</h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-sm font-mono text-gray-600">{flightWithValidData.flightNumber}</span>
+                  <StopBadge stops={stops} />
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              {lowestFare && (
-                <span className="text-sm font-medium text-[#FD561E]">
-                  ₹{lowestFare.totalPrice?.toLocaleString()}+
-                </span>
-              )}
-              {showFareSummary ? <FaChevronUp className="text-gray-400" /> : <FaChevronDown className="text-gray-400" />}
+            
+            {/* Price */}
+            <div className="text-right">
+              <div className="text-xs text-gray-400 uppercase tracking-wide">From</div>
+              <div className="text-2xl font-bold text-[#FD561E]">
+                ₹{parsePrice(lowestPrice).toLocaleString('en-IN')}
+              </div>
             </div>
           </div>
 
-          {/* Expanded Fare Options */}
-          {showFareSummary && (
-            <div className="mt-2 space-y-2 p-3 bg-white border border-gray-200 rounded-xl">
-              {uniqueFares.map((fare, index) => (
-                <div 
-                  key={fare.id || index}
-                  className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${getFareBadgeStyle(fare.brand?.name)}`}>
-                      {getFareIcon(fare.brand?.name)}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-gray-900">{fare.brand?.name || 'Economy'}</span>
-                        {index === 0 && (
-                          <span className="text-[10px] bg-[#FD561E] text-white px-2 py-0.5 rounded-full">
-                            Best
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                        <span className="flex items-center gap-1">
-                          <FaSuitcase size={10} className="text-[#FD561E]" />
-                          {fare.baggage?.weight || 15}{fare.baggage?.unit || 'kg'}
-                        </span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1">
-                          <FaChair size={10} className="text-[#FD561E]" />
-                          {fare.cabinClass || 'Economy'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-lg font-bold text-[#FD561E]">
-                      ₹{fare.totalPrice?.toLocaleString()}
+          {/* Flight Route Section */}
+          <div className="relative py-4">
+            <div className="flex items-center justify-between">
+              {/* Departure */}
+              <div className="text-center min-w-[100px]">
+                <div className="text-2xl font-semibold text-gray-900">{formatTime(flightWithValidData.departureTime)}</div>
+                <div className="text-sm font-medium text-gray-700 mt-1">{flightWithValidData.origin}</div>
+                <div className="text-xs text-gray-400 mt-0.5 flex items-center justify-center gap-1">
+                  <FaCalendarAlt size={10} />
+                  {formatDate(flightWithValidData.departureTime)}
+                </div>
+              </div>
+              
+              {/* Journey Visual */}
+              <div className="flex-1 mx-8">
+                <div className="relative">
+                  {/* Track Line */}
+                  <div className="absolute top-1/2 left-0 right-0 h-px bg-gray-200 -translate-y-1/2"></div>
+                  
+                  {/* Animated Track (when selected) */}
+                  {isSelected && (
+                    <div className="absolute top-1/2 left-0 h-px bg-gradient-to-r from-[#FD561E] to-[#FD561E]/30 -translate-y-1/2 animate-pulse" style={{ width: '50%' }}></div>
+                  )}
+                  
+                  {/* Duration Badge */}
+                  <div className="relative flex justify-center">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-50 rounded-full border border-gray-200 shadow-sm">
+                      <FaRegClock size={12} className="text-gray-400" />
+                      <span className="text-sm font-medium text-gray-700">{formatDuration(duration)}</span>
                     </div>
                   </div>
                 </div>
-              ))}
+              </div>
               
-              <button
-                onClick={handleViewDetails}
-                className="w-full mt-2 py-2.5 bg-[#FD561E] text-white rounded-lg font-medium hover:bg-[#e04e1b] transition-colors"
-              >
-                View All Fare Details
-              </button>
+              {/* Arrival */}
+              <div className="text-center min-w-[100px]">
+                <div className="text-2xl font-semibold text-gray-900">{formatTime(flightWithValidData.arrivalTime)}</div>
+                <div className="text-sm font-medium text-gray-700 mt-1">{flightWithValidData.destination}</div>
+                <div className="text-xs text-gray-400 mt-0.5 flex items-center justify-center gap-1">
+                  <FaCalendarAlt size={10} />
+                  {formatDate(flightWithValidData.arrivalTime)}
+                </div>
+              </div>
             </div>
-          )}
+          </div>
+        </div>
+
+        {/* Subtle Divider with Airline Brand Color */}
+        <div className={`h-0.5 bg-gradient-to-r from-${legColor}-50 via-${legColor}-200 to-${legColor}-50 opacity-50`}></div>
+        
+        {/* Footer Hint */}
+        <div className="px-5 py-3 bg-gray-50/30">
+          <p className="text-xs text-gray-400 text-center">
+            {isSelected ? '✓ Selected' : 'Click to select this flight'}
+          </p>
         </div>
       </div>
     </div>

@@ -23,7 +23,7 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
     try {
       setLoading(true);
       const res = await axios.get(`/printTicket?tin=${tin.trim()}`);
-      console.log("Print Ticket Data:", res.data);
+      console.log("Print Ticket Full Response:", JSON.stringify(res.data, null, 2));
 
       if (!res.data?.success) {
         setError("Ticket not found. Please check the Ticket ID.");
@@ -41,56 +41,17 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
   };
 
   const openPrintWindow = (d) => {
-    // ── Parse all fields from API response ──
-    const sourceCity       = d.sourceCity        || d.pickupLocation   || "—";
-    const destCity         = d.destinationCity   || d.dropLocation     || "—";
-    const pnr              = d.pnr               || d.tin              || tin;
-    const bookingId        = d.tin               || d.pnr              || tin;
-    const doj              = d.doj               || "—";
-    const travels          = d.travels           || "—";
-    const busType          = d.busType           || "—";
-    const status           = d.status            || "CONFIRMED";
-    const operatorContact  = d.pickUpContactNo   || "—";
-
-    // Passenger
-    const passenger        = d.inventoryItems?.passenger || {};
-    const pname            = passenger.name       || "—";
-    const pmobile          = passenger.mobile     || "—";
-    const pgender          = passenger.gender     || "—";
-    const page             = passenger.age        || "—";
-    const seatName         = d.inventoryItems?.seatName || "—";
-
-    // Fare
-    const baseFare         = d.inventoryItems?.baseFare         || "0";
-    const serviceTax       = d.inventoryItems?.serviceTax       || "0";
-    const totalFare        = d.inventoryItems?.grandTotalFare   || d.inventoryItems?.fare || "0";
-
-    // Boarding
-    const boardingPoint    = d.pickupLocation    || "—";
-    const boardingAddress  = d.pickUpLocationAddress || "—";
-    const boardingLandmark = d.pickupLocationLandmark || "—";
-    const boardingContact  = d.pickUpContactNo   || "—";
-
-    // Drop
-    const dropPoint        = d.dropLocation      || "—";
-    const dropAddress      = d.dropLocationAddress || "—";
-
-    // Times — stored as minutes from midnight (e.g. 1125 = 18:45)
+    // ── Helper: convert minutes from midnight to HH:MM ──
     const toTime = (mins) => {
       if (!mins) return "—";
       const m = parseInt(mins);
-      if (isNaN(m)) return mins;
+      if (isNaN(m)) return String(mins);
       const h = Math.floor(m / 60);
       const min = m % 60;
       return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
     };
 
-    const departureTime    = toTime(d.pickupTime || d.primeDepartureTime || d.firstBoardingPointTime);
-    const dropTime         = toTime(d.dropTime);
-    const reportingTime    = toTime(d.firstBoardingPointTime);
-    const serviceStartTime = d.serviceStartTime || "—";
-
-    // Dates
+    // ── Helper: format date ──
     const formatDate = (dt) => {
       if (!dt || dt === "—") return "—";
       try {
@@ -100,18 +61,132 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
       } catch { return dt; }
     };
 
-    const dojFormatted     = formatDate(doj);
-    const dateOfIssue      = formatDate(d.dateOfIssue);
-    const printTimestamp   = new Date().toLocaleString("en-IN", {
+    // ── Basic trip fields ──
+    const sourceCity      = d.sourceCity        || d.pickupLocation      || d.from        || "—";
+    const destCity        = d.destinationCity   || d.dropLocation        || d.to          || "—";
+    const pnr             = d.pnr               || d.tin                 || tin;
+    const bookingId       = d.tin               || d.pnr                 || tin;
+    const doj             = d.doj               || "—";
+    const travels         = d.travels           || d.operatorName        || "—";
+    const busType         = d.busType           || d.bus_type            || "—";
+    const status          = d.status            || "CONFIRMED";
+    const operatorContact = d.pickUpContactNo   || d.operatorContact     || "—";
+
+    // ── Passenger parsing — handles BOTH single object AND array ──
+    // Priority: inventoryItems (array or object), then passengers array, then top-level
+    let passengers = [];
+
+    const inv = d.inventoryItems;
+
+    if (Array.isArray(inv)) {
+      // inventoryItems is an array of passengers
+      passengers = inv.map((item) => ({
+        name:     item.passenger?.name     || item.name     || item.pname  || "—",
+        mobile:   item.passenger?.mobile   || item.mobile   || item.pmob   || "—",
+        gender:   item.passenger?.gender   || item.gender   || item.pgender|| "—",
+        age:      item.passenger?.age      || item.age      || item.page   || "—",
+        seatName: item.seatName            || item.seat     || item.seatno || "—",
+        baseFare: item.baseFare            || item.base_fare|| "0",
+        serviceTax: item.serviceTax        || item.service_tax || "0",
+        totalFare: item.grandTotalFare     || item.totalFare|| item.fare   || "0",
+      }));
+    } else if (inv && typeof inv === "object") {
+      // inventoryItems is a single object
+      // Check if passenger inside is an array
+      if (Array.isArray(inv.passenger)) {
+        passengers = inv.passenger.map((p, i) => ({
+          name:     p.name     || p.pname  || "—",
+          mobile:   p.mobile   || p.pmob   || "—",
+          gender:   p.gender   || p.pgender|| "—",
+          age:      p.age      || p.page   || "—",
+          seatName: Array.isArray(inv.seatName) ? (inv.seatName[i] || "—") : (inv.seatName || "—"),
+          baseFare: inv.baseFare     || inv.base_fare    || "0",
+          serviceTax: inv.serviceTax || inv.service_tax  || "0",
+          totalFare:  inv.grandTotalFare || inv.totalFare || inv.fare || "0",
+        }));
+      } else {
+        // Single passenger object
+        const p = inv.passenger || {};
+        passengers = [{
+          name:     p.name     || inv.pname  || d.pname  || "—",
+          mobile:   p.mobile   || inv.pmob   || d.pmob   || "—",
+          gender:   p.gender   || inv.pgender|| d.pgender|| "—",
+          age:      p.age      || inv.page   || d.page   || "—",
+          seatName: inv.seatName || inv.seat || d.seatName || "—",
+          baseFare:   inv.baseFare    || inv.base_fare   || "0",
+          serviceTax: inv.serviceTax  || inv.service_tax || "0",
+          totalFare:  inv.grandTotalFare || inv.totalFare || inv.fare || "0",
+        }];
+      }
+    } else if (Array.isArray(d.passengers)) {
+      // Top-level passengers array
+      passengers = d.passengers.map((p) => ({
+        name:     p.name     || p.pname   || "—",
+        mobile:   p.mobile   || p.pmob    || "—",
+        gender:   p.gender   || p.pgender || "—",
+        age:      p.age      || p.page    || "—",
+        seatName: p.seatName || p.seat    || p.seatno || "—",
+        baseFare:   p.baseFare    || d.baseFare    || "0",
+        serviceTax: p.serviceTax  || d.serviceTax  || "0",
+        totalFare:  p.grandTotalFare || p.totalFare || p.fare || d.totalFare || "0",
+      }));
+    } else {
+      // Fallback: top-level single passenger fields
+      passengers = [{
+        name:     d.pname    || d.passengerName  || "—",
+        mobile:   d.pmob     || d.mobile         || "—",
+        gender:   d.pgender  || d.gender         || "—",
+        age:      d.page     || d.age            || "—",
+        seatName: d.seatName || d.seat           || "—",
+        baseFare:   d.baseFare    || "0",
+        serviceTax: d.serviceTax  || "0",
+        totalFare:  d.grandTotalFare || d.totalFare || d.fare || "0",
+      }];
+    }
+
+    // ── Aggregate fare across all passengers ──
+    const totalBaseFare   = passengers.reduce((sum, p) => sum + parseFloat(p.baseFare   || 0), 0);
+    const totalServiceTax = passengers.reduce((sum, p) => sum + parseFloat(p.serviceTax || 0), 0);
+    const totalGrandFare  = passengers.reduce((sum, p) => sum + parseFloat(p.totalFare  || 0), 0);
+
+    // ── Boarding ──
+    const boardingPoint    = d.pickupLocation         || d.boardingPoint    || "—";
+    const boardingAddress  = d.pickUpLocationAddress  || d.boardingAddress  || "—";
+    const boardingLandmark = d.pickupLocationLandmark || d.boardingLandmark || "—";
+    const boardingContact  = d.pickUpContactNo        || d.boardingContact  || "—";
+
+    // ── Drop ──
+    const dropPoint        = d.dropLocation           || d.dropPoint        || destCity  || "—";
+    const dropAddress      = d.dropLocationAddress    || d.dropAddress      || "—";
+    const dropLandmark     = d.dropLocationLandmark   || d.dropLandmark     || "—";
+
+    // ── Times ──
+    const departureTime  = toTime(d.pickupTime             || d.primeDepartureTime     || d.firstBoardingPointTime);
+    const dropTime       = toTime(d.dropTime               || d.arrivalTime);
+    const reportingTime  = toTime(d.firstBoardingPointTime || d.reportingTime          || d.pickupTime);
+
+    // ── Dates ──
+    const dojFormatted   = formatDate(doj);
+    const printTimestamp = new Date().toLocaleString("en-IN", {
       day: "2-digit", month: "2-digit", year: "numeric",
       hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
     }).replace(",", "");
 
-    // Status color
-    const statusColor = status === "CANCELLED" ? "#dc2626" : status === "CONFIRMED" ? "#16a34a" : "#d97706";
+    const statusColor = status === "CANCELLED" ? "#dc2626" : status === "CONFIRMED" || status === "BOOKED" ? "#16a34a" : "#d97706";
+    const logoUrl     = `${window.location.origin}/assets/Bobros_logo.png`;
 
-    // Logo absolute URL
-    const logoUrl = `${window.location.origin}/assets/Bobros_logo.png`;
+    // ── Build passenger rows for table ──
+    const passengerRows = passengers.map(p => `
+      <tr>
+        <td>${p.name}</td>
+        <td>${p.gender}</td>
+        <td>${p.age}</td>
+        <td class="orange">${p.seatName}</td>
+        <td>${busType}</td>
+        <td class="status">${status}</td>
+        <td class="orange">${pnr}</td>
+      </tr>
+    `).join("");
 
     const printContent = `<!DOCTYPE html>
 <html lang="en">
@@ -130,7 +205,7 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
     }
     .page {
       background: white;
-      max-width: 720px;
+      max-width: 780px;
       margin: 0 auto;
       border: 1px solid #ddd;
     }
@@ -190,7 +265,7 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
     }
     .operator-bar strong { color: #fd561e; }
 
-    /* ── TABLE SECTION ── */
+    /* ── SECTION ── */
     .section { padding: 14px 24px; border-bottom: 1px solid #eee; }
     .section-title {
       font-size: 11px;
@@ -201,8 +276,42 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
       padding-bottom: 6px;
       border-bottom: 1px solid #f0f0f0;
     }
-    table { width: 100%; border-collapse: collapse; }
-    table th {
+
+    /* ── PASSENGER TABLE ── */
+    .passenger-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .passenger-table th {
+      font-size: 10px;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 600;
+      text-align: left;
+      padding: 6px 10px;
+      background: #f8f9ff;
+      border: 1px solid #eee;
+      white-space: nowrap;
+    }
+    .passenger-table td {
+      font-size: 12px;
+      font-weight: 700;
+      color: #1a1a2e;
+      padding: 8px 10px;
+      border: 1px solid #eee;
+    }
+    .passenger-table td.orange { color: #fd561e; }
+    .passenger-table td.status { color: ${statusColor}; font-weight: 800; }
+    .passenger-table tbody tr:nth-child(even) td { background: #fafafa; }
+
+    /* ── INFO TABLE ── */
+    .info-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .info-table th {
       font-size: 10px;
       color: #999;
       text-transform: uppercase;
@@ -212,19 +321,15 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
       padding: 4px 8px 4px 0;
       white-space: nowrap;
     }
-    table td {
+    .info-table td {
       font-size: 12px;
       font-weight: 700;
       color: #1a1a2e;
       padding: 4px 8px 4px 0;
     }
-    table td.orange { color: #fd561e; }
-    table td.status {
-      color: ${statusColor};
-      font-weight: 800;
-    }
-    table tr:not(:last-child) td,
-    table tr:not(:last-child) th {
+    .info-table td.orange { color: #fd561e; }
+    .info-table tr:not(:last-child) td,
+    .info-table tr:not(:last-child) th {
       border-bottom: 1px solid #f9f9f9;
     }
 
@@ -251,19 +356,34 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
       color: #1a1a2e;
       border: 1px solid #eee;
     }
-    .fare-table td:last-child { color: #fd561e; }
+    .fare-table td.total { color: #fd561e; font-size: 14px; }
 
-    /* ── ADDRESS BLOCK ── */
+    /* ── ADDRESS GRID ── */
+    .address-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 4px;
+    }
     .address-block {
       background: #f8f9ff;
       border-radius: 6px;
       padding: 10px 14px;
-      margin-top: 6px;
       font-size: 12px;
       line-height: 1.7;
       color: #444;
     }
+    .address-block.drop { background: #f0fff4; }
+    .address-block .label {
+      font-size: 10px;
+      color: #999;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
     .address-block strong { color: #fd561e; display: block; margin-bottom: 2px; }
+    .address-block.drop strong { color: #16a34a; }
 
     /* ── TERMS ── */
     .terms {
@@ -278,10 +398,7 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
       color: #1a1a2e;
       margin: 10px 0 4px;
     }
-    .terms ul {
-      padding-left: 18px;
-      margin: 4px 0;
-    }
+    .terms ul { padding-left: 18px; margin: 4px 0; }
     .terms ul li { margin-bottom: 3px; }
     .not-responsible {
       border: 1px solid #eee;
@@ -300,10 +417,10 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
       text-align: center;
     }
 
-    /* ── DOWNLOAD BUTTON (screen only) ── */
+    /* ── DOWNLOAD BUTTON ── */
     .download-btn {
       display: block;
-      max-width: 720px;
+      max-width: 780px;
       margin: 16px auto 0;
       background: linear-gradient(135deg, #fd561e, #ff8c42);
       color: white;
@@ -353,48 +470,48 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
     </div>
     <div class="route-meta">
       <strong>DOJ: ${dojFormatted}</strong><br/>
+      PNR: <strong style="color:#fd561e;">${pnr}</strong>
     </div>
   </div>
 
   <!-- OPERATOR -->
   <div class="operator-bar">
     <span>Operator: <strong>${travels}</strong></span>
+    <span>Bus Type: <strong>${busType}</strong></span>
     <span>Operator Contact: <strong>${operatorContact}</strong></span>
   </div>
 
   <!-- PASSENGER DETAILS TABLE -->
   <div class="section">
-    <table>
+    <div class="section-title">Passenger Details (${passengers.length} Passenger${passengers.length > 1 ? "s" : ""})</div>
+    <table class="passenger-table">
       <thead>
         <tr>
-          <th>Passenger Name(s)</th>
-          <th>Seat Number(s)</th>
+          <th>Passenger Name</th>
+          <th>Gender</th>
+          <th>Age</th>
+          <th>Seat No.</th>
           <th>Bus Type</th>
-          <th>Booking Status</th>
+          <th>Status</th>
           <th>PNR</th>
         </tr>
       </thead>
       <tbody>
-        <tr>
-          <td>${pname}</td>
-          <td>${seatName}</td>
-          <td>${busType}</td>
-          <td class="status">${status}</td>
-          <td class="orange">${pnr}</td>
-        </tr>
+        ${passengerRows}
       </tbody>
     </table>
   </div>
 
   <!-- BOOKING INFO TABLE -->
   <div class="section">
-    <table>
+    <table class="info-table">
       <thead>
         <tr>
           <th>Booking ID</th>
           <th>Boarding Point</th>
           <th>Pick Up Time</th>
           <th>Reporting Time</th>
+          ${dropTime !== "—" ? "<th>Drop Time</th>" : ""}
         </tr>
       </thead>
       <tbody>
@@ -403,24 +520,38 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
           <td>${boardingPoint}</td>
           <td>${departureTime}</td>
           <td>${reportingTime}</td>
+          ${dropTime !== "—" ? `<td>${dropTime}</td>` : ""}
         </tr>
       </tbody>
     </table>
   </div>
 
-  <!-- BOARDING POINT ADDRESS -->
+  <!-- BOARDING + DROP ADDRESS GRID -->
   <div class="section">
-    <div class="section-title">Boarding Point Address</div>
-    <div class="address-block">
-      <strong>Location: ${boardingPoint}</strong>
-      Address: ${boardingAddress}<br/>
-      Landmark: ${boardingLandmark}<br/>
-      ${boardingContact !== "—" ? `Contact: ${boardingContact}` : ""}
+    <div class="section-title">Boarding &amp; Drop Point</div>
+    <div class="address-grid">
+
+      <div class="address-block">
+        <div class="label">🟠 Boarding Point</div>
+        <strong>${boardingPoint}</strong>
+        ${boardingAddress !== "—" ? `Address: ${boardingAddress}<br/>` : ""}
+        ${boardingLandmark !== "—" ? `Landmark: ${boardingLandmark}<br/>` : ""}
+        ${boardingContact !== "—" ? `Contact: ${boardingContact}` : ""}
+      </div>
+
+      <div class="address-block drop">
+        <div class="label">🟢 Drop Point</div>
+        <strong style="color:#16a34a;">${dropPoint}</strong>
+        ${dropAddress !== "—" ? `Address: ${dropAddress}<br/>` : ""}
+        ${dropLandmark !== "—" ? `Landmark: ${dropLandmark}` : ""}
+      </div>
+
     </div>
   </div>
 
   <!-- FARE BREAKUP -->
   <div class="section">
+    <div class="section-title">Fare Breakup</div>
     <table class="fare-table">
       <thead>
         <tr>
@@ -431,9 +562,9 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
       </thead>
       <tbody>
         <tr>
-          <td>Rs. ${baseFare}</td>
-          <td>Rs. ${serviceTax}</td>
-          <td>Rs. ${totalFare}</td>
+          <td>Rs. ${totalBaseFare > 0 ? totalBaseFare.toFixed(2) : passengers[0]?.baseFare || "0"}</td>
+          <td>Rs. ${totalServiceTax > 0 ? totalServiceTax.toFixed(2) : passengers[0]?.serviceTax || "0"}</td>
+          <td class="total">Rs. ${totalGrandFare > 0 ? totalGrandFare.toFixed(2) : passengers[0]?.totalFare || "0"}</td>
         </tr>
       </tbody>
     </table>
@@ -473,14 +604,14 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
 
   <!-- FOOTER -->
   <div class="footer">
-    This ticket is generated electronically at www.bobrosone.com, Ticket Print Time Stamp: ${printTimestamp}
+    This ticket is generated electronically at www.bobrosone.com &nbsp;|&nbsp; Ticket Print Time Stamp: ${printTimestamp}
   </div>
 
 </div>
 
 <!-- DOWNLOAD BUTTON -->
 <button class="download-btn" id="dlBtn">
-  ⬇️ Download Ticket
+  ⬇️ Download Ticket as PDF
 </button>
 
 <!-- html2canvas + jsPDF CDN -->
@@ -504,23 +635,19 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
       const imgData = canvas.toDataURL('image/png');
       const { jsPDF } = window.jspdf;
 
-      // A4 page size
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
 
-      // Scale image to fit A4 width
       const imgW = pageW;
       const imgH = (canvas.height * pageW) / canvas.width;
 
-      // If content taller than A4, add extra pages
       let yPos = 0;
       let remaining = imgH;
       let firstPage = true;
 
       while (remaining > 0) {
         if (!firstPage) pdf.addPage();
-        const sliceH = Math.min(remaining, pageH);
         pdf.addImage(imgData, 'PNG', 0, -yPos, imgW, imgH);
         yPos += pageH;
         remaining -= pageH;
@@ -535,7 +662,7 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
       alert('Download failed. Please try again.');
       console.error(err);
     } finally {
-      btn.textContent = '⬇️ Download Ticket';
+      btn.textContent = '⬇️ Download Ticket as PDF';
       btn.disabled = false;
     }
   });
@@ -608,7 +735,6 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
           />
         </div>
 
-        {/* ✅ CHANGED: "🖨️ Print Ticket" */}
         <button
           type="submit"
           disabled={loading}

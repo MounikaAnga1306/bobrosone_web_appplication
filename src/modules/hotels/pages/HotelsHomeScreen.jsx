@@ -2,7 +2,7 @@
 import React from "react";
 import HotelHeroSection from "../components/HotelHeroSection";
 // Import from bus components (these exist)
-import Services from "../../bus/components/Services";
+import Services from "../../bus/components/OurServices";
 import WhyBobros from "../../bus/components/WhyBobros";
 import AppDownload from "../../bus/components/AppDownload";
 import Quick_Links from "../../bus/components/Quick_Links";

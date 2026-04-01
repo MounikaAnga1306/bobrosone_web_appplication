@@ -72,7 +72,7 @@ const BusResultCard = ({
 
           <Button
             size="sm"
-            className="w-full font-bold"
+            className="w-full font-bold cursor-pointer"
             onClick={() => onSelectSeat(id)}
           >
             Select Seat

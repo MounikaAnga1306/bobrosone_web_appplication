@@ -1,17 +1,6 @@
-import { motion, useInView } from "framer-motion";
-import { useRef, useState } from "react";
-import {
-  Bus,
-  Plane,
-  Building2,
-  Umbrella,
-  Car,
-  CreditCard,
-  Monitor,
-  ChevronRight,
-} from "lucide-react";
+import { motion } from "framer-motion";
 
-// Images
+// ✅ Your local images (unchanged)
 import flights from "../../../assets/flights.jpg";
 import bus from "../../../assets/bus.jpg";
 import hotels from "../../../assets/hotels.jpg";
@@ -252,34 +241,6 @@ export default function Service() {
             </motion.div>
           ))}
         </div>
-
-        {/* CTA */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="mt-20"
-        >
-          <div className="relative bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl overflow-hidden">
-            <div className="relative px-8 py-12 sm:px-12 sm:py-16 text-center">
-              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
-                Ready to Get Started?
-              </h2>
-              <p className="text-gray-300 mb-8 max-w-md mx-auto">
-                Experience seamless service with our expert support team
-              </p>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="inline-flex items-center gap-2 px-8 py-3 bg-white text-gray-900 rounded-full font-semibold shadow-lg hover:shadow-xl transition-all"
-              >
-                Contact Our Team
-                <ChevronRight className="w-4 h-4" />
-              </motion.button>
-            </div>
-          </div>
-        </motion.div>
       </div>
     </div>
   );

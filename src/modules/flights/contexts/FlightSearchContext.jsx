@@ -29,13 +29,16 @@ export const FlightSearchProvider = ({ children }) => {
   // Store flight results from API
   const [flightResults, setFlightResults] = useState({
     flights: [],           // For one-way display
-    roundTripDisplay: null, // For round trip two-column display
+    roundTrips: null,      // For round-trip with full fare options
+    roundTripDisplay: null, // For round trip simplified display (fallback)
     multiCity: { legs: [], combinations: [] }, // For multi-city
     brandDetails: {},
     loading: false,
     error: null,
     searchId: null,
-    currency: 'INR'
+    currency: 'INR',
+    traceId: null,
+    passengerCount: { ADT: 1 }
   });
 
   // Selected flight for detail view
@@ -214,14 +217,32 @@ export const FlightSearchProvider = ({ children }) => {
     setSelectedLegFlights([]);
   }, []);
 
-  // Update flight results
+  // Update flight results - PRESERVES roundTrips for round-trip
   const updateFlightResults = useCallback((results) => {
+    console.log('🔍 [Context] updateFlightResults called:', {
+      hasRoundTrips: !!results?.roundTrips,
+      roundTripsLength: results?.roundTrips?.length,
+      hasRoundTripDisplay: !!results?.roundTripDisplay,
+      type: results?.type
+    });
+    
     setFlightResults(prev => ({ 
       ...prev, 
       ...results,
+      // IMPORTANT: Preserve roundTrips for round-trip data (DO NOT LOSE IT)
+      roundTrips: results.roundTrips || prev.roundTrips || null,
+      // One-way flights
       flights: results.flights || prev.flights || [],
+      // Round-trip simplified display (fallback)
       roundTripDisplay: results.roundTripDisplay || prev.roundTripDisplay || null,
-      multiCity: results.multiCity || prev.multiCity || { legs: [], combinations: [] }
+      // Multi-city data
+      multiCity: results.multiCity || prev.multiCity || { legs: [], combinations: [] },
+      // Additional metadata
+      brandDetails: results.brandDetails || prev.brandDetails || {},
+      currency: results.currency || prev.currency || 'INR',
+      traceId: results.traceId || prev.traceId || null,
+      passengerCount: results.passengerCount || prev.passengerCount || { ADT: 1 },
+      count: results.count !== undefined ? results.count : prev.count
     }));
   }, []);
 
@@ -235,17 +256,20 @@ export const FlightSearchProvider = ({ children }) => {
     setFlightResults(prev => ({ ...prev, error, loading: false }));
   }, []);
 
-  // Clear results
+  // Clear results - RESETS roundTrips as well
   const clearResults = useCallback(() => {
     setFlightResults({
       flights: [],
+      roundTrips: null,      // Reset roundTrips
       roundTripDisplay: null,
       multiCity: { legs: [], combinations: [] },
       brandDetails: {},
       loading: false,
       error: null,
       searchId: null,
-      currency: 'INR'
+      currency: 'INR',
+      traceId: null,
+      passengerCount: { ADT: 1 }
     });
     setSelectedFlight(null);
     setSelectedFare(null);
