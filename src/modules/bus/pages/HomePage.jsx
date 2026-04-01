@@ -23,27 +23,27 @@ function HomePage() {
           </div>
 
           {/* Services */}
-          <div className="mt-16">
+          <div className="mt-8">
             <Services />
           </div>
 
           {/* App Download */}
-          <div className="mt-16">
+          <div >
             <AppDownload />
           </div>
 
           {/* Popular Bus Routes */}
-          <div className="mt-16">
+          <div className="mt-6">
             <PopularBusRoutes />
           </div>
 
           {/* Why Bobros */}
-          <div className="mt-16">
+          <div className="mt-6">
             <WhyBobros />
           </div>
 
           {/* Quick Links */}
-          <div className="mt-16">
+          <div className="mt-6">
             <Quick_Links />
           </div>
 

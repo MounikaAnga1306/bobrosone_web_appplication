@@ -182,7 +182,7 @@ export default function OurServices() {
         </div>
 
         {/* CTA SECTION */}
-        <div className="mt-20">
+        <div className="mt-14">
           <div className="relative bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl overflow-hidden">
             
             {/* ✅ FIXED BACKGROUND */}

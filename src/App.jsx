@@ -50,7 +50,6 @@ import PrivacyPolicy from "./modules/bus/pages/PrivacyPolicy";
 import TermsAndConditions from "./modules/bus/pages/TermsAndConditions";
 import CancellationPolicy from "./modules/bus/pages/CancellationPolicy";
 import DisclaimerPolicy from "./modules/bus/pages/DisclaimerPolicy";
-import Advertisement from "./modules/bus/components/Advertisement";
 
 function App() {
   return (
@@ -59,7 +58,7 @@ function App() {
         <FlightSearchProvider>
           <HotelSearchProvider>
             <Router>
-              <div className="min-h-screen bg-gray-100 flex flex-col w-full overflow-x-hidden">
+              <div className="min-h-screen   bg-gray-100 flex flex-col w-full overflow-x-hidden">
                 <Navbar />
                 <main className="flex-1 w-full">
                   <Routes>
@@ -102,7 +101,7 @@ function App() {
                     <Route path="*" element={<Navigate to="/" />} />
                   </Routes>
                 </main>
-                <Advertisement />
+               
                 <FooterBottom />
               </div>
             </Router>
