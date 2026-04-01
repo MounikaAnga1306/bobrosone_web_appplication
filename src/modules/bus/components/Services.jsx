@@ -9,22 +9,21 @@ import cab from "../../../assets/cab.jpg";
 import bill from "../../../assets/bill.png";
 import service from "../../../assets/IT_Services.jpg";
 
-// ✅ Image hover animation - smoother and more subtle
+// Animations
 const imageHover = {
   rest: { y: 0, scale: 1, rotate: 0 },
   hover: {
     y: -8,
     scale: 1.1,
     rotate: 2,
-    transition: { 
-      type: "spring", 
-      stiffness: 300, 
-      damping: 14 
+    transition: {
+      type: "spring",
+      stiffness: 300,
+      damping: 14,
     },
   },
 };
 
-// ✅ Entry animation - smoother fade from bottom
 const cardEntry = {
   hidden: { opacity: 0, y: 30 },
   show: (i) => ({
@@ -38,10 +37,9 @@ const cardEntry = {
   }),
 };
 
-// ✅ Card hover animation - maintains exact same size, only lift and shadow
 const cardHover = {
-  rest: { 
-    y: 0, 
+  rest: {
+    y: 0,
     boxShadow: "0 10px 20px rgba(0,0,0,0.08)",
     scale: 1,
   },
@@ -49,15 +47,15 @@ const cardHover = {
     y: -8,
     boxShadow: "0 25px 40px rgba(253,86,30,0.15)",
     scale: 1,
-    transition: { 
-      type: "spring", 
-      stiffness: 200, 
-      damping: 18 
+    transition: {
+      type: "spring",
+      stiffness: 200,
+      damping: 18,
     },
   },
 };
 
-// Service Card - EXACT same structure, only animations changed
+// Service Card
 function ServiceCard({ image, title, description, contain }) {
   return (
     <motion.div
@@ -80,12 +78,12 @@ function ServiceCard({ image, title, description, contain }) {
         transition-colors duration-300
         w-full
       "
-      style={{ 
+      style={{
         minHeight: "280px",
         width: "100%",
       }}
     >
-      {/* Image with enhanced animation */}
+      {/* Image */}
       <motion.div
         variants={imageHover}
         className="
@@ -110,7 +108,7 @@ function ServiceCard({ image, title, description, contain }) {
         />
       </motion.div>
 
-      {/* Title with enhanced animation */}
+      {/* Title */}
       <motion.h3
         variants={{
           rest: { y: 0, color: "#111827" },
@@ -121,13 +119,12 @@ function ServiceCard({ image, title, description, contain }) {
       >
         {title}
 
-        {/* Animated underline with smoother transition */}
         <motion.span
           variants={{
             rest: { width: 0, opacity: 0, left: "50%" },
-            hover: { 
-              width: "60%", 
-              opacity: 1, 
+            hover: {
+              width: "60%",
+              opacity: 1,
               left: "20%",
             },
           }}
@@ -136,7 +133,7 @@ function ServiceCard({ image, title, description, contain }) {
         />
       </motion.h3>
 
-      {/* Description with subtle fade on hover */}
+      {/* Description */}
       <motion.p
         variants={{
           rest: { opacity: 0.9, y: 0 },
@@ -148,14 +145,14 @@ function ServiceCard({ image, title, description, contain }) {
         {description}
       </motion.p>
 
-      {/* Subtle shine overlay on hover */}
+      {/* Shine */}
       <motion.div
         variants={{
           rest: { opacity: 0, x: "-100%" },
-          hover: { 
-            opacity: 0.2, 
+          hover: {
+            opacity: 0.2,
             x: "100%",
-            transition: { duration: 0.6, ease: "easeInOut" }
+            transition: { duration: 0.6, ease: "easeInOut" },
           },
         }}
         className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent pointer-events-none rounded-2xl"
@@ -164,7 +161,7 @@ function ServiceCard({ image, title, description, contain }) {
   );
 }
 
-// Main Page - EXACT same structure
+// Main Component
 export default function Service() {
   const services = [
     {
