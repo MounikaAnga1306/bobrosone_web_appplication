@@ -41,30 +41,12 @@ import GuestBookingsPage from "./modules/bus/pages/GuestBookingPage";
 import CancelTicketPage from "./modules/bus/pages/CancelTicketPage";
 import MyAccount from "./modules/bus/pages/MyAccount";
 import MyProfile from "./modules/bus/pages/MyProfile";
-
-// Simple wrapper component
-const MainContent = ({ children }) => {
-  const location = useLocation();
-  
-  // Routes that DON'T need padding
-  const noPaddingRoutes = [
-    '/', 
-    '/HomePage', 
-    '/flights', 
-    '/hotels', 
-    '/flights/tracker', 
-    '/flights/pnr-search',
-     // Add seat map route if needed
-  ];
-  
-  const needsPadding = !noPaddingRoutes.includes(location.pathname);
-  
-  return (
-    <div className={`flex-1 ${needsPadding ? 'pt-20' : ''}`}>
-      {children}
-    </div>
-  );
-};
+import AboutUs from "./modules/bus/pages/AboutUs";
+import ContactUs from "./modules/bus/pages/ContactUs";
+import PrivacyPolicy from "./modules/bus/pages/PrivacyPolicy";
+import TermsAndConditions from "./modules/bus/pages/TermsAndConditions";
+import CancellationPolicy from "./modules/bus/pages/CancellationPolicy";
+import DisclaimerPolicy from "./modules/bus/pages/DisclaimerPolicy";
 
 function App() {
   return (
@@ -73,7 +55,7 @@ function App() {
         <FlightSearchProvider>
           <HotelSearchProvider>
             <Router>
-              <div className="min-h-screen bg-gray-100 flex flex-col">
+              <div className="min-h-screen   bg-gray-100 flex flex-col w-full overflow-x-hidden">
                 <Navbar />
                 <MainContent>
                   <Routes>
@@ -111,7 +93,8 @@ function App() {
                     
                     <Route path="*" element={<Navigate to="/" />} />
                   </Routes>
-                </MainContent>
+                </main>
+               
                 <FooterBottom />
               </div>
             </Router>
