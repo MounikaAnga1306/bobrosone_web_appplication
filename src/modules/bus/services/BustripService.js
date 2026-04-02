@@ -1,6 +1,6 @@
+// BustripService.js
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 
-// Format trips safely
 // Format trips safely
 export const formatTrips = (data) => {
   if (!data || !data.availableTrips) return [];
@@ -14,51 +14,42 @@ export const formatTrips = (data) => {
     return {
       id: trip.id || "",
       travels: trip.travels || "Unknown Travels",
-
       busType: trip.busType || "N/A",
       busNumber: trip.businfo?.busNumber || "N/A",
-
       departureTime: trip.departureTime || "",
       arrivalTime: trip.arrivalTime || "",
       duration: trip.duration || "",
-
       availableSeats: trip.availableSeats || 0,
-
-      // Minimum fare
       fare: faresArray.length ? Math.min(...faresArray) : 0,
-
-     boardingTimes: trip.boardingTimes || [],
-     droppingTimes: trip.droppingTimes || [],
-
-      // ✅ Filter related fields (IMPORTANT)
+      boardingTimes: trip.boardingTimes || [],
+      droppingTimes: trip.droppingTimes || [],
       AC: trip.AC ?? false,
       nonAC: trip.nonAC ?? false,
       seater: trip.seater ?? false,
       sleeper: trip.sleeper ?? false,
       primo: trip.primo ?? false,
+      // Add cancellation policy from backend
+      cancellationPolicyParsed: trip.cancellationPolicyParsed || null
     };
   });
 };
+
 export const sortTrips = (trips, type) => {
   const sorted = [...trips];
 
   switch (type) {
     case "Low to High":
       return sorted.sort((a, b) => a.fare - b.fare);
-
     case "High to Low":
       return sorted.sort((a, b) => b.fare - a.fare);
-
     case "Early Departure":
       return sorted.sort((a, b) =>
         a.departureTime.localeCompare(b.departureTime)
       );
-
     case "Late Departure":
       return sorted.sort((a, b) =>
         b.departureTime.localeCompare(a.departureTime)
       );
-
     default:
       return trips;
   }
@@ -72,22 +63,18 @@ export const searchTrips = async (sourceId, destId, date) => {
   }
 
   const url = `${API_BASE}/searchTrips?source=${sourceId}&destination=${destId}&doj=${date}`;
-  //console.log("Calling API:", url);
 
   try {
     const res = await fetch(url);
-   
-     if (!res.ok) {
     
+    if (!res.ok) {
       throw new Error(`HTTP ${res.status}`);
     }
     const data = await res.json();
-     
-     const formatted = formatTrips(data);
-    
+    const formatted = formatTrips(data);
     return formatted;
   } catch (err) {
-   
+    console.error("Search trips error:", err);
     return [];
   }
 };
