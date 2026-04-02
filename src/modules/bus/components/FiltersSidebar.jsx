@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Search,
   Sun,
@@ -38,7 +38,6 @@ const timeSlots = [
   { label: "6 PM - 12 midnight", icon: <Sunset className="h-4 w-4" /> },
 ];
 
-// CHANGED: added initialShow + showAll logic, removed showMore prop
 const CheckboxSection = ({
   title,
   items,
@@ -129,8 +128,7 @@ const CheckboxSection = ({
   );
 };
 
-// CHANGED: added trips = [] prop
-const FiltersSidebar = ({ onFilterChange, trips = [] }) => {
+const FiltersSidebar = ({ onFilterChange, trips = [], externalFilters = null }) => {
   const [chipSelected, setChipSelected] = useState(new Set());
   const [depTime, setDepTime] = useState(new Set());
   const [arrTime, setArrTime] = useState(new Set());
@@ -139,8 +137,36 @@ const FiltersSidebar = ({ onFilterChange, trips = [] }) => {
   const [ops, setOps] = useState(new Set());
   const [amens, setAmens] = useState(new Set());
 
-  // CHANGED: dynamic from trips instead of static arrays
-  // boardingTimes: array or object → extract bpName
+  // Sync with externalFilters when modal opens (for mobile view)
+  useEffect(() => {
+    if (externalFilters) {
+      const newChipSelected = new Set();
+      
+      // Set AC sync - both Popular and Bus Type should be synced
+      if (externalFilters.ac) {
+        newChipSelected.add("Popular__AC");
+        newChipSelected.add("Bus Type__AC");
+      }
+      if (externalFilters.nonAc) newChipSelected.add("Bus Type__Non-AC");
+      if (externalFilters.seater) newChipSelected.add("Bus Type__Seater");
+      if (externalFilters.sleeper) {
+        newChipSelected.add("Popular__Sleeper");
+        newChipSelected.add("Bus Type__Sleeper");
+      }
+      if (externalFilters.primo) newChipSelected.add("Popular__Primo");
+      if (externalFilters.evening) newChipSelected.add("Popular__6PM-12AM");
+      
+      setChipSelected(newChipSelected);
+      
+      setDepTime(new Set(externalFilters.depTime || []));
+      setArrTime(new Set(externalFilters.arrTime || []));
+      setBoarding(new Set(externalFilters.boarding || []));
+      setDropping(new Set(externalFilters.dropping || []));
+      setOps(new Set(externalFilters.ops || []));
+      setAmens(new Set(externalFilters.amens || []));
+    }
+  }, [externalFilters]);
+
   const boardingPoints = useMemo(() => {
     const set = new Set();
     trips.forEach((t) => {
@@ -154,7 +180,6 @@ const FiltersSidebar = ({ onFilterChange, trips = [] }) => {
     return [...set].sort();
   }, [trips]);
 
-  // droppingTimes: array or object → extract bpName
   const droppingPoints = useMemo(() => {
     const set = new Set();
     trips.forEach((t) => {
@@ -168,7 +193,6 @@ const FiltersSidebar = ({ onFilterChange, trips = [] }) => {
     return [...set].sort();
   }, [trips]);
 
-  // operators: from travels field
   const operators = useMemo(() => {
     const set = new Set();
     trips.forEach((t) => {
@@ -179,7 +203,6 @@ const FiltersSidebar = ({ onFilterChange, trips = [] }) => {
   }, [trips]);
 
   const toggleChip = (key) => {
-    // Build next chip set directly (no nested setState)
     const next = new Set(chipSelected);
     next.has(key) ? next.delete(key) : next.add(key);
 
@@ -211,10 +234,10 @@ const FiltersSidebar = ({ onFilterChange, trips = [] }) => {
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
     onFilterChange({
-      ac:      next.has("Bus Type__AC"),
+      ac:      next.has("Bus Type__AC") || next.has("Popular__AC"),
       nonAc:   next.has("Bus Type__Non-AC"),
       seater:  next.has("Bus Type__Seater"),
-      sleeper: next.has("Bus Type__Sleeper"),
+      sleeper: next.has("Bus Type__Sleeper") || next.has("Popular__Sleeper"),
       primo:   next.has("Popular__Primo"),
       evening: next.has("Popular__6PM-12AM"),
       depTime: nextDep,
@@ -227,71 +250,70 @@ const FiltersSidebar = ({ onFilterChange, trips = [] }) => {
   };
 
   const toggleSet = (setter, key, type) => {
-  setter((prev) => {
-    const next = new Set(prev);
-    next.has(key) ? next.delete(key) : next.add(key);
+    setter((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
 
-    // CHANGED: Departure "6 PM - 12 midnight" → sync Popular chip
-    if (type === "depTime" && key === "6 PM - 12 midnight") {
-      setChipSelected((prevChips) => {
-        const nextChips = new Set(prevChips);
-        next.has("6 PM - 12 midnight")
-          ? nextChips.add("Popular__6PM-12AM")
-          : nextChips.delete("Popular__6PM-12AM");
-        return nextChips;
-      });
-    }
+      if (type === "depTime" && key === "6 PM - 12 midnight") {
+        setChipSelected((prevChips) => {
+          const nextChips = new Set(prevChips);
+          next.has("6 PM - 12 midnight")
+            ? nextChips.add("Popular__6PM-12AM")
+            : nextChips.delete("Popular__6PM-12AM");
+          return nextChips;
+        });
+      }
 
-    const newFilters = {
-      ac:       chipSelected.has("Bus Type__AC"),
-      nonAc:    chipSelected.has("Bus Type__Non-AC"),
-      seater:   chipSelected.has("Bus Type__Seater"),
-      sleeper:  chipSelected.has("Bus Type__Sleeper"),
-      primo:    chipSelected.has("Popular__Primo"),
-      evening:  type === "depTime" && key === "6 PM - 12 midnight"
+      const newFilters = {
+        ac:      chipSelected.has("Bus Type__AC") || chipSelected.has("Popular__AC"),
+        nonAc:   chipSelected.has("Bus Type__Non-AC"),
+        seater:  chipSelected.has("Bus Type__Seater"),
+        sleeper: chipSelected.has("Bus Type__Sleeper") || chipSelected.has("Popular__Sleeper"),
+        primo:   chipSelected.has("Popular__Primo"),
+        evening: type === "depTime" && key === "6 PM - 12 midnight"
                   ? next.has("6 PM - 12 midnight")
                   : chipSelected.has("Popular__6PM-12AM"),
-      depTime:  type === "depTime"  ? next : depTime,
-      arrTime:  type === "arrTime"  ? next : arrTime,
-      boarding: type === "boarding" ? next : boarding,
-      dropping: type === "dropping" ? next : dropping,
-      ops:      type === "ops"      ? next : ops,
-      amens:    type === "amens"    ? next : amens,
-    };
+        depTime:  type === "depTime"  ? next : depTime,
+        arrTime:  type === "arrTime"  ? next : arrTime,
+        boarding: type === "boarding" ? next : boarding,
+        dropping: type === "dropping" ? next : dropping,
+        ops:      type === "ops"      ? next : ops,
+        amens:    type === "amens"    ? next : amens,
+      };
 
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    onFilterChange(newFilters);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      onFilterChange(newFilters);
 
-    return next;
-  });
-};
+      return next;
+    });
+  };
 
   const clearSet = (setter) => setter(new Set());
 
- const clearAll = () => {
-  setChipSelected(new Set());
-  setDepTime(new Set());
-  setArrTime(new Set());
-  setBoarding(new Set());
-  setDropping(new Set());
-  setOps(new Set());
-  setAmens(new Set());
+  const clearAll = () => {
+    setChipSelected(new Set());
+    setDepTime(new Set());
+    setArrTime(new Set());
+    setBoarding(new Set());
+    setDropping(new Set());
+    setOps(new Set());
+    setAmens(new Set());
 
- window.scrollTo({ top: 0, behavior: 'smooth' });
- onFilterChange({
-  ac: false,
-  nonAc: false,
-  seater: false,
-  sleeper: false,
-  primo: false,
-  evening: false,
-  depTime: new Set(),
-  arrTime: new Set(),
-  boarding: new Set(),
-  dropping: new Set(),
-  ops: new Set()
-});
- }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    onFilterChange({
+      ac: false,
+      nonAc: false,
+      seater: false,
+      sleeper: false,
+      primo: false,
+      evening: false,
+      depTime: new Set(),
+      arrTime: new Set(),
+      boarding: new Set(),
+      dropping: new Set(),
+      ops: new Set()
+    });
+  }
 
   const TimeGrid = ({ title, selected, setSelected }) => (
     <div>
@@ -305,17 +327,17 @@ const FiltersSidebar = ({ onFilterChange, trips = [] }) => {
           return (
             <button
               key={slot.label}
-             onClick={() =>
-  toggleSet(
-    setSelected,
-    slot.label,
-    title === "Departure Time" ? "depTime" : "arrTime"
-  )
-}
-              className={`flex flex-col items-center gap-1 p-3 rounded-lg border text-xs  transition-all ${
+              onClick={() =>
+                toggleSet(
+                  setSelected,
+                  slot.label,
+                  title === "Departure Time" ? "depTime" : "arrTime"
+                )
+              }
+              className={`flex flex-col items-center gap-1 p-3 rounded-lg border text-xs transition-all ${
                 isActive
                   ? "border-[#FD561E] bg-[#FD561E]/10 text-[#FD561E]"
-                  : "border-gray-300  text-muted-foreground "
+                  : "border-gray-300 text-muted-foreground"
               }`}
             >
               {slot.icon}
@@ -328,8 +350,8 @@ const FiltersSidebar = ({ onFilterChange, trips = [] }) => {
   );
 
   return (
-    <aside className="w-full bg-white rounded-xl shadow-sm  p-5  top-24">
-      <div className="flex items-center justify-between mb-5 pb-3  border-b border-gray-300 -mx-5 px-5">
+    <aside className="w-full bg-white rounded-xl shadow-sm p-5 top-24">
+      <div className="flex items-center justify-between mb-5 pb-3 border-b border-gray-300 -mx-5 px-5">
         <h2 className="text-base font-bold text-foreground">Filters</h2>
         <button
           onClick={clearAll}
@@ -368,7 +390,7 @@ const FiltersSidebar = ({ onFilterChange, trips = [] }) => {
             key={title}
             className="pb-4 mb-4 border-b border-gray-200 -mx-5 px-5"
           >
-            <h3 className="text-sm font-bold  text-foreground uppercase tracking-wide mb-3">
+            <h3 className="text-sm font-bold text-foreground uppercase tracking-wide mb-3">
               {title}
             </h3>
 
@@ -381,10 +403,10 @@ const FiltersSidebar = ({ onFilterChange, trips = [] }) => {
                   <button
                     key={key}
                     onClick={() => toggleChip(key)}
-                    className={`flex flex-col items-center gap-1 p-3 rounded-lg border   text-xs  transition-all ${
+                    className={`flex flex-col items-center gap-1 p-3 rounded-lg border text-xs transition-all ${
                       isActive
                         ? "border-[#FD561E] bg-[#FD561E]/10 text-[#FD561E]"
-                        : "border border-gray-300 bg-background text-muted-foreground "
+                        : "border border-gray-300 bg-background text-muted-foreground"
                     }`}
                   >
                     {opt.icon}
@@ -455,7 +477,6 @@ const FiltersSidebar = ({ onFilterChange, trips = [] }) => {
       </div>
     </aside>
   );
-
 };
 
 export default FiltersSidebar;
