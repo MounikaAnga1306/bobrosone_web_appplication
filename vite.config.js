@@ -27,6 +27,7 @@ export default defineConfig({
       '/billdesk': 'http://localhost:5000',
       '/verifyPayment': 'http://localhost:5000',
       '/cities': 'http://localhost:5000',
+      '/cancellation-policy': 'http://localhost:5000',
     }
   }
 })
