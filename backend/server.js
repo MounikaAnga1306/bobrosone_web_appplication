@@ -169,46 +169,55 @@ app.get("/tripdetails", async (req, res) => {
   }
 });
 // =========================
-// BLOCK TICKET ENDPOINT
+// BLOCK TICKET ENDPOINT (CORRECTED)
 // =========================
 app.post("/blockTicket", async (req, res) => {
   try {
-
     const url = `${process.env.BASE_URL}/blockTicket`;
-
+    
+    // IMPORTANT: Create requestData with body FIRST
     const requestData = {
-  url,
-  method: "POST",
- body: req.body
-};
-
+      url: url,
+      method: "POST",
+      body: req.body  // This must be included for OAuth signature
+    };
+    
+    // Generate OAuth headers with the request data including body
     const headers = oauth.toHeader(oauth.authorize(requestData));
     headers["Content-Type"] = "application/json";
-     console.log("Block Ticket Body:", req.body);
+    
+    console.log("Block Ticket Request Body:", JSON.stringify(req.body, null, 2));
+    console.log("Block Ticket URL:", url);
+    
+    // Make the API call
     const response = await axios.post(url, req.body, { headers });
-     console.log("Block Ticket SUCCESS Response:", response.data);
-
+    
+    console.log("Block Ticket SUCCESS Response:", response.data);
+    
+    // Return the response to frontend
     res.json(response.data);
-
+    
   } catch (error) {
-
-  console.error("Block Ticket Error FULL:", {
-    data: error.response?.data,
-    status: error.response?.status,
-    headers: error.response?.headers,
-    message: error.message
-  });
-  console.error("Block Ticket Backend Error Detail:", 
-      JSON.stringify(error.response?.data, null, 2)
-  );
-
-  res.status(500).json({
-    success: false,
-    message: error.response?.data || error.message
-  });
-}
+    console.error("Block Ticket Error FULL:", {
+      data: error.response?.data,
+      status: error.response?.status,
+      message: error.message
+    });
+    
+    // Send appropriate error response
+    const statusCode = error.response?.status || 500;
+    const errorMessage = error.response?.data?.message || 
+                        error.response?.data?.error || 
+                        error.message || 
+                        "Failed to block ticket";
+    
+    res.status(statusCode).json({
+      success: false,
+      message: errorMessage,
+      error: error.response?.data
+    });
+  }
 });
-
 
 
 // =========================
