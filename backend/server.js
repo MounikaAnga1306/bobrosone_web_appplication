@@ -188,7 +188,6 @@ app.get("/searchTrips", async (req, res) => {
     if (sleeper === 'true') url += `&sleeper=true`;
     if (seater === 'true') url += `&seater=true`;
 
-    console.log("Trips API:", url);
 
     const requestData = { url, method: "GET" };
     const headers = oauth.toHeader(oauth.authorize(requestData));
@@ -225,8 +224,6 @@ app.get("/tripdetails", async (req, res) => {
 
     const url = `${process.env.BASE_URL}/tripdetails?id=${id}`;
 
-    console.log("Trip details API:", url);
-    console.log("Trip ID:", id);
 
     const requestData = { url, method: "GET" };
     const headers = oauth.toHeader(oauth.authorize(requestData));
@@ -267,12 +264,9 @@ app.post("/blockTicket", async (req, res) => {
     const headers = oauth.toHeader(oauth.authorize(requestData));
     headers["Content-Type"] = "application/json";
     
-    console.log("Block Ticket Request Body:", JSON.stringify(req.body, null, 2));
-    console.log("Block Ticket URL:", url);
     
     const response = await axios.post(url, req.body, { headers });
     
-    console.log("Block Ticket SUCCESS Response:", response.data);
     
     res.json(response.data);
     
@@ -317,7 +311,6 @@ app.post("/razorpayment/order", async (req, res) => {
       email: email || "Not Applicable",
     };
 
-    console.log("Razorpay Order Request Body:", razorpayBody);
 
     const url = `${process.env.BASE_URL}/razorpayment/order`;
     const requestData = { url, method: "POST", body: razorpayBody };
@@ -327,7 +320,6 @@ app.post("/razorpayment/order", async (req, res) => {
 
     const response = await axios.post(url, razorpayBody, { headers });
 
-    console.log("Razorpay Order Response:", response.data);
 
     res.json(response.data);
 
@@ -358,7 +350,6 @@ app.post("/billdesk/order", async (req, res) => {
       tickid: tickid
     });
 
-    console.log("BillDesk Order Request:", billdeskBody.toString());
 
     const response = await axios.post(
       "https://uat.bobros.co.in/billdesktest.php",
@@ -370,7 +361,6 @@ app.post("/billdesk/order", async (req, res) => {
       }
     );
 
-    console.log("BillDesk API Response:", response.data);
 
     res.json(response.data);
 
@@ -389,14 +379,12 @@ app.post("/billdesk/order", async (req, res) => {
 app.post("/verifyPayment", async (req, res) => {
   try {
     const url = `${process.env.BASE_URL}/verifyPayment`;
-    console.log("Verify Payment Request:", req.body);
    
     const requestData = { url, method: "POST" };
     const headers = oauth.toHeader(oauth.authorize(requestData));
     headers["Content-Type"] = "application/json";
 
     const response = await axios.post(url, req.body, { headers });
-    console.log("Verify Payment Response:", response.data);
     res.json(response.data);
 
   } catch (error) {
@@ -423,7 +411,6 @@ app.get("/rewardPoints", async (req, res) => {
     }
 
     const url = `${process.env.BASE_URL}/rewardPoints?uid=${uid}&fare=${fare}`;
-    console.log("Reward Points API:", url);
 
     const requestData = { url, method: "GET" };
     const headers = oauth.toHeader(oauth.authorize(requestData));
@@ -467,13 +454,11 @@ app.post("/myBookings", async (req, res) => {
     });
 
     const allRows = response.data?.rows || [];
-    console.log("All Rows:", JSON.stringify(allRows, null, 2));
 
     const confirmedBookings = allRows.filter(b =>
       b.tin_ticket && b.tin_ticket !== "0"
     );
 
-    console.log("Confirmed:", JSON.stringify(confirmedBookings, null, 2));
 
     res.json({ success: true, bookings: confirmedBookings });
 
@@ -500,7 +485,6 @@ app.post("/guestBookings/verify", async (req, res) => {
       headers: { "Content-Type": "application/json" }
     });
 
-    console.log("Guest Verify Response:", response.data);
     res.json({ success: true, data: response.data });
 
   } catch (error) {
@@ -525,7 +509,6 @@ app.post("/guestBookings/data", async (req, res) => {
       headers: { "Content-Type": "application/json" }
     });
 
-    console.log("Guest Data Response:", dataRes.data);
 
     const allBookings = dataRes.data?.bookingDetails || dataRes.data?.bookings || dataRes.data?.rows || [];
 
@@ -562,11 +545,9 @@ app.post("/bookticket/rp", async (req, res) => {
     const headers = oauth.toHeader(oauth.authorize(requestData));
     headers["Content-Type"] = "application/json";
 
-    console.log("Book Ticket RP Body:", req.body);
 
     const response = await axios.post(url, req.body, { headers });
 
-    console.log("Book Ticket RP Response:", response.data);
 
     res.json(response.data);
 
@@ -595,14 +576,12 @@ app.post("/cancel/verify", async (req, res) => {
 
     const url = `${process.env.BASE_URL}/cancelt/verifyuser`;
 
-    console.log("Cancel Verify Body:", req.body);
 
     const requestData = { url, method: "POST", body: req.body };
     const headers = oauth.toHeader(oauth.authorize(requestData));
     headers["Content-Type"] = "application/json";
 
     const response = await axios.post(url, req.body, { headers });
-    console.log("Cancel Verify Response:", response.data);
 
     res.json(response.data);
 
@@ -631,14 +610,12 @@ app.post("/cancel/data", async (req, res) => {
 
     const url = `${process.env.BASE_URL}/cancelt/cancellationData`;
 
-    console.log("Cancel Data Body:", req.body);
 
     const requestData = { url, method: "POST", body: req.body };
     const headers = oauth.toHeader(oauth.authorize(requestData));
     headers["Content-Type"] = "application/json";
 
     const response = await axios.post(url, req.body, { headers });
-    console.log("Cancel Data Response:", response.data);
 
     res.json(response.data);
 
@@ -667,14 +644,12 @@ app.post("/cancel/ticket", async (req, res) => {
 
     const url = `${process.env.BASE_URL}/cancelt/cancelTicket`;
 
-    console.log("Cancel Ticket Body:", req.body);
 
     const requestData = { url, method: "POST", body: req.body };
     const headers = oauth.toHeader(oauth.authorize(requestData));
     headers["Content-Type"] = "application/json";
 
     const response = await axios.post(url, req.body, { headers });
-    console.log("Cancel Ticket Response:", response.data);
 
     res.json(response.data);
 
@@ -715,7 +690,6 @@ app.post("/myAccount", async (req, res) => {
 // =========================
 app.post("/offer/apply", async (req, res) => {
   try {
-    console.log("Offer Apply Body:", req.body);
  
     const response = await axios.post(
       "https://api.bobros.co.in/offer/apply-offer/",
@@ -723,7 +697,6 @@ app.post("/offer/apply", async (req, res) => {
       { headers: { "Content-Type": "application/json" } }
     );
  
-    console.log("Offer Apply Response:", response.data);
     res.json(response.data);
  
   } catch (error) {
@@ -746,13 +719,11 @@ app.get("/printTicket", async (req, res) => {
     }
 
     const url = `${process.env.BASE_URL}/email/print-ticket?tin=${tin}`;
-    console.log("Print Ticket API:", url);
 
     const requestData = { url, method: "GET" };
     const headers = oauth.toHeader(oauth.authorize(requestData));
 
     const response = await axios.get(url, { headers });
-    console.log("Print Ticket Response:", response.data);
     res.json(response.data);
 
   } catch (error) {

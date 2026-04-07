@@ -23,7 +23,6 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
     try {
       setLoading(true);
       const res = await axios.get(`/printTicket?tin=${tin.trim()}`);
-      console.log("Print Ticket Full Response:", JSON.stringify(res.data, null, 2));
 
       if (!res.data?.success) {
         setError("Ticket not found. Please check the Ticket ID.");

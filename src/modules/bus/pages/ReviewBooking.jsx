@@ -34,11 +34,6 @@ const {
 const user = getUserDetails();
 const uid = String(user?.uid || contact?.uid || contact.mobile);
 
-console.log("=== UID DEBUG ===");
-console.log("user?.uid:", user?.uid);
-console.log("contact?.uid:", contact?.uid);
-console.log("final uid:", uid);
-console.log("=================");
 
 const totalFare = selectedSeats.reduce(
   (sum, seat) => sum + seat.totalFare,
@@ -101,11 +96,9 @@ const handleConfirmBooking = async () => {
       inventoryItems
     };
 
-    console.log("Block Ticket Body:", JSON.stringify(body, null, 2));
 
     const response = await blockTicket(body);
 
-    console.log("Block Ticket Response:", response);
 
     if (!response.success) {
       alert("Ticket block failed");

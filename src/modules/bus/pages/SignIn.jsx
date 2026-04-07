@@ -51,6 +51,7 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
         localStorage.setItem("isLoggedIn", "true");
         window.dispatchEvent(new Event("storage"));
         closeModal();
+        navigate("/");
       } catch (error) {
         alert("Google account not registered or server error.");
       }

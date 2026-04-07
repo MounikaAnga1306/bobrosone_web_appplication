@@ -58,7 +58,6 @@ const ResetPassword = ({ resetData, closeModal, openSignin }) => {
       });
 
     } catch (err) {
-      console.log("RESET PASSWORD ERROR:", err.response?.data);
 
       let message =
         err.response?.data?.msg ||
