@@ -94,7 +94,6 @@ const CancellationCard = ({ onClose }) => {
         otp: otpValue,
       });
 
-      console.log("Cancel Data Full Response:", JSON.stringify(res.data, null, 2));
 
       setPendingNav({
         state: {

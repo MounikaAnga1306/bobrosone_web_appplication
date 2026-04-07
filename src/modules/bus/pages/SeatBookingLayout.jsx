@@ -94,7 +94,6 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
     const mins = minutes % 60;
     return `${String(hrs).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
   };
-  console.log("SeatBookingLayout PROPS:", { fromCity, toCity, source, destination, date });
 
   const handleConfirmBooking = async () => {
     if (isBooking) return;
@@ -138,9 +137,7 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
         inventoryItems
       };
 
-      console.log("Block Ticket Body:", JSON.stringify(body, null, 2));
       const response = await blockTicket(body);
-      console.log("Block Ticket Response:", response);
 
       if (!response.success) {
         alert("Ticket block failed");
@@ -149,15 +146,7 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
       }
 
       localStorage.setItem("blockStartTime", Date.now());
-      console.log("NAVIGATE STATE:", {
-  totalFare,
-  fromCity,
-  toCity,
-  date,
-  source,
-  destination,
-  ticketId: response.blockedTicketId,
-});
+    
 
       navigate("/booking-success", {
         state: {

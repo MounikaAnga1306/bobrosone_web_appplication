@@ -32,7 +32,6 @@ const BusResultCard = ({
     
     try {
       const apiUrl = `/cancellation-policy/${id}`;
-      console.log("Fetching from:", apiUrl);
       
       const response = await fetch(apiUrl);
       
