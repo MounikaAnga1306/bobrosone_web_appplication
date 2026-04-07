@@ -199,7 +199,9 @@ const BookingForm = () => {
 
   const isPastDate = (d) => {
     const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), d);
-    return date < new Date();
+    const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return date < today;
   };
 
   return (
@@ -347,7 +349,7 @@ const BookingForm = () => {
               </div>
 
               {showCalendar && (
-                <div ref={calendarRef} className="absolute top-full left-0 right-0 bg-white rounded-2xl shadow-2xl p-3 z-50 mt-1">
+                <div ref={calendarRef} onMouseDown={(e) => e.stopPropagation()} className="absolute top-full left-0 right-0 bg-white rounded-2xl shadow-2xl p-3 z-50 mt-1">
                   <div className="flex justify-between items-center mb-3">
                     <button onClick={() => setCurrentDate(new Date(year, currentDate.getMonth() - 1, 1))} className="p-1 hover:bg-gray-100 rounded"><ChevronLeft size={18} /></button>
                     <h2 className="font-semibold text-sm">{monthName} {year}</h2>
@@ -456,11 +458,27 @@ const BookingForm = () => {
                 </div>
                 <div className="h-4 mt-0.5" />
                 {showCalendar && (
-                  <div ref={calendarRef} className="absolute top-12 left-0 right-0 sm:right-auto bg-white rounded-2xl shadow-2xl p-3 sm:p-4 w-full sm:w-[320px] z-50">
+                  <div ref={calendarRef} className="absolute top-16  right-0 bg-white rounded-2xl shadow-2xl p-3 sm:p-4 w-[280px] sm:w-[320px] z-50">
                     <div className="flex justify-between items-center mb-3">
-                      <button onClick={() => setCurrentDate(new Date(year, currentDate.getMonth() - 1, 1))} className="p-1 hover:bg-gray-100 rounded"><ChevronLeft size={18} /></button>
+                     <button 
+                      onClick={(e) => { 
+                      e.stopPropagation(); 
+                      setCurrentDate(new Date(year, currentDate.getMonth() - 1, 1)); 
+                      }} 
+                        className="p-1 hover:bg-gray-100 rounded"
+                       >
+                         <ChevronLeft size={18} />
+                       </button>
                       <h2 className="font-semibold text-sm">{monthName} {year}</h2>
-                      <button onClick={() => setCurrentDate(new Date(year, currentDate.getMonth() + 1, 1))} className="p-1 hover:bg-gray-100 rounded"><ChevronRight size={18} /></button>
+                      <button 
+                       onClick={(e) => { 
+                           e.stopPropagation(); 
+                           setCurrentDate(new Date(year, currentDate.getMonth() + 1, 1)); 
+                         }} 
+                         className="p-1 hover:bg-gray-100 rounded"
+                           >
+                             <ChevronRight size={18} />
+                         </button>
                     </div>
                     <div className="grid grid-cols-7 text-center text-xs text-gray-500 mb-2">
                       {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d) => <div key={d}>{d}</div>)}
@@ -472,10 +490,17 @@ const BookingForm = () => {
                         const past = isPastDate(day);
                         const isSelected = selectedDate?.getDate() === day && selectedDate?.getMonth() === currentDate.getMonth();
                         return (
-                          <button key={day} onClick={() => !past && handleDateSelect(day)} disabled={past}
-                            className={`p-1 rounded-lg transition text-xs ${isSelected ? "bg-[#FD561E] text-white" : ""} ${past ? "text-gray-300 cursor-not-allowed" : "hover:bg-orange-100"}`}>
-                            {day}
-                          </button>
+                          <button  
+                            key={day}
+                             onClick={(e) => { 
+                               e.stopPropagation(); 
+                                !past && handleDateSelect(day);
+                                 }} 
+                                 disabled={past}
+                                 className={`p-1 rounded-lg transition text-xs ${isSelected ? "bg-[#FD561E] text-white" : ""} ${past ? "text-gray-300 cursor-not-allowed" : "hover:bg-orange-100"}`}
+                                 >
+                                   {day}
+                                   </button>
                         );
                       })}
                     </div>
