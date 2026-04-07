@@ -301,7 +301,7 @@ const SeatSelection = ({
         tablet  (sm–lg) : side-by-side below seat panel
         desktop (lg+)   : alongside seat panel (parent flex-row)
       */}
-      <div className="flex flex-col sm:flex-row sm:items-start lg:flex-col lg:items-stretch gap-4 md:gap-6 w-full lg:w-auto">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-center lg:flex-col lg:items-stretch gap-4 md:gap-6 w-full lg:w-auto">
         <SeatLegend />
         <SelectedSeatSummary
           selectedSeats={selectedSeats}
