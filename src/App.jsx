@@ -57,7 +57,7 @@ function App() {
             <Router>
               <div className="min-h-screen   bg-gray-100 flex flex-col w-full overflow-x-hidden">
                 <Navbar />
-                <MainContent>
+               
                   <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/HomePage" element={<Home />} />
@@ -93,7 +93,7 @@ function App() {
                     
                     <Route path="*" element={<Navigate to="/" />} />
                   </Routes>
-                </MainContent>
+              
                
                 <FooterBottom />
               </div>
