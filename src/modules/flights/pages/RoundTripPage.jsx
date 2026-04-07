@@ -1,8 +1,9 @@
 // src/modules/flights/pages/RoundTripPage.jsx
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useFlightSearchContext } from '../contexts/FlightSearchContext';
+import { searchFlights } from '../services/flightSearchService';
 import { transformFlightData } from '../utils/flightDataTransformer';
 import RoundTripFlightCard from '../components/shared/RoundTripFlightCard';
 import BottomBar from '../components/shared/BottomBar';
@@ -22,25 +23,199 @@ import {
   FaInfoCircle,
   FaExchangeAlt,
   FaStar,
-  FaRegClock,
-  FaSuitcase,
-  FaShieldAlt,
-  FaLongArrowAltRight
+  FaShieldAlt
 } from 'react-icons/fa';
+
+// ============ PREMIUM FLIGHT LOADING COMPONENT ============
+const FlightLoadingAnimation = ({ searchSummary }) => {
+  const [progress, setProgress] = useState(0);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [dots, setDots] = useState('');
+  
+  // Loading steps for better UX
+  const loadingSteps = [
+    { message: "Searching the best routes", duration: 800 },
+    { message: "Checking availability", duration: 600 },
+    { message: "Finding lowest fares", duration: 700 },
+    { message: "Comparing airlines", duration: 500 },
+    { message: "Almost there...", duration: 400 }
+  ];
+  
+  // Animated dots effect
+  useEffect(() => {
+    const dotInterval = setInterval(() => {
+      setDots(prev => prev.length >= 3 ? '' : prev + '.');
+    }, 400);
+    return () => clearInterval(dotInterval);
+  }, []);
+  
+  // Progress animation
+  useEffect(() => {
+    const totalDuration = loadingSteps.reduce((sum, step) => sum + step.duration, 0);
+    const startTime = Date.now();
+    
+    const progressInterval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const newProgress = Math.min((elapsed / totalDuration) * 100, 100);
+      setProgress(newProgress);
+      
+      // Update current step based on elapsed time
+      let accumulatedTime = 0;
+      for (let i = 0; i < loadingSteps.length; i++) {
+        accumulatedTime += loadingSteps[i].duration;
+        if (elapsed < accumulatedTime) {
+          setCurrentStep(i);
+          break;
+        }
+      }
+      
+      if (newProgress >= 100) {
+        clearInterval(progressInterval);
+      }
+    }, 50);
+    
+    return () => clearInterval(progressInterval);
+  }, []);
+  
+  // Calculate flight position based on progress with takeoff trajectory
+  const calculatePosition = (progress) => {
+    const screenWidth = window.innerWidth;
+    const maxLeft = screenWidth - 100;
+    const left = (progress / 100) * maxLeft;
+    
+    const x = progress / 100;
+    const maxRise = 150;
+    const top = 350 - (maxRise * x * x);
+    const rotation = -8 * (1 - x);
+    
+    return { left, top, rotation };
+  };
+  
+  const position = calculatePosition(progress);
+  
+  return (
+    <div className="min-h-screen bg-white overflow-hidden relative">
+      {/* Clean white background */}
+      <div className="absolute inset-0 bg-white"></div>
+      
+      {/* Subtle minimal shadow line at bottom */}
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-gray-50 to-transparent"></div>
+      
+      {/* Animated Flight Image with Takeoff Trajectory */}
+      <div
+        className="fixed transition-all duration-100 ease-linear"
+        style={{
+          left: `${position.left}px`,
+          top: `${position.top}px`,
+          transform: `rotate(${position.rotation}deg)`,
+          transition: 'left 0.05s linear, top 0.08s cubic-bezier(0.4, 0, 0.2, 1), transform 0.1s ease',
+          zIndex: 20
+        }}
+      >
+        {/* Large Flight Image */}
+        <img 
+          src="/assets/flight_moving_image1.png"
+          alt="Flight"
+          className="w-32 h-32 md:w-40 md:h-40 object-contain"
+          style={{
+            filter: 'drop-shadow(0 8px 16px rgba(0, 0, 0, 0.08))',
+            transition: 'all 0.3s ease',
+            opacity: 0.95
+          }}
+          onError={(e) => {
+            e.target.src = "https://cdn-icons-png.flaticon.com/512/3095/3095100.png";
+            console.warn('Flight image not found in public/assets, using fallback');
+          }}
+        />
+        
+        {/* Minimal trail effect */}
+        <div className="absolute -left-12 top-1/2 transform -translate-y-1/2 flex gap-1">
+          {[...Array(3)].map((_, i) => (
+            <div
+              key={i}
+              className="rounded-full bg-gray-200"
+              style={{
+                width: `${12 - i * 3}px`,
+                height: `${2 - i * 0.5}px`,
+                opacity: 0.3 - i * 0.1,
+                animation: `trail ${0.6 - i * 0.15}s linear infinite`,
+              }}
+            />
+          ))}
+        </div>
+      </div>
+      
+      {/* Minimal horizontal reference line */}
+      <div className="absolute bottom-32 left-0 right-0">
+        <div className="h-px bg-gray-100 w-full"></div>
+      </div>
+      
+      {/* Loading Text - Centered */}
+      <div className="absolute bottom-40 left-1/2 transform -translate-x-1/2 text-center z-10">
+        <h2 className="text-xl font-light text-gray-600 mb-2 tracking-wide">
+          {loadingSteps[currentStep]?.message}
+          <span className="inline-block w-6 text-left text-gray-400">{dots}</span>
+        </h2>
+        <p className="text-gray-400 text-sm font-light">
+          {searchSummary?.fromName} → {searchSummary?.toName}
+        </p>
+        <p className="text-gray-300 text-xs mt-1 font-light">
+          {searchSummary?.departureDate} → {searchSummary?.returnDate}
+        </p>
+        
+        {/* Minimal Progress Bar */}
+        <div className="mt-8 w-48 mx-auto">
+          <div className="h-px bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gray-400 rounded-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            ></div>
+          </div>
+          <div className="flex justify-between text-xs text-gray-300 mt-2 font-light">
+            <span>Depart</span>
+            <span className="text-gray-400">{Math.round(progress)}%</span>
+            <span>Arrive</span>
+          </div>
+        </div>
+      </div>
+      
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @keyframes trail {
+            0% { 
+              transform: translateX(0); 
+              opacity: 0.3;
+              width: 12px;
+            }
+            100% { 
+              transform: translateX(-20px); 
+              opacity: 0;
+              width: 20px;
+            }
+          }
+        `
+      }} />
+    </div>
+  );
+};
 
 const RoundTripPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { 
-    flightResults, 
-    searchParams, 
+    updateFlightResults, 
+    flightResults,
     getSearchSummary,
     passengerBreakdown
   } = useFlightSearchContext();
 
-  // ============ STATE MANAGEMENT ============
+  // ============ API LOADING STATE ============
+  const [isLoading, setIsLoading] = useState(true);
+  const [apiError, setApiError] = useState(null);
+  const [searchSummary, setSearchSummary] = useState(null);
+  const [passengerCounts, setPassengerCounts] = useState({ ADT: 1, CNN: 0, INF: 0 });
   
-  // UI States
+  // ============ UI STATES ============
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [sortBy, setSortBy] = useState('price-low');
@@ -67,13 +242,6 @@ const RoundTripPage = () => {
   // Sheet States
   const [showDetailSheet, setShowDetailSheet] = useState(false);
 
-  // ============ DATA TRANSFORMATION ============
-  
-  const { outboundFlights, returnFlights, combinations } = useMemo(() => {
-    console.log('🔍 Transforming flight data from:', flightResults);
-    return transformFlightData(flightResults);
-  }, [flightResults]);
-
   // Sort options
   const sortOptions = [
     { value: 'price-low', label: 'Price: Low to High' },
@@ -90,6 +258,176 @@ const RoundTripPage = () => {
     { id: 'armed', label: 'Armed Forces', icon: FaShieldAlt, color: 'orange' },
     { id: 'senior', label: 'Senior Citizen', icon: FaUserFriends, color: 'purple' }
   ];
+
+  // ============ PARSE URL PARAMETERS AND CALL API ============
+  useEffect(() => {
+    const fetchFlightResults = async () => {
+      setIsLoading(true);
+      setApiError(null);
+      
+      try {
+        // Parse URL parameters
+        const params = new URLSearchParams(location.search);
+        const tripType = params.get('tripType');
+        
+        // Validate trip type
+        if (!tripType || tripType !== 'round-trip') {
+          console.error('Invalid trip type or missing parameters');
+          navigate('/flights');
+          return;
+        }
+        
+        // Extract search parameters
+        const from = params.get('from');
+        const to = params.get('to');
+        const fromName = params.get('fromName');
+        const toName = params.get('toName');
+        const fromCity = params.get('fromCity');
+        const toCity = params.get('toCity');
+        const departureDate = params.get('departureDate');
+        const returnDate = params.get('returnDate');
+        const adults = parseInt(params.get('adults') || '1');
+        const children = parseInt(params.get('children') || '0');
+        const infants = parseInt(params.get('infants') || '0');
+        const travelClass = params.get('class') || 'Economy';
+        const fareType = params.get('fareType') || 'regular';
+        
+        // Validate required parameters
+        if (!from || !to || !departureDate || !returnDate) {
+          console.error('Missing required search parameters');
+          navigate('/flights');
+          return;
+        }
+        
+        // Format dates for display
+        const formattedDeparture = new Date(departureDate).toLocaleDateString('en-GB', { 
+          day: 'numeric', 
+          month: 'short',
+          year: 'numeric'
+        });
+        const formattedReturn = new Date(returnDate).toLocaleDateString('en-GB', { 
+          day: 'numeric', 
+          month: 'short',
+          year: 'numeric'
+        });
+        
+        // Build search summary for display
+        const summary = {
+          from: { code: from, name: fromName, city: fromCity },
+          to: { code: to, name: toName, city: toCity },
+          departureDate: formattedDeparture,
+          returnDate: formattedReturn,
+          rawDepartureDate: departureDate,
+          rawReturnDate: returnDate,
+          adults,
+          children,
+          infants,
+          travelClass,
+          fareType,
+          fromCode: from,
+          toCode: to,
+          fromName: fromName,
+          toName: toName
+        };
+        
+        setSearchSummary(summary);
+        
+        // Set passenger counts
+        setPassengerCounts({ ADT: adults, CNN: children, INF: infants });
+        
+        // Build passengers array for API
+        const passengers = [];
+        for (let i = 0; i < adults; i++) passengers.push({ code: 'ADT' });
+        for (let i = 0; i < children; i++) passengers.push({ code: 'CNN', age: 8 });
+        for (let i = 0; i < infants; i++) passengers.push({ code: 'INF', age: 1 });
+        
+        // Build search data for API
+        const searchData = {
+          tripType: 'round-trip',
+          legs: [
+            {
+              origin: from,
+              destination: to,
+              departureDate: departureDate
+            },
+            {
+              origin: to,
+              destination: from,
+              departureDate: returnDate
+            }
+          ],
+          passengers,
+          fareType
+        };
+        
+        // Call the API
+        console.log('🔍 Calling round-trip search API with:', searchData);
+        const result = await searchFlights(searchData);
+        
+        if (result.success) {
+          console.log('✅ Round-trip search successful:', {
+            outboundCount: result.flights?.length || 0,
+            returnCount: result.roundTrips?.length || 0,
+            searchId: result.searchId
+          });
+          
+          updateFlightResults({
+            flights: result.flights || [],
+            roundTrips: result.roundTrips || [],
+            roundTripDisplay: result.roundTripDisplay || null,
+            multiCity: null,
+            brandDetails: result.brandDetails || {},
+            count: result.count || 0,
+            loading: false,
+            error: null,
+            searchId: result.searchId,
+            traceId: result.traceId,
+            passengerCount: result.passengerCount,
+            currency: result.currency,
+            passengerBreakdown: { ADT: adults, CNN: children, INF: infants }
+          });
+        } else {
+          console.error('❌ Round-trip search failed:', result.error);
+          setApiError(result.error || 'Search failed. Please try again.');
+          updateFlightResults({
+            loading: false,
+            error: result.error || 'Search failed',
+            flights: [],
+            roundTrips: []
+          });
+        }
+      } catch (err) {
+        console.error('❌ Round-trip search error:', err);
+        setApiError(err.message || 'An unexpected error occurred');
+        updateFlightResults({
+          loading: false,
+          error: err.message,
+          flights: [],
+          roundTrips: []
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchFlightResults();
+  }, [location.search, navigate, updateFlightResults]);
+
+  // ============ DATA TRANSFORMATION ============
+  
+  const { outboundFlights, returnFlights, combinations } = useMemo(() => {
+    console.log('🔄 Transforming flight data...');
+    const transformed = transformFlightData(flightResults);
+    
+    // Log brand fare details
+    console.log('\n📊 [BRAND FARE DETAILS]');
+    console.log('========================================');
+    console.log(`✈️ Outbound Flights: ${transformed.outboundFlights?.length || 0}`);
+    console.log(`🔄 Return Flights: ${transformed.returnFlights?.length || 0}`);
+    console.log('========================================\n');
+    
+    return transformed;
+  }, [flightResults]);
 
   // ============ FILTERING LOGIC ============
   
@@ -135,10 +473,10 @@ const RoundTripPage = () => {
     // Sorting
     switch (sortBy) {
       case 'price-low':
-        filtered.sort((a, b) => (a.lowestPrice || 0) - (b.lowestPrice || 0));
+        filtered.sort((a, b) => (a.lowestPrice || a.price || 0) - (b.lowestPrice || b.price || 0));
         break;
       case 'price-high':
-        filtered.sort((a, b) => (b.lowestPrice || 0) - (a.lowestPrice || 0));
+        filtered.sort((a, b) => (b.lowestPrice || b.price || 0) - (a.lowestPrice || a.price || 0));
         break;
       case 'duration':
         filtered.sort((a, b) => (a.duration || 0) - (b.duration || 0));
@@ -156,7 +494,6 @@ const RoundTripPage = () => {
   const filteredReturn = useMemo(() => {
     let filtered = [...returnFlights];
 
-    // Apply same filters as outbound
     if (priceRange.min > 0 || priceRange.max < 100000) {
       filtered = filtered.filter(f => {
         const price = f.lowestPrice || f.price || 0;
@@ -189,7 +526,6 @@ const RoundTripPage = () => {
       });
     }
 
-    // Sort return flights by departure time (earliest first)
     filtered.sort((a, b) => new Date(a.departureTime) - new Date(b.departureTime));
 
     return filtered;
@@ -198,7 +534,7 @@ const RoundTripPage = () => {
   // ============ HANDLERS ============
   
   const handleFlightSelect = (flight, legType) => {
-    console.log(`🎯 Selecting ${legType} flight:`, flight.id);
+    console.log(`🎯 Selecting ${legType} flight:`, flight.id, 'Airline:', flight.airline);
     
     setSelectedRoundTrip(prev => {
       const newSelection = {
@@ -206,7 +542,6 @@ const RoundTripPage = () => {
         [legType]: flight
       };
       
-      // Calculate total price
       const outboundPrice = newSelection.outbound?.lowestPrice || 
                            newSelection.outbound?.price || 0;
       const returnPrice = newSelection.return?.lowestPrice || 
@@ -231,7 +566,6 @@ const RoundTripPage = () => {
 
   const handleFaresSelected = (outboundFare, returnFare) => {
     setSelectedFares({ outbound: outboundFare, return: returnFare });
-    // Here you can navigate to booking or show summary
     console.log('Fares selected:', { outboundFare, returnFare });
   };
 
@@ -258,16 +592,15 @@ const RoundTripPage = () => {
   }, [outboundFlights, returnFlights]);
 
   const airlines = useMemo(() => {
-    const airlineSet = new Set();
+    const airlineMap = new Map();
     [...outboundFlights, ...returnFlights].forEach(f => {
-      if (f.airline) airlineSet.add(f.airline);
+      if (f.airline) {
+        const current = airlineMap.get(f.airline) || { name: f.airline, code: f.airlineCode, count: 0 };
+        current.count += 1;
+        airlineMap.set(f.airline, current);
+      }
     });
-    return Array.from(airlineSet).map(name => ({
-      name,
-      code: name.substring(0, 2).toUpperCase(),
-      count: outboundFlights.filter(f => f.airline === name).length + 
-             returnFlights.filter(f => f.airline === name).length
-    }));
+    return Array.from(airlineMap.values());
   }, [outboundFlights, returnFlights]);
 
   const activeFilterCount = 
@@ -277,23 +610,76 @@ const RoundTripPage = () => {
     selectedFareTypes.length +
     (priceRange.min !== getPriceRange.min || priceRange.max !== getPriceRange.max ? 1 : 0);
 
-  // ============ RENDER ============
-  
-  if (!outboundFlights.length || !returnFlights.length) {
+  // ============ LOADING STATE ============
+  if (isLoading) {
+    return <FlightLoadingAnimation searchSummary={searchSummary} />;
+  }
+
+  // ============ API ERROR STATE ============
+  if (apiError) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
-        <div className="text-center bg-white p-8 rounded-2xl shadow-lg max-w-md">
-          <div className="relative">
-            <div className="animate-spin rounded-full h-20 w-20 border-4 border-gray-200 border-t-[#FD561E] mx-auto mb-6"></div>
-            <FaExchangeAlt className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-[#FD561E] text-xl animate-pulse" />
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <FaExclamationTriangle className="text-3xl text-red-500" />
           </div>
-          <h2 className="text-xl font-bold text-gray-800 mb-2">Loading Flights</h2>
-          <p className="text-gray-600">Please wait while we find the best options for you...</p>
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">Search Failed</h2>
+          <p className="text-gray-600 mb-4">{apiError}</p>
+          {searchSummary && (
+            <div className="bg-gray-50 p-3 rounded-lg mb-6 text-left">
+              <p className="text-sm text-gray-600">Your search:</p>
+              <p className="font-medium text-sm mt-1">{searchSummary.fromName} → {searchSummary.toName}</p>
+              <p className="text-xs text-gray-500 mt-1">{searchSummary.departureDate} → {searchSummary.returnDate}</p>
+            </div>
+          )}
+          <div className="flex gap-3">
+            <button
+              onClick={() => window.location.reload()}
+              className="flex-1 bg-gray-100 text-gray-700 font-semibold py-3 px-4 rounded-xl hover:bg-gray-200 transition-colors"
+            >
+              Try Again
+            </button>
+            <button
+              onClick={() => navigate('/flights')}
+              className="flex-1 bg-[#FD561E] hover:bg-[#e04e1b] text-white font-semibold py-3 px-4 rounded-xl transition-all hover:shadow-lg"
+            >
+              Modify Search
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
+  // ============ NO FLIGHTS STATE ============
+  if (!isLoading && !apiError && (!outboundFlights.length || !returnFlights.length)) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
+          <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <FaPlane className="text-3xl text-blue-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-3">No Flights Found</h2>
+          <p className="text-gray-600 mb-4">We couldn't find any flights matching your search criteria.</p>
+          {searchSummary && (
+            <div className="bg-gray-50 p-3 rounded-lg mb-6 text-left">
+              <p className="text-sm text-gray-600">You searched for:</p>
+              <p className="font-medium text-sm mt-1">{searchSummary.fromName} → {searchSummary.toName}</p>
+              <p className="text-xs text-gray-500 mt-1">{searchSummary.departureDate} → {searchSummary.returnDate}</p>
+            </div>
+          )}
+          <button
+            onClick={() => navigate('/flights')}
+            className="w-full bg-[#FD561E] hover:bg-[#e04e1b] text-white font-semibold py-3 px-4 rounded-xl transition-all hover:shadow-lg"
+          >
+            Modify Search
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ============ MAIN RENDER ============
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -310,20 +696,20 @@ const RoundTripPage = () => {
 
             <div className="text-center flex-1 max-w-2xl mx-4">
               {/* Search Summary Card */}
-              <div className="bg-orange-50 rounded-full px-4 py-2 inline-flex items-center space-x-3 text-sm">
+              <div className="bg-orange-50 rounded-full px-4 py-2 inline-flex items-center space-x-3 text-sm flex-wrap justify-center gap-2">
                 <FaMapMarkerAlt className="text-[#FD561E] text-xs" />
-                <span className="font-medium">{searchParams?.legs?.[0]?.origin || 'DEL'}</span>
+                <span className="font-medium">{searchSummary?.fromCode || 'DEL'}</span>
                 <FaExchangeAlt className="text-gray-400 text-xs" />
-                <span className="font-medium">{searchParams?.legs?.[0]?.destination || 'BOM'}</span>
+                <span className="font-medium">{searchSummary?.toCode || 'BOM'}</span>
                 <span className="w-px h-4 bg-gray-300"></span>
                 <FaCalendarAlt className="text-gray-400 text-xs" />
-                <span>{searchParams?.legs?.[0]?.departureDate || '26 Mar'}</span>
+                <span>{searchSummary?.departureDate || '26 Mar'}</span>
                 <FaChevronRight className="text-gray-400 text-xs" />
                 <FaCalendarAlt className="text-gray-400 text-xs" />
-                <span>{searchParams?.legs?.[1]?.departureDate || '28 Mar'}</span>
+                <span>{searchSummary?.returnDate || '28 Mar'}</span>
                 <span className="w-px h-4 bg-gray-300"></span>
                 <FaUserFriends className="text-gray-400 text-xs" />
-                <span>1 Adult</span>
+                <span>{passengerCounts.ADT} Adult{passengerCounts.ADT !== 1 ? 's' : ''}</span>
               </div>
             </div>
 
@@ -541,14 +927,14 @@ const RoundTripPage = () => {
         </div>
       </div>
 
-      {/* Bottom Bar - Shows when both flights selected */}
+      {/* Bottom Bar */}
       {selectedRoundTrip.outbound && selectedRoundTrip.return && (
         <BottomBar
           selectedFlights={[selectedRoundTrip.outbound, selectedRoundTrip.return]}
           totalPrice={selectedRoundTrip.totalPrice}
           onContinue={handleContinue}
           type="round-trip"
-          passengerCount={passengerBreakdown?.ADT || 1}
+          passengerCount={passengerCounts.ADT + passengerCounts.CNN}
         />
       )}
 
@@ -559,7 +945,7 @@ const RoundTripPage = () => {
           onClose={handleCloseSheet}
           outboundFlight={selectedRoundTrip.outbound}
           returnFlight={selectedRoundTrip.return}
-          passengerCounts={passengerBreakdown || { ADT: 1, CNN: 0, INF: 0 }}
+          passengerCounts={passengerCounts}
           onFaresSelected={handleFaresSelected}
         />
       )}
