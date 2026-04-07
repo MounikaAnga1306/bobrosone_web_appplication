@@ -227,6 +227,7 @@ app.get("/tripdetails", async (req, res) => {
 
     const requestData = { url, method: "GET" };
     const headers = oauth.toHeader(oauth.authorize(requestData));
+    console.log("trip id",id);
 
     const response = await axios.get(url, { headers });
 

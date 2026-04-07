@@ -1,4 +1,4 @@
-const SeatBookingHeader = ({ step, handleStepClick, onClose, fromCity, toCity, date }) => {
+const SeatBookingHeader = ({ step, handleStepClick, onClose, fromCity, toCity, date,operator }) => {
   return (
     <div className="border-b border-gray-200 px-4 md:px-6 py-3 md:py-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 md:gap-0">
       
@@ -16,10 +16,14 @@ const SeatBookingHeader = ({ step, handleStepClick, onClose, fromCity, toCity, d
         {/* DYNAMIC ROUTE */}
         <div className="flex-1 md:flex-initial">
           <h2 className="font-semibold text-sm md:text-base lg:text-lg">
-            {fromCity} → {toCity} <span className="hidden md:inline">|</span>
-            <br className="md:hidden" />
-            <span className="text-xs md:text-sm lg:text-base"> {date}</span>
-          </h2>
+  {fromCity} → {toCity} <span className="hidden md:inline">|</span>
+  <br className="md:hidden" />
+  <span className="text-xs md:text-sm lg:text-base"> {date}</span>
+</h2>
+{operator && (
+  <p className="text-sm  font-semibold text-gray-800 mt-0.5">{operator}</p>
+)}
+
         </div>
 
       </div>

@@ -403,6 +403,7 @@ export default function BusResultsPage() {
         source={fromId}
         destination={toId}
         date={date}
+        operator={allTrips.find(t => t.id === selectedTripId)?.travels} 
       />
     </div>
   );
