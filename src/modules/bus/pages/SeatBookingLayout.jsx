@@ -10,7 +10,7 @@ import SeatSelection from "../components/SeatSelection";
 import BoardingDropping from "../components/BoardingDropping";
 import PassengerForm from "../components/PassengerForm";
 
-const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, destination, date }) => {
+const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, destination, date,operator }) => {
   const navigate = useNavigate();
 
   const [tripDetails, setTripDetails]         = useState(null);
@@ -44,12 +44,12 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
     if ((boardingPoint || droppingPoint) && warning === "Please select boarding and dropping points") setWarning("");
   }, [selectedSeats, boardingPoint, droppingPoint]);
 
-  const handleStepClick = (stepNumber) => {
-    if (stepNumber === 2 && selectedSeats.length === 0) { showWarning("Please select at least one seat"); return; }
-    if (stepNumber === 3 && (!boardingPoint || !droppingPoint)) { showWarning("Please select boarding and dropping points"); return; }
-    setStep(stepNumber);
-  };
-
+ const handleStepClick = (stepNumber) => {
+  if (stepNumber === 2 && selectedSeats.length === 0) { showWarning("Please select at least one seat"); return; }
+  if (stepNumber === 3 && selectedSeats.length === 0) { showWarning("Please select at least one seat"); return; }
+  if (stepNumber === 3 && (!boardingPoint || !droppingPoint)) { showWarning("Please select boarding and dropping points"); return; }
+  setStep(stepNumber);
+};
   useEffect(() => {
     if (!tripId) return;
     setStep(1);
@@ -90,11 +90,13 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
   if (!open) return null;
 
   const minutesToTime = (minutes) => {
-    const hrs = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${String(hrs).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
-  };
-  console.log("SeatBookingLayout PROPS:", { fromCity, toCity, source, destination, date });
+  const totalMinutes = Number(minutes);
+  const hrs24 = Math.floor(totalMinutes / 60) % 24;
+  const mins = totalMinutes % 60;
+  const period = hrs24 >= 12 ? "PM" : "AM";
+  const hrs12 = hrs24 % 12 || 12;
+  return `${hrs12}:${String(mins).padStart(2, "0")} ${period}`;
+};
 
   const handleConfirmBooking = async () => {
     if (isBooking) return;
@@ -138,9 +140,7 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
         inventoryItems
       };
 
-      console.log("Block Ticket Body:", JSON.stringify(body, null, 2));
       const response = await blockTicket(body);
-      console.log("Block Ticket Response:", response);
 
       if (!response.success) {
         alert("Ticket block failed");
@@ -149,15 +149,8 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
       }
 
       localStorage.setItem("blockStartTime", Date.now());
-      console.log("NAVIGATE STATE:", {
-  totalFare,
-  fromCity,
-  toCity,
-  date,
-  source,
-  destination,
-  ticketId: response.blockedTicketId,
-});
+      console.log("tripDetails:", tripDetails);
+
 
       navigate("/booking-success", {
         state: {
@@ -218,6 +211,7 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
           fromCity={fromCity}
           toCity={toCity}
           date={date}
+          operator={operator || tripDetails?.travels}
         />
 
         <div className="flex-1 overflow-y-auto p-6">
@@ -269,21 +263,27 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
 
               <h2 className="text-2xl font-semibold mb-6">Review Your Booking</h2>
 
-              <div className="border-b pb-4 mb-4">
-                <p className="font-semibold text-lg mb-2">Travel Itinerary</p>
-                <p>{fromCity} → {toCity}</p>
-                <p>Date : {date}</p>
-                <p className="text-sm text-gray-600 mt-2">{tripDetails?.travels}</p>
-                <p className="text-sm text-gray-600">{tripDetails?.busType}</p>
-              </div>
+              <div className="border-b pb-4 mb-4 flex flex-col sm:flex-row gap-6">
+  
+  {/* Travel Itinerary - Left */}
+  <div className="flex-1">
+    <p className="font-semibold text-lg mb-2">Travel Itinerary</p>
+    <p>{fromCity} → {toCity}</p>
+    <p>Date : {date}</p>
+    <p className="text-sm text-gray-600 mt-2">{tripDetails?.travels}</p>
+    <p className="text-sm text-gray-600">{tripDetails?.busType}</p>
+  </div>
 
-              <div className="border-b pb-4 mb-4">
-                <p className="font-semibold text-lg mb-2">Boarding & Dropping</p>
-                <p>Boarding : <span className="font-medium ml-1">{boardingPoint?.bpName}</span></p>
-                <p className="text-sm text-gray-600">Time : {minutesToTime(boardingPoint?.time)}</p>
-                <p className="mt-2">Dropping : <span className="font-medium ml-1">{droppingPoint?.bpName}</span></p>
-                <p className="text-sm text-gray-600">Time : {minutesToTime(droppingPoint?.time)}</p>
-              </div>
+  {/* Boarding & Dropping - Right */}
+  <div className="flex-1">
+    <p className="font-semibold text-lg mb-2">Boarding & Dropping</p>
+    <p>Boarding : <span className="font-medium ml-1">{boardingPoint?.bpName}</span></p>
+    <p className="text-sm text-gray-600">Time : {minutesToTime(boardingPoint?.time)}</p>
+    <p className="mt-2">Dropping : <span className="font-medium ml-1">{droppingPoint?.bpName}</span></p>
+    <p className="text-sm text-gray-600">Time : {minutesToTime(droppingPoint?.time)}</p>
+  </div>
+
+</div>
 
               <div className="border-b pb-4 mb-4">
                 <p className="font-semibold text-lg mb-2">Seat Details</p>
@@ -370,58 +370,50 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
       </div>
 
       {/* ── BACK CONFIRM POPUP ── */}
-      {showBackConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
-            <div className="text-3xl text-center mb-3">⚠️</div>
-            <h3 className="text-lg font-bold text-gray-900 text-center mb-2">Are you sure?</h3>
-            <p className="text-sm text-gray-500 text-center mb-6 leading-relaxed">
-              If you go back, you may lose the seat(s) that we have temporarily blocked for you.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowBackConfirm(false)}
-                className="flex-1 py-3 rounded-xl border-2 border-gray-300 text-gray-700 font-semibold cursor-pointer hover:bg-gray-50 transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => { setShowBackConfirm(false); onClose(); }}
-                className="flex-1 py-3 rounded-xl bg-[#fd561e] text-white font-semibold cursor-pointer hover:bg-[#e24c16] transition"
-              >
-                Go Back
-              </button>
-            </div>
+      {showBookConfirm && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4">
+    <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+      
+      {isBooking ? (
+        // ── LOADING STATE ──
+        <div className="text-center py-4">
+          <div className="flex justify-center mb-4">
+            <svg className="animate-spin h-10 w-10 text-[#fd561e]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+            </svg>
           </div>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">Processing...</h3>
+          <p className="text-sm text-gray-500">Redirecting to payment page</p>
         </div>
+      ) : (
+        // ── CONFIRM STATE ──
+        <>
+          <div className="text-3xl text-center mb-3">🎟️</div>
+          <h3 className="text-lg font-bold text-gray-900 text-center mb-2">Confirm Booking?</h3>
+          <p className="text-sm text-gray-500 text-center mb-6 leading-relaxed">
+            Are you sure you want to confirm now and proceed for Payment?
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setShowBookConfirm(false)}
+              className="flex-1 py-3 rounded-xl border-2 border-gray-300 text-gray-700 font-semibold cursor-pointer hover:bg-gray-50 transition"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => handleConfirmBooking()}
+              className="flex-1 py-3 rounded-xl bg-[#fd561e] text-white font-semibold cursor-pointer hover:bg-[#e24c16] transition"
+            >
+              Confirm
+            </button>
+          </div>
+        </>
       )}
 
-      {/* ── BOOK CONFIRM POPUP ── */}
-      {showBookConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
-            <div className="text-3xl text-center mb-3">🎟️</div>
-            <h3 className="text-lg font-bold text-gray-900 text-center mb-2">Confirm Booking?</h3>
-            <p className="text-sm text-gray-500 text-center mb-6 leading-relaxed">
-              Are you sure you want to confirm now and proceed for Payment?
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowBookConfirm(false)}
-                className="flex-1 py-3 rounded-xl border-2 border-gray-300 text-gray-700 font-semibold cursor-pointer hover:bg-gray-50 transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => { setShowBookConfirm(false); handleConfirmBooking(); }}
-                className="flex-1 py-3 rounded-xl bg-[#fd561e] text-white font-semibold cursor-pointer hover:bg-[#e24c16] transition"
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+    </div>
+  </div>
+)}
       {showErrorPopup && (
   <div className="fixed inset-0 bg-black/55 flex items-center justify-center z-[600] p-4">
     <div className="bg-white rounded-2xl p-8 w-full max-w-sm text-center shadow-2xl">
