@@ -7,7 +7,7 @@ import CancellationCard from "./CancellationCard";
 import ForgotPassword from "./ForgotPassword";
 import ResetPassword from "./ResetPassword";
 import SignIn from "./SignIn";
-import SignupForm from "./SignupForm";
+import SignupForm from "./SignUpForm";
 import SidebarLayout from "../pages/SidebarLayout";
 import AuthModal from "./AuthModal";
 import {
