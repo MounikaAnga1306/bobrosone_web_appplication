@@ -1,940 +1,525 @@
-// src/services/pnr_creationService.js
+// src/modules/flights/services/pnr_creationService.js
 
 import axios from 'axios';
 
-// Constants
 const BASE_URL = 'https://api.bobros.org';
 
 class PNRCreationService {
-  constructor() {
-    // Store hostToken from pricing response for later use
-    this.storedHostToken = null;
-    this.lastRawResponse = null; // Store last raw response for debugging
+  
+  navigateFunction = null;
+  contextStoreFunction = null;
+  pricingBookingContext = null;
+
+  setNavigateAndContext(navigate, storePnrResponse) {
+    this.navigateFunction = navigate;
+    this.contextStoreFunction = storePnrResponse;
   }
 
-  // ============================================================
-  // HELPER FUNCTIONS
-  // ============================================================
-
-  calculateAge(dob) {
-    if (!dob) return 0;
-    const today = new Date();
-    const birthDate = new Date(dob);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
-    return age;
+  setPricingBookingContext(context) {
+    this.pricingBookingContext = context;
+    console.log('✅ PNR Service: PricingBookingContext reference set');
   }
 
-  formatPrice(value) {
-    if (!value && value !== 0) return 'INR0';
-    if (typeof value === 'string' && value.startsWith('INR')) return value;
-    return `INR${Math.round(parseFloat(value))}`;
+  // Helper to ensure value is always an array
+  ensureArray(value) {
+    if (!value) return [];
+    return Array.isArray(value) ? value : [value];
   }
 
-  getNumericPrice(value) {
-    if (!value) return 0;
-    const str = String(value);
-    const match = str.match(/INR(\d+(?:\.\d+)?)/);
-    return match ? parseFloat(match[1]) : parseFloat(str) || 0;
-  }
-
-  normalizeToArray(data) {
-    if (!data) return [];
-    return Array.isArray(data) ? data : [data];
-  }
-
-  // ============================================================
-  // EXTRACT HOST TOKEN FROM PRICING RESPONSE
-  // ============================================================
-
-  extractAndStoreHostToken(pricingResponse) {
-    console.log('\n🔍 EXTRACTING HOST TOKEN FROM PRICING RESPONSE');
+  // Helper to log and make copyable JSON
+  logCopyableJSON(label, data) {
+    const jsonString = JSON.stringify(data, null, 2);
+    console.log(`\n${'='.repeat(80)}`);
+    console.log(`📋 ${label}`);
+    console.log(`${'='.repeat(80)}`);
+    console.log(jsonString);
+    console.log(`${'='.repeat(80)}\n`);
     
-    try {
-      let hostToken = null;
-      
-      // Try different paths to find host token
-      if (pricingResponse?.data?.['SOAP:Envelope']?.['SOAP:Body']?.['air:AirPriceRsp']?.['air:AirItinerary']?.['common_v54_0:HostToken']) {
-        hostToken = pricingResponse.data['SOAP:Envelope']['SOAP:Body']['air:AirPriceRsp']['air:AirItinerary']['common_v54_0:HostToken'];
-      }
-      else if (pricingResponse?.['SOAP:Envelope']?.['SOAP:Body']?.['air:AirPriceRsp']?.['air:AirItinerary']?.['common_v54_0:HostToken']) {
-        hostToken = pricingResponse['SOAP:Envelope']['SOAP:Body']['air:AirPriceRsp']['air:AirItinerary']['common_v54_0:HostToken'];
-      }
-      else if (pricingResponse?.data?.['air:AirPriceRsp']?.['air:AirItinerary']?.['common_v54_0:HostToken']) {
-        hostToken = pricingResponse.data['air:AirPriceRsp']['air:AirItinerary']['common_v54_0:HostToken'];
-      }
-      else if (pricingResponse?.['air:AirPriceRsp']?.['air:AirItinerary']?.['common_v54_0:HostToken']) {
-        hostToken = pricingResponse['air:AirPriceRsp']['air:AirItinerary']['common_v54_0:HostToken'];
-      }
-      // Also check in selectedOption for hostTokens
-      else if (pricingResponse?.hostTokens) {
-        hostToken = pricingResponse.hostTokens;
-      }
-      
-      if (hostToken) {
-        const hostTokensArray = this.normalizeToArray(hostToken);
-        
-        this.storedHostToken = {
-          key: hostTokensArray[0]?.$?.Key || hostTokensArray[0]?.key,
-          value: hostTokensArray[0]?._ || hostTokensArray[0]?.value,
-          allTokens: hostTokensArray.map(t => ({
-            key: t.$?.Key || t.key,
-            value: t._ || t.value
-          }))
-        };
-        
-        console.log('✅ Host token stored successfully!');
-        console.log(`   - Key: ${this.storedHostToken.key}`);
-        console.log(`   - Value: ${this.storedHostToken.value?.substring(0, 50)}...`);
-        console.log(`   - Total Tokens: ${this.storedHostToken.allTokens.length}`);
-        
-        return this.storedHostToken;
-      } else {
-        console.log('⚠️ No host token found in pricing response');
-        return null;
-      }
-    } catch (error) {
-      console.error('❌ Error extracting host token:', error.message);
-      return null;
+    if (typeof window !== 'undefined') {
+      window[`__last_${label.replace(/ /g, '_')}`] = data;
+      console.log(`💡 Tip: Access via window.__last_${label.replace(/ /g, '_')}`);
     }
-  }
-
-  getStoredHostToken() {
-    return this.storedHostToken;
-  }
-
-  getLastRawResponse() {
-    return this.lastRawResponse;
-  }
-
-  // ============================================================
-  // EXTRACT DATA FROM SELECTED OPTION
-  // ============================================================
-
-  extractBookingCode(selectedOption, segments) {
-    if (selectedOption?.bookingInfo) {
-      const bookingInfos = this.normalizeToArray(selectedOption.bookingInfo);
-      if (bookingInfos[0]?.bookingCode) return bookingInfos[0].bookingCode;
-      if (bookingInfos[0]?.$?.BookingCode) return bookingInfos[0].$.BookingCode;
-    }
-    if (selectedOption?.fareInfo) {
-      const fareInfos = this.normalizeToArray(selectedOption.fareInfo);
-      if (fareInfos[0]?.fareBasis) return fareInfos[0].fareBasis.charAt(0);
-      if (fareInfos[0]?.$?.FareBasis) return fareInfos[0].$.FareBasis.charAt(0);
-    }
-    if (segments[0]?.classOfService) return segments[0].classOfService;
-    return 'U';
-  }
-
-  extractLatestTicketingTime(selectedOption) {
-    if (selectedOption?.latestTicketingTime) return selectedOption.latestTicketingTime;
-    if (selectedOption?.airPricingInfo) {
-      const pricingInfos = this.normalizeToArray(selectedOption.airPricingInfo);
-      if (pricingInfos[0]?.latestTicketingTime) return pricingInfos[0].latestTicketingTime;
-    }
-    const today = new Date();
-    return `${today.toISOString().split('T')[0]}T23:59:00.000+05:30`;
-  }
-
-  extractPlatingCarrier(selectedOption, segments) {
-    if (selectedOption?.platingCarrier) return selectedOption.platingCarrier;
-    if (selectedOption?.airPricingInfo) {
-      const pricingInfos = this.normalizeToArray(selectedOption.airPricingInfo);
-      if (pricingInfos[0]?.platingCarrier) return pricingInfos[0].platingCarrier;
-    }
-    if (segments[0]?.carrier) return segments[0].carrier;
-    return 'AI';
-  }
-
-  extractProviderCode(selectedOption, segments) {
-    if (selectedOption?.providerCode) return selectedOption.providerCode;
-    if (selectedOption?.airPricingInfo) {
-      const pricingInfos = this.normalizeToArray(selectedOption.airPricingInfo);
-      if (pricingInfos[0]?.providerCode) return pricingInfos[0].providerCode;
-    }
-    if (segments[0]?.carrier === 'AI') return '1G';
-    return 'ACH';
-  }
-
-  // ============================================================
-  // BUILD SEGMENTS
-  // ============================================================
-
-  buildSegment(segmentData, groupNumber, bookingCode) {
-    const seg = segmentData.$ || segmentData;
     
-    const segment = {
-      key: seg.Key || segmentData.key || segmentData.segmentKey,
-      group: groupNumber.toString(),
-      carrier: seg.Carrier || segmentData.carrier,
-      flightNumber: seg.FlightNumber || segmentData.flightNumber,
-      origin: seg.Origin || segmentData.origin,
-      destination: seg.Destination || segmentData.destination,
-      departureTime: seg.DepartureTime || segmentData.departureTime,
-      arrivalTime: seg.ArrivalTime || segmentData.arrivalTime,
-      classOfService: bookingCode,
-      flightTime: seg.FlightTime || segmentData.flightTime || segmentData.duration?.toString() || '0',
-      travelTime: seg.TravelTime || segmentData.travelTime || seg.FlightTime || '0',
-      distance: seg.Distance || segmentData.distance,
-      equipment: seg.Equipment || segmentData.equipment || '32N',
-      changeOfPlane: 'false',
-      optionalServicesIndicator: 'false',
-      availabilitySource: 'S',
-      participantLevel: 'Secure Sell',
-      linkAvailability: 'true',
-      availabilityDisplayType: 'Fare Specific Fare Quote Unbooked'
-    };
-
-    if (seg.ProviderCode) segment.providerCode = seg.ProviderCode;
-    if (seg.SupplierCode) segment.supplierCode = seg.SupplierCode;
-    if (seg.Status) segment.status = seg.Status;
-    if (seg.HostTokenRef) segment.hostTokenRef = seg.HostTokenRef;
-
-    return segment;
+    return jsonString;
   }
 
-  // ============================================================
-  // BUILD ALL SEGMENTS
-  // ============================================================
-
-  buildAllSegments(flight, isRoundTrip, outboundFlight, returnFlight, bookingCode) {
-    const allSegments = [];
-
-    if (isRoundTrip) {
-      const outboundSegments = this.normalizeToArray(outboundFlight?.segments || outboundFlight);
-      outboundSegments.forEach((segment) => {
-        if (segment) allSegments.push(this.buildSegment(segment, 0, bookingCode));
-      });
-
-      const returnSegments = this.normalizeToArray(returnFlight?.segments || returnFlight);
-      returnSegments.forEach((segment) => {
-        if (segment) allSegments.push(this.buildSegment(segment, 1, bookingCode));
-      });
-    } else {
-      const flightSegments = this.normalizeToArray(flight?.segments || flight);
-      flightSegments.forEach((segment) => {
-        if (segment) allSegments.push(this.buildSegment(segment, 0, bookingCode));
-      });
-    }
-
-    return allSegments;
-  }
-
-  // ============================================================
-  // BUILD HOST TOKENS - USE STORED HOST TOKEN
-  // ============================================================
-
-  buildHostTokens(selectedOption, segments) {
-    const hostTokens = [];
-
-    // PRIORITY 1: Use stored host token from pricing response
-    if (this.storedHostToken && this.storedHostToken.value) {
-      console.log('✅ Using stored host token from pricing response');
-      console.log(`   - Key: ${this.storedHostToken.key}`);
-      console.log(`   - Value: ${this.storedHostToken.value.substring(0, 50)}...`);
-      
-      // For each segment, create a host token entry
-      for (let i = 0; i < segments.length; i++) {
-        hostTokens.push({
-          key: this.storedHostToken.key,
-          value: this.storedHostToken.value
-        });
-      }
-      return hostTokens;
-    }
-
-    // PRIORITY 2: Try to get host tokens from selected option
-    if (selectedOption?.hostTokens) {
-      const tokens = this.normalizeToArray(selectedOption.hostTokens);
-      tokens.forEach(token => {
-        if (token.value) {
-          hostTokens.push({
-            key: token.key || token.$?.Key,
-            value: token.token || token.value || token._
-          });
-        }
-      });
-    }
-
-    // PRIORITY 3: Try from bookingInfo
-    if (hostTokens.length === 0 && selectedOption?.bookingInfo) {
-      const bookingInfos = this.normalizeToArray(selectedOption.bookingInfo);
-      bookingInfos.forEach((bi, idx) => {
-        if (bi.hostTokenRef || bi.$?.HostTokenRef) {
-          hostTokens.push({
-            key: bi.hostTokenRef || bi.$?.HostTokenRef,
-            value: bi.hostToken || bi.$?._ || ''
-          });
-        }
-      });
-    }
-
-    // Log warning if no host tokens found
-    if (hostTokens.length === 0) {
-      console.warn('⚠️ No host tokens found in any source! Booking may fail.');
-    }
-
-    return hostTokens;
-  }
-
-  // ============================================================
-  // BUILD AIR PRICING INFO FOR ALL PASSENGERS
-  // ============================================================
-
-  buildAirPricingInfos(passengers, selectedOption, segments, hostTokens, bookingCode, isRoundTrip) {
-    const airPricingInfos = [];
-
-    for (let pIdx = 0; pIdx < passengers.length; pIdx++) {
-      const passenger = passengers[pIdx];
-      const passengerCode = passenger.code;
-      const passengerAge = passenger.age || this.calculateAge(passenger.dob);
-      const passengerRef = (pIdx + 1).toString();
-
-      // Get existing pricing info for this passenger type from selectedOption
-      let existingPricingInfo = null;
-      let existingFareInfos = [];
-      
-      if (selectedOption?.fareInfo) {
-        existingFareInfos = this.normalizeToArray(selectedOption.fareInfo);
-      }
-      
-      if (!existingFareInfos.length && selectedOption?.airPricingInfo) {
-        const pricingInfos = this.normalizeToArray(selectedOption.airPricingInfo);
-        existingPricingInfo = pricingInfos.find(p => {
-          const pTypes = this.normalizeToArray(p.passengerTypes);
-          return pTypes[0]?.code === passengerCode;
-        });
-        if (existingPricingInfo?.fareInfos) {
-          existingFareInfos = this.normalizeToArray(existingPricingInfo.fareInfos);
-        }
-      }
-
-      // Build fare infos for each segment
-      const fareInfos = [];
-      for (let i = 0; i < segments.length; i++) {
-        const segment = segments[i];
-        const existingFare = existingFareInfos[i] || existingFareInfos[0];
-        
-        // Calculate fare amount - use actual fare amount from selectedOption
-        let fareAmount = 0;
-        if (existingFare?.amount) {
-          fareAmount = this.getNumericPrice(existingFare.amount);
-        } else if (selectedOption?.basePrice) {
-          fareAmount = this.getNumericPrice(selectedOption.basePrice) / segments.length;
-        }
-
-        fareInfos.push({
-          key: existingFare?.key || `FI-${passengerCode}-${i}-${Date.now()}`,
-          fareBasis: existingFare?.fareBasis || 
-                     (existingFare?.$?.FareBasis) || 
-                     (selectedOption?.fareInfo?.[0]?.fareBasis) || 'U1YXSII',
-          passengerTypeCode: passengerCode,
-          origin: segment.origin,
-          destination: segment.destination,
-          effectiveDate: existingFare?.effectiveDate || 
-                         existingFare?.$?.EffectiveDate || 
-                         new Date().toISOString().split('T')[0] + 'T00:00:00.000+05:30',
-          departureDate: segment.departureTime?.split('T')[0] || 
-                         existingFare?.departureDate,
-          amount: this.formatPrice(fareAmount),
-          privateFare: existingFare?.privateFare || 'false',
-          negotiatedFare: existingFare?.negotiatedFare || 'false',
-          promotionalFare: existingFare?.promotionalFare || 'false',
-          fareRuleKey: existingFare?.fareRuleKey || existingFare?.$?.FareRuleKey
-        });
-      }
-
-      // Calculate total fare amount
-      let totalFareAmount = 0;
-      fareInfos.forEach(fi => {
-        totalFareAmount += this.getNumericPrice(fi.amount);
-      });
-
-      // Calculate taxes from selectedOption
-      let taxes = 0;
-      if (selectedOption?.taxes) {
-        taxes = this.getNumericPrice(selectedOption.taxes) / passengers.length;
-      }
-
-      const totalPrice = totalFareAmount + taxes;
-
-      // Build booking infos
-      const bookingInfos = [];
-      for (let i = 0; i < segments.length; i++) {
-        const segment = segments[i];
-        const fareInfo = fareInfos[i];
-        const hostToken = hostTokens[i] || hostTokens[0];
-        
-        bookingInfos.push({
-          bookingCode: bookingCode,
-          fareInfoRef: fareInfo.key,
-          segmentRef: segment.key,
-          cabinClass: 'Economy',
-          hostTokenRef: hostToken?.key
-        });
-      }
-
-      airPricingInfos.push({
-        key: existingPricingInfo?.key || `API-${passengerCode}-${Date.now()}`,
-        totalPrice: this.formatPrice(totalPrice),
-        basePrice: this.formatPrice(totalFareAmount),
-        fareType: existingPricingInfo?.fareType || 'Public',
-        fareIndicator: existingPricingInfo?.fareIndicator || 'PublicFaresOnly',
-        latestTicketingTime: this.extractLatestTicketingTime(selectedOption),
-        pricingMethod: existingPricingInfo?.pricingMethod || 'Guaranteed',
-        refundable: existingPricingInfo?.refundable !== undefined ? existingPricingInfo.refundable : true,
-        eticketability: existingPricingInfo?.eticketability || 'Yes',
-        platingCarrier: this.extractPlatingCarrier(selectedOption, segments),
-        providerCode: this.extractProviderCode(selectedOption, segments),
-        fareInfos: fareInfos,
-        bookingInfos: bookingInfos,
-        passengerTypes: [{
-          code: passengerCode,
-          bookingTravelerRef: passengerRef,
-          age: passengerAge.toString()
-        }]
-      });
-    }
-
-    return airPricingInfos;
-  }
-
-  // ============================================================
-  // BUILD AIR PRICING SOLUTION
-  // ============================================================
-
-  buildAirPricingSolution(selectedOption, segments, passengers, hostTokens, bookingCode, isRoundTrip) {
-    let totalPrice = 0;
-    let totalBasePrice = 0;
-    let totalTaxes = 0;
-
-    const airPricingInfos = this.buildAirPricingInfos(
-      passengers, selectedOption, segments, hostTokens, bookingCode, isRoundTrip
-    );
-
-    airPricingInfos.forEach(api => {
-      totalPrice += this.getNumericPrice(api.totalPrice);
-      totalBasePrice += this.getNumericPrice(api.basePrice);
-      totalTaxes += this.getNumericPrice(api.totalPrice) - this.getNumericPrice(api.basePrice);
-    });
-
-    return {
-      key: selectedOption?.key || `SOL-${Date.now()}`,
-      totalPrice: this.formatPrice(totalPrice),
-      basePrice: this.formatPrice(totalBasePrice),
-      fees: 'INR0',
-      taxes: this.formatPrice(totalTaxes),
-      airPricingInfo: airPricingInfos,
-      hostTokens: hostTokens
-    };
-  }
-
-  // ============================================================
-  // BUILD COMPLETE BOOKING REQUEST
-  // ============================================================
-
-  buildBookingRequest(params) {
-    console.log('\n' + '='.repeat(80));
-    console.log('🏗️ BUILDING BOOKING REQUEST');
-    console.log('='.repeat(80));
-
-    const {
-      pricingResult,
-      selectedOption,
-      flight,
-      outboundFlight,
-      returnFlight,
-      isRoundTrip,
-      passengers,
-      contactInfo,
-      paymentMethod,
-      traceId
-    } = params;
-
-    // Extract and store host token from pricing result
-    this.extractAndStoreHostToken(pricingResult);
-
-    const bookingCode = this.extractBookingCode(selectedOption, 
-      isRoundTrip ? (outboundFlight?.segments || [outboundFlight]) : (flight?.segments || [flight]));
-    
-    const segments = this.buildAllSegments(flight, isRoundTrip, outboundFlight, returnFlight, bookingCode);
-
-    const passengersWithAge = passengers.map(p => ({
-      ...p,
-      age: p.age || this.calculateAge(p.dob)
-    }));
-
-    // Build host tokens using the stored token
-    const hostTokens = this.buildHostTokens(selectedOption, segments);
-
-    const airPricingSolution = this.buildAirPricingSolution(
-      selectedOption, segments, passengersWithAge, hostTokens, bookingCode, isRoundTrip
-    );
-
-    const bookingRequest = {
-      traceId: traceId || `BOBROS-${Date.now()}`,
-      passengers: passengersWithAge.map(p => ({
-        code: p.code,
-        firstName: p.firstName.toUpperCase(),
-        lastName: p.lastName.toUpperCase(),
-        dob: p.dob,
-        gender: p.gender,
-        nationality: p.nationality || 'IN',
-        age: p.age
-      })),
-      segments: segments,
-      airPricingSolution: airPricingSolution,
-      contactInfo: {
-        email: contactInfo.email,
-        phone: {
-          countryCode: contactInfo.phone.countryCode,
-          number: contactInfo.phone.number
-        }
-      },
-      formOfPayment: {
-        type: paymentMethod
-      },
-      autoTicket: false
-    };
-
-    console.log('\n✅ Booking request built successfully!');
-    console.log(`   - Trace ID: ${bookingRequest.traceId}`);
-    console.log(`   - Segments: ${segments.length}`);
-    console.log(`   - Passengers: ${passengersWithAge.length}`);
-    console.log(`   - Total Price: ${airPricingSolution.totalPrice}`);
-    console.log(`   - Host Tokens: ${hostTokens.length}`);
-    console.log(`   - Host Token Keys: ${hostTokens.map(t => t.key).join(', ')}`);
-    console.log('='.repeat(80) + '\n');
-
-    return bookingRequest;
-  }
-
-  // ============================================================
-  // CREATE PNR - MAIN ENTRY POINT
-  // ============================================================
-
-  async createPNR(bookingData) {
+  async createPNR() {
     console.log('\n' + '🎫'.repeat(40));
     console.log('PNR CREATION SERVICE - CREATE PNR');
     console.log('🎫'.repeat(40) + '\n');
-
-    // ============================================================
-    // LOG 1: INPUT BOOKING DATA
-    // ============================================================
-    console.log('\n' + '='.repeat(80));
-    console.log('📥 STEP 1: INPUT BOOKING DATA RECEIVED');
-    console.log('='.repeat(80));
-    console.log('📦 Booking Data Structure:');
-    console.log(JSON.stringify(bookingData, null, 2));
-    console.log('\n📊 Booking Data Summary:');
-    console.log(`   - isRoundTrip: ${bookingData?.isRoundTrip}`);
-    console.log(`   - Passengers Count: ${bookingData?.passengers?.length}`);
-    console.log(`   - Flight exists: ${!!bookingData?.flight}`);
-    console.log(`   - Outbound Flight exists: ${!!bookingData?.outboundFlight}`);
-    console.log(`   - Return Flight exists: ${!!bookingData?.returnFlight}`);
-    console.log(`   - Selected Seat: ${bookingData?.selectedSeat?.seatCode || 'None'}`);
-    console.log('='.repeat(80) + '\n');
-
-    const startTime = Date.now();
-
+    
     try {
       // ============================================================
-      // LOG 2: BUILDING BOOKING REQUEST
+      // STEP 0: GET DATA DIRECTLY FROM CONTEXT
       // ============================================================
-      console.log('\n' + '='.repeat(80));
-      console.log('🔨 STEP 2: BUILDING BOOKING REQUEST');
-      console.log('='.repeat(80));
       
-      const bookingRequest = this.buildBookingRequest(bookingData);
-
-      if (!bookingRequest) {
-        throw new Error('Failed to build booking request');
+      console.log('📦 STEP 0: Fetching data from Context...');
+      
+      if (!this.pricingBookingContext) {
+        throw new Error('PricingBookingContext not set. Call setPricingBookingContext() first.');
       }
-
-      // ============================================================
-      // LOG 3: FINAL BOOKING REQUEST BEING SENT TO API
-      // ============================================================
-      console.log('\n' + '='.repeat(80));
-      console.log('📤 STEP 3: FINAL BOOKING REQUEST TO API');
-      console.log('='.repeat(80));
-      console.log('📍 API Endpoint:', `${BASE_URL}/flights/air-create/air-booking`);
-      console.log('📋 HTTP Method: POST');
-      console.log('\n📦 REQUEST BODY (RAW):');
-      console.log(JSON.stringify(bookingRequest, null, 2));
-      console.log('\n📊 REQUEST SUMMARY:');
-      console.log(`   - Trace ID: ${bookingRequest.traceId}`);
-      console.log(`   - Segments Count: ${bookingRequest.segments.length}`);
-      console.log(`   - Passengers Count: ${bookingRequest.passengers.length}`);
-      console.log(`   - Total Price: ${bookingRequest.airPricingSolution.totalPrice}`);
-      console.log(`   - Payment Method: ${bookingRequest.formOfPayment.type}`);
-      console.log(`   - Auto Ticket: ${bookingRequest.autoTicket}`);
-      console.log('='.repeat(80) + '\n');
-
-      const apiUrl = `${BASE_URL}/flights/air-create/air-booking`;
       
-      const response = await axios.post(apiUrl, bookingRequest, {
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
+      const { bookingData } = this.pricingBookingContext;
+      const airPriceResponse = bookingData.rawPricingResponse;
+      const passengers = bookingData.passengers;
+      const contactInfo = bookingData.contactInfo;
+      const paymentMethod = bookingData.paymentMethod;
+      
+      console.log('✅ Context Data Retrieved:');
+      console.log(`   - Raw Pricing Response: ${airPriceResponse ? '✅ Present' : '❌ Missing'}`);
+      console.log(`   - Passengers: ${passengers?.length || 0}`);
+      console.log(`   - Contact Email: ${contactInfo?.email || 'Missing'}`);
+      console.log(`   - Payment Method: ${paymentMethod || 'Cash'}`);
+      
+      if (!airPriceResponse) {
+        throw new Error('No pricing response found in context. Please search for flights first.');
+      }
+      
+      if (!passengers || passengers.length === 0) {
+        throw new Error('No passengers found in context. Please add passenger details.');
+      }
+      
+      if (!contactInfo || !contactInfo.email) {
+        throw new Error('No contact info found in context. Please add contact details.');
+      }
+      
+      // ============================================================
+      // STEP 1: EXTRACT DATA FROM PRICING RESPONSE
+      // ============================================================
+      
+      console.log('\n📦 STEP 1: Extracting data from Pricing Response...');
+      
+      // Handle both possible response structures
+      let envelope, body, airPriceRsp, airPriceResult, solution;
+      
+      // Case 1: Response has data wrapper
+      if (airPriceResponse.data && airPriceResponse.data['SOAP:Envelope']) {
+        envelope = airPriceResponse.data['SOAP:Envelope'];
+        body = envelope['SOAP:Body'];
+        airPriceRsp = body['air:AirPriceRsp'];
+        airPriceResult = airPriceRsp['air:AirPriceResult'];
+        // FIX: AirPricingSolution can be OBJECT or ARRAY
+        const pricingSolution = airPriceResult['air:AirPricingSolution'];
+        solution = Array.isArray(pricingSolution) ? pricingSolution[0] : pricingSolution;
+        console.log('   - Using response structure: data.SOAP:Envelope');
+      }
+      // Case 2: Response directly has SOAP:Envelope
+      else if (airPriceResponse['SOAP:Envelope']) {
+        envelope = airPriceResponse['SOAP:Envelope'];
+        body = envelope['SOAP:Body'];
+        airPriceRsp = body['air:AirPriceRsp'];
+        airPriceResult = airPriceRsp['air:AirPriceResult'];
+        const pricingSolution = airPriceResult['air:AirPricingSolution'];
+        solution = Array.isArray(pricingSolution) ? pricingSolution[0] : pricingSolution;
+        console.log('   - Using response structure: SOAP:Envelope');
+      }
+      else {
+        throw new Error('Invalid pricing response structure');
+      }
+      
+      // ============================================================
+      // STEP 1a: EXTRACT AIR SEGMENTS (HANDLE MULTIPLE FLIGHTS)
+      // ============================================================
+      
+      const airSegmentsRaw = airPriceRsp['air:AirItinerary']['air:AirSegment'];
+      const airSegmentsArray = this.ensureArray(airSegmentsRaw);
+      
+      console.log(`   - Found ${airSegmentsArray.length} flight segment(s)`);
+      
+      // Build all segments
+      const allSegments = [];
+      for (const seg of airSegmentsArray) {
+        const segAttrs = seg['$'];
+        allSegments.push({
+          key: segAttrs.Key,
+          group: segAttrs.Group || "0",
+          carrier: segAttrs.Carrier,
+          flightNumber: segAttrs.FlightNumber,
+          origin: segAttrs.Origin,
+          destination: segAttrs.Destination,
+          departureTime: segAttrs.DepartureTime,
+          arrivalTime: segAttrs.ArrivalTime,
+          classOfService: segAttrs.ClassOfService,
+          flightTime: segAttrs.FlightTime,
+          travelTime: segAttrs.TravelTime,
+          distance: segAttrs.Distance,
+          equipment: segAttrs.Equipment || "32N",
+          changeOfPlane: "false",
+          optionalServicesIndicator: "false",
+          availabilitySource: "S",
+          participantLevel: "Secure Sell",
+          linkAvailability: "true",
+          availabilityDisplayType: "Fare Specific Fare Quote Unbooked",
+          providerCode: segAttrs.ProviderCode || "1G"
+        });
+        console.log(`   - Segment ${allSegments.length}: ${segAttrs.Carrier} ${segAttrs.FlightNumber} (${segAttrs.Origin} → ${segAttrs.Destination})`);
+      }
+      
+      // ============================================================
+      // STEP 1b: EXTRACT HOST TOKENS (CAN BE OBJECT OR ARRAY)
+      // ============================================================
+      
+      let hostTokensRaw = solution['common_v54_0:HostToken'];
+      let hostTokensArray = this.ensureArray(hostTokensRaw);
+      console.log(`   - Host tokens found: ${hostTokensArray.length}`);
+      
+      // Map host tokens by passenger type
+      const hostTokenMap = {};
+      hostTokensArray.forEach(token => {
+        const tokenValue = token['_'] || token.value;
+        const tokenKey = token['$']?.Key || token.key;
+        if (tokenValue.includes('ADT')) hostTokenMap.ADT = { key: tokenKey, value: tokenValue };
+        else if (tokenValue.includes('CNN')) hostTokenMap.CNN = { key: tokenKey, value: tokenValue };
+        else if (tokenValue.includes('INF')) hostTokenMap.INF = { key: tokenKey, value: tokenValue };
+      });
+      console.log(`   - Host token types: ${Object.keys(hostTokenMap).join(', ') || 'None'}`);
+      
+      // ============================================================
+      // STEP 1c: EXTRACT AIR PRICING INFO (CAN BE OBJECT OR ARRAY)
+      // ============================================================
+      
+      let airPricingInfoRaw = solution['air:AirPricingInfo'];
+      let airPricingInfoArray = this.ensureArray(airPricingInfoRaw);
+      console.log(`   - AirPricingInfo entries: ${airPricingInfoArray.length}`);
+      
+      // Map pricing info by passenger type
+      const pricingInfoMap = {};
+      for (const info of airPricingInfoArray) {
+        const passengerType = info['air:PassengerType']?.['$']?.Code;
+        if (passengerType) {
+          // Handle BookingInfo - can be object (single segment) or array (multiple segments)
+          let bookingInfoRaw = info['air:BookingInfo'];
+          let bookingInfoArray = this.ensureArray(bookingInfoRaw);
+          
+          pricingInfoMap[passengerType] = {
+            totalPrice: info['$']?.TotalPrice,
+            basePrice: info['$']?.BasePrice,
+            taxes: info['$']?.Taxes,
+            fareBasis: info['air:FareInfo']?.['$']?.FareBasis,
+            bookingInfos: bookingInfoArray.map(bi => ({
+              bookingCode: bi['$']?.BookingCode,
+              cabinClass: bi['$']?.CabinClass,
+              segmentRef: bi['$']?.SegmentRef,
+              hostTokenRef: bi['$']?.HostTokenRef
+            }))
+          };
+        }
+      }
+      console.log(`   - Pricing types: ${Object.keys(pricingInfoMap).join(', ') || 'None'}`);
+      
+      // ============================================================
+      // STEP 2: BUILD ALL SEGMENTS FOR REQUEST
+      // ============================================================
+      
+      console.log('\n📦 STEP 2: Building all segments for request...');
+      
+      // Use the already built allSegments array
+      const segmentsForRequest = allSegments;
+      console.log(`   ✅ Built ${segmentsForRequest.length} segment(s)`);
+      
+      // ============================================================
+      // STEP 3: BUILD AIR PRICING INFO FOR EACH PASSENGER
+      // ============================================================
+      
+      console.log('\n📦 STEP 3: Building AirPricingInfo for each passenger...');
+      
+      const airPricingInfoList = [];
+      const allHostTokens = [];
+      let travelerRef = 1;
+      
+      // Sort passengers: ADT first, then CNN, then INF
+      const sortedPassengers = [...passengers].sort((a, b) => {
+        const order = { ADT: 1, CNN: 2, INF: 3 };
+        return order[a.code] - order[b.code];
+      });
+      
+      for (const passenger of sortedPassengers) {
+        const passengerType = passenger.code;
+        const pricing = pricingInfoMap[passengerType];
+        const hostToken = hostTokenMap[passengerType];
+        
+        if (!pricing || !hostToken) {
+          console.warn(`⚠️ Missing data for ${passengerType}`);
+          console.log('   Available pricing keys:', Object.keys(pricingInfoMap));
+          console.log('   Available host token keys:', Object.keys(hostTokenMap));
+          continue;
+        }
+        
+        // Add host token (deduplicate)
+        if (!allHostTokens.find(t => t.key === hostToken.key)) {
+          allHostTokens.push({ key: hostToken.key, value: hostToken.value });
+        }
+        
+        const fareInfoKey = `FI-${passengerType}-${Date.now()}-${travelerRef}`;
+        
+        // Build fare info (shared across all segments)
+        const fareInfo = {
+          key: fareInfoKey,
+          fareBasis: pricing.fareBasis,
+          passengerTypeCode: passengerType,
+          origin: segmentsForRequest[0]?.origin || 'HYD',
+          destination: segmentsForRequest[segmentsForRequest.length - 1]?.destination || 'DEL',
+          effectiveDate: new Date().toISOString().replace('Z', '+05:30'),
+          departureDate: segmentsForRequest[0]?.departureTime?.split('T')[0] || new Date().toISOString().split('T')[0],
+          amount: pricing.basePrice,
+          privateFare: "false",
+          negotiatedFare: "false",
+          promotionalFare: "false",
+          fareRuleKey: ""
+        };
+        
+        // Build booking infos - ONE PER SEGMENT
+        const bookingInfos = [];
+        for (let i = 0; i < segmentsForRequest.length; i++) {
+          const segment = segmentsForRequest[i];
+          const bookingInfoData = pricing.bookingInfos?.[i] || pricing.bookingInfos?.[0];
+          
+          bookingInfos.push({
+            bookingCode: bookingInfoData?.bookingCode || pricing.bookingCode || "S",
+            cabinClass: bookingInfoData?.cabinClass || "Economy",
+            fareInfoRef: fareInfoKey,
+            segmentRef: segment.key,
+            hostTokenRef: hostToken.key
+          });
+        }
+        
+        const airPricingInfo = {
+          key: `API-${passengerType}-${Date.now()}-${travelerRef}`,
+          totalPrice: pricing.totalPrice,
+          basePrice: pricing.basePrice,
+          taxes: pricing.taxes || "INR0",
+          pricingMethod: "Guaranteed",
+          refundable: true,
+          eticketability: "Yes",
+          platingCarrier: segmentsForRequest[0]?.carrier || "AI",
+          fareInfos: [fareInfo],
+          bookingInfos: bookingInfos,
+          passengerTypes: [{
+            code: passengerType,
+            bookingTravelerRef: travelerRef.toString(),
+            age: passenger.age?.toString() || (passengerType === 'ADT' ? "25" : passengerType === 'CNN' ? "8" : "1"),
+            firstName: (passenger.firstName || "").toUpperCase(),
+            lastName: (passenger.lastName || "").toUpperCase()
+          }]
+        };
+        
+        airPricingInfoList.push(airPricingInfo);
+        console.log(`   ✅ ${passengerType}: ${passenger.firstName} ${passenger.lastName} - Price: ${pricing.totalPrice} (${bookingInfos.length} booking info(s))`);
+        travelerRef++;
+      }
+      
+      // Calculate totals
+      let totalPrice = 0, totalBasePrice = 0, totalTaxes = 0;
+      airPricingInfoList.forEach(info => {
+        totalPrice += parseInt(info.totalPrice.replace('INR', '')) || 0;
+        totalBasePrice += parseInt(info.basePrice.replace('INR', '')) || 0;
+        totalTaxes += parseInt(info.taxes.replace('INR', '')) || 0;
+      });
+      
+      const airPricingSolution = {
+        key: `SOL-${Date.now()}`,
+        totalPrice: `INR${totalPrice}`,
+        basePrice: `INR${totalBasePrice}`,
+        fees: "INR0",
+        taxes: `INR${totalTaxes}`,
+        airPricingInfo: airPricingInfoList,
+        hostTokens: allHostTokens
+      };
+      
+      console.log(`\n💰 Total Price: ${airPricingSolution.totalPrice}`);
+      console.log(`   - Base Price: ${airPricingSolution.basePrice}`);
+      console.log(`   - Taxes: ${airPricingSolution.taxes}`);
+      console.log(`   - Segments in request: ${segmentsForRequest.length}`);
+      console.log(`   - Passenger types: ${airPricingInfoList.map(p => p.passengerTypes[0].code).join(', ')}`);
+      
+      // ============================================================
+      // STEP 4: BUILD PASSENGERS LIST
+      // ============================================================
+      
+      console.log('\n📦 STEP 4: Building Passengers List...');
+      
+      const passengersList = sortedPassengers.map(p => ({
+        code: p.code,
+        firstName: (p.firstName || "").toUpperCase(),
+        lastName: (p.lastName || "").toUpperCase(),
+        dob: p.dob || (p.code === 'ADT' ? "1990-01-01" : p.code === 'CNN' ? "2016-01-01" : "2024-01-01"),
+        gender: p.gender || "F",
+        nationality: p.nationality || "IN",
+        age: p.age || (p.code === 'ADT' ? 25 : p.code === 'CNN' ? 8 : 1)
+      }));
+      
+      passengersList.forEach(p => {
+        console.log(`   ✅ ${p.code}: ${p.firstName} ${p.lastName} (Age: ${p.age})`);
+      });
+      
+      // ============================================================
+      // STEP 5: BUILD FINAL REQUEST
+      // ============================================================
+      
+      console.log('\n📦 STEP 5: Building Final Request...');
+      
+      const bookingRequest = {
+        traceId: `BOBROS-${Date.now()}`,
+        passengers: passengersList,
+        segments: segmentsForRequest,  // ← Now sends ALL segments
+        airPricingSolution: airPricingSolution,
+        contactInfo: {
+          email: contactInfo.email,
+          phone: {
+            countryCode: contactInfo.phone?.countryCode || "91",
+            number: contactInfo.phone?.number || "9999999999"
+          }
         },
+        formOfPayment: {
+          type: paymentMethod === 'card' ? 'CreditCard' : 
+                 paymentMethod === 'upi' ? 'UPI' : 
+                 paymentMethod === 'netbanking' ? 'NetBanking' : 'Cash'
+        },
+        autoTicket: false
+      };
+      
+      // Log the complete request body for copying
+      this.logCopyableJSON('PNR CREATION REQUEST BODY (COPY THIS)', bookingRequest);
+      
+      // ============================================================
+      // STEP 6: SEND REQUEST
+      // ============================================================
+      
+      console.log('\n📤 STEP 6: Sending PNR Creation Request...');
+      console.log(`   - URL: ${BASE_URL}/flights/air-create/air-booking`);
+      console.log(`   - Method: POST`);
+      console.log(`   - Segments: ${segmentsForRequest.length}`);
+      console.log(`   - Passengers: ${passengersList.length}`);
+      console.log(`   - Request size: ${JSON.stringify(bookingRequest).length} bytes`);
+      
+      const startTime = Date.now();
+      
+      const response = await axios.post(`${BASE_URL}/flights/air-create/air-booking`, bookingRequest, {
+        headers: { 'Content-Type': 'application/json' },
         timeout: 30000
       });
-
-      const responseTime = Date.now() - startTime;
-
+      
+      const endTime = Date.now();
+      console.log(`\n📥 Response received in ${endTime - startTime}ms`);
+      console.log(`   - Status: ${response.status} ${response.statusText}`);
+      console.log(`   - Response size: ${JSON.stringify(response.data).length} bytes`);
+      
+      // Log the complete response body for copying
+      this.logCopyableJSON('PNR CREATION RESPONSE BODY (COPY THIS)', response.data);
+      
       // ============================================================
-      // LOG 4: RAW API RESPONSE RECEIVED
+      // STEP 7: EXTRACT PNR NUMBER
       // ============================================================
-      console.log('\n' + '='.repeat(80));
-      console.log('🟢 STEP 4: RAW API RESPONSE RECEIVED');
-      console.log('='.repeat(80));
-      console.log(`⏱️ Response Time: ${responseTime}ms`);
-      console.log(`📊 Status: ${response.status} ${response.statusText}`);
-      console.log('\n📄 FULL RAW RESPONSE BODY:');
-      console.log(JSON.stringify(response.data, null, 2));
-      console.log('\n📊 RESPONSE SUMMARY:');
-      console.log(`   - Success: ${response.data?.success || false}`);
-      console.log(`   - Trace ID: ${response.data?.traceId || 'N/A'}`);
-      console.log(`   - Data exists: ${!!response.data?.data}`);
-      console.log('='.repeat(80) + '\n');
       
-      // Store raw response for debugging
-      this.lastRawResponse = response.data;
-
-      // Parse the response structure
-      const responseData = response.data;
+      console.log('\n📦 STEP 7: Extracting PNR Number...');
       
-      // Check if the response has the expected structure
-      if (!responseData || !responseData.data) {
-        console.error('❌ Invalid response structure:', responseData);
-        throw new Error('Invalid response structure from API');
-      }
-
-      // Navigate to SOAP body
-      const soapBody = responseData.data?.['SOAP:Envelope']?.['SOAP:Body'];
+      let pnrNumber = null;
+      let universalLocator = null;
+      let airLocatorCode = null;
       
-      if (!soapBody) {
-        console.error('❌ SOAP body not found in response');
-        throw new Error('SOAP body missing in response');
-      }
-
-      // Check for SOAP fault
-      if (soapBody['SOAP:Fault']) {
-        const fault = soapBody['SOAP:Fault'];
-        const faultCode = fault.faultcode;
-        const faultString = fault.faultstring;
-        console.error(`❌ SOAP Fault detected:`);
-        console.error(`   - Code: ${faultCode}`);
-        console.error(`   - Message: ${faultString}`);
-        
-        if (fault.detail) {
-          console.error(`   - Details:`, JSON.stringify(fault.detail, null, 2));
+      // Try multiple possible paths to find PNR
+      const possiblePaths = [
+        () => response.data?.data?.['SOAP:Envelope']?.['SOAP:Body']?.['universal:AirCreateReservationRsp']?.['universal:UniversalRecord']?.$?.LocatorCode,
+        () => response.data?.['SOAP:Envelope']?.['SOAP:Body']?.['universal:AirCreateReservationRsp']?.['universal:UniversalRecord']?.$?.LocatorCode,
+        () => response.data?.data?.['SOAP:Envelope']?.['SOAP:Body']?.['universal:AirCreateReservationRsp']?.['universal:ProviderReservationInfo']?.$?.LocatorCode,
+        () => response.data?.universalRecord?.LocatorCode,
+        () => response.data?.pnrNumber || response.data?.bookingReference,
+        () => {
+          const str = JSON.stringify(response.data);
+          const match = str.match(/LocatorCode["']?\s*:\s*["']([A-Z0-9]+)["']/);
+          return match ? match[1] : null;
         }
-        
-        throw new Error(faultString || 'SOAP fault occurred during booking');
-      }
-
-      // Get the AirCreateReservationRsp
-      const airCreateReservationRsp = soapBody['universal:AirCreateReservationRsp'];
+      ];
       
-      if (!airCreateReservationRsp) {
-        console.error('❌ AirCreateReservationRsp not found in response');
-        throw new Error('AirCreateReservationRsp missing in response');
-      }
-
-      // Check for warnings/errors in response messages
-      const responseMessages = this.normalizeToArray(airCreateReservationRsp['common_v54_0:ResponseMessage']);
-      const warnings = [];
-      const errors = [];
-      
-      responseMessages.forEach(msg => {
-        const messageText = msg._ || msg;
-        const messageCode = msg.$?.Code;
-        const messageType = msg.$?.Type;
-        
-        if (messageType === 'Warning') {
-          warnings.push({ code: messageCode, message: messageText });
-          console.log(`⚠️ Warning: ${messageText}`);
-        } else if (messageType === 'Error') {
-          errors.push({ code: messageCode, message: messageText });
-          console.error(`❌ Error: ${messageText}`);
+      for (const path of possiblePaths) {
+        try {
+          const value = path();
+          if (value && typeof value === 'string' && value.length >= 5) {
+            pnrNumber = value;
+            universalLocator = value;
+            console.log(`   ✅ Found PNR via path ${possiblePaths.indexOf(path) + 1}: ${pnrNumber}`);
+            break;
+          }
+        } catch (e) {
+          // Continue to next path
         }
-      });
-      
-      // If there are errors, throw them
-      if (errors.length > 0) {
-        throw new Error(`Booking failed: ${errors.map(e => e.message).join(', ')}`);
-      }
-
-      // Extract UniversalRecord
-      const universalRecord = airCreateReservationRsp['universal:UniversalRecord'];
-      
-      if (!universalRecord) {
-        console.error('❌ UniversalRecord not found in response');
-        throw new Error('UniversalRecord missing in response');
-      }
-
-      // Extract locator codes
-      const universalLocator = universalRecord.$?.LocatorCode;
-      const universalVersion = universalRecord.$?.Version;
-      const universalStatus = universalRecord.$?.Status;
-      
-      // Extract provider reservation info
-      const providerReservationInfo = universalRecord['universal:ProviderReservationInfo'];
-      const providerLocatorCode = providerReservationInfo?.$?.LocatorCode;
-      const providerCode = providerReservationInfo?.$?.ProviderCode;
-      const owningPCC = providerReservationInfo?.$?.OwningPCC;
-      
-      // Extract air reservation
-      const airReservation = universalRecord['air:AirReservation'];
-      const airLocatorCode = airReservation?.$?.LocatorCode;
-      
-      // Extract passenger information
-      const bookingTraveler = universalRecord['common_v54_0:BookingTraveler'];
-      const passengersBooked = [];
-      
-      if (bookingTraveler) {
-        const travelers = this.normalizeToArray(bookingTraveler);
-        travelers.forEach(traveler => {
-          const travelerName = traveler['common_v54_0:BookingTravelerName'];
-          passengersBooked.push({
-            key: traveler.$?.Key,
-            type: traveler.$?.TravelerType,
-            age: traveler.$?.Age,
-            dob: traveler.$?.DOB,
-            gender: traveler.$?.Gender,
-            name: {
-              prefix: travelerName?.$?.Prefix,
-              first: travelerName?.$?.First,
-              last: travelerName?.$?.Last
-            }
-          });
-        });
       }
       
-      // Extract flight segments
-      const airSegments = [];
-      if (airReservation) {
-        const segments = this.normalizeToArray(airReservation['air:AirSegment']);
-        segments.forEach(segment => {
-          airSegments.push({
-            key: segment.$?.Key,
-            group: segment.$?.Group,
-            carrier: segment.$?.Carrier,
-            flightNumber: segment.$?.FlightNumber,
-            origin: segment.$?.Origin,
-            destination: segment.$?.Destination,
-            departureTime: segment.$?.DepartureTime,
-            arrivalTime: segment.$?.ArrivalTime,
-            classOfService: segment.$?.ClassOfService,
-            status: segment.$?.Status,
-            equipment: segment.$?.Equipment,
-            providerCode: segment.$?.ProviderCode,
-            travelTime: segment.$?.TravelTime,
-            distance: segment.$?.Distance
-          });
-        });
-      }
-      
-      // Extract pricing info
-      const airPricingInfo = [];
-      if (airReservation) {
-        const pricingInfos = this.normalizeToArray(airReservation['air:AirPricingInfo']);
-        pricingInfos.forEach(pricing => {
-          const fareInfo = pricing['air:FareInfo'];
-          const bookingInfo = pricing['air:BookingInfo'];
-          
-          airPricingInfo.push({
-            key: pricing.$?.Key,
-            totalPrice: pricing.$?.TotalPrice,
-            basePrice: pricing.$?.BasePrice,
-            taxes: pricing.$?.Taxes,
-            platingCarrier: pricing.$?.PlatingCarrier,
-            providerCode: pricing.$?.ProviderCode,
-            latestTicketingTime: pricing.$?.LatestTicketingTime,
-            refundable: pricing.$?.Refundable === 'true',
-            eticketability: pricing.$?.ETicketability,
-            fareInfo: fareInfo ? {
-              fareBasis: fareInfo.$?.FareBasis,
-              amount: fareInfo.$?.Amount,
-              origin: fareInfo.$?.Origin,
-              destination: fareInfo.$?.Destination,
-              effectiveDate: fareInfo.$?.EffectiveDate,
-              passengerTypeCode: fareInfo.$?.PassengerTypeCode
-            } : null,
-            bookingInfo: bookingInfo ? {
-              bookingCode: bookingInfo.$?.BookingCode,
-              cabinClass: bookingInfo.$?.CabinClass,
-              segmentRef: bookingInfo.$?.SegmentRef,
-              fareInfoRef: bookingInfo.$?.FareInfoRef
-            } : null
-          });
-        });
-      }
-      
-      // Extract contact info from SSR
-      const ssrList = this.normalizeToArray(universalRecord['common_v54_0:SSR']);
-      let contactPhone = null;
-      let contactEmail = null;
-      
-      ssrList.forEach(ssr => {
-        if (ssr.$?.Type === 'CTCM') {
-          contactPhone = ssr.$?.FreeText;
-        } else if (ssr.$?.Type === 'CTCE') {
-          contactEmail = ssr.$?.FreeText;
+      if (!pnrNumber) {
+        console.warn('⚠️ Could not extract PNR number from response');
+        console.log('   Response structure:', Object.keys(response.data || {}));
+        if (response.data?.data) {
+          console.log('   Response.data keys:', Object.keys(response.data.data));
         }
-      });
-      
-      // Extract form of payment
-      const formOfPayment = universalRecord['common_v54_0:FormOfPayment'];
-      const paymentType = formOfPayment?.$?.Type;
-      
-      // Extract agency info
-      const agencyInfo = universalRecord['common_v54_0:AgencyInfo'];
-      const agentAction = agencyInfo?.['common_v54_0:AgentAction'];
-      
-      // Extract trace and transaction IDs
-      const traceId = airCreateReservationRsp.$?.TraceId;
-      const transactionId = airCreateReservationRsp.$?.TransactionId;
-      const apiResponseTime = airCreateReservationRsp.$?.ResponseTime;
-      
-      // Extract warnings if any were found
-      const warningMessages = warnings.map(w => w.message);
-      if (warningMessages.length > 0) {
-        console.log(`⚠️ Warnings were returned: ${warningMessages.join(', ')}`);
+      } else {
+        console.log(`\n✅ PNR NUMBER EXTRACTED: ${pnrNumber}`);
       }
-
-      const bookingConfirmation = {
-        success: true,
-        hasWarnings: warnings.length > 0,
-        warnings: warningMessages,
-        universalLocator: universalLocator,
-        universalVersion: universalVersion,
-        universalStatus: universalStatus,
-        airLocatorCode: airLocatorCode,
-        providerLocatorCode: providerLocatorCode,
-        providerCode: providerCode,
-        owningPCC: owningPCC,
-        totalPrice: bookingRequest.airPricingSolution.totalPrice,
-        passengersBooked: passengersBooked,
-        flightSegments: airSegments,
-        pricingInfo: airPricingInfo,
-        contactInfo: {
-          phone: contactPhone,
-          email: contactEmail
-        },
-        paymentType: paymentType,
-        agencyInfo: {
-          agentCode: agentAction?.$?.AgentCode,
-          branchCode: agentAction?.$?.BranchCode,
-          agencyCode: agentAction?.$?.AgencyCode,
-          actionType: agentAction?.$?.ActionType,
-          eventTime: agentAction?.$?.EventTime
-        },
-        bookingRequest: bookingRequest,
-        traceId: traceId,
-        transactionId: transactionId,
-        responseTime: apiResponseTime,
-        rawResponse: response.data // Include full raw response
+      
+      // ============================================================
+      // STEP 8: STORE RESPONSE IN CONTEXT
+      // ============================================================
+      
+      console.log('\n📦 STEP 8: Storing Response in Context...');
+      
+      if (this.contextStoreFunction && response.data) {
+        this.contextStoreFunction(response.data);
+        console.log('   ✅ Response stored via contextStoreFunction');
+      } else {
+        console.log('   ⚠️ No contextStoreFunction provided');
+      }
+      
+      // Update booking status in context if available
+      if (this.pricingBookingContext && pnrNumber) {
+        this.pricingBookingContext.updateBookingStatus('confirmed', pnrNumber, pnrNumber);
+        console.log('   ✅ Booking status updated in context');
+      }
+      
+      // ============================================================
+      // STEP 9: NAVIGATE
+      // ============================================================
+      
+      if (this.navigateFunction) {
+        console.log('\n🚀 STEP 9: Navigating to passenger review page...');
+        this.navigateFunction('/flights/passenger-review');
+      }
+      
+      console.log('\n' + '✅'.repeat(40));
+      console.log('PNR CREATION COMPLETED SUCCESSFULLY');
+      console.log('✅'.repeat(40) + '\n');
+      
+      return { 
+        success: true, 
+        pnrNumber, 
+        universalLocator,
+        airLocatorCode,
+        bookingRequest, 
+        rawResponse: response.data 
       };
-
-      // ============================================================
-      // LOG 5: TRANSFORMED BOOKING CONFIRMATION
-      // ============================================================
-      console.log('\n' + '='.repeat(80));
-      console.log('🔄 STEP 5: TRANSFORMED BOOKING CONFIRMATION');
-      console.log('='.repeat(80));
-      console.log('📦 TRANSFORMED DATA STRUCTURE:');
-      console.log(JSON.stringify(bookingConfirmation, null, 2));
-      console.log('\n📊 TRANSFORMED DATA SUMMARY:');
-      console.log(`   - Universal Locator: ${universalLocator}`);
-      console.log(`   - Air Locator: ${airLocatorCode}`);
-      console.log(`   - Provider Locator: ${providerLocatorCode}`);
-      console.log(`   - Provider Code: ${providerCode}`);
-      console.log(`   - Owning PCC: ${owningPCC}`);
-      console.log(`   - Total Price: ${bookingConfirmation.totalPrice}`);
-      console.log(`   - Passengers Count: ${passengersBooked.length}`);
-      console.log(`   - Flight Segments Count: ${airSegments.length}`);
-      console.log(`   - Pricing Info Count: ${airPricingInfo.length}`);
-      console.log(`   - Warnings Count: ${warnings.length}`);
-      console.log(`   - Payment Type: ${paymentType}`);
-      console.log(`   - Trace ID: ${traceId}`);
-      console.log(`   - Transaction ID: ${transactionId}`);
-      console.log(`   - Response Time: ${apiResponseTime}ms`);
-      console.log('='.repeat(80) + '\n');
-
-      console.log('\n✨ BOOKING SUCCESSFUL!');
-      console.log('='.repeat(80));
-      console.log('📋 BOOKING CONFIRMATION SUMMARY:');
-      console.log('='.repeat(80));
-      console.log(`   Universal Locator: ${universalLocator}`);
-      console.log(`   Air Locator: ${airLocatorCode}`);
-      console.log(`   Provider Locator: ${providerLocatorCode}`);
-      console.log(`   Provider: ${providerCode}`);
-      console.log(`   Owning PCC: ${owningPCC}`);
-      console.log(`   Passengers: ${passengersBooked.length}`);
-      console.log(`   Segments: ${airSegments.length}`);
-      console.log(`   Total Price: ${bookingConfirmation.totalPrice}`);
-      console.log(`   Trace ID: ${traceId}`);
-      console.log(`   Transaction ID: ${transactionId}`);
-      console.log(`   API Response Time: ${apiResponseTime}ms`);
-      console.log(`   Total Time: ${Date.now() - startTime}ms`);
       
-      if (warningMessages.length > 0) {
-        console.log(`\n⚠️ Warnings (${warningMessages.length}):`);
-        warningMessages.forEach(warning => console.log(`      - ${warning}`));
-      }
-      console.log('='.repeat(80) + '\n');
-
-      // Return complete response with raw data for copying
-      const result = {
-        success: true,
-        bookingConfirmation,
-        bookingRequest,
-        rawResponse: response.data
-      };
-
-      // ============================================================
-      // LOG 6: FINAL RETURN RESULT
-      // ============================================================
-      console.log('\n' + '='.repeat(80));
-      console.log('📤 STEP 6: FINAL RETURN RESULT');
-      console.log('='.repeat(80));
-      console.log(`   - success: ${result.success}`);
-      console.log(`   - bookingConfirmation exists: ${!!result.bookingConfirmation}`);
-      console.log(`   - bookingRequest exists: ${!!result.bookingRequest}`);
-      console.log(`   - rawResponse exists: ${!!result.rawResponse}`);
-      console.log(`   - Raw response size: ${JSON.stringify(result.rawResponse).length} bytes`);
-      console.log('='.repeat(80) + '\n');
-
-      return result;
-
     } catch (error) {
-      console.error('\n' + '='.repeat(80));
-      console.error('🔴 PNR CREATION FAILED');
-      console.error('='.repeat(80));
-      console.error(`❌ Error: ${error.message}`);
-      console.error(`📍 Endpoint: ${BASE_URL}/flights/air-create/air-booking`);
-
+      console.error('\n' + '❌'.repeat(40));
+      console.error('PNR CREATION FAILED');
+      console.error('❌'.repeat(40));
+      console.error(`Error: ${error.message}`);
+      if (error.stack) console.error(`Stack: ${error.stack}`);
       if (error.response) {
-        console.error(`📊 Response Status: ${error.response.status}`);
-        console.error(`📦 Response Data:`);
-        console.error(JSON.stringify(error.response.data, null, 2));
-        this.lastRawResponse = error.response.data;
-      } else if (error.request) {
-        console.error('📡 No response received from server');
-        console.error(`Request details:`, error.request);
+        console.error(`Status: ${error.response.status}`);
+        console.error(`Data:`, error.response.data);
+        this.logCopyableJSON('ERROR RESPONSE BODY', error.response.data);
+      }
+      console.error('❌'.repeat(40) + '\n');
+      
+      // Update booking status in context if available
+      if (this.pricingBookingContext) {
+        this.pricingBookingContext.updateBookingStatus('failed');
+        if (this.pricingBookingContext.setBookingError) {
+          this.pricingBookingContext.setBookingError(error.message);
+        }
       }
       
-      console.error('='.repeat(80) + '\n');
-
-      throw error;
+      return { success: false, error: error.message };
     }
   }
 }
 
-// Export singleton instance
-const pnrCreationService = new PNRCreationService();
-
-export default pnrCreationService;
+export default new PNRCreationService();

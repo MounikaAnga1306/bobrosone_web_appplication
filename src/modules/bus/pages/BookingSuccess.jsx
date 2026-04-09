@@ -5,12 +5,12 @@ import { createBillDeskOrder } from "../services/billdeskService";
 import { useEffect, useState, useRef } from "react";
 import { getUserDetails } from "../../../utils/authHelper";
 import axios from "axios";
-
+ 
 const BookingSuccess = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
   const savedState = useRef(state);
-
+ 
   const [showBackConfirm, setShowBackConfirm] = useState(false);
   const [promoCode, setPromoCode] = useState("");
   const [promoApplied, setPromoApplied] = useState(false);
@@ -21,15 +21,15 @@ const BookingSuccess = () => {
   const [pendingGateway, setPendingGateway] = useState(null);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [timeLeft, setTimeLeft] = useState(480);
-
+ 
   const BLOCK_DURATION = 480;
   const user = getUserDetails();
   const isGuest = !user?.uid || user?.uid === "Not Applicable";
-
+ 
   useEffect(() => {
     if (!state) navigate("/", { replace: true });
   }, [state, navigate]);
-
+ 
   const totalFare = state?.totalFare || 0;
   const uid = user?.uid || state?.uid;
   const rewardpoint = parseFloat(state?.rewardpoint) || 0;
@@ -38,7 +38,7 @@ const BookingSuccess = () => {
   const discountedFare = promoApplied ? totalFare - promoDiscount : totalFare;
   const canPayFullWithRewards = availableRewardPoint >= discountedFare;
   const remainingAfterRewards = Math.max(0, discountedFare - availableRewardPoint).toFixed(2);
-
+ 
   // Timer
   useEffect(() => {
     let startTime = localStorage.getItem("blockStartTime");
@@ -46,7 +46,7 @@ const BookingSuccess = () => {
       startTime = Date.now();
       localStorage.setItem("blockStartTime", startTime);
     }
-
+ 
     const timer = setInterval(() => {
       const elapsed = Math.floor((Date.now() - startTime) / 1000);
       const remaining = BLOCK_DURATION - elapsed;
@@ -57,10 +57,10 @@ const BookingSuccess = () => {
       }
       setTimeLeft(remaining);
     }, 1000);
-
+ 
     return () => clearInterval(timer);
   }, [navigate]);
-
+ 
   // Intercept back button
   useEffect(() => {
     window.history.pushState({ bookingState: true }, "", window.location.href);
@@ -71,9 +71,9 @@ const BookingSuccess = () => {
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
-
+ 
   const timerStr = `${Math.floor(timeLeft / 60)}:${String(timeLeft % 60).padStart(2, "0")}`;
-
+ 
   // Save navigation state
   useEffect(() => {
     if (state && state.source) {
@@ -87,7 +87,7 @@ const BookingSuccess = () => {
       }));
     }
   }, [state]);
-
+ 
   const handleBackConfirm = () => {
     setShowBackConfirm(false);
     const saved = JSON.parse(localStorage.getItem("bookingNavState") || "{}");
@@ -103,9 +103,9 @@ const BookingSuccess = () => {
       }
     );
   };
-
+ 
   const handleBackCancel = () => setShowBackConfirm(false);
-
+ 
   // Apply Promo
   const handleApplyPromo = async () => {
     if (!promoCode.trim()) {
@@ -120,7 +120,7 @@ const BookingSuccess = () => {
       divTotal: Number(totalFare),
       offerCode: promoCode.trim().toUpperCase(),
     };
-
+ 
     try {
       const res = await axios.post("/offer/apply", offerBody);
       if (res.data?.success) {
@@ -137,14 +137,14 @@ const BookingSuccess = () => {
       setPromoError(err.response?.data?.message || "Failed to apply promo code.");
     }
   };
-
+ 
   const handleRemovePromo = () => {
     setPromoCode("");
     setPromoApplied(false);
     setPromoDiscount(0);
     setPromoError("");
   };
-
+ 
   const handleGatewaySelect = (gateway) => {
     setPendingGateway(gateway);
     if (!isGuest && availableRewardPoint > 0) {
@@ -153,12 +153,12 @@ const BookingSuccess = () => {
       executePayment(gateway, false);
     }
   };
-
+ 
   const handleRewardConfirmProceed = () => {
     setShowRewardConfirm(false);
     executePayment(pendingGateway, true);
   };
-
+ 
   const executePayment = async (gateway, useRewards) => {
     if (useRewards && availableRewardPoint > 0) {
       if (canPayFullWithRewards) {
@@ -206,18 +206,18 @@ const BookingSuccess = () => {
         } catch (err) {
           console.error("Partial reward error:", err);
         }
-
+ 
         const fareToCharge = parseFloat(remainingAfterRewards);
         if (gateway === "razorpay") await handleRazorPayClick(fareToCharge);
         else await handleBillDeskClick(fareToCharge);
         return;
       }
     }
-
+ 
     if (gateway === "razorpay") await handleRazorPayClick(discountedFare);
     else await handleBillDeskClick(discountedFare);
   };
-
+ 
   const handleRazorPayClick = async (fareToCharge) => {
     const fare = fareToCharge ?? discountedFare;
     try {
@@ -228,12 +228,12 @@ const BookingSuccess = () => {
         ticketId: state?.ticketId,
         email: passengers[0]?.email || "Not Applicable"
       });
-
+ 
       if (!orderResponse) {
         alert("Failed to create Razorpay order");
         return;
       }
-
+ 
       const order = orderResponse.order;
       const options = {
         key: "rzp_live_wyxyLDS9NPZCPy",
@@ -254,12 +254,12 @@ const BookingSuccess = () => {
             razorpay_order_id: response.razorpay_order_id,
             razorpay_signature: response.razorpay_signature
           });
-
+ 
           if (!verifyData) {
             navigate("/payment-status", { state: { status: "failed", payment: { code: "VERIFY_FAILED", description: "Payment verification failed" } } });
             return;
           }
-
+ 
           const isSuccess = verifyData?.success === true || verifyData?.status === "success";
           navigate("/payment-status", {
             state: {
@@ -281,7 +281,7 @@ const BookingSuccess = () => {
           }
         }
       };
-
+ 
       const rzp = new window.Razorpay(options);
       rzp.on("payment.failed", function (r) {
         navigate("/payment-status", {
@@ -295,7 +295,7 @@ const BookingSuccess = () => {
       });
     }
   };
-
+ 
   const handleBillDeskClick = async (fareToCharge) => {
     const fare = fareToCharge ?? discountedFare;
     try {
@@ -305,12 +305,12 @@ const BookingSuccess = () => {
         pname: passengers[0]?.name || "Guest",
         tickid: state?.ticketId
       });
-
+ 
       if (!response || !response.success || !response.authToken) {
         alert("BillDesk order creation failed");
         return;
       }
-
+ 
       window.location.href = `https://uat.bobros.co.in/billdesk_checkout.php?merchantId=HYDBOBROS&bdorderid=${response.bdorderid}&authToken=${encodeURIComponent(response.authToken)}`;
     } catch (error) {
       navigate("/payment-status", {
@@ -318,7 +318,7 @@ const BookingSuccess = () => {
       });
     }
   };
-
+ 
   return (
     <div style={{
       minHeight: "100vh",
@@ -349,7 +349,7 @@ const BookingSuccess = () => {
           {timerStr}
         </div>
       </div>
-
+ 
       {/* TRUST BADGES */}
       <div style={{ background: "#fff", borderBottom: "1px solid #f0f0f0", padding: "10px 16px" }}>
         <div style={{
@@ -369,7 +369,7 @@ const BookingSuccess = () => {
           ))}
         </div>
       </div>
-
+ 
       {/* MAIN CONTENT */}
       <div style={{ maxWidth: "1100px", margin: "20px auto 40px", padding: "0 16px" }}>
         <div style={{
@@ -433,7 +433,7 @@ const BookingSuccess = () => {
                 {promoError && <div style={{ color: "#dc2626", fontSize: "11.5px", marginTop: "6px" }}>{promoError}</div>}
               </div>
             )}
-
+ 
             {/* Reward Points Info */}
             {!isGuest && rewardpoint > 0 && !promoApplied && (
               <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "12px", padding: "14px", marginBottom: "16px", fontSize: "12.5px", color: "#92400e", lineHeight: "1.5" }}>
@@ -447,11 +447,11 @@ const BookingSuccess = () => {
                 )}
               </div>
             )}
-
+ 
             {/* Payment Methods */}
             <div style={{ background: "#fff", borderRadius: "12px", border: "1px solid #e8e8e8", padding: "16px", marginBottom: "16px" }}>
               <div style={{ fontSize: "14.5px", fontWeight: "700", color: "#1a1a2e", marginBottom: "16px" }}>Payment Method</div>
-
+ 
               <div onClick={() => handleGatewaySelect("razorpay")} style={{
                 border: "1.5px solid #e8e8e8", borderRadius: "10px", padding: "14px", marginBottom: "10px", cursor: "pointer", transition: "all 0.2s"
               }}
@@ -465,7 +465,7 @@ const BookingSuccess = () => {
                   <span style={{ color: "#aaa", fontSize: "18px" }}>›</span>
                 </div>
               </div>
-
+ 
               <div onClick={() => handleGatewaySelect("billdesk")} style={{
                 border: "1.5px solid #e8e8e8", borderRadius: "10px", padding: "14px", cursor: "pointer", transition: "all 0.2s"
               }}
@@ -480,7 +480,7 @@ const BookingSuccess = () => {
                 </div>
               </div>
             </div>
-
+ 
             {/* Guest Message */}
             {isGuest && (
               <div style={{ background: "#fff", borderRadius: "12px", border: "1px solid #e8e8e8", padding: "20px", textAlign: "center" }}>
@@ -511,32 +511,32 @@ const BookingSuccess = () => {
               </div>
             )}
           </div>
-
+ 
           {/* RIGHT COLUMN - Summary */}
           <div>
             {/* Fare Breakup */}
             <div style={{ background: "#fff", borderRadius: "12px", border: "1px solid #e8e8e8", padding: "18px", marginBottom: "16px" }}>
               <div style={{ fontSize: "14.5px", fontWeight: "700", color: "#1a1a2e", marginBottom: "14px" }}>Fare Breakup</div>
-
+ 
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px", fontSize: "13.5px", color: "#555" }}>
                 <span>Base Fare ({passengers.length} seat{passengers.length > 1 ? "s" : ""})</span>
                 <span style={{ fontWeight: "600", color: "#1a1a2e" }}>₹{totalFare}</span>
               </div>
-
+ 
               {promoApplied && (
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px", fontSize: "13.5px", color: "#16a34a" }}>
                   <span>Promo Discount ({promoCode})</span>
                   <span style={{ fontWeight: "600" }}>− ₹{promoDiscount}</span>
                 </div>
               )}
-
+ 
               {!isGuest && availableRewardPoint > 0 && (
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px", fontSize: "13.5px", color: "#16a34a" }}>
                   <span>Reward Balance</span>
                   <span style={{ fontWeight: "600" }}>− ₹{Math.min(availableRewardPoint, discountedFare).toFixed(2)}</span>
                 </div>
               )}
-
+ 
               <div style={{ borderTop: "1px solid #f0f0f0", paddingTop: "12px", marginTop: "6px", display: "flex", justifyContent: "space-between", fontSize: "15.5px", fontWeight: "800", color: "#1a1a2e" }}>
                 <span>Total</span>
                 <span style={{ color: "#fd561e" }}>
@@ -544,7 +544,7 @@ const BookingSuccess = () => {
                 </span>
               </div>
             </div>
-
+ 
             {/* Trip Info */}
             <div style={{ background: "#fff", borderRadius: "12px", border: "1px solid #e8e8e8", padding: "18px", marginBottom: "16px" }}>
               <div style={{ fontSize: "15.5px", fontWeight: "800", color: "#1a1a2e", marginBottom: "6px" }}>
@@ -555,7 +555,7 @@ const BookingSuccess = () => {
               <div style={{ fontSize: "12.5px", color: "#555" }}>📅 {state?.date}</div>
               <div style={{ fontSize: "12.5px", color: "#555", marginTop: "4px" }}>🎫 Ref: <strong>{state?.ticketId}</strong></div>
             </div>
-
+ 
             {/* Passengers */}
             <div style={{ background: "#fff", borderRadius: "12px", border: "1px solid #e8e8e8", padding: "18px" }}>
               <div style={{ fontSize: "13.5px", fontWeight: "700", color: "#1a1a2e", marginBottom: "14px" }}>Passengers</div>
@@ -582,7 +582,7 @@ const BookingSuccess = () => {
                   </div>
                 </div>
               ))}
-
+ 
               <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "1px solid #f0f0f0" }}>
                 <div style={{ fontSize: "10.5px", color: "#888", marginBottom: "6px" }}>Booking details will be sent to:</div>
                 {(passengers[0]?.mobile || state?.mobile) && (
@@ -596,10 +596,10 @@ const BookingSuccess = () => {
           </div>
         </div>
       </div>
-
+ 
       {/* All Popups (Reward, Promo, Success, Back Confirm) - Same as your second version with minor improvements */}
       {/* ... (I kept the popup sections exactly as in your improved version for brevity) ... */}
-
+ 
       {/* REWARD CONFIRMATION POPUP */}
       {showRewardConfirm && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300, padding: "16px" }}>
@@ -615,13 +615,15 @@ const BookingSuccess = () => {
           </div>
         </div>
       )}
-
+ 
       {/* Other popups (Promo, Success, Back Confirm) - you can keep them as in your second version */}
-
+ 
       {/* I recommend keeping the popup sections from your second provided code as they are cleaner. */}
-
+ 
     </div>
   );
 };
-
+ 
 export default BookingSuccess;
+
+ 
