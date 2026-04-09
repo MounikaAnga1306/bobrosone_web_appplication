@@ -40,6 +40,7 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
 
   const googleLogin = useGoogleLogin({
     scope: "email profile",
+    flow: "implicit",
     onSuccess: async (tokenResponse) => {
       try {
         const res = await axios.get("https://www.googleapis.com/oauth2/v2/userinfo", {
@@ -53,8 +54,13 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
         closeModal();
         navigate("/");
       } catch (error) {
+        console.error("Google Login API Error:", error?.response?.data || error.message);
         alert("Google account not registered or server error.");
       }
+    },
+    onError: (error) => {
+      console.error("Google OAuth Error:", error);
+      alert("Google sign-in failed. Please try again.");
     },
   });
 
