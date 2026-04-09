@@ -73,7 +73,6 @@ const BoardingDropping = ({
                   name="boarding"
                   checked={boardingPoint === bp}
                   onChange={() => {
-                    console.log("Selected Boarding Point ID:", bp.bpId);
                     setBoardingPoint(bp);
                   }}
                   className="accent-[#fd561e] w-3.5 h-3.5 sm:w-4 sm:h-4 ml-2 flex-shrink-0"
@@ -131,7 +130,6 @@ const BoardingDropping = ({
                   name="dropping"
                   checked={droppingPoint === dp}
                   onChange={() => {
-                    console.log("Selected Dropping Point ID:", dp.bpId);
                     setDroppingPoint(dp);
                   }}
                   className="accent-[#fd561e] w-3.5 h-3.5 sm:w-4 sm:h-4 ml-2 flex-shrink-0"

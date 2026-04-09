@@ -40,6 +40,7 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
  
   const googleLogin = useGoogleLogin({
     scope: "email profile",
+    flow: "implicit",
     onSuccess: async (tokenResponse) => {
       try {
         const res = await axios.get("https://www.googleapis.com/oauth2/v2/userinfo", {
@@ -53,8 +54,13 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
         closeModal();
         navigate("/");
       } catch (error) {
+        console.error("Google Login API Error:", error?.response?.data || error.message);
         alert("Google account not registered or server error.");
       }
+    },
+    onError: (error) => {
+      console.error("Google OAuth Error:", error);
+      alert("Google sign-in failed. Please try again.");
     },
   });
  
@@ -175,12 +181,12 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
             <span className="px-2 sm:px-3 text-gray-400 text-xs">OR</span>
             <div className="flex-grow border-t border-gray-100"></div>
           </div>
- 
-          <button
-            onClick={() => googleLogin()}
+
+          <button 
+            onClick={() => googleLogin()} 
             className="w-full border border-gray-200 flex items-center justify-center cursor-pointer gap-2 py-2 sm:py-2.5 rounded-xl hover:bg-gray-50 text-xs sm:text-sm font-medium transition-all"
           >
-            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="G" className="w-4 h-4 sm:w-5 sm:h-5 cursor-pointer" />
+            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="G" className="w-4 h-4 sm:w-5 sm:h-5 cursor-pointer" /> 
             Sign in with Google
           </button>
  

@@ -15,7 +15,6 @@ export const createRazorpayOrder = async ({ fare, uid, name, ticketId, email }) 
     if (!res.ok) throw new Error(`Order creation failed: HTTP ${res.status}`);
 
     const data = await res.json();
-    console.log("✅ Razorpay Order Response:", data);
     return data;
 
   } catch (error) {
@@ -50,7 +49,6 @@ export const verifyRazorpayPayment = async ({
     if (!res.ok) throw new Error(`Verification failed: HTTP ${res.status}`);
 
     const data = await res.json();
-     console.log("✅ Razorpay Verify Response:", data);
 
     return data;
 

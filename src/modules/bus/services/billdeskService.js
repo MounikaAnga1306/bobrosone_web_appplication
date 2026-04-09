@@ -8,7 +8,6 @@ export const createBillDeskOrder = async (payload) => {
       body: JSON.stringify(payload)
     });
     const data = await response.json();
-    console.log("BillDesk Order Response:", data);
     return data;
   } catch (error) {
     console.error("BillDesk Service Error:", error);

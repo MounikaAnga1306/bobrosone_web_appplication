@@ -9,8 +9,7 @@ require("dotenv").config();
 const rateLimit = require("express-rate-limit");
  
 const app = express();
- 
- 
+
 // =========================
 // SECURITY & MIDDLEWARE
 // =========================
@@ -32,8 +31,7 @@ app.use(helmet());
  
 // Serve frontend in production
 app.use(express.static(path.join(__dirname, "public")));
- 
- 
+
 // ======================================================
 // HELPER FUNCTION: Transform Seats For Frontend Layout
 // ======================================================
@@ -41,7 +39,6 @@ const transformSeats = (seats) => {
   if (!Array.isArray(seats)) return [];
  
   return seats.map((seat, index) => {
- 
     const baseFare = Number(seat.baseFare ?? 0);
     const serviceTax = Number(seat.serviceTaxAbsolute ?? 0);
  
@@ -50,24 +47,92 @@ const transformSeats = (seats) => {
       name: seat.name || `S${index + 1}`,
       available: seat.available ?? true,
       ladiesSeat: seat.ladiesSeat ?? false,
- 
       baseFare: baseFare,
- 
-      // ⭐ totalFare
       totalFare: baseFare + serviceTax,
- 
-      // Layout fields
       zIndex: Number(seat.zIndex ?? 0),
       row: Number(seat.row ?? Math.floor(index / 4)),
       column: Number(seat.column ?? index % 4),
       length: Number(seat.length ?? 1),
       width: Number(seat.width ?? 1),
     };
- 
   });
 };
- 
- 
+
+// ======================================================
+// HELPER FUNCTION: Parse Cancellation Policy
+// ======================================================
+const parseCancellationPolicy = (policyString) => {
+  if (!policyString || typeof policyString !== 'string') {
+    return {
+      original: policyString || "",
+      rules: [],
+      summary: "No cancellation policy available"
+    };
+  }
+
+  const rules = [];
+  const policyParts = policyString.split(';');
+  
+  for (const part of policyParts) {
+    if (part.trim() === "") continue;
+    
+    const parts = part.split(':');
+    if (parts.length !== 4) continue;
+    
+    const from = parseInt(parts[0]);
+    const to = parseInt(parts[1]);
+    const rate = parseInt(parts[2]);
+    const type = parseInt(parts[3]);
+    
+    const rateType = type === 0 ? '%' : '₹';
+    const chargeStr = type === 0 ? `${rate}%` : `₹${rate}`;
+    
+    let timeStr = '';
+    const fromStr = from === -1 ? 'start' : `${from} hour${from !== 1 ? 's' : ''}`;
+    const toStr = to === -1 ? 'start' : `${to} hour${to !== 1 ? 's' : ''}`;
+    
+    if (from < to) {
+      timeStr = `Between ${fromStr} and ${toStr} before departure`;
+    } else {
+      timeStr = `Before ${fromStr} before departure`;
+    }
+    
+    rules.push({
+      from: from,
+      to: to,
+      rate: rate,
+      type: type,
+      charge: chargeStr,
+      timeRange: timeStr,
+      rateType: rateType
+    });
+  }
+  
+  // Generate summary text
+  let summary = "";
+  if (rules.length > 0) {
+    const firstRule = rules[0];
+    const lastRule = rules[rules.length - 1];
+    
+    if (firstRule.from === -1) {
+      summary = `Free cancellation up to ${firstRule.to} hours before departure`;
+    } else if (lastRule.to === -1 && lastRule.from > 0) {
+      summary = `Cancellation charges apply ${lastRule.charge} if cancelled after ${lastRule.from} hours before departure`;
+    } else {
+      summary = `Cancellation charges: ${rules.map(r => r.charge).join(' / ')}`;
+    }
+  } else {
+    summary = "Cancellation not available for this booking";
+  }
+  
+  return {
+    original: policyString,
+    rules: rules,
+    summary: summary,
+    hasPolicy: rules.length > 0
+  };
+};
+
 // =========================
 // CITIES ENDPOINT
 // =========================
@@ -100,36 +165,52 @@ app.get("/cities", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch cities" });
   }
 });
- 
- 
+
 // =========================
-// SEARCH TRIPS ENDPOINT
+// SEARCH TRIPS ENDPOINT (UPDATED with cancellation policy)
 // =========================
 app.get("/searchTrips", async (req, res) => {
   try {
-    const { source, destination, doj } = req.query;
- 
+    const { source, destination, doj, AC, nonAC, operator, priceSort, timeSort, sleeper, seater } = req.query;
+
     if (!source || !destination || !doj) {
       return res.status(400).json({ error: "Missing required parameters" });
     }
- 
-    const url = `${process.env.BASE_URL}/availabletrips?source=${source}&destination=${destination}&doj=${doj}`;
-    console.log("Trips API:", url);
- 
+
+    let url = `${process.env.BASE_URL}/availabletrips?source=${source}&destination=${destination}&doj=${doj}`;
+    
+    // Add filter parameters if they exist
+    if (AC === 'true') url += `&AC=true`;
+    if (nonAC === 'true') url += `&nonAC=true`;
+    if (operator) url += `&operator=${encodeURIComponent(operator)}`;
+    if (priceSort) url += `&priceSort=${priceSort}`;
+    if (timeSort) url += `&timeSort=${timeSort}`;
+    if (sleeper === 'true') url += `&sleeper=true`;
+    if (seater === 'true') url += `&seater=true`;
+
+
     const requestData = { url, method: "GET" };
     const headers = oauth.toHeader(oauth.authorize(requestData));
  
     const tripsResponse = await axios.get(url, { headers });
- 
-    res.json(tripsResponse.data);
- 
+    
+    // Parse cancellation policy for each trip
+    const tripsWithParsedPolicy = {
+      ...tripsResponse.data,
+      availableTrips: tripsResponse.data.availableTrips?.map(trip => ({
+        ...trip,
+        cancellationPolicyParsed: parseCancellationPolicy(trip.cancellationPolicy)
+      })) || []
+    };
+
+    res.json(tripsWithParsedPolicy);
+
   } catch (error) {
     console.error(error.response?.data || error.message);
     res.status(500).json({ error: "Failed to fetch trips" });
   }
 });
- 
- 
+
 // =========================
 // TRIP DETAILS ENDPOINT (UPDATED FOR SEAT LAYOUT)
 // =========================
@@ -142,25 +223,24 @@ app.get("/tripdetails", async (req, res) => {
     }
  
     const url = `${process.env.BASE_URL}/tripdetails?id=${id}`;
- 
-    console.log("Trip details API:", url);
-    console.log("Trip ID:", id);
- 
+
+
     const requestData = { url, method: "GET" };
     const headers = oauth.toHeader(oauth.authorize(requestData));
- 
+    console.log("trip id",id);
+
     const response = await axios.get(url, { headers });
  
     const tripData = response.data;
- 
-    // ✅ LOG ACTUAL RESPONSE
-    //console.log("Trip Details Response:", tripData);
- 
     const transformedSeats = transformSeats(tripData.seats);
- 
+    
+    // Parse cancellation policy for trip details
+    const cancellationPolicyParsed = parseCancellationPolicy(tripData.cancellationPolicy);
+
     res.json({
       ...tripData,
       seats: transformedSeats,
+      cancellationPolicyParsed: cancellationPolicyParsed
     });
  
   } catch (error) {
@@ -168,49 +248,42 @@ app.get("/tripdetails", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch trip details" });
   }
 });
+
 // =========================
 // BLOCK TICKET ENDPOINT (CORRECTED)
 // =========================
 app.post("/blockTicket", async (req, res) => {
   try {
     const url = `${process.env.BASE_URL}/blockTicket`;
-   
-    // IMPORTANT: Create requestData with body FIRST
+    
     const requestData = {
       url: url,
       method: "POST",
-      body: req.body  // This must be included for OAuth signature
+      body: req.body
     };
-   
-    // Generate OAuth headers with the request data including body
+    
     const headers = oauth.toHeader(oauth.authorize(requestData));
     headers["Content-Type"] = "application/json";
-   
-    console.log("Block Ticket Request Body:", JSON.stringify(req.body, null, 2));
-    console.log("Block Ticket URL:", url);
-   
-    // Make the API call
+    
+    
     const response = await axios.post(url, req.body, { headers });
-   
-    console.log("Block Ticket SUCCESS Response:", response.data);
-   
-    // Return the response to frontend
+    
+    
     res.json(response.data);
-   
+    
   } catch (error) {
     console.error("Block Ticket Error FULL:", {
       data: error.response?.data,
       status: error.response?.status,
       message: error.message
     });
-   
-    // Send appropriate error response
+    
     const statusCode = error.response?.status || 500;
-    const errorMessage = error.response?.data?.message ||
-                        error.response?.data?.error ||
-                        error.message ||
+    const errorMessage = error.response?.data?.message || 
+                        error.response?.data?.error || 
+                        error.message || 
                         "Failed to block ticket";
-   
+    
     res.status(statusCode).json({
       success: false,
       message: errorMessage,
@@ -218,10 +291,9 @@ app.post("/blockTicket", async (req, res) => {
     });
   }
 });
- 
- 
+
 // =========================
-// RAZORPAY ORDER ENDPOINT (with OAuth)
+// RAZORPAY ORDER ENDPOINT
 // =========================
 app.post("/razorpayment/order", async (req, res) => {
   try {
@@ -239,21 +311,17 @@ app.post("/razorpayment/order", async (req, res) => {
       paymentfor: "BusTicket Rpay",
       email: email || "Not Applicable",
     };
- 
-    console.log("Razorpay Order Request Body:", razorpayBody);
- 
-    const url = `${process.env.BASE_URL}/razorpayment/order`; // Your OAuth-protected API
-    const requestData = { url, method: "POST",body: razorpayBody };
- 
-    // ✅ Generate OAuth headers
+
+
+    const url = `${process.env.BASE_URL}/razorpayment/order`;
+    const requestData = { url, method: "POST", body: razorpayBody };
+
     const headers = oauth.toHeader(oauth.authorize(requestData));
     headers["Content-Type"] = "application/json";
- 
-    // Call the OAuth-protected Razorpay order API
+
     const response = await axios.post(url, razorpayBody, { headers });
- 
-    console.log("Razorpay Order Response:", response.data);
- 
+
+
     res.json(response.data);
  
   } catch (error) {
@@ -261,12 +329,12 @@ app.post("/razorpayment/order", async (req, res) => {
     res.status(500).json({ error: "Failed to create Razorpay order" });
   }
 });
+
 // =========================
 // BILLDESK ORDER ENDPOINT
 // =========================
 app.post("/billdesk/order", async (req, res) => {
   try {
- 
     const { fare, uid, pname, tickid } = req.body;
  
     if (!fare || !tickid) {
@@ -282,9 +350,8 @@ app.post("/billdesk/order", async (req, res) => {
       pname: pname || "Guest",
       tickid: tickid
     });
- 
-    console.log("BillDesk Order Request:", billdeskBody.toString());
- 
+
+
     const response = await axios.post(
       "https://uat.bobros.co.in/billdesktest.php",
       billdeskBody,
@@ -294,75 +361,47 @@ app.post("/billdesk/order", async (req, res) => {
         }
       }
     );
- 
-    console.log("BillDesk API Response:", response.data);
- 
+
+
     res.json(response.data);
  
   } catch (error) {
- 
-    console.error(
-      "BillDesk Order Error:",
-      error.response?.data || error.message
-    );
- 
+    console.error("BillDesk Order Error:", error.response?.data || error.message);
     res.status(500).json({
       success: false,
       message: "BillDesk order creation failed"
     });
   }
 });
+
+// =========================
+// VERIFY PAYMENT ENDPOINT
+// =========================
 app.post("/verifyPayment", async (req, res) => {
   try {
- 
     const url = `${process.env.BASE_URL}/verifyPayment`;
- 
-    console.log("Verify Payment Request:", req.body);
    
-    const requestData = {
-      url,
-      method: "POST"
-    };
- 
-    // ✅ Generate OAuth headers
+    const requestData = { url, method: "POST" };
     const headers = oauth.toHeader(oauth.authorize(requestData));
     headers["Content-Type"] = "application/json";
- 
-    const response = await axios.post(
-      url,
-      req.body,
-      { headers}
-       
-     
-    );
- 
-    console.log("Verify Payment Response:", response.data);
- 
+
+    const response = await axios.post(url, req.body, { headers });
     res.json(response.data);
  
   } catch (error) {
- 
-    console.error(
-      "Verify Payment Error:",
-      error.response?.data || error.message
-    );
- 
+    console.error("Verify Payment Error:", error.response?.data || error.message);
     res.status(500).json({
       success: false,
       message: "Payment verification failed"
     });
- 
   }
 });
- 
- 
- 
+
 // =========================
 // REWARD POINTS API
 // =========================
 app.get("/rewardPoints", async (req, res) => {
   try {
- 
     const { uid, fare } = req.query;
  
     if (!uid || !fare) {
@@ -373,32 +412,19 @@ app.get("/rewardPoints", async (req, res) => {
     }
  
     const url = `${process.env.BASE_URL}/rewardPoints?uid=${uid}&fare=${fare}`;
- 
-    console.log("Reward Points API:", url);
- 
-    const requestData = {
-      url,
-      method: "GET"
-    };
- 
+
+    const requestData = { url, method: "GET" };
     const headers = oauth.toHeader(oauth.authorize(requestData));
  
     const response = await axios.get(url, { headers });
- 
     res.json(response.data);
  
   } catch (error) {
- 
-    console.error(
-      "Reward API Error:",
-      error.response?.data || error.message
-    );
- 
+    console.error("Reward API Error:", error.response?.data || error.message);
     res.status(500).json({
       success: false,
       message: "Failed to fetch reward points"
     });
- 
   }
 });
  
@@ -429,17 +455,12 @@ app.post("/myBookings", async (req, res) => {
     });
  
     const allRows = response.data?.rows || [];
-   
-    // ✅ ఇక్కడ add చేయి
-    console.log("All Rows:", JSON.stringify(allRows, null, 2));
- 
+
     const confirmedBookings = allRows.filter(b =>
       b.tin_ticket && b.tin_ticket !== "0"
     );
- 
-    // ✅ ఇక్కడ add చేయి
-    console.log("Confirmed:", JSON.stringify(confirmedBookings, null, 2));
- 
+
+
     res.json({ success: true, bookings: confirmedBookings });
  
   } catch (error) {
@@ -458,14 +479,13 @@ app.post("/guestBookings/verify", async (req, res) => {
     if (!email || !mobile) {
       return res.status(400).json({ success: false, message: "email and mobile required" });
     }
- 
-    const url = `${process.env.BASE_URL}/mybookings/verify`;  // ← env నుండి
- 
+
+    const url = `${process.env.BASE_URL}/mybookings/verify`;
+
     const response = await axios.post(url, { email, mobile }, {
       headers: { "Content-Type": "application/json" }
     });
- 
-    console.log("Guest Verify Response:", response.data);
+
     res.json({ success: true, data: response.data });
  
   } catch (error) {
@@ -477,7 +497,6 @@ app.post("/guestBookings/verify", async (req, res) => {
 // =========================
 // GUEST BOOKINGS - FETCH DATA WITH OTP
 // =========================
-// server.js - guestBookings/data
 app.post("/guestBookings/data", async (req, res) => {
   try {
     const { email, mobile, otp } = req.body;
@@ -490,9 +509,8 @@ app.post("/guestBookings/data", async (req, res) => {
     const dataRes = await axios.post(dataUrl, { email, mobile, otp }, {
       headers: { "Content-Type": "application/json" }
     });
- 
-    console.log("Guest Data Response:", dataRes.data);
- 
+
+
     const allBookings = dataRes.data?.bookingDetails || dataRes.data?.bookings || dataRes.data?.rows || [];
  
     const guestBookings = allBookings.filter(b => b.uid === String(mobile));
@@ -527,13 +545,11 @@ app.post("/bookticket/rp", async (req, res) => {
     const requestData = { url, method: "POST", body: req.body };
     const headers = oauth.toHeader(oauth.authorize(requestData));
     headers["Content-Type"] = "application/json";
- 
-    console.log("Book Ticket RP Body:", req.body);
- 
+
+
     const response = await axios.post(url, req.body, { headers });
- 
-    console.log("Book Ticket RP Response:", response.data);
- 
+
+
     res.json(response.data);
  
   } catch (error) {
@@ -560,26 +576,18 @@ app.post("/cancel/verify", async (req, res) => {
     }
  
     const url = `${process.env.BASE_URL}/cancelt/verifyuser`;
- 
-    console.log("Cancel Verify Body:", req.body);
- 
-   const requestData = {
-  url,
-  method: "POST",
-  body: req.body
-};
- 
-const headers = oauth.toHeader(oauth.authorize(requestData));
-headers["Content-Type"] = "application/json";
- 
-const response = await axios.post(url, req.body, { headers });
-    console.log("Cancel Verify Response:", response.data);
- 
+
+
+    const requestData = { url, method: "POST", body: req.body };
+    const headers = oauth.toHeader(oauth.authorize(requestData));
+    headers["Content-Type"] = "application/json";
+
+    const response = await axios.post(url, req.body, { headers });
+
     res.json(response.data);
  
   } catch (error) {
     console.error("Cancel Verify Error:", error.response?.data || error.message);
- 
     res.status(500).json({
       success: false,
       message: error.response?.data || "Verification failed"
@@ -602,27 +610,18 @@ app.post("/cancel/data", async (req, res) => {
     }
  
     const url = `${process.env.BASE_URL}/cancelt/cancellationData`;
- 
-    console.log("Cancel Data Body:", req.body);
- 
-    const requestData = {
-  url,
-  method: "POST",
-  body: req.body
-};
- 
-const headers = oauth.toHeader(oauth.authorize(requestData));
-headers["Content-Type"] = "application/json";
- 
-const response = await axios.post(url, req.body, { headers });
- 
-    console.log("Cancel Data Response:", response.data);
- 
+
+
+    const requestData = { url, method: "POST", body: req.body };
+    const headers = oauth.toHeader(oauth.authorize(requestData));
+    headers["Content-Type"] = "application/json";
+
+    const response = await axios.post(url, req.body, { headers });
+
     res.json(response.data);
  
   } catch (error) {
     console.error("Cancel Data Error:", error.response?.data || error.message);
- 
     res.status(500).json({
       success: false,
       message: error.response?.data || "OTP verification failed"
@@ -645,27 +644,18 @@ app.post("/cancel/ticket", async (req, res) => {
     }
  
     const url = `${process.env.BASE_URL}/cancelt/cancelTicket`;
- 
-    console.log("Cancel Ticket Body:", req.body);
- 
-   const requestData = {
-  url,
-  method: "POST",
-  body: req.body
-};
- 
-const headers = oauth.toHeader(oauth.authorize(requestData));
-headers["Content-Type"] = "application/json";
- 
-const response = await axios.post(url, req.body, { headers });
- 
-    console.log("Cancel Ticket Response:", response.data);
- 
+
+
+    const requestData = { url, method: "POST", body: req.body };
+    const headers = oauth.toHeader(oauth.authorize(requestData));
+    headers["Content-Type"] = "application/json";
+
+    const response = await axios.post(url, req.body, { headers });
+
     res.json(response.data);
  
   } catch (error) {
     console.error("Cancel Ticket Error:", error.response?.data || error.message);
- 
     res.status(500).json({
       success: false,
       message: error.response?.data || "Cancellation failed"
@@ -701,7 +691,6 @@ app.post("/myAccount", async (req, res) => {
 // =========================
 app.post("/offer/apply", async (req, res) => {
   try {
-    console.log("Offer Apply Body:", req.body);
  
     const response = await axios.post(
       "https://api.bobros.co.in/offer/apply-offer/",
@@ -709,13 +698,10 @@ app.post("/offer/apply", async (req, res) => {
       { headers: { "Content-Type": "application/json" } }
     );
  
-    console.log("Offer Apply Response:", response.data);
     res.json(response.data);
  
   } catch (error) {
     console.error("Offer Apply Error:", error.response?.data || error.message);
- 
-    // Return backend error message to frontend (important!)
     res.status(error.response?.status || 500).json(
       error.response?.data || { success: false, message: "Offer apply failed" }
     );
@@ -734,15 +720,11 @@ app.get("/printTicket", async (req, res) => {
     }
  
     const url = `${process.env.BASE_URL}/email/print-ticket?tin=${tin}`;
-    console.log("Print Ticket API:", url);
- 
+
     const requestData = { url, method: "GET" };
     const headers = oauth.toHeader(oauth.authorize(requestData));
  
     const response = await axios.get(url, { headers });
- 
-    console.log("Print Ticket Response:", response.data);
- 
     res.json(response.data);
  
   } catch (error) {
@@ -750,10 +732,44 @@ app.get("/printTicket", async (req, res) => {
     res.status(500).json({ success: false, message: "Failed to fetch ticket details" });
   }
 });
- 
- 
- 
- 
+
+// =========================
+// GET CANCELLATION POLICY ENDPOINT (NEW)
+// =========================
+app.get("/cancellation-policy/:tripId", async (req, res) => {
+  try {
+    const { tripId } = req.params;
+    
+    if (!tripId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Trip ID is required" 
+      });
+    }
+
+    const url = `${process.env.BASE_URL}/tripdetails?id=${tripId}`;
+    const requestData = { url, method: "GET" };
+    const headers = oauth.toHeader(oauth.authorize(requestData));
+
+    const response = await axios.get(url, { headers });
+    const policyString = response.data.cancellationPolicy;
+    
+    const parsedPolicy = parseCancellationPolicy(policyString);
+    
+    res.json({
+      success: true,
+      policy: parsedPolicy
+    });
+
+  } catch (error) {
+    console.error("Cancellation Policy Error:", error.response?.data || error.message);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to fetch cancellation policy" 
+    });
+  }
+});
+
 // =========================
 // React Routing Support
 // =========================
