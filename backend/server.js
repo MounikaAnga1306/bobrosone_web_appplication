@@ -165,6 +165,34 @@ app.get("/cities", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch cities" });
   }
 });
+// =========================
+// GMAIL VERIFY ENDPOINT
+// =========================
+app.get("/gmailverify", async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Email is required" });
+    }
+
+    const url = `${process.env.BASE_URL}/gmailVerify?email=${encodeURIComponent(email)}`;
+
+    const requestData = { url, method: "GET" };
+    const headers = oauth.toHeader(oauth.authorize(requestData));
+
+    const response = await axios.get(url, { headers });
+
+    res.json(response.data);
+
+  } catch (error) {
+    console.error("Gmail Verify Error:", error.response?.data || error.message);
+    if (error.response?.status === 404) {
+      return res.status(404).json({ success: false, message: "Google account not registered" });
+    }
+    res.status(500).json({ success: false, message: "Gmail verification failed" });
+  }
+});
 
 // =========================
 // SEARCH TRIPS ENDPOINT (UPDATED with cancellation policy)

@@ -186,7 +186,7 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
             onClick={() => googleLogin()} 
             className="w-full border border-gray-200 flex items-center justify-center cursor-pointer gap-2 py-2 sm:py-2.5 rounded-xl hover:bg-gray-50 text-xs sm:text-sm font-medium transition-all"
           >
-            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="G" className="w-4 h-4 sm:w-5 sm:h-5 cursor-pointer" /> 
+            <img src="/assets/google-Icon.png" alt="G" className="w-4 h-4 sm:w-5 sm:h-5 cursor-pointer" /> 
             Sign in with Google
           </button>
 
