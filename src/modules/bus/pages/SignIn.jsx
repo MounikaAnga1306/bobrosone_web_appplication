@@ -42,24 +42,27 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
     scope: "email profile",
     flow: "implicit",
     onSuccess: async (tokenResponse) => {
+      console.log("✅ Google OAuth Success - token received");
       try {
         const res = await axios.get("https://www.googleapis.com/oauth2/v2/userinfo", {
           headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
         });
+        console.log("✅ Userinfo received:", res.data.email);
         const email = res.data.email;
         const verify = await axios.get(`${API_URL}/gmailverify`, { params: { email } });
+        console.log("✅ Gmail verify response:", verify.data);
         localStorage.setItem("user", JSON.stringify(verify.data));
         localStorage.setItem("isLoggedIn", "true");
         window.dispatchEvent(new Event("storage"));
         closeModal();
         navigate("/");
       } catch (error) {
-        console.error("Google Login API Error:", error?.response?.data || error.message);
+        console.error("❌ Google Login API Error:", error?.response?.data || error.message);
         alert("Google account not registered or server error.");
       }
     },
     onError: (error) => {
-      console.error("Google OAuth Error:", error);
+      console.error("❌ Google OAuth Error:", error);
       alert("Google sign-in failed. Please try again.");
     },
   });
