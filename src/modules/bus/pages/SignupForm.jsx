@@ -186,9 +186,9 @@ const AccountDeletionCard = ({ onBack, onClose }) => {
 };
 
 // ─────────────────────────────────────────────────────────────
-// Main SignupForm — Mobile Responsive
+// Main SignUpForm — Mobile Responsive
 // ─────────────────────────────────────────────────────────────
-const SignupForm = ({ closeModal, openSignin, openVerifyOtp }) => {
+const SignUpForm = ({ closeModal, openSignin, openVerifyOtp }) => {
   const location = useLocation();
   const [showDeletion, setShowDeletion] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -367,4 +367,4 @@ const SignupForm = ({ closeModal, openSignin, openVerifyOtp }) => {
   );
 };
 
-export default SignupForm;
+export default SignUpForm;
