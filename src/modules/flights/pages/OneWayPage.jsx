@@ -5,8 +5,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useFlightSearchContext } from '../contexts/FlightSearchContext';
 import { searchFlights } from '../services/flightSearchService';
 import { searchAirports } from '../services/airportSearchService';
+import { fetchAirlines } from '../services/airlineService'; // ADD THIS IMPORT
 import OneWayFlightCard from '../components/shared/OneWayFlightCard';
-import OneWaySheet from '../components/sheet/OneWaySheet'; // ← ADD THIS BACK
+import OneWaySheet from '../components/sheet/OneWaySheet';
 import FilterSidebar from '../components/shared/FilterSidebar';
 import {
   FaPlane,
@@ -195,6 +196,10 @@ const OneWayPage = () => {
   const [passengerCounts, setPassengerCounts] = useState({ ADT: 1, CNN: 0, INF: 0 });
   const [searchParamsData, setSearchParamsData] = useState(null);
   
+  // ============ AIRLINE DATA STATE (NEW) ============
+  const [airlinesMap, setAirlinesMap] = useState({});
+  const [airlinesLoading, setAirlinesLoading] = useState(true);
+  
   // ============ EDIT MODE STATE ============
   const [isEditing, setIsEditing] = useState(false);
   const [editFrom, setEditFrom] = useState(null);
@@ -228,7 +233,7 @@ const OneWayPage = () => {
   const maxTravellers = 9;
   const travellerRef = useRef(null);
   
-  // ============ SHEET STATE (RESTORED) ============
+  // ============ SHEET STATE ============
   const [showDetailSheet, setShowDetailSheet] = useState(false);
   const [selectedFlightForSheet, setSelectedFlightForSheet] = useState(null);
   
@@ -377,6 +382,38 @@ const OneWayPage = () => {
     
     fetchFlightResults();
   }, [location.search, navigate, updateFlightResults]);
+
+  // ============ FETCH AIRLINES DATA AFTER FLIGHTS LOAD (NEW) ============
+  useEffect(() => {
+    const loadAirlines = async () => {
+      // Only fetch if we have flights
+      if (!flightResults.flights || flightResults.flights.length === 0) {
+        setAirlinesLoading(false);
+        return;
+      }
+      
+      try {
+        setAirlinesLoading(true);
+        console.log('🛫 Fetching airlines data...');
+        const airlines = await fetchAirlines();
+        
+        // Create a map for quick lookup by airline code
+        const airlinesMapData = {};
+        airlines.forEach(airline => {
+          airlinesMapData[airline.code] = airline;
+        });
+        
+        setAirlinesMap(airlinesMapData);
+        console.log('✅ Airlines data loaded:', Object.keys(airlinesMapData).length);
+      } catch (error) {
+        console.error('❌ Failed to load airlines:', error);
+      } finally {
+        setAirlinesLoading(false);
+      }
+    };
+    
+    loadAirlines();
+  }, [flightResults.flights]); // Re-run when flights change
 
   // ============ EDIT MODE FUNCTIONS ============
 
@@ -598,7 +635,7 @@ const OneWayPage = () => {
   const monthName = currentDate.toLocaleString("default", { month: "long" });
   const year = currentDate.getFullYear();
 
-  // ============ FLIGHT HANDLERS (RESTORED) ============
+  // ============ FLIGHT HANDLERS ============
   
   const handleCloseSheet = () => {
     setShowDetailSheet(false);
@@ -1075,8 +1112,7 @@ const OneWayPage = () => {
       {/* Sort and Filter Bar */}
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between gap-4">
-          {/* Results Count */}
-          
+         
 
           {/* Sort Dropdown */}
           <div className="relative">
@@ -1170,8 +1206,10 @@ const OneWayPage = () => {
                   flight={flight}
                   isSelected={false}
                   onSelect={() => {}}
-                  onViewDetails={handleViewDetails}  // ← IMPORTANT: Passing the handler
-                  passengerCounts={passengerCounts}   // ← Also passing passenger counts
+                  onViewDetails={handleViewDetails}
+                  passengerCounts={passengerCounts}
+                  airlineData={airlinesMap[flight.airlineCode]} // Pass pre-fetched airline data
+                  airlinesLoading={airlinesLoading} // Pass loading state
                 />
               ))
             )}
@@ -1179,7 +1217,7 @@ const OneWayPage = () => {
         </div>
       </div>
 
-      {/* OneWaySheet - RESTORED */}
+      {/* OneWaySheet */}
       {showDetailSheet && selectedFlightForSheet && (
         <OneWaySheet 
           isOpen={showDetailSheet}

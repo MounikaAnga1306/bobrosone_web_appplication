@@ -5,9 +5,9 @@ const path = require("path");
 const cors = require("cors");
 const oauth = require("./services/oauthService");
 require("dotenv").config();
-
+ 
 const rateLimit = require("express-rate-limit");
-
+ 
 const app = express();
 
 // =========================
@@ -18,17 +18,17 @@ const limiter = rateLimit({
   max: 100,
   message: "Too many requests, please try again later.",
 });
-
+ 
 app.use(cors({
   origin: true,
   methods: ["GET", "POST"],
   credentials: true
 }));
-
+ 
 app.use(limiter);
 app.use(express.json());
 app.use(helmet());
-
+ 
 // Serve frontend in production
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -37,11 +37,11 @@ app.use(express.static(path.join(__dirname, "public")));
 // ======================================================
 const transformSeats = (seats) => {
   if (!Array.isArray(seats)) return [];
-
+ 
   return seats.map((seat, index) => {
     const baseFare = Number(seat.baseFare ?? 0);
     const serviceTax = Number(seat.serviceTaxAbsolute ?? 0);
-
+ 
     return {
       id: seat.id || index + 1,
       name: seat.name || `S${index + 1}`,
@@ -139,27 +139,27 @@ const parseCancellationPolicy = (policyString) => {
 app.get("/cities", async (req, res) => {
   try {
     const name = req.query.name;
-
+ 
     if (!name || typeof name !== "string" || name.trim().length < 2) {
       return res.status(400).json({ error: "Invalid city name" });
     }
-
+ 
     const sanitizedName = name.trim();
     const url = `${process.env.BASE_URL}/cities?name=${encodeURIComponent(sanitizedName)}`;
-
+ 
     const requestData = { url, method: "GET" };
     const headers = oauth.toHeader(oauth.authorize(requestData));
-
+ 
     const response = await axios.get(url, { headers });
-
+ 
     const safeData = response.data.map(city => ({
       sid: city.sid,
       cityname: city.cityname,
       state: city.state
     }));
-
+ 
     res.json(safeData);
-
+ 
   } catch (error) {
     console.error(error.response?.data || error.message);
     res.status(500).json({ error: "Failed to fetch cities" });
@@ -191,7 +191,7 @@ app.get("/searchTrips", async (req, res) => {
 
     const requestData = { url, method: "GET" };
     const headers = oauth.toHeader(oauth.authorize(requestData));
-
+ 
     const tripsResponse = await axios.get(url, { headers });
     
     // Parse cancellation policy for each trip
@@ -217,11 +217,11 @@ app.get("/searchTrips", async (req, res) => {
 app.get("/tripdetails", async (req, res) => {
   try {
     const { id } = req.query;
-
+ 
     if (!id) {
       return res.status(400).json({ error: "Trip ID is required" });
     }
-
+ 
     const url = `${process.env.BASE_URL}/tripdetails?id=${id}`;
 
 
@@ -230,7 +230,7 @@ app.get("/tripdetails", async (req, res) => {
     console.log("trip id",id);
 
     const response = await axios.get(url, { headers });
-
+ 
     const tripData = response.data;
     const transformedSeats = transformSeats(tripData.seats);
     
@@ -242,7 +242,7 @@ app.get("/tripdetails", async (req, res) => {
       seats: transformedSeats,
       cancellationPolicyParsed: cancellationPolicyParsed
     });
-
+ 
   } catch (error) {
     console.error("Trip details error:", error.response?.data || error.message);
     res.status(500).json({ error: "Failed to fetch trip details" });
@@ -250,7 +250,7 @@ app.get("/tripdetails", async (req, res) => {
 });
 
 // =========================
-// BLOCK TICKET ENDPOINT
+// BLOCK TICKET ENDPOINT (CORRECTED)
 // =========================
 app.post("/blockTicket", async (req, res) => {
   try {
@@ -298,11 +298,11 @@ app.post("/blockTicket", async (req, res) => {
 app.post("/razorpayment/order", async (req, res) => {
   try {
     const { fare, uid, name, ticketId, email } = req.body;
-
+ 
     if (!fare || !ticketId) {
       return res.status(400).json({ error: "Fare and ticketId are required" });
     }
-
+ 
     const razorpayBody = {
       fare,
       uid: uid || "Not Applicable",
@@ -323,7 +323,7 @@ app.post("/razorpayment/order", async (req, res) => {
 
 
     res.json(response.data);
-
+ 
   } catch (error) {
     console.error("Razorpay Order API Error:", error.response?.data || error.message);
     res.status(500).json({ error: "Failed to create Razorpay order" });
@@ -336,14 +336,14 @@ app.post("/razorpayment/order", async (req, res) => {
 app.post("/billdesk/order", async (req, res) => {
   try {
     const { fare, uid, pname, tickid } = req.body;
-
+ 
     if (!fare || !tickid) {
       return res.status(400).json({
         success: false,
         message: "fare and ticketId required"
       });
     }
-
+ 
     const billdeskBody = new URLSearchParams({
       fare: fare,
       uid: uid || "Not Applicable",
@@ -364,7 +364,7 @@ app.post("/billdesk/order", async (req, res) => {
 
 
     res.json(response.data);
-
+ 
   } catch (error) {
     console.error("BillDesk Order Error:", error.response?.data || error.message);
     res.status(500).json({
@@ -387,7 +387,7 @@ app.post("/verifyPayment", async (req, res) => {
 
     const response = await axios.post(url, req.body, { headers });
     res.json(response.data);
-
+ 
   } catch (error) {
     console.error("Verify Payment Error:", error.response?.data || error.message);
     res.status(500).json({
@@ -403,22 +403,22 @@ app.post("/verifyPayment", async (req, res) => {
 app.get("/rewardPoints", async (req, res) => {
   try {
     const { uid, fare } = req.query;
-
+ 
     if (!uid || !fare) {
       return res.status(400).json({
         success: false,
         message: "uid and fare required"
       });
     }
-
+ 
     const url = `${process.env.BASE_URL}/rewardPoints?uid=${uid}&fare=${fare}`;
 
     const requestData = { url, method: "GET" };
     const headers = oauth.toHeader(oauth.authorize(requestData));
-
+ 
     const response = await axios.get(url, { headers });
     res.json(response.data);
-
+ 
   } catch (error) {
     console.error("Reward API Error:", error.response?.data || error.message);
     res.status(500).json({
@@ -427,20 +427,20 @@ app.get("/rewardPoints", async (req, res) => {
     });
   }
 });
-
+ 
 // =========================
 // MY BOOKINGS ENDPOINT
 // =========================
 app.post("/myBookings", async (req, res) => {
   try {
     const { uid, mobile } = req.body;
-
+ 
     if (!uid && !mobile) {
       return res.status(400).json({ success: false, message: "uid or mobile required" });
     }
-
+ 
     const url = `${process.env.BASE_URL}/db/select`;
-
+ 
     const response = await axios.post(url, {
       table: "uticket",
       columns: ["*"],
@@ -453,7 +453,7 @@ app.post("/myBookings", async (req, res) => {
     }, {
       headers: { "Content-Type": "application/json" }
     });
-
+ 
     const allRows = response.data?.rows || [];
 
     const confirmedBookings = allRows.filter(b =>
@@ -462,20 +462,20 @@ app.post("/myBookings", async (req, res) => {
 
 
     res.json({ success: true, bookings: confirmedBookings });
-
+ 
   } catch (error) {
     console.error("My Bookings Error:", error.response?.data || error.message);
     res.status(500).json({ success: false, message: "Failed to fetch bookings" });
   }
 });
-
+ 
 // =========================
 // GUEST BOOKINGS - VERIFY OTP
 // =========================
 app.post("/guestBookings/verify", async (req, res) => {
   try {
     const { email, mobile } = req.body;
-
+ 
     if (!email || !mobile) {
       return res.status(400).json({ success: false, message: "email and mobile required" });
     }
@@ -487,24 +487,24 @@ app.post("/guestBookings/verify", async (req, res) => {
     });
 
     res.json({ success: true, data: response.data });
-
+ 
   } catch (error) {
     console.error("Guest Verify Error:", error.response?.data || error.message);
     res.status(500).json({ success: false, message: "Failed to send OTP" });
   }
 });
-
+ 
 // =========================
 // GUEST BOOKINGS - FETCH DATA WITH OTP
 // =========================
 app.post("/guestBookings/data", async (req, res) => {
   try {
     const { email, mobile, otp } = req.body;
-
+ 
     if (!email || !mobile || !otp) {
       return res.status(400).json({ success: false, message: "email, mobile and otp required" });
     }
-
+ 
     const dataUrl = `${process.env.BASE_URL}/mybookings/data`;
     const dataRes = await axios.post(dataUrl, { email, mobile, otp }, {
       headers: { "Content-Type": "application/json" }
@@ -512,11 +512,11 @@ app.post("/guestBookings/data", async (req, res) => {
 
 
     const allBookings = dataRes.data?.bookingDetails || dataRes.data?.bookings || dataRes.data?.rows || [];
-
+ 
     const guestBookings = allBookings.filter(b => b.uid === String(mobile));
-
+ 
     return res.json({ success: true, bookings: guestBookings });
-
+ 
   } catch (error) {
     console.error("Guest Data Error:", error.response?.data || error.message);
     res.status(500).json({
@@ -525,23 +525,23 @@ app.post("/guestBookings/data", async (req, res) => {
     });
   }
 });
-
+ 
 // =========================
 // BOOK TICKET WITH REWARD POINTS
 // =========================
 app.post("/bookticket/rp", async (req, res) => {
   try {
     const { blockedTicketId, payeeid, name, email, fare, paymentfor } = req.body;
-
+ 
     if (!blockedTicketId || !payeeid) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "blockedTicketId and payeeid required" 
+      return res.status(400).json({
+        success: false,
+        message: "blockedTicketId and payeeid required"
       });
     }
-
+ 
     const url = `${process.env.BASE_URL}/bookticket/rp`;
-
+ 
     const requestData = { url, method: "POST", body: req.body };
     const headers = oauth.toHeader(oauth.authorize(requestData));
     headers["Content-Type"] = "application/json";
@@ -551,30 +551,30 @@ app.post("/bookticket/rp", async (req, res) => {
 
 
     res.json(response.data);
-
+ 
   } catch (error) {
     console.error("Book Ticket RP Error:", error.response?.data || error.message);
-    res.status(500).json({ 
-      success: false, 
-      message: error.response?.data?.message || "Failed to book ticket with reward points" 
+    res.status(500).json({
+      success: false,
+      message: error.response?.data?.message || "Failed to book ticket with reward points"
     });
   }
 });
-
+ 
 // =========================
 // CANCEL VERIFY USER
 // =========================
 app.post("/cancel/verify", async (req, res) => {
   try {
     const { ticket, mobile, email } = req.body;
-
+ 
     if (!ticket || !mobile || !email) {
       return res.status(400).json({
         success: false,
         message: "ticket, mobile, email required"
       });
     }
-
+ 
     const url = `${process.env.BASE_URL}/cancelt/verifyuser`;
 
 
@@ -585,7 +585,7 @@ app.post("/cancel/verify", async (req, res) => {
     const response = await axios.post(url, req.body, { headers });
 
     res.json(response.data);
-
+ 
   } catch (error) {
     console.error("Cancel Verify Error:", error.response?.data || error.message);
     res.status(500).json({
@@ -594,21 +594,21 @@ app.post("/cancel/verify", async (req, res) => {
     });
   }
 });
-
+ 
 // =========================
 // CANCEL DATA (OTP VERIFY)
 // =========================
 app.post("/cancel/data", async (req, res) => {
   try {
     const { mobile, ticketId, otp } = req.body;
-
+ 
     if (!mobile || !ticketId || !otp) {
       return res.status(400).json({
         success: false,
         message: "mobile, ticketId, otp required"
       });
     }
-
+ 
     const url = `${process.env.BASE_URL}/cancelt/cancellationData`;
 
 
@@ -619,7 +619,7 @@ app.post("/cancel/data", async (req, res) => {
     const response = await axios.post(url, req.body, { headers });
 
     res.json(response.data);
-
+ 
   } catch (error) {
     console.error("Cancel Data Error:", error.response?.data || error.message);
     res.status(500).json({
@@ -628,21 +628,21 @@ app.post("/cancel/data", async (req, res) => {
     });
   }
 });
-
+ 
 // =========================
 // CANCEL TICKET
 // =========================
 app.post("/cancel/ticket", async (req, res) => {
   try {
     const { tin, seatsToCancel } = req.body;
-
+ 
     if (!tin || !seatsToCancel?.length) {
       return res.status(400).json({
         success: false,
         message: "tin and seatsToCancel required"
       });
     }
-
+ 
     const url = `${process.env.BASE_URL}/cancelt/cancelTicket`;
 
 
@@ -653,7 +653,7 @@ app.post("/cancel/ticket", async (req, res) => {
     const response = await axios.post(url, req.body, { headers });
 
     res.json(response.data);
-
+ 
   } catch (error) {
     console.error("Cancel Ticket Error:", error.response?.data || error.message);
     res.status(500).json({
@@ -662,7 +662,7 @@ app.post("/cancel/ticket", async (req, res) => {
     });
   }
 });
-
+ 
 // =========================
 // MY ACCOUNT ENDPOINT
 // =========================
@@ -670,14 +670,14 @@ app.post("/myAccount", async (req, res) => {
   try {
     const { uid } = req.body;
     if (!uid) return res.status(400).json({ success: false, message: "uid required" });
-
+ 
     const url = `${process.env.BASE_URL}/db/select`;
     const response = await axios.post(url, {
       table: "t_account",
       columns: ["*"],
       conditions: { id: String(uid) }
     }, { headers: { "Content-Type": "application/json" } });
-
+ 
     const rows = response.data?.rows || [];
     res.json({ success: true, transactions: rows });
   } catch (error) {
@@ -685,7 +685,7 @@ app.post("/myAccount", async (req, res) => {
     res.status(500).json({ success: false, message: "Failed to fetch account data" });
   }
 });
-
+ 
 // =========================
 // OFFER APPLY ENDPOINT
 // =========================
@@ -707,26 +707,26 @@ app.post("/offer/apply", async (req, res) => {
     );
   }
 });
-
+ 
 // =========================
 // PRINT TICKET ENDPOINT
 // =========================
 app.get("/printTicket", async (req, res) => {
   try {
     const { tin } = req.query;
-
+ 
     if (!tin) {
       return res.status(400).json({ success: false, message: "tin is required" });
     }
-
+ 
     const url = `${process.env.BASE_URL}/email/print-ticket?tin=${tin}`;
 
     const requestData = { url, method: "GET" };
     const headers = oauth.toHeader(oauth.authorize(requestData));
-
+ 
     const response = await axios.get(url, { headers });
     res.json(response.data);
-
+ 
   } catch (error) {
     console.error("Print Ticket Error:", error.response?.data || error.message);
     res.status(500).json({ success: false, message: "Failed to fetch ticket details" });
@@ -774,16 +774,17 @@ app.get("/cancellation-policy/:tripId", async (req, res) => {
 // React Routing Support
 // =========================
 app.use(express.static(path.join(__dirname, "public", "dist")));
-
+ 
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "dist", "index.html"));
 });
-
+ 
 // =========================
 // START SERVER
 // =========================
 const PORT = process.env.PORT || 5000;
-
+ 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+ 
