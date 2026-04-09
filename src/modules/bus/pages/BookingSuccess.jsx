@@ -5,12 +5,12 @@ import { createBillDeskOrder } from "../services/billdeskService";
 import { useEffect, useState, useRef } from "react";
 import { getUserDetails } from "../../../utils/authHelper";
 import axios from "axios";
-
+ 
 const BookingSuccess = () => {
   const { state } = useLocation();
   const navigate = useNavigate();
   const savedState = useRef(state);
-
+ 
   const [showBackConfirm, setShowBackConfirm] = useState(false);
   const [promoCode, setPromoCode] = useState("");
   const [promoApplied, setPromoApplied] = useState(false);
@@ -21,11 +21,11 @@ const BookingSuccess = () => {
   const [pendingGateway, setPendingGateway] = useState(null);
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
   const [timeLeft, setTimeLeft] = useState(480);
-
+ 
   const BLOCK_DURATION = 480;
   const user = getUserDetails();
   const isGuest = !user?.uid || user?.uid === "Not Applicable";
-
+ 
   useEffect(() => {
     if (!state) navigate("/", { replace: true });
   }, []);
@@ -38,7 +38,7 @@ const BookingSuccess = () => {
   const discountedFare = promoApplied ? totalFare - promoDiscount : totalFare;
   const canPayFullWithRewards = availableRewardPoint >= discountedFare;
   const remainingAfterRewards = Math.max(0, discountedFare - availableRewardPoint).toFixed(2);
-
+ 
   // Timer
   useEffect(() => {
     let startTime = localStorage.getItem("blockStartTime");
@@ -69,9 +69,9 @@ const BookingSuccess = () => {
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
-
+ 
   const timerStr = `${Math.floor(timeLeft / 60)}:${String(timeLeft % 60).padStart(2, "0")}`;
-
+ 
   // Save navigation state
   useEffect(() => {
     if (state && state.source) {
@@ -85,7 +85,7 @@ const BookingSuccess = () => {
       }));
     }
   }, [state]);
-
+ 
   const handleBackConfirm = () => {
     setShowBackConfirm(false);
     const saved = JSON.parse(localStorage.getItem("bookingNavState") || "{}");
@@ -101,9 +101,9 @@ const BookingSuccess = () => {
       }
     );
   };
-
+ 
   const handleBackCancel = () => setShowBackConfirm(false);
-
+ 
   // Apply Promo
   const handleApplyPromo = async () => {
     if (!promoCode.trim()) {
@@ -133,14 +133,14 @@ const BookingSuccess = () => {
       setPromoError(err.response?.data?.message || "Failed to apply promo code.");
     }
   };
-
+ 
   const handleRemovePromo = () => {
     setPromoCode("");
     setPromoApplied(false);
     setPromoDiscount(0);
     setPromoError("");
   };
-
+ 
   const handleGatewaySelect = (gateway) => {
     setPendingGateway(gateway);
     if (!isGuest && availableRewardPoint > 0) {
@@ -149,12 +149,12 @@ const BookingSuccess = () => {
       executePayment(gateway, false);
     }
   };
-
+ 
   const handleRewardConfirmProceed = () => {
     setShowRewardConfirm(false);
     executePayment(pendingGateway, true);
   };
-
+ 
   const executePayment = async (gateway, useRewards) => {
     if (useRewards && availableRewardPoint > 0) {
       if (canPayFullWithRewards) {
@@ -211,7 +211,7 @@ const BookingSuccess = () => {
     if (gateway === "razorpay") await handleRazorPayClick(discountedFare);
     else await handleBillDeskClick(discountedFare);
   };
-
+ 
   const handleRazorPayClick = async (fareToCharge) => {
     const fare = fareToCharge ?? discountedFare;
     try {
@@ -269,7 +269,7 @@ const BookingSuccess = () => {
       navigate("/payment-status", { state: { status: "failed", payment: { code: "PAYMENT_ERROR", reason: error.message } } });
     }
   };
-
+ 
   const handleBillDeskClick = async (fareToCharge) => {
     const fare = fareToCharge ?? discountedFare;
     try {
@@ -285,7 +285,7 @@ const BookingSuccess = () => {
       navigate("/payment-status", { state: { status: "failed", payment: { description: "BillDesk payment error", reason: error.message } } });
     }
   };
-
+ 
   return (
     <div style={{ minHeight: "100vh", background: "#f4f6f9", fontFamily: "'Segoe UI', sans-serif", paddingTop: "90px" }}>
 
@@ -301,7 +301,7 @@ const BookingSuccess = () => {
           {timerStr}
         </div>
       </div>
-
+ 
       {/* TRUST BADGES */}
       <div style={{ background: "#fff", borderBottom: "1px solid #f0f0f0", padding: "10px 16px" }}>
         <div style={{ maxWidth: "1100px", margin: "0 auto", display: "flex", gap: "16px", alignItems: "center", justifyContent: "center", flexWrap: "wrap" }}>
@@ -313,7 +313,7 @@ const BookingSuccess = () => {
           ))}
         </div>
       </div>
-
+ 
       {/* MAIN CONTENT */}
       <div style={{ maxWidth: "1100px", margin: "20px auto 40px", padding: "0 16px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "20px", alignItems: "start" }} className="md:grid-cols-[1fr_380px]">
@@ -348,7 +348,7 @@ const BookingSuccess = () => {
                 {promoError && <div style={{ color: "#dc2626", fontSize: "11.5px", marginTop: "6px" }}>{promoError}</div>}
               </div>
             )}
-
+ 
             {/* Reward Points Info */}
             {!isGuest && rewardpoint > 0 && !promoApplied && (
               <div style={{ background: "#fffbeb", border: "1px solid #fde68a", borderRadius: "12px", padding: "14px", marginBottom: "16px", fontSize: "12.5px", color: "#92400e", lineHeight: "1.5" }}>
@@ -362,7 +362,7 @@ const BookingSuccess = () => {
                 )}
               </div>
             )}
-
+ 
             {/* Payment Methods */}
             <div style={{ background: "#fff", borderRadius: "12px", border: "1px solid #e8e8e8", padding: "16px", marginBottom: "16px" }}>
               <div style={{ fontSize: "14.5px", fontWeight: "700", color: "#1a1a2e", marginBottom: "16px" }}>Payment Method</div>
@@ -389,7 +389,7 @@ const BookingSuccess = () => {
                 </div>
               </div>
             </div>
-
+ 
             {/* Guest Message */}
             {isGuest && (
               <div style={{ background: "#fff", borderRadius: "12px", border: "1px solid #e8e8e8", padding: "20px", textAlign: "center" }}>
@@ -435,7 +435,7 @@ const BookingSuccess = () => {
                 </span>
               </div>
             </div>
-
+ 
             {/* Trip Info */}
             <div style={{ background: "#fff", borderRadius: "12px", border: "1px solid #e8e8e8", padding: "18px", marginBottom: "16px" }}>
               <div style={{ fontSize: "15.5px", fontWeight: "800", color: "#1a1a2e", marginBottom: "6px" }}>
@@ -446,7 +446,7 @@ const BookingSuccess = () => {
               <div style={{ fontSize: "12.5px", color: "#555" }}>📅 {state?.date}</div>
               <div style={{ fontSize: "12.5px", color: "#555", marginTop: "4px" }}>🎫 Ref: <strong>{state?.ticketId}</strong></div>
             </div>
-
+ 
             {/* Passengers */}
             <div style={{ background: "#fff", borderRadius: "12px", border: "1px solid #e8e8e8", padding: "18px" }}>
               <div style={{ fontSize: "13.5px", fontWeight: "700", color: "#1a1a2e", marginBottom: "14px" }}>Passengers</div>
@@ -570,5 +570,7 @@ const BookingSuccess = () => {
     </div>
   );
 };
-
+ 
 export default BookingSuccess;
+
+ 

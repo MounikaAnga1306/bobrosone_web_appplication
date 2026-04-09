@@ -1,6 +1,6 @@
 // src/modules/flights/pages/BookingReviewPage.jsx
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaArrowLeft,
@@ -40,16 +40,50 @@ import {
   FaMoneyBillWave,
   FaTicketAlt,
   FaBriefcase,
-  FaExclamationTriangle,
   FaRoute,
   FaStopwatch,
   FaLuggageCart,
   FaSpinner,
-  FaCheck
+  FaCheck,
+  FaChevronDown,
+  FaChevronUp,
+  FaGift,
+  FaBuilding,
+  FaPlaneDeparture,
+  FaPlaneArrival,
+  FaHourglassHalf,
+  FaCoffee,
+  FaBabyCarriage,
+  FaWheelchair,
+  FaBolt,
+  FaUtensilSpoon,
+  FaGlassCheers,
+  FaTachometerAlt,
+  FaCalendarWeek,
+  FaMapMarkerAlt
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import pnrCreationService from '../services/pnr_creationService';
+
+// Import data extractor utilities
+import {
+  extractAllFareOptions,
+  extractHostTokenForSelectedFare,
+  extractFlightSegments,
+  extractFareDetails,
+  extractBrandFeatures,
+  extractPenalties,
+  extractBaggageInfo,
+  extractOptionalServices,
+  extractTaxBreakdown,
+  enrichPassengersWithAges
+} from '../utils/dataExtractor';
+
+// Import pricing service
+import { getFlightPricing, buildOneWayPricingRequest, buildRoundTripPricingRequest } from '../services/pricingService';
+
+// ============ IMPORT CONTEXT ============
+import { usePricingBooking } from '../contexts/PricingBookingContext';
 
 // ============ HELPER FUNCTIONS ============
 const formatTime = (isoString) => {
@@ -72,11 +106,6 @@ const formatDate = (isoString) => {
   }
 };
 
-const formatDateTime = (isoString) => {
-  if (!isoString) return '';
-  return `${formatDate(isoString)}, ${formatTime(isoString)}`;
-};
-
 const formatDuration = (minutes) => {
   if (!minutes) return '0h 0m';
   const hours = Math.floor(minutes / 60);
@@ -89,32 +118,51 @@ const formatPrice = (price) => {
   return `₹${price.toLocaleString('en-IN')}`;
 };
 
-const getBrandIcon = (brandName) => {
-  const name = brandName?.toLowerCase() || '';
-  if (name.includes('business') || name.includes('first')) return <FaCrown className="text-amber-500" size={20} />;
-  if (name.includes('premium')) return <FaStar className="text-purple-500" size={20} />;
-  if (name.includes('flex') || name.includes('flexi')) return <FaGem className="text-blue-500" size={20} />;
-  if (name.includes('sale')) return <FaTag className="text-green-500" size={20} />;
-  return <FaTag className="text-[#FD561E]" size={20} />;
+// Passenger type display names
+const getPassengerTypeName = (type) => {
+  switch(type) {
+    case 'ADT': return 'Adult';
+    case 'CNN': return 'Child';
+    case 'INF': return 'Infant';
+    default: return type;
+  }
 };
 
-const getBrandColor = (brandName) => {
-  const name = brandName?.toLowerCase() || '';
-  if (name.includes('business')) return 'from-amber-500 to-amber-600';
-  if (name.includes('premium')) return 'from-purple-500 to-purple-600';
-  if (name.includes('flex')) return 'from-blue-500 to-blue-600';
-  if (name.includes('sale')) return 'from-green-500 to-green-600';
-  return 'from-[#FD561E] to-[#ff7b4a]';
+// Passenger type icons
+const getPassengerTypeIcon = (type) => {
+  switch(type) {
+    case 'ADT': return FaUser;
+    case 'CNN': return FaBabyCarriage;
+    case 'INF': return FaBabyCarriage;
+    default: return FaUser;
+  }
 };
 
-const calculateAge = (dob) => {
-  if (!dob) return 0;
-  const today = new Date();
-  const birthDate = new Date(dob);
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
-  return age;
+// Passenger type colors
+const getPassengerTypeColor = (type) => {
+  switch(type) {
+    case 'ADT': return 'text-blue-500 bg-blue-50';
+    case 'CNN': return 'text-green-500 bg-green-50';
+    case 'INF': return 'text-[#FD561E] bg-[#FD561E]/10';
+    default: return 'text-gray-500 bg-gray-50';
+  }
+};
+
+// Tax category mapping
+const taxCategoryMap = {
+  'IN': 'Tax',
+  'K3': 'Airport Tax',
+  'P2': 'Passenger Service Fee',
+  'YQ': 'Fuel Surcharge',
+  'YR': 'Insurance Surcharge',
+  'RCF': 'Reservation & Cancellation Fee',
+  'ASF': 'Airport Security Fee',
+  'UDF': 'User Development Fee',
+  'TTF': 'Transport Tax Fee',
+  'UDFA': 'User Development Fee (Additional)',
+  '36GST': 'GST',
+  'PHF': 'Passenger Handling Fee',
+  'DU': 'Domestic Tax'
 };
 
 const BookingReviewPage = () => {
@@ -122,38 +170,43 @@ const BookingReviewPage = () => {
   const location = useLocation();
   const state = location.state || {};
   
-  // ============ DATA EXTRACTION ============
-  const isRoundTrip = state.tripType === 'round-trip';
-  const rawPricingResponse = state.rawPricingResponse;
-  const pricingResult = state.pricingResult;
+  // ============ GET CONTEXT ============
+  const { 
+    bookingData,
+    initializeBookingData,
+    selectFareWithHostToken,
+    updatePassengersList,
+    updateContactInformation,
+    updatePaymentMethodType,
+    setRawPricingResponse
+  } = usePricingBooking();
   
-  // Flight data
-  const flightData = pricingResult?.flight;
-  const allPricingOptions = pricingResult?.pricingOptions || [];
-  
-  // Determine flights based on trip type
-  const outboundFlight = isRoundTrip ? (flightData?.[0] || state.outboundFlight) : null;
-  const returnFlight = isRoundTrip ? (flightData?.[1] || state.returnFlight) : null;
-  const oneWayFlight = !isRoundTrip ? (state.flight || flightData) : null;
-  
-  // Fares
-  const outboundFare = state.selectedOutboundFare;
-  const returnFare = state.selectedReturnFare;
-  const selectedFare = state.selectedFare;
-  
-  // Passenger counts and total
+  // ============ DATA FROM NAVIGATION STATE ============
+  const selectedOutboundFare = state.selectedOutboundFare;
+  const selectedReturnFare = state.selectedReturnFare;
+  const outboundFlight = state.outboundFlight;
+  const returnFlight = state.returnFlight;
   const passengerCounts = state.passengerCounts || { ADT: 1, CNN: 0, INF: 0 };
-  const totalPrice = state.totalPrice || pricingResult?.pricingOptions?.[0]?.totalPrice;
+  const tripType = state.tripType || 'one-way';
+  const totalPriceFromState = state.totalPrice || 0;
   
-  // ============ UI STATES ============
-  const [activeLeg, setActiveLeg] = useState('outbound');
-  const [selectedPricingOption, setSelectedPricingOption] = useState(allPricingOptions[0] || null);
-  const [activeTab, setActiveTab] = useState('fare-details');
-  const [loading, setLoading] = useState(false);
-  const [expandedFareCard, setExpandedFareCard] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('Cash');
-  
-  // ============ PASSENGER DETAILS ============
+  // ============ STATE ============
+  const [extractedData, setExtractedData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [pricingError, setPricingError] = useState(null);
+  const [selectedFareIndex, setSelectedFareIndex] = useState(0);
+  const [expandedSections, setExpandedSections] = useState({
+    flightDetails: true,
+    returnFlightDetails: tripType === 'round-trip',
+    allFares: true,
+    taxDetails: false,
+    optionalServices: false,
+    fareRules: true,
+    passengerDetails: true,
+    contactInfo: true,
+    paymentMethod: true
+  });
+  const [paymentMethod, setPaymentMethod] = useState('card');
   const [passengers, setPassengers] = useState(() => {
     const initialPassengers = [];
     const adultCount = passengerCounts?.ADT || 1;
@@ -164,39 +217,33 @@ const BookingReviewPage = () => {
       initialPassengers.push({
         id: `adt-${i}`,
         code: 'ADT',
-        type: 'Adult',
         title: 'Adult',
         firstName: '',
         lastName: '',
         dob: '',
-        gender: '',
-        nationality: 'IN'
+        gender: ''
       });
     }
     for (let i = 0; i < childCount; i++) {
       initialPassengers.push({
         id: `cnn-${i}`,
         code: 'CNN',
-        type: 'Child',
         title: 'Child',
         firstName: '',
         lastName: '',
         dob: '',
-        gender: '',
-        nationality: 'IN'
+        gender: ''
       });
     }
     for (let i = 0; i < infantCount; i++) {
       initialPassengers.push({
         id: `inf-${i}`,
         code: 'INF',
-        type: 'Infant',
         title: 'Infant',
         firstName: '',
         lastName: '',
         dob: '',
-        gender: '',
-        nationality: 'IN'
+        gender: ''
       });
     }
     return initialPassengers;
@@ -209,57 +256,206 @@ const BookingReviewPage = () => {
   
   const [errors, setErrors] = useState({});
   
-  // Current flight based on active leg
-  const currentFlight = isRoundTrip
-    ? (activeLeg === 'outbound' ? outboundFlight : returnFlight)
-    : oneWayFlight;
+  // ============ FETCH PRICING API ============
+  useEffect(() => {
+    const fetchPricing = async () => {
+      if (!selectedOutboundFare) {
+        console.log('No selected fares found in navigation state');
+        setLoading(false);
+        return;
+      }
+      
+      // Check if we already have pricing data in context
+      if (bookingData?.rawPricingResponse) {
+        console.log('Using existing pricing data from context');
+        const allFareOptions = extractAllFareOptions(bookingData.rawPricingResponse);
+        const flightSegments = extractFlightSegments(bookingData.rawPricingResponse);
+        const optionalServices = extractOptionalServices(bookingData.rawPricingResponse);
+        
+        setExtractedData({
+          rawPricingResponse: bookingData.rawPricingResponse,
+          allFareOptions,
+          flightSegments,
+          optionalServices,
+          isRoundTrip: tripType === 'round-trip',
+          tripType: tripType
+        });
+        setLoading(false);
+        return;
+      }
+      
+      setLoading(true);
+      setPricingError(null);
+      
+      const loadingToast = toast.loading('Fetching fare details...');
+      
+      try {
+        let pricingRequest;
+        
+        if (tripType === 'round-trip') {
+          pricingRequest = buildRoundTripPricingRequest(
+            outboundFlight,
+            selectedOutboundFare,
+            returnFlight,
+            selectedReturnFare,
+            passengerCounts
+          );
+          console.log('Building round-trip pricing request');
+        } else {
+          pricingRequest = buildOneWayPricingRequest(
+            outboundFlight,
+            selectedOutboundFare,
+            passengerCounts
+          );
+          console.log('Building one-way pricing request');
+        }
+        
+        const result = await getFlightPricing(pricingRequest);
+        
+        toast.dismiss(loadingToast);
+        
+        if (result.success && result.rawResponse) {
+          console.log('✅ Pricing API successful');
+          
+          // Extract data from response
+          const allFareOptions = extractAllFareOptions(result.rawResponse);
+          const flightSegments = extractFlightSegments(result.rawResponse);
+          const optionalServices = extractOptionalServices(result.rawResponse);
+          
+          setExtractedData({
+            rawPricingResponse: result.rawResponse,
+            allFareOptions,
+            flightSegments,
+            optionalServices,
+            isRoundTrip: tripType === 'round-trip',
+            tripType: tripType
+          });
+          
+          toast.success('Fare options loaded successfully');
+        } else {
+          throw new Error(result.error || 'Failed to get pricing');
+        }
+      } catch (error) {
+        console.error('Pricing API failed:', error);
+        toast.error(error.message || 'Failed to fetch fare details');
+        setPricingError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchPricing();
+  }, [selectedOutboundFare, selectedReturnFare, outboundFlight, returnFlight, passengerCounts, tripType, bookingData?.rawPricingResponse]);
   
-  const currentFare = isRoundTrip 
-    ? (activeLeg === 'outbound' ? outboundFare : returnFare)
-    : selectedFare;
+  // ============ Get selected fare details from extracted data ============
+  const selectedFare = extractedData?.allFareOptions?.[selectedFareIndex];
+  const rawPricingResponse = extractedData?.rawPricingResponse;
+  const flightSegments = extractedData?.flightSegments || [];
+  const isConnectingFlight = flightSegments.length > 1;
   
-  const selectedFareDetails = selectedPricingOption || currentFare;
+  // For round trip, split segments into outbound and return
+  const outboundSegments = useMemo(() => {
+    if (tripType !== 'round-trip') return flightSegments;
+    const midPoint = Math.ceil(flightSegments.length / 2);
+    return flightSegments.slice(0, midPoint);
+  }, [flightSegments, tripType]);
   
-  // ============ UPDATE PASSENGER ============
+  const returnSegments = useMemo(() => {
+    if (tripType !== 'round-trip') return [];
+    const midPoint = Math.ceil(flightSegments.length / 2);
+    return flightSegments.slice(midPoint);
+  }, [flightSegments, tripType]);
+  
+  // ============ EXTRACT SELECTED FARE SPECIFIC DATA ============
+  const selectedFareBrand = selectedFare?.brand?.name;
+  
+  const selectedFareHostToken = useMemo(() => {
+    if (!rawPricingResponse || !selectedFareBrand) return null;
+    return extractHostTokenForSelectedFare(rawPricingResponse, selectedFareBrand);
+  }, [rawPricingResponse, selectedFareBrand]);
+  
+  const selectedFareDetails = useMemo(() => {
+    if (!rawPricingResponse || !selectedFareBrand) return null;
+    return extractFareDetails(rawPricingResponse, selectedFareBrand);
+  }, [rawPricingResponse, selectedFareBrand]);
+  
+  const selectedBrandFeatures = useMemo(() => {
+    if (!rawPricingResponse || !selectedFareBrand) return [];
+    return extractBrandFeatures(rawPricingResponse, selectedFareBrand);
+  }, [rawPricingResponse, selectedFareBrand]);
+  
+  const selectedPenalties = useMemo(() => {
+    if (!rawPricingResponse || !selectedFareBrand) return null;
+    return extractPenalties(rawPricingResponse, selectedFareBrand);
+  }, [rawPricingResponse, selectedFareBrand]);
+  
+  const selectedBaggage = useMemo(() => {
+    if (!rawPricingResponse || !selectedFareBrand) return null;
+    return extractBaggageInfo(rawPricingResponse, selectedFareBrand);
+  }, [rawPricingResponse, selectedFareBrand]);
+  
+  const selectedTaxBreakdown = useMemo(() => {
+    if (!rawPricingResponse || !selectedFareBrand) return [];
+    return extractTaxBreakdown(rawPricingResponse, selectedFareBrand);
+  }, [rawPricingResponse, selectedFareBrand]);
+  
+  // Get passenger-specific pricing from selected fare
+  const passengerPricing = selectedFare?.passengerPricing || {};
+  const passengerTypes = selectedFare?.passengerTypes || (Object.keys(passengerPricing).length > 0 ? Object.keys(passengerPricing) : ['ADT']);
+  
+  // For backward compatibility with existing UI
+  const fareDetails = selectedFare;
+  const taxBreakdown = selectedTaxBreakdown;
+  const optionalServices = extractedData?.optionalServices || { meals: [], seats: [], baggage: [], other: [] };
+  const mealOptions = optionalServices.meals || [];
+  const seatOptions = optionalServices.seats || [];
+  const baggageOptions = optionalServices.baggage || [];
+  const otherServices = optionalServices.other || [];
+  const brandFeatures = selectedBrandFeatures;
+  const penalties = selectedPenalties;
+  
   const updatePassenger = (index, field, value) => {
     const updated = [...passengers];
     updated[index][field] = value;
     setPassengers(updated);
-    if (errors[`passenger_${index}_${field}`]) {
-      const newErrors = { ...errors };
-      delete newErrors[`passenger_${index}_${field}`];
-      setErrors(newErrors);
-    }
   };
   
-  // ============ VALIDATION FUNCTIONS ============
+  const calculateAge = (dob) => {
+    if (!dob) return 0;
+    const today = new Date();
+    const birthDate = new Date(dob);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) age--;
+    return age;
+  };
+  
   const validateForm = useCallback(() => {
     const newErrors = {};
     
     passengers.forEach((passenger, idx) => {
-      if (!passenger.firstName.trim()) newErrors[`passenger_${idx}_firstName`] = 'First name is required';
-      if (!passenger.lastName.trim()) newErrors[`passenger_${idx}_lastName`] = 'Last name is required';
-      if (!passenger.dob) newErrors[`passenger_${idx}_dob`] = 'Date of birth is required';
+      if (!passenger.firstName.trim()) newErrors[`passenger_${idx}_firstName`] = 'First name required';
+      if (!passenger.lastName.trim()) newErrors[`passenger_${idx}_lastName`] = 'Last name required';
+      if (!passenger.dob) newErrors[`passenger_${idx}_dob`] = 'Date of birth required';
       else {
         const age = calculateAge(passenger.dob);
-        if (passenger.code === 'ADT' && age < 12) newErrors[`passenger_${idx}_dob`] = 'Adult must be 12 years or older';
-        if (passenger.code === 'CNN' && (age < 2 || age > 11)) newErrors[`passenger_${idx}_dob`] = 'Child must be between 2-11 years';
+        if (passenger.code === 'ADT' && age < 12) newErrors[`passenger_${idx}_dob`] = 'Adult must be 12+ years';
+        if (passenger.code === 'CNN' && (age < 2 || age > 11)) newErrors[`passenger_${idx}_dob`] = 'Child must be 2-11 years';
         if (passenger.code === 'INF' && age > 2) newErrors[`passenger_${idx}_dob`] = 'Infant must be under 2 years';
       }
-      if (!passenger.gender) newErrors[`passenger_${idx}_gender`] = 'Gender is required';
+      if (!passenger.gender) newErrors[`passenger_${idx}_gender`] = 'Gender required';
     });
     
-    if (!contactInfo.email.trim()) newErrors.email = 'Email is required';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactInfo.email)) newErrors.email = 'Invalid email format';
+    if (!contactInfo.email.trim()) newErrors.email = 'Email required';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactInfo.email)) newErrors.email = 'Invalid email';
     
-    if (!contactInfo.phone.number.trim()) newErrors.phone = 'Phone number is required';
-    else if (!/^\d{10}$/.test(contactInfo.phone.number)) newErrors.phone = 'Invalid phone number (10 digits required)';
+    if (!contactInfo.phone.number.trim()) newErrors.phone = 'Phone number required';
+    else if (!/^\d{10}$/.test(contactInfo.phone.number)) newErrors.phone = '10 digits required';
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }, [passengers, contactInfo]);
   
-  // Fix: Make isFormValid a function that checks validity
   const isFormValid = useCallback(() => {
     const allPassengersValid = passengers.every(p => p.firstName.trim() && p.lastName.trim() && p.dob && p.gender);
     const contactValid = contactInfo.email.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactInfo.email) && 
@@ -267,397 +463,532 @@ const BookingReviewPage = () => {
     return allPassengersValid && contactValid;
   }, [passengers, contactInfo]);
   
-  // ============ BOOKING HANDLER ============
-
-const handleProceedToBooking = async () => {
-  if (!validateForm()) {
-    toast.error('Please fill in all required fields');
-    return;
-  }
-  
-  setLoading(true);
-  
-  // Prepare all booking data to pass to seat map page
-  const bookingDataForSeatMap = {
-    // Raw pricing response (complete SOAP response)
-    rawPricingResponse: rawPricingResponse,
-    
-    // Transformed pricing result
-    pricingResult: pricingResult,
-    
-    // Selected fare option
-    selectedPricingOption: selectedPricingOption,
-    
-    // Flight data
-    flight: oneWayFlight,
-    outboundFlight: outboundFlight,
-    returnFlight: returnFlight,
-    isRoundTrip: isRoundTrip,
-    
-    // Passenger data
-    passengers: passengers,
-    passengerCounts: passengerCounts,
-    
-    // Contact information
-    contactInfo: contactInfo,
-    
-    // Payment method
-    paymentMethod: paymentMethod,
-    
-    // Trace ID
-    traceId: pricingResult?.traceId || `BOOK-${Date.now()}`,
-    
-    // Total price
-    totalPrice: totalPrice,
-    
-    // Trip type
-    tripType: isRoundTrip ? 'round-trip' : 'one-way',
-    
-    // Fare details
-    selectedFare: selectedFare,
-    outboundFare: outboundFare,
-    returnFare: returnFare,
-    
-    // Timestamp
-    timestamp: new Date().toISOString()
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
   
-  try {
-    // Navigate to seat map page with all booking data
-    navigate('/flights/booking/seat-map', {
-      state: {
-        bookingData: bookingDataForSeatMap
-      }
-    });
-  } catch (error) {
-    console.error('Navigation to seat map failed:', error);
-    toast.error('Unable to proceed to seat selection');
-  } finally {
-    setLoading(false);
-  }
-};
+  // ============ HANDLE SELECT FARE ============
+  const handleSelectFare = (index) => {
+    const selectedFareData = extractedData?.allFareOptions[index];
+    const brandName = selectedFareData?.brand?.name;
+    
+    if (rawPricingResponse && brandName && selectFareWithHostToken) {
+      const hostToken = extractHostTokenForSelectedFare(rawPricingResponse, brandName);
+      
+      const selectedFareWithDetails = {
+        ...selectedFareData,
+        details: extractFareDetails(rawPricingResponse, brandName),
+        features: extractBrandFeatures(rawPricingResponse, brandName),
+        penalties: extractPenalties(rawPricingResponse, brandName),
+        baggage: extractBaggageInfo(rawPricingResponse, brandName),
+        taxBreakdown: extractTaxBreakdown(rawPricingResponse, brandName),
+        hostToken: hostToken,
+        hostTokenRef: selectedFareData?.bookingInfo?.hostTokenRef,
+        passengerPricing: selectedFareData?.passengerPricing,
+        passengerHostTokens: selectedFareData?.passengerHostTokens,
+        passengerTypes: selectedFareData?.passengerTypes
+      };
+      
+      selectFareWithHostToken(selectedFareWithDetails, hostToken);
+      
+      console.log(`✈️ Fare selected: ${brandName}`);
+    }
+    
+    setSelectedFareIndex(index);
+    toast.success(`Selected ${extractedData?.allFareOptions[index]?.brand?.name || 'Fare'} option`);
+  };
   
-  // ============ RENDER FLIGHT CARD ============
-  const renderFlightCard = (flight, legType) => {
-    if (!flight) return null;
+  // ============ PROCEED TO SEAT MAP ============
+  const handleProceedToBooking = async () => {
+    if (!validateForm()) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
     
-    const isReturn = legType === 'return';
-    const bgGradient = isReturn ? 'from-emerald-500 to-emerald-600' : 'from-[#FD561E] to-[#ff7b4a]';
-    const segments = flight.segments || [];
-    const totalDuration = flight.duration || flight.flightTime || segments.reduce((sum, seg) => sum + (seg.flightTime || 0), 0);
-    const stops = segments.length - 1;
+    const enrichedPassengers = enrichPassengersWithAges(passengers);
     
+    const completeBookingData = {
+      rawPricingResponse: rawPricingResponse,
+      hostToken: selectedFareHostToken,
+      hostTokenRef: selectedFare?.bookingInfo?.hostTokenRef,
+      flightSegments: extractedData?.flightSegments || [],
+      outboundSegments: outboundSegments,
+      returnSegments: returnSegments,
+      selectedFare: {
+        ...selectedFare,
+        details: selectedFareDetails,
+        features: selectedBrandFeatures,
+        penalties: selectedPenalties,
+        baggage: selectedBaggage,
+        taxBreakdown: selectedTaxBreakdown,
+        hostToken: selectedFareHostToken,
+        hostTokenRef: selectedFare?.bookingInfo?.hostTokenRef,
+        passengerPricing: selectedFare?.passengerPricing,
+        passengerHostTokens: selectedFare?.passengerHostTokens,
+        passengerTypes: selectedFare?.passengerTypes
+      },
+      allFareOptions: extractedData?.allFareOptions,
+      optionalServices: extractedData?.optionalServices,
+      passengers: enrichedPassengers,
+      passengerCounts: passengerCounts,
+      passengerPricing: passengerPricing,
+      contactInfo: contactInfo,
+      paymentMethod: paymentMethod,
+      isRoundTrip: tripType === 'round-trip',
+      tripType: tripType,
+      currency: 'INR',
+      timestamp: new Date().toISOString()
+    };
+    
+    // Store everything in context
+    if (initializeBookingData) initializeBookingData(completeBookingData);
+    if (updatePassengersList) updatePassengersList(enrichedPassengers);
+    if (updateContactInformation) updateContactInformation(contactInfo);
+    if (updatePaymentMethodType) updatePaymentMethodType(paymentMethod);
+    
+    console.log('\n📦 COMPLETE BOOKING DATA STORED IN CONTEXT:');
+    console.log('   - Selected Fare:', selectedFare?.brand?.name);
+    console.log('   - Passengers:', enrichedPassengers.length);
+    console.log('   - Contact:', contactInfo.email);
+    
+    setTimeout(() => {
+      console.log('🚀 NAVIGATING to seat map page...');
+      navigate('/flights/booking/seat-map');
+    }, 100);
+  };
+  
+  // ============ RENDER FLIGHT SEGMENTS (Reusable) ============
+  const renderFlightSegment = (segment, segIdx, isReturn = false) => {
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
-        <div className={`p-4 text-white bg-gradient-to-r ${bgGradient}`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <FaPlane className={isReturn ? '-rotate-45' : 'rotate-45'} size={20} />
-              <h3 className="font-semibold text-lg">
-                {legType === 'outbound' ? 'Outbound Flight' : 'Return Flight'}
-              </h3>
-              <span className="text-xs bg-white/20 px-2 py-1 rounded-full">
-                {segments[0]?.carrier} {segments[0]?.flightNumber}
-              </span>
+      <div key={segIdx} className={segIdx > 0 ? 'mt-6 pt-4 border-t border-dashed border-gray-200' : ''}>
+        {segIdx > 0 && (
+          <div className="mb-4 text-center">
+            <div className="inline-block bg-amber-100 text-amber-700 text-xs px-3 py-1 rounded-full">
+              <FaHourglassHalf className="inline mr-1" size={10} />
+              Layover at {segment.origin || 'Unknown'} - {formatDuration(segment.duration || segment.flightTime)}
             </div>
-            <div className="text-right text-sm">
-              <div className="flex items-center gap-2">
-                <FaCalendarAlt size={12} />
-                <span>{formatDate(segments[0]?.departureTime)}</span>
+          </div>
+        )}
+        
+        <div className="flex items-center justify-between py-4">
+          <div className="text-center flex-1">
+            <div className="text-2xl font-bold text-gray-800">{formatTime(segment.departureTime)}</div>
+            <div className="text-base font-medium text-gray-600 mt-1">{segment.origin}</div>
+            <div className="text-xs text-gray-400 mt-0.5">{formatDate(segment.departureTime)}</div>
+            {segment.originTerminal && (
+              <div className="text-xs text-gray-400 mt-0.5">Terminal {segment.originTerminal}</div>
+            )}
+          </div>
+          
+          <div className="flex-1 px-6">
+            <div className="relative">
+              <div className="w-full h-px bg-gray-200"></div>
+              <FaPlane className="absolute text-[#FD561E] transform -translate-x-1/2 -translate-y-1/2 left-1/2 top-1/2 rotate-90 bg-white px-1" size={12} />
+            </div>
+            <div className="text-center text-xs text-gray-400 mt-2">
+              <FaStopwatch className="inline mr-1" size={10} /> {formatDuration(segment.flightTime)}
+            </div>
+            {segment.codeshareInfo && (
+              <div className="text-center text-xs text-gray-400 mt-1">
+                Operated by {segment.codeshareInfo.operatingCarrier}
               </div>
-            </div>
+            )}
+          </div>
+          
+          <div className="text-center flex-1">
+            <div className="text-2xl font-bold text-gray-800">{formatTime(segment.arrivalTime)}</div>
+            <div className="text-base font-medium text-gray-600 mt-1">{segment.destination}</div>
+            <div className="text-xs text-gray-400 mt-0.5">{formatDate(segment.arrivalTime)}</div>
+            {segment.destinationTerminal && (
+              <div className="text-xs text-gray-400 mt-0.5">Terminal {segment.destinationTerminal}</div>
+            )}
           </div>
         </div>
         
-        <div className="p-5">
-          {/* Flight Segments */}
-          <div className="space-y-6">
-            {segments.map((segment, idx) => (
-              <div key={idx} className="relative">
-                {idx > 0 && (
-                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-amber-100 px-3 py-1 rounded-full text-xs text-amber-700 z-10 shadow-sm">
-                    <FaRoute className="inline mr-1" size={10} /> {formatDuration(segment.duration || segment.flightTime)}
-                  </div>
-                )}
-                <div className={`p-4 rounded-xl ${idx > 0 ? 'bg-gray-50 border-l-4 border-amber-400' : 'bg-white border border-gray-100'}`}>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
-                        <span className="font-bold text-gray-700">{segment.carrier}</span>
-                      </div>
-                      <div>
-                        <div className="font-semibold text-gray-900">{segment.flightNumber}</div>
-                        <div className="text-xs text-gray-500">
-                          {segment.operatingCarrier && segment.operatingCarrier !== segment.carrier && `Operated by ${segment.operatingCarrier}`}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      Class: {segment.bookingCode || segment.classOfService}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="text-center flex-1">
-                      <div className="text-2xl font-bold text-gray-900">{formatTime(segment.departureTime)}</div>
-                      <div className="text-sm font-medium text-gray-700 mt-1">{segment.origin}</div>
-                      <div className="text-xs text-gray-400">{formatDate(segment.departureTime)}</div>
-                    </div>
-                    <div className="flex-1 px-4">
-                      <div className="relative">
-                        <div className="w-full h-0.5 bg-gray-300"></div>
-                        <FaPlane className="absolute text-[#FD561E] transform -translate-x-1/2 -translate-y-1/2 left-1/2 top-1/2 rotate-90 bg-white px-1" size={14} />
-                      </div>
-                      <div className="text-center text-xs text-gray-500 mt-2">
-                        <FaStopwatch className="inline mr-1" size={10} /> {formatDuration(segment.flightTime)}
-                      </div>
-                    </div>
-                    <div className="text-center flex-1">
-                      <div className="text-2xl font-bold text-gray-900">{formatTime(segment.arrivalTime)}</div>
-                      <div className="text-sm font-medium text-gray-700 mt-1">{segment.destination}</div>
-                      <div className="text-xs text-gray-400">{formatDate(segment.arrivalTime)}</div>
-                    </div>
-                  </div>
-                  
-                  {segment.equipment && (
-                    <div className="mt-3 text-xs text-gray-400 text-center">
-                      Aircraft: {segment.equipment}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-4 border-t border-gray-100">
+          <div className="bg-gray-50 rounded-xl p-3 text-center">
+            <FaBuilding className="text-[#FD561E] mx-auto mb-1" size={14} />
+            <p className="text-xs text-gray-500">Aircraft</p>
+            <p className="text-sm font-semibold text-gray-700">{segment.equipment || 'Not specified'}</p>
           </div>
-          
-          {/* Flight Stats */}
-          <div className="mt-5 pt-4 border-t flex justify-between text-sm text-gray-500">
-            <span className="flex items-center gap-1">
-              <FaClock size={12} /> Total: {formatDuration(totalDuration)}
-            </span>
-            <span className="flex items-center gap-1">
-              <FaRoute size={12} /> {stops === 0 ? 'Direct' : `${stops} Stop${stops > 1 ? 's' : ''}`}
-            </span>
-            <span className="flex items-center gap-1">
-              <FaLuggageCart size={12} /> {flight.distance || '788'} km
-            </span>
+          <div className="bg-gray-50 rounded-xl p-3 text-center">
+            <FaChair className="text-[#FD561E] mx-auto mb-1" size={14} />
+            <p className="text-xs text-gray-500">Class</p>
+            <p className="text-sm font-semibold text-gray-700">{selectedFare?.bookingInfo?.cabinClass || 'Economy'}</p>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-3 text-center">
+            <FaTicketAlt className="text-[#FD561E] mx-auto mb-1" size={14} />
+            <p className="text-xs text-gray-500">Booking Code</p>
+            <p className="text-sm font-semibold text-gray-700 font-mono">{selectedFare?.bookingInfo?.bookingCode || 'N/A'}</p>
+          </div>
+          <div className="bg-gray-50 rounded-xl p-3 text-center">
+            <FaCheckCircle className="text-emerald-500 mx-auto mb-1" size={14} />
+            <p className="text-xs text-gray-500">Status</p>
+            <p className="text-sm font-semibold text-emerald-600">Confirmed</p>
           </div>
         </div>
       </div>
     );
   };
   
-  // ============ RENDER FARE OPTION CARD ============
-  const renderFareOptionCard = (option, index) => {
-    const isSelected = selectedPricingOption?.key === option.key;
-    const isExpanded = expandedFareCard === option.key;
-    
-    // Get brand name
-    let brandName = 'Economy';
-    if (option.brand) {
-      if (Array.isArray(option.brand)) {
-        brandName = option.brand.map(b => b?.name).filter(Boolean).join(' / ') || 'Economy';
-      } else {
-        brandName = option.brand.name || 'Economy';
-      }
-    }
-    
-    const firstBookingInfo = Array.isArray(option.bookingInfo) ? option.bookingInfo[0] : option.bookingInfo;
-    const cabinClass = firstBookingInfo?.cabinClass || 'Economy';
-    const hasMultipleSegments = (Array.isArray(option.bookingInfo) && option.bookingInfo.length > 1) ||
-                                (Array.isArray(option.fareInfo) && option.fareInfo.length > 1);
-    
-    const brandColor = getBrandColor(brandName);
+  // ============ RENDER FLIGHT DETAILS ============
+  const renderFlightDetails = () => {
+    if (!outboundSegments.length) return null;
     
     return (
-      <div
-        className={`border-2 rounded-xl transition-all cursor-pointer ${
-          isSelected 
-            ? 'border-[#FD561E] bg-orange-50 shadow-md' 
-            : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
-        }`}
-      >
-        <div 
-          className="p-4"
-          onClick={() => {
-            setSelectedPricingOption(option);
-            setExpandedFareCard(isExpanded ? null : option.key);
-          }}
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-lg transition-all">
+        <button
+          onClick={() => toggleSection('flightDetails')}
+          className="w-full flex items-center justify-between p-5 hover:bg-[#FD561E]/5 transition-colors"
         >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`w-12 h-12 rounded-full bg-gradient-to-r ${brandColor} flex items-center justify-center text-white shadow-sm`}>
-                {getBrandIcon(brandName)}
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-gray-800 text-lg">{brandName}</h4>
-                  {index === 0 && (
-                    <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Best Price</span>
-                  )}
-                  {hasMultipleSegments && (
-                    <span className="text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
-                      {Array.isArray(option.bookingInfo) ? option.bookingInfo.length : 1} Segments
-                    </span>
-                  )}
-                </div>
-                <div className="text-xs text-gray-500 mt-1">
-                  {cabinClass} • {Array.isArray(option.fareInfo) ? option.fareInfo[0]?.fareBasis : option.fareInfo?.fareBasis || 'N/A'}
-                </div>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#FD561E]/10 rounded-xl flex items-center justify-center">
+              <FaPlaneDeparture className="text-[#FD561E]" size={18} />
             </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold text-[#FD561E]">{formatPrice(option.totalPrice)}</div>
-              <div className="text-xs text-gray-500">Total for {passengerCounts?.ADT || 1} Adult(s)</div>
+            <div>
+              <h2 className="font-semibold text-gray-800">
+                Outbound Flight
+                {isConnectingFlight && <span className="ml-2 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Connecting Flight</span>}
+              </h2>
+              <p className="text-xs text-gray-500">{outboundSegments[0]?.carrier} {outboundSegments[0]?.flightNumber}</p>
             </div>
           </div>
+          {expandedSections.flightDetails ? <FaChevronUp className="text-gray-400" /> : <FaChevronDown className="text-gray-400" />}
+        </button>
+        
+        {expandedSections.flightDetails && (
+          <div className="p-5 pt-0 border-t border-gray-100">
+            {outboundSegments.map((segment, segIdx) => renderFlightSegment(segment, segIdx, false))}
+          </div>
+        )}
+      </div>
+    );
+  };
+  
+  // ============ RENDER RETURN FLIGHT DETAILS (for round trips) ============
+  const renderReturnFlightDetails = () => {
+    if (tripType !== 'round-trip' || !returnSegments.length) return null;
+    
+    const isReturnConnecting = returnSegments.length > 1;
+    
+    return (
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-lg transition-all">
+        <button
+          onClick={() => toggleSection('returnFlightDetails')}
+          className="w-full flex items-center justify-between p-5 hover:bg-[#FD561E]/5 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#FD561E]/10 rounded-xl flex items-center justify-center">
+              <FaPlaneArrival className="text-[#FD561E]" size={18} />
+            </div>
+            <div>
+              <h2 className="font-semibold text-gray-800">
+                Return Flight
+                {isReturnConnecting && <span className="ml-2 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Connecting Flight</span>}
+              </h2>
+              <p className="text-xs text-gray-500">{returnSegments[0]?.carrier} {returnSegments[0]?.flightNumber}</p>
+            </div>
+          </div>
+          {expandedSections.returnFlightDetails ? <FaChevronUp className="text-gray-400" /> : <FaChevronDown className="text-gray-400" />}
+        </button>
+        
+        {expandedSections.returnFlightDetails && (
+          <div className="p-5 pt-0 border-t border-gray-100">
+            {returnSegments.map((segment, segIdx) => renderFlightSegment(segment, segIdx, true))}
+          </div>
+        )}
+      </div>
+    );
+  };
+  
+  // ============ RENDER PASSENGER PRICE BREAKDOWN ============
+  const renderPassengerPriceBreakdown = () => {
+    const hasPassengerPricing = passengerPricing && Object.keys(passengerPricing).length > 0;
+    
+    if (!hasPassengerPricing) {
+      return (
+        <>
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-500">Base Fare</span>
+            <span className="font-medium text-gray-700">{formatPrice(selectedFare?.basePrice)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-500">Taxes & Fees</span>
+            <span className="font-medium text-gray-700">{formatPrice(selectedFare?.taxes)}</span>
+          </div>
+        </>
+      );
+    }
+    
+    let totalBasePrice = 0;
+    let totalTaxes = 0;
+    let totalFare = 0;
+    const validPassengerTypes = passengerTypes.filter(type => passengerCounts[type] > 0);
+    
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-3 gap-2 text-xs font-medium text-gray-500 pb-2 border-b border-gray-100">
+          <div>Passenger Type</div>
+          <div className="text-right">Base Fare</div>
+          <div className="text-right">Total (incl. taxes)</div>
+        </div>
+        
+        {validPassengerTypes.map(type => {
+          const pricing = passengerPricing[type];
+          const count = passengerCounts[type] || 0;
+          if (count === 0 || !pricing) return null;
           
-          {isExpanded && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="grid grid-cols-2 gap-4 text-sm">
+          const passengerTotal = (pricing.totalPrice || 0) * count;
+          totalBasePrice += (pricing.basePrice || 0) * count;
+          totalTaxes += (pricing.taxes || 0) * count;
+          totalFare += passengerTotal;
+          
+          const PassengerIcon = getPassengerTypeIcon(type);
+          const colorClass = getPassengerTypeColor(type);
+          
+          return (
+            <div key={type} className="group">
+              <div className="grid grid-cols-3 gap-2 items-center py-2 hover:bg-gray-50 rounded-lg transition-colors">
                 <div>
-                  <div className="text-gray-500 mb-1">Base Price</div>
-                  <div className="font-semibold">{formatPrice(option.basePrice)}</div>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${colorClass}`}>
+                      <PassengerIcon size={12} className={colorClass.split(' ')[0]} />
+                    </div>
+                    <span className="text-sm font-semibold text-gray-800">
+                      {getPassengerTypeName(type)}
+                    </span>
+                    <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full">
+                      ×{count}
+                    </span>
+                    {pricing.fareInfo?.fareBasis && (
+                      <span className="text-xs font-mono text-gray-400 hidden sm:inline">
+                        {pricing.fareInfo.fareBasis}
+                      </span>
+                    )}
+                  </div>
+                  {pricing.fareInfo?.cabinClass && (
+                    <div className="text-xs text-gray-400 mt-0.5 ml-8">
+                      {pricing.fareInfo.cabinClass}
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <div className="text-gray-500 mb-1">Taxes & Fees</div>
-                  <div className="font-semibold">{formatPrice(option.taxes)}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 mb-1">Booking Code</div>
-                  <div className="font-mono text-sm">{firstBookingInfo?.bookingCode || 'N/A'}</div>
-                </div>
-                <div>
-                  <div className="text-gray-500 mb-1">Fare Basis</div>
-                  <div className="font-mono text-sm">
-                    {Array.isArray(option.fareInfo) ? option.fareInfo.map(f => f.fareBasis).join(', ') : option.fareInfo?.fareBasis || 'N/A'}
+                
+                <div className="text-right">
+                  <div className="text-sm text-gray-600">
+                    {formatPrice(pricing.basePrice)}
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    +{formatPrice(pricing.taxes)} taxes
                   </div>
                 </div>
+                
+                <div className="text-right">
+                  <div className="text-base font-bold text-gray-800">
+                    {formatPrice(pricing.totalPrice)}
+                  </div>
+                  {count > 1 && (
+                    <div className="text-xs text-gray-400">
+                      Total: {formatPrice(passengerTotal)}
+                    </div>
+                  )}
+                </div>
               </div>
+              
+              {pricing.baggage && (
+                <div className="flex items-center gap-4 mt-1 mb-2 ml-8 text-xs text-gray-400 border-l-2 border-gray-100 pl-3">
+                  <div className="flex items-center gap-1">
+                    <FaSuitcase size={10} />
+                    <span>Checked: {pricing.baggage.checked?.weight || '15'}kg</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <FaBriefcase size={10} />
+                    <span>Cabin: {pricing.baggage.cabin?.weight || '7'}kg</span>
+                  </div>
+                </div>
+              )}
             </div>
+          );
+        })}
+        
+        <div className="pt-3 mt-2 border-t border-gray-200">
+          <div className="flex justify-between text-sm py-1">
+            <span className="text-gray-600">Subtotal (Base Fare)</span>
+            <span className="font-semibold text-gray-800">{formatPrice(totalBasePrice)}</span>
+          </div>
+          <div className="flex justify-between text-sm py-1">
+            <span className="text-gray-600">Taxes & Fees</span>
+            <span className="font-semibold text-gray-800">{formatPrice(totalTaxes)}</span>
+          </div>
+          
+          {selectedTaxBreakdown && selectedTaxBreakdown.length > 0 && (
+            <details className="mt-2 text-xs">
+              <summary className="text-gray-400 cursor-pointer hover:text-gray-500">
+                View tax details ({selectedTaxBreakdown.length} items)
+              </summary>
+              <div className="mt-2 space-y-1 pl-2">
+                {selectedTaxBreakdown.map((tax, idx) => (
+                  <div key={idx} className="flex justify-between text-gray-500">
+                    <span>{taxCategoryMap[tax.category] || tax.category}</span>
+                    <span>{formatPrice(tax.amount)}</span>
+                  </div>
+                ))}
+              </div>
+            </details>
           )}
         </div>
         
-        {isSelected && !isExpanded && (
-          <div className="px-4 pb-4">
-            <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 p-2 rounded-lg">
-              <FaCheckCircle size={12} />
-              <span>Selected fare option</span>
+        <div className="pt-2 border-t-2 border-gray-200">
+          <div className="flex justify-between items-center">
+            <span className="text-base font-bold text-gray-800">Total for {passengers.length} passenger(s)</span>
+            <div className="text-right">
+              <span className="text-2xl font-bold text-[#FD561E]">{formatPrice(totalFare)}</span>
+              <div className="text-xs text-gray-400">including all taxes</div>
             </div>
           </div>
-        )}
+        </div>
       </div>
     );
   };
   
-  // ============ RENDER FARE DETAILS TAB ============
-  const renderFareDetailsTab = () => {
-    const firstFareInfo = Array.isArray(selectedFareDetails?.fareInfo) 
-      ? selectedFareDetails.fareInfo[0] 
-      : selectedFareDetails?.fareInfo;
-    const firstBookingInfo = Array.isArray(selectedFareDetails?.bookingInfo) 
-      ? selectedFareDetails.bookingInfo[0] 
-      : selectedFareDetails?.bookingInfo;
+  // ============ RENDER ALL BRAND FARES ============
+  const renderAllFares = () => {
+    if (!extractedData?.allFareOptions?.length) return null;
+    
+    const allFares = extractedData.allFareOptions;
     
     return (
-      <div className="space-y-5">
-        {/* Price Summary */}
-        <div className="bg-gradient-to-r from-gray-50 to-white rounded-xl p-5 border border-gray-200">
-          <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <FaRupeeSign className="text-[#FD561E]" size={18} />
-            Price Breakdown
-          </h3>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center pb-2 border-b border-gray-100">
-              <span className="text-gray-600">Base Fare</span>
-              <span className="font-semibold text-gray-800">{formatPrice(selectedFareDetails?.basePrice)}</span>
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <button
+          onClick={() => toggleSection('allFares')}
+          className="w-full flex items-center justify-between p-5 hover:bg-[#FD561E]/5 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
+              <FaTag className="text-blue-500" size={18} />
             </div>
-            <div className="flex justify-between items-center pb-2 border-b border-gray-100">
-              <span className="text-gray-600">Taxes & Surcharges</span>
-              <span className="font-semibold text-gray-800">{formatPrice(selectedFareDetails?.taxes)}</span>
-            </div>
-            <div className="flex justify-between items-center pt-3">
-              <span className="text-lg font-bold text-gray-900">Total</span>
-              <span className="text-2xl font-bold text-[#FD561E]">{formatPrice(selectedFareDetails?.totalPrice)}</span>
+            <div>
+              <h2 className="font-semibold text-gray-800">Available Fare Options</h2>
+              <p className="text-xs text-gray-500">{allFares.length} fare types available</p>
             </div>
           </div>
-        </div>
+          {expandedSections.allFares ? <FaChevronUp className="text-gray-400" /> : <FaChevronDown className="text-gray-400" />}
+        </button>
         
-        {/* Fare Information */}
-        <div className="bg-gray-50 rounded-xl p-5">
-          <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <FaTicketAlt className="text-[#FD561E]" size={16} />
-            Fare Information
-          </h3>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <div className="text-xs text-gray-500 mb-1">Fare Basis</div>
-              <div className="font-mono text-sm font-semibold text-gray-800">{firstFareInfo?.fareBasis || 'N/A'}</div>
-            </div>
-            <div>
-              <div className="text-xs text-gray-500 mb-1">Booking Code</div>
-              <div className="font-mono text-sm font-semibold text-gray-800">{firstBookingInfo?.bookingCode || 'N/A'}</div>
-            </div>
-            <div>
-              <div className="text-xs text-gray-500 mb-1">Cabin Class</div>
-              <div className="text-sm font-semibold text-gray-800">{firstBookingInfo?.cabinClass || 'Economy'}</div>
-            </div>
-            <div>
-              <div className="text-xs text-gray-500 mb-1">Refundable</div>
-              <div className={`text-sm font-semibold ${selectedFareDetails?.refundable ? 'text-green-600' : 'text-red-600'}`}>
-                {selectedFareDetails?.refundable ? 'Yes' : 'No'}
+        {expandedSections.allFares && (
+          <div className="p-5 pt-0 border-t border-gray-100">
+            <div className="overflow-x-auto pb-4">
+              <div className="flex gap-4 min-w-max">
+                {allFares.map((fare, idx) => {
+                  const isSelected = selectedFareIndex === idx;
+                  const brandName = fare.brand?.name || 'Economy';
+                  const isLowest = idx === 0;
+                  const cabinClass = fare.bookingInfo?.cabinClass || 'Economy';
+                  const isPremium = cabinClass === 'PremiumEconomy' || cabinClass === 'Business';
+                  const farePassengerTypes = fare.passengerTypes || ['ADT'];
+                  const farePassengerPricing = fare.passengerPricing || {};
+                  
+                  const primaryPassengerType = farePassengerTypes.includes('ADT') ? 'ADT' : farePassengerTypes[0];
+                  const primaryPrice = farePassengerPricing[primaryPassengerType]?.totalPrice || fare.totalPrice;
+                  
+                  return (
+                    <div
+                      key={idx}
+                      className={`flex-shrink-0 w-[320px] rounded-xl border-2 transition-all cursor-pointer ${
+                        isSelected 
+                          ? 'border-[#FD561E] bg-[#FD561E]/5 shadow-md' 
+                          : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                      }`}
+                      onClick={() => handleSelectFare(idx)}
+                    >
+                      <div className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <div>
+                            <h3 className="font-bold text-gray-800">{brandName}</h3>
+                            {isPremium && (
+                              <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full mt-1 inline-block">Premium</span>
+                            )}
+                          </div>
+                          {isLowest && (
+                            <span className="text-[10px] bg-[#FD561E] text-white px-2 py-0.5 rounded-full">Best Price</span>
+                          )}
+                        </div>
+                        
+                        <div className="mt-2">
+                          <div className="text-2xl font-bold text-[#FD561E]">{formatPrice(primaryPrice)}</div>
+                          <div className="text-xs text-gray-400">per {getPassengerTypeName(primaryPassengerType)}</div>
+                        </div>
+                        
+                        {farePassengerTypes.length > 1 && (
+                          <div className="mt-2 text-xs text-gray-500 space-y-1">
+                            {farePassengerTypes.filter(t => t !== primaryPassengerType).map(type => {
+                              const typePrice = farePassengerPricing[type]?.totalPrice;
+                              if (!typePrice) return null;
+                              return (
+                                <div key={type} className="flex justify-between">
+                                  <span>{getPassengerTypeName(type)}:</span>
+                                  <span className="font-medium">{formatPrice(typePrice)}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                        
+                        <div className="mt-3 pt-3 border-t border-gray-100 space-y-1.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-500 flex items-center gap-1">
+                              <FaSuitcase size={11} /> Checked Baggage
+                            </span>
+                            <span className="text-gray-700 font-medium">
+                              {farePassengerPricing[primaryPassengerType]?.baggage?.checked?.weight || fare.baggage?.checked || '15'}kg
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-500 flex items-center gap-1">
+                              <FaChair size={11} /> Cabin Class
+                            </span>
+                            <span className="text-gray-700">{cabinClass}</span>
+                          </div>
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-gray-500 flex items-center gap-1">
+                              <FaExchangeAlt size={11} /> Change Policy
+                            </span>
+                            <span className="text-gray-700">
+                              {fare.penalties?.change?.amount 
+                                ? `₹${fare.penalties.change.amount}`
+                                : fare.penalties?.change?.percentage
+                                ? `${fare.penalties.change.percentage}%`
+                                : 'Changeable'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="px-4 pb-4">
+                        <button
+                          onClick={() => handleSelectFare(idx)}
+                          className={`w-full py-2 rounded-lg text-sm font-medium transition-colors ${
+                            isSelected
+                              ? 'bg-[#FD561E] text-white'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          {isSelected ? 'Selected' : 'Select Fare'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-          </div>
-        </div>
-        
-        {/* Segment-wise Fare Details for Round Trip */}
-        {Array.isArray(selectedFareDetails?.fareInfo) && selectedFareDetails.fareInfo.length > 1 && (
-          <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
-            <h4 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
-              <FaPlane size={14} /> Segment-wise Fare Details
-            </h4>
-            <div className="space-y-3">
-              {selectedFareDetails.fareInfo.map((info, idx) => {
-                const segment = flightData?.[idx];
-                return (
-                  <div key={idx} className="border-b border-blue-200 last:border-0 pb-2 last:pb-0">
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="font-medium text-blue-700">
-                        {info.origin || segment?.origin || 'Unknown'} → {info.destination || segment?.destination || 'Unknown'}
-                      </span>
-                      <span className="font-mono text-xs">{info.fareBasis}</span>
-                    </div>
-                    <div className="flex justify-between text-xs text-gray-600 mt-1">
-                      <span>Effective: {formatDate(info.effectiveDate)}</span>
-                      <span>Amount: {formatPrice(info.amount)}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-        
-        {/* Brand Features */}
-        {selectedFareDetails?.brand && (
-          <div className="bg-purple-50 rounded-xl p-4 border border-purple-200">
-            <h4 className="text-sm font-semibold text-purple-800 mb-2 flex items-center gap-2">
-              {getBrandIcon(Array.isArray(selectedFareDetails.brand) ? selectedFareDetails.brand[0]?.name : selectedFareDetails.brand.name)} Brand Features
-            </h4>
-            {Array.isArray(selectedFareDetails.brand) ? (
-              selectedFareDetails.brand.map((brand, idx) => (
-                <div key={idx} className="mt-2">
-                  <p className="text-sm font-medium text-purple-700">{brand.name}</p>
-                  <p className="text-xs text-purple-600 mt-1">{brand.description}</p>
-                  {idx < selectedFareDetails.brand.length - 1 && <div className="border-t border-purple-200 my-2"></div>}
+            
+            {allFares.length > 2 && (
+              <div className="flex justify-center items-center gap-2 mt-3">
+                <div className="flex gap-1">
+                  <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#FD561E]"></div>
+                  <div className="w-1.5 h-1.5 rounded-full bg-gray-300"></div>
                 </div>
-              ))
-            ) : (
-              <>
-                <p className="text-sm font-medium text-purple-700">{selectedFareDetails.brand.name}</p>
-                <p className="text-xs text-purple-600 mt-1">{selectedFareDetails.brand.description}</p>
-              </>
+                <span className="text-[10px] text-gray-400">Swipe → to see all {allFares.length} fares</span>
+              </div>
             )}
           </div>
         )}
@@ -665,161 +996,46 @@ const handleProceedToBooking = async () => {
     );
   };
   
-  // ============ RENDER FARE RULES TAB ============
-  const renderFareRulesTab = () => {
-    const penalties = selectedFareDetails?.penalties;
+  // ============ RENDER TAX DETAILS ============
+  const renderTaxDetails = () => {
+    if (!taxBreakdown.length) return null;
     
     return (
-      <div className="space-y-5">
-        <div className="bg-blue-50 rounded-xl p-5 border border-blue-200">
-          <h3 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
-            <FaExchangeAlt className="text-blue-600" size={18} />
-            Change Policy
-          </h3>
-          {penalties?.change ? (
-            <div>
-              <p className="text-sm text-gray-700">
-                {penalties.change.amount 
-                  ? `Change Fee: ${formatPrice(penalties.change.amount)}`
-                  : penalties.change.percentage 
-                    ? `Change Fee: ${penalties.change.percentage}% of fare`
-                    : 'Changes not permitted'}
-              </p>
-              {penalties.change.applies && (
-                <p className="text-xs text-gray-500 mt-1">Applies: {penalties.change.applies}</p>
-              )}
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <button
+          onClick={() => toggleSection('taxDetails')}
+          className="w-full flex items-center justify-between p-5 hover:bg-[#FD561E]/5 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
+              <FaPercent className="text-amber-500" size={18} />
             </div>
-          ) : (
-            <p className="text-sm text-gray-600">Changeable with applicable charges</p>
-          )}
-        </div>
+            <div>
+              <h2 className="font-semibold text-gray-800">Tax Breakdown</h2>
+              <p className="text-xs text-gray-500">{taxBreakdown.length} taxes applied</p>
+            </div>
+          </div>
+          {expandedSections.taxDetails ? <FaChevronUp className="text-gray-400" /> : <FaChevronDown className="text-gray-400" />}
+        </button>
         
-        <div className="bg-red-50 rounded-xl p-5 border border-red-200">
-          <h3 className="font-semibold text-red-800 mb-3 flex items-center gap-2">
-            <FaUndo className="text-red-600" size={18} />
-            Cancellation Policy
-          </h3>
-          {penalties?.cancel ? (
-            <div>
-              <p className="text-sm text-gray-700">
-                {penalties.cancel.amount 
-                  ? `Cancellation Fee: ${formatPrice(penalties.cancel.amount)}`
-                  : penalties.cancel.percentage 
-                    ? `Cancellation Fee: ${penalties.cancel.percentage}% of fare`
-                    : selectedFareDetails?.refundable 
-                      ? 'Refundable with applicable fees' 
-                      : 'Non-refundable'}
-              </p>
-              {penalties.cancel.applies && (
-                <p className="text-xs text-gray-500 mt-1">Applies: {penalties.cancel.applies}</p>
-              )}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-600">
-              {selectedFareDetails?.refundable ? 'Refundable with applicable cancellation fees' : 'Non-refundable'}
-            </p>
-          )}
-        </div>
-      </div>
-    );
-  };
-  
-  // ============ RENDER BAGGAGE TAB ============
-  const renderBaggageTab = () => {
-    const baggage = selectedFareDetails?.baggage;
-    const checkedBaggage = baggage?.checked?.weight_kg || baggage?.checked?.pieces || '15';
-    const cabinBaggage = baggage?.cabin || '7';
-    
-    return (
-      <div className="space-y-5">
-        <div className="grid grid-cols-2 gap-5">
-          <div className="bg-green-50 rounded-xl p-6 text-center border border-green-200">
-            <FaSuitcase className="text-green-600 mx-auto mb-3" size={40} />
-            <h3 className="font-medium text-gray-800 mb-2">Check-in Baggage</h3>
-            <p className="text-3xl font-bold text-green-700">{checkedBaggage}kg</p>
-            <p className="text-xs text-gray-500 mt-2">per passenger</p>
-          </div>
-          <div className="bg-blue-50 rounded-xl p-6 text-center border border-blue-200">
-            <FaBriefcase className="text-blue-600 mx-auto mb-3" size={40} />
-            <h3 className="font-medium text-gray-800 mb-2">Cabin Baggage</h3>
-            <p className="text-3xl font-bold text-blue-700">{cabinBaggage}kg</p>
-            <p className="text-xs text-gray-500 mt-2">per passenger</p>
-          </div>
-        </div>
-        <div className="bg-gray-50 rounded-xl p-4 text-center text-xs text-gray-500">
-          <FaInfoCircle className="inline mr-1" size={12} />
-          Baggage allowances are included in the fare
-        </div>
-      </div>
-    );
-  };
-  
-  // ============ RENDER TAXES TAB ============
-  const renderTaxesTab = () => {
-    const taxBreakdown = selectedFareDetails?.taxBreakdown || [];
-    
-    return (
-      <div className="bg-gray-50 rounded-xl p-5">
-        <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-          <FaWallet className="text-[#FD561E]" size={18} />
-          Tax Breakdown
-        </h3>
-        <div className="space-y-2">
-          {taxBreakdown.length > 0 ? (
-            taxBreakdown.map((tax, idx) => (
-              <div key={idx} className="flex justify-between items-center py-2 border-b border-gray-200 last:border-0">
-                <span className="text-gray-600">
-                  {tax.carrierDefinedCategory || tax.category} Tax
-                </span>
-                <span className="font-medium text-gray-800">{formatPrice(tax.amount)}</span>
+        {expandedSections.taxDetails && (
+          <div className="p-5 pt-0 border-t border-gray-100">
+            <div className="space-y-3">
+              {taxBreakdown.map((tax, idx) => (
+                <div key={idx} className="flex justify-between items-center py-3 border-b border-gray-100 last:border-0">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">{tax.name || taxCategoryMap[tax.category] || tax.category}</p>
+                    <p className="text-xs text-gray-400">{tax.category}</p>
+                  </div>
+                  <p className="text-sm font-semibold text-gray-800">{formatPrice(tax.amount)}</p>
+                </div>
+              ))}
+              <div className="mt-3 pt-3 border-t-2 border-gray-200">
+                <div className="flex justify-between items-center">
+                  <p className="text-base font-semibold text-gray-800">Total Taxes</p>
+                  <p className="text-lg font-bold text-[#FD561E]">{formatPrice(selectedFare?.taxes)}</p>
+                </div>
               </div>
-            ))
-          ) : (
-            <div className="flex justify-between items-center py-2">
-              <span className="text-gray-600">Total Taxes</span>
-              <span className="font-medium text-gray-800">{formatPrice(selectedFareDetails?.taxes)}</span>
-            </div>
-          )}
-          <div className="flex justify-between items-center pt-3 mt-2 border-t-2 border-gray-300">
-            <span className="font-semibold text-gray-800">Total Taxes & Fees</span>
-            <span className="font-bold text-[#FD561E] text-lg">{formatPrice(selectedFareDetails?.taxes)}</span>
-          </div>
-        </div>
-      </div>
-    );
-  };
-  
-  // ============ RENDER AMENITIES TAB ============
-  const renderAmenitiesTab = () => {
-    const amenities = [
-      { icon: FaUtensils, name: 'Meals', color: 'green', available: true, description: 'Available for purchase' },
-      { icon: FaChair, name: 'Seat Selection', color: 'blue', available: true, description: 'Available for purchase' },
-      { icon: FaWifi, name: 'Wi-Fi', color: 'purple', available: true, description: 'Available on select aircraft' },
-      { icon: FaTv, name: 'Entertainment', color: 'amber', available: true, description: 'In-flight entertainment' },
-    ];
-    
-    return (
-      <div className="space-y-5">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {amenities.map((amenity, idx) => (
-            <div key={idx} className={`bg-${amenity.color}-50 rounded-xl p-4 text-center border border-${amenity.color}-200`}>
-              <amenity.icon className={`text-${amenity.color}-600 mx-auto mb-2`} size={28} />
-              <p className="text-sm font-medium text-gray-800">{amenity.name}</p>
-              <p className="text-xs text-gray-500 mt-1">{amenity.description}</p>
-            </div>
-          ))}
-        </div>
-        
-        {selectedFareDetails?.brand && (
-          <div className="bg-gray-50 rounded-xl p-4">
-            <h4 className="text-sm font-semibold text-gray-700 mb-2">Included in this fare</h4>
-            <div className="flex flex-wrap gap-2">
-              <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
-                <FaCheck size={12} /> {selectedFareDetails.baggage?.checked?.weight_kg || 15}kg Check-in
-              </span>
-              <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
-                <FaCheck size={12} /> {selectedFareDetails.baggage?.cabin || 7}kg Cabin
-              </span>
             </div>
           </div>
         )}
@@ -827,251 +1043,234 @@ const handleProceedToBooking = async () => {
     );
   };
   
-  // ============ RENDER PASSENGER FORM ============
-  const renderPassengerForm = () => {
-    return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="bg-gray-50 p-4 border-b">
-          <div className="flex items-center gap-2">
-            <FaUser className="text-[#FD561E]" size={18} />
-            <h2 className="font-semibold text-gray-800">Passenger Details</h2>
-            <span className="text-xs text-gray-500 ml-auto">{passengers.length} passenger(s)</span>
-          </div>
-        </div>
-        <div className="p-5 space-y-5">
-          {passengers.map((passenger, idx) => (
-            <div key={passenger.id} className="border rounded-xl p-5 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-4 pb-3 border-b">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    passenger.code === 'ADT' ? 'bg-blue-100' : passenger.code === 'CNN' ? 'bg-green-100' : 'bg-yellow-100'
-                  }`}>
-                    <FaUser className={
-                      passenger.code === 'ADT' ? 'text-blue-600' : passenger.code === 'CNN' ? 'text-green-600' : 'text-yellow-600'
-                    } size={16} />
-                  </div>
-                  <div>
-                    <span className="font-semibold text-gray-800">{passenger.title}</span>
-                    <p className="text-xs text-gray-500">{passenger.code}</p>
-                  </div>
-                </div>
-                <span className="text-xs bg-gray-100 px-3 py-1 rounded-full text-gray-600">Passenger {idx + 1}</span>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">First Name *</label>
-                  <input 
-                    type="text" 
-                    value={passenger.firstName} 
-                    onChange={(e) => updatePassenger(idx, 'firstName', e.target.value)} 
-                    className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-[#FD561E] focus:border-transparent ${
-                      errors[`passenger_${idx}_firstName`] ? 'border-red-500' : 'border-gray-300'
-                    }`} 
-                    placeholder="Enter first name" 
-                  />
-                  {errors[`passenger_${idx}_firstName`] && <p className="text-xs text-red-500 mt-1">{errors[`passenger_${idx}_firstName`]}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Last Name *</label>
-                  <input 
-                    type="text" 
-                    value={passenger.lastName} 
-                    onChange={(e) => updatePassenger(idx, 'lastName', e.target.value)} 
-                    className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-[#FD561E] focus:border-transparent ${
-                      errors[`passenger_${idx}_lastName`] ? 'border-red-500' : 'border-gray-300'
-                    }`} 
-                    placeholder="Enter last name" 
-                  />
-                  {errors[`passenger_${idx}_lastName`] && <p className="text-xs text-red-500 mt-1">{errors[`passenger_${idx}_lastName`]}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Date of Birth *</label>
-                  <input 
-                    type="date" 
-                    value={passenger.dob} 
-                    onChange={(e) => updatePassenger(idx, 'dob', e.target.value)} 
-                    className={`w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-[#FD561E] ${
-                      errors[`passenger_${idx}_dob`] ? 'border-red-500' : 'border-gray-300'
-                    }`} 
-                  />
-                  {errors[`passenger_${idx}_dob`] && <p className="text-xs text-red-500 mt-1">{errors[`passenger_${idx}_dob`]}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Gender *</label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="radio" 
-                        name={`gender_${idx}`} 
-                        value="M" 
-                        checked={passenger.gender === 'M'} 
-                        onChange={(e) => updatePassenger(idx, 'gender', e.target.value)} 
-                        className="w-4 h-4 text-[#FD561E]" 
-                      />
-                      <FaVenusMars className="text-blue-500" size={14} />
-                      <span className="text-sm">Male</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        type="radio" 
-                        name={`gender_${idx}`} 
-                        value="F" 
-                        checked={passenger.gender === 'F'} 
-                        onChange={(e) => updatePassenger(idx, 'gender', e.target.value)} 
-                        className="w-4 h-4 text-[#FD561E]" 
-                      />
-                      <FaVenusMars className="text-pink-500" size={14} />
-                      <span className="text-sm">Female</span>
-                    </label>
-                  </div>
-                  {errors[`passenger_${idx}_gender`] && <p className="text-xs text-red-500 mt-1">{errors[`passenger_${idx}_gender`]}</p>}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
-  
-  // ============ RENDER CONTACT FORM ============
-  const renderContactForm = () => {
-    return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="bg-gray-50 p-4 border-b">
-          <div className="flex items-center gap-2">
-            <FaPhone className="text-[#FD561E]" size={18} />
-            <h2 className="font-semibold text-gray-800">Contact Information</h2>
-          </div>
-        </div>
-        <div className="p-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
-              <div className="relative">
-                <FaEnvelope className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                <input 
-                  type="email" 
-                  value={contactInfo.email} 
-                  onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })} 
-                  className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-[#FD561E] ${
-                    errors.email ? 'border-red-500' : 'border-gray-300'
-                  }`} 
-                  placeholder="Enter email address" 
-                />
-              </div>
-              {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
-              <div className="flex gap-3">
-                <select 
-                  value={contactInfo.phone.countryCode} 
-                  onChange={(e) => setContactInfo({ ...contactInfo, phone: { ...contactInfo.phone, countryCode: e.target.value } })} 
-                  className="w-28 px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FD561E]"
-                >
-                  <option value="91">+91 (IN)</option>
-                  <option value="1">+1 (US)</option>
-                  <option value="44">+44 (UK)</option>
-                  <option value="971">+971 (AE)</option>
-                </select>
-                <div className="flex-1 relative">
-                  <FaPhone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                  <input 
-                    type="tel" 
-                    value={contactInfo.phone.number} 
-                    onChange={(e) => setContactInfo({ ...contactInfo, phone: { ...contactInfo.phone, number: e.target.value } })} 
-                    className={`w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-[#FD561E] ${
-                      errors.phone ? 'border-red-500' : 'border-gray-300'
-                    }`} 
-                    placeholder="9876543210" 
-                    maxLength="10" 
-                  />
-                </div>
-              </div>
-              {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-  
-  // ============ RENDER PAYMENT METHODS ============
-  const renderPaymentMethods = () => {
-    const methods = [
-      { id: 'Cash', icon: FaMoneyBillWave, name: 'Cash', color: 'green' },
-      { id: 'Card', icon: FaCreditCard, name: 'Card', color: 'blue', subIcons: [FaCcVisa, FaCcMastercard] },
-      { id: 'UPI', icon: FaMobileAlt, name: 'UPI', color: 'purple' },
-    ];
+  // ============ RENDER OPTIONAL SERVICES ============
+  const renderOptionalServices = () => {
+    if (!mealOptions.length && !seatOptions.length && !baggageOptions.length && !otherServices.length) return null;
     
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="bg-gray-50 p-4 border-b">
-          <div className="flex items-center gap-2">
-            <FaWallet className="text-[#FD561E]" size={18} />
-            <h2 className="font-semibold text-gray-800">Payment Method</h2>
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <button
+          onClick={() => toggleSection('optionalServices')}
+          className="w-full flex items-center justify-between p-5 hover:bg-[#FD561E]/5 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center">
+              <FaGift className="text-green-500" size={18} />
+            </div>
+            <div>
+              <h2 className="font-semibold text-gray-800">Add-ons & Services</h2>
+              <p className="text-xs text-gray-500">
+                {mealOptions.length + seatOptions.length + baggageOptions.length + otherServices.length} options available
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="p-5">
-          <div className="grid grid-cols-3 gap-4">
-            {methods.map((method) => (
-              <button 
-                key={method.id}
-                onClick={() => setPaymentMethod(method.id)} 
-                className={`p-5 rounded-xl border-2 transition-all text-center ${
-                  paymentMethod === method.id 
-                    ? `border-[#FD561E] bg-orange-50` 
-                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                <method.icon className={`text-3xl mx-auto mb-2 ${paymentMethod === method.id ? 'text-[#FD561E]' : 'text-gray-400'}`} />
-                {method.subIcons && (
-                  <div className="flex justify-center gap-2 mb-2">
-                    {method.subIcons.map((Icon, i) => (
-                      <Icon key={i} className={`text-xl ${paymentMethod === method.id ? 'text-[#FD561E]' : 'text-gray-400'}`} />
-                    ))}
-                  </div>
-                )}
-                <p className="text-sm font-medium text-center">{method.name}</p>
-              </button>
-            ))}
+          {expandedSections.optionalServices ? <FaChevronUp className="text-gray-400" /> : <FaChevronDown className="text-gray-400" />}
+        </button>
+        
+        {expandedSections.optionalServices && (
+          <div className="p-5 pt-0 border-t border-gray-100 space-y-6">
+            {mealOptions.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <FaUtensils className="text-[#FD561E]" size={14} />
+                  Meal Options ({mealOptions.length})
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {mealOptions.slice(0, 6).map((meal, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-[#FD561E]/5 transition-colors">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-800">{meal.name}</p>
+                        {meal.description && <p className="text-xs text-gray-500 mt-0.5 truncate max-w-[200px]">{meal.description}</p>}
+                      </div>
+                      <div className="text-right ml-4">
+                        <p className="text-sm font-semibold text-[#FD561E]">{formatPrice(meal.price)}</p>
+                        <button className="text-xs text-gray-400 hover:text-[#FD561E] mt-1">Add</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {seatOptions.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <FaChair className="text-[#FD561E]" size={14} />
+                  Seat Options ({seatOptions.length})
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {seatOptions.slice(0, 6).map((seat, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-[#FD561E]/5 transition-colors">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-800">{seat.name}</p>
+                        {seat.description && <p className="text-xs text-gray-500 mt-0.5">{seat.description.substring(0, 50)}...</p>}
+                      </div>
+                      <div className="text-right ml-4">
+                        <p className="text-sm font-semibold text-[#FD561E]">{formatPrice(seat.price)}</p>
+                        <button className="text-xs text-gray-400 hover:text-[#FD561E] mt-1">Select</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {baggageOptions.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <FaSuitcase className="text-[#FD561E]" size={14} />
+                  Extra Baggage ({baggageOptions.length})
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {baggageOptions.slice(0, 8).map((bag, idx) => (
+                    <div key={idx} className="text-center p-3 bg-gray-50 rounded-lg hover:bg-[#FD561E]/5 transition-colors">
+                      <p className="text-sm font-semibold text-gray-800">{bag.name}</p>
+                      <p className="text-xs text-gray-500 mt-1">{bag.description?.substring(0, 30)}</p>
+                      <p className="text-sm font-bold text-[#FD561E] mt-2">{formatPrice(bag.price)}</p>
+                      <button className="text-xs text-gray-400 hover:text-[#FD561E] mt-1">Add</button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {otherServices.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <FaBolt className="text-[#FD561E]" size={14} />
+                  Other Services
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {otherServices.map((service, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-[#FD561E]/5 transition-colors">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-800">{service.name}</p>
+                        {service.description && <p className="text-xs text-gray-500 mt-0.5">{service.description.substring(0, 80)}...</p>}
+                      </div>
+                      <div className="text-right ml-4">
+                        <p className="text-sm font-semibold text-[#FD561E]">{formatPrice(service.price)}</p>
+                        <button className="text-xs text-gray-400 hover:text-[#FD561E] mt-1">Add</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-        </div>
+        )}
+      </div>
+    );
+  };
+  
+  // ============ RENDER FARE RULES ============
+  const renderFareRules = () => {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <button
+          onClick={() => toggleSection('fareRules')}
+          className="w-full flex items-center justify-between p-5 hover:bg-[#FD561E]/5 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center">
+              <FaShieldAlt className="text-red-500" size={18} />
+            </div>
+            <div>
+              <h2 className="font-semibold text-gray-800">Fare Rules & Policies</h2>
+              <p className="text-xs text-gray-500">Cancellation, Changes & Refunds</p>
+            </div>
+          </div>
+          {expandedSections.fareRules ? <FaChevronUp className="text-gray-400" /> : <FaChevronDown className="text-gray-400" />}
+        </button>
+        
+        {expandedSections.fareRules && (
+          <div className="p-5 pt-0 border-t border-gray-100">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-gradient-to-r from-blue-50 to-white rounded-xl p-5 border border-blue-100">
+                <div className="flex items-center gap-2 mb-3">
+                  <FaExchangeAlt className="text-blue-500" size={20} />
+                  <h3 className="font-semibold text-gray-800">Date Change Policy</h3>
+                </div>
+                <p className="text-sm text-gray-600">
+                  {penalties?.change?.amount 
+                    ? `Change Fee: ${formatPrice(penalties.change.amount)} + fare difference`
+                    : penalties?.change?.percentage 
+                    ? `Change Fee: ${penalties.change.percentage}% of fare + fare difference`
+                    : 'Free changes allowed'}
+                </p>
+              </div>
+              
+              <div className="bg-gradient-to-r from-red-50 to-white rounded-xl p-5 border border-red-100">
+                <div className="flex items-center gap-2 mb-3">
+                  <FaUndo className="text-red-500" size={20} />
+                  <h3 className="font-semibold text-gray-800">Cancellation Policy</h3>
+                </div>
+                <p className="text-sm text-gray-600">
+                  {penalties?.cancel?.amount 
+                    ? `Cancellation Fee: ${formatPrice(penalties.cancel.amount)}`
+                    : penalties?.cancel?.percentage 
+                    ? `Cancellation Fee: ${penalties.cancel.percentage}% of fare`
+                    : selectedFare?.refundable 
+                      ? 'Refundable with applicable fees' 
+                      : 'Non-refundable'}
+                </p>
+              </div>
+            </div>
+            
+            {brandFeatures.length > 0 && (
+              <div className="mt-4 bg-gray-50 rounded-xl p-4">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                  <FaGift className="text-[#FD561E]" size={14} />
+                  Included Benefits
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {brandFeatures.slice(0, 6).map((feature, idx) => (
+                    <span key={idx} className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs">
+                      <FaCheck size={10} /> {typeof feature === 'string' ? (feature.length > 40 ? feature.substring(0, 40) + '...' : feature) : feature.description || feature.code}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   };
   
   // ============ RENDER PRICE SUMMARY ============
   const renderPriceSummary = () => {
-    // Use isFormValid as a function call
     const formValid = isFormValid();
     
+    let totalPrice = 0;
+    
+    if (passengerPricing && Object.keys(passengerPricing).length > 0) {
+      passengerTypes.forEach(type => {
+        const pricing = passengerPricing[type];
+        const count = passengerCounts[type] || 0;
+        if (count > 0 && pricing?.totalPrice) {
+          totalPrice += pricing.totalPrice * count;
+        }
+      });
+    } else {
+      totalPrice = selectedFare?.totalPrice || 0;
+    }
+    
     return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 sticky top-24">
-        <div className="bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] p-5 text-white rounded-t-xl">
-          <h2 className="font-semibold flex items-center gap-2 text-lg">
-            <FaRupeeSign /> Price Summary
+      <div className="bg-white rounded-2xl border border-gray-100 sticky top-24 hover:shadow-lg transition-all">
+        <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white rounded-t-2xl">
+          <h2 className="font-semibold text-gray-800 flex items-center gap-2">
+            <FaRupeeSign className="text-[#FD561E]" size={18} />
+            Price Summary
           </h2>
         </div>
-        <div className="p-5 space-y-5">
-          <div className="flex justify-between items-center">
-            <span className="text-gray-600">Base Fare</span>
-            <span className="font-semibold text-gray-800">{formatPrice(selectedFareDetails?.basePrice)}</span>
+        <div className="p-5 space-y-4">
+          <div>
+            <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+              <FaUserFriends className="text-[#FD561E]" size={14} />
+              Fare Breakdown
+            </h3>
+            {renderPassengerPriceBreakdown()}
           </div>
-          <div className="flex justify-between items-center">
-            <span className="text-gray-600">Taxes & Fees</span>
-            <span className="font-semibold text-gray-800">{formatPrice(selectedFareDetails?.taxes)}</span>
-          </div>
-          <div className="border-t pt-4">
-            <div className="flex justify-between items-center">
-              <span className="text-lg font-bold text-gray-900">Total</span>
-              <span className="text-2xl font-bold text-[#FD561E]">{formatPrice(selectedFareDetails?.totalPrice)}</span>
-            </div>
-          </div>
-          
-          <p className="text-xs text-gray-500">Inclusive of all taxes and surcharges</p>
           
           <div className="bg-gray-50 rounded-xl p-4">
             <div className="flex items-center gap-2 mb-3">
@@ -1080,19 +1279,19 @@ const handleProceedToBooking = async () => {
             </div>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-600">Adults (12+ years)</span>
-                <span className="font-medium">{passengerCounts?.ADT || 1}</span>
+                <span className="text-gray-500">Adults (12+ years)</span>
+                <span className="font-medium text-gray-700">{passengerCounts?.ADT || 1}</span>
               </div>
               {passengerCounts?.CNN > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Children (2-11 years)</span>
-                  <span className="font-medium">{passengerCounts.CNN}</span>
+                  <span className="text-gray-500">Children (2-11 years)</span>
+                  <span className="font-medium text-gray-700">{passengerCounts.CNN}</span>
                 </div>
               )}
               {passengerCounts?.INF > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Infants (0-2 years)</span>
-                  <span className="font-medium">{passengerCounts.INF}</span>
+                  <span className="text-gray-500">Infants (0-2 years)</span>
+                  <span className="font-medium text-gray-700">{passengerCounts.INF}</span>
                 </div>
               )}
             </div>
@@ -1101,16 +1300,16 @@ const handleProceedToBooking = async () => {
           <button 
             onClick={handleProceedToBooking} 
             disabled={!formValid || loading} 
-            className={`w-full py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all ${
+            className={`w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all ${
               formValid && !loading 
-                ? 'bg-gradient-to-r from-[#FD561E] to-[#e04e1b] text-white shadow-md hover:shadow-lg transform hover:scale-[1.02]' 
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                ? 'bg-[#FD561E] hover:bg-[#e04e1b] text-white shadow-md hover:shadow-lg' 
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
             }`}
           >
             {loading ? (
               <>
                 <FaSpinner className="animate-spin" />
-                Processing...
+                Loading...
               </>
             ) : (
               <>
@@ -1121,16 +1320,10 @@ const handleProceedToBooking = async () => {
             )}
           </button>
           
-          {!formValid && !loading && (
-            <p className="text-xs text-amber-600 text-center">
-              Please fill in all required passenger details and contact information
-            </p>
-          )}
-          
-          <div className="flex items-center justify-center gap-3 text-xs text-gray-500 pt-2">
-            <FaCheckCircle className="text-green-500" />
+          <div className="flex items-center justify-center gap-3 text-xs text-gray-400 pt-2">
+            <FaCheckCircle className="text-emerald-500" size={12} />
             <span>Secure & Encrypted</span>
-            <span className="w-px h-3 bg-gray-300"></span>
+            <span className="w-px h-3 bg-gray-200"></span>
             <span>Price Guaranteed</span>
           </div>
         </div>
@@ -1138,152 +1331,311 @@ const handleProceedToBooking = async () => {
     );
   };
   
+  // ============ RENDER PASSENGER FORM ============
+  const renderPassengerForm = () => {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <button
+          onClick={() => toggleSection('passengerDetails')}
+          className="w-full flex items-center justify-between p-5 hover:bg-[#FD561E]/5 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center">
+              <FaUserFriends className="text-blue-500" size={18} />
+            </div>
+            <div>
+              <h2 className="font-semibold text-gray-800">Passenger Details</h2>
+              <p className="text-xs text-gray-500">{passengers.length} passenger(s)</p>
+            </div>
+          </div>
+          {expandedSections.passengerDetails ? <FaChevronUp className="text-gray-400" /> : <FaChevronDown className="text-gray-400" />}
+        </button>
+        
+        {expandedSections.passengerDetails && (
+          <div className="p-5 pt-0 border-t border-gray-100">
+            <div className="space-y-4">
+              {passengers.map((passenger, idx) => (
+                <div key={passenger.id} className="border border-gray-100 rounded-xl p-4 hover:shadow-md transition-all">
+                  <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-50">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      passenger.code === 'ADT' ? 'bg-blue-50' : passenger.code === 'CNN' ? 'bg-green-50' : 'bg-[#FD561E]/10'
+                    }`}>
+                      <FaUser className={passenger.code === 'ADT' ? 'text-blue-500' : passenger.code === 'CNN' ? 'text-green-500' : 'text-[#FD561E]'} size={12} />
+                    </div>
+                    <span className="font-medium text-gray-700 text-sm">{passenger.title}</span>
+                    <span className="text-xs text-gray-400 ml-auto">Passenger {idx + 1}</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">First Name *</label>
+                      <input 
+                        type="text" 
+                        value={passenger.firstName} 
+                        onChange={(e) => updatePassenger(idx, 'firstName', e.target.value)} 
+                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FD561E]/20 focus:border-[#FD561E] ${
+                          errors[`passenger_${idx}_firstName`] ? 'border-red-400' : 'border-gray-200'
+                        }`} 
+                        placeholder="First name" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Last Name *</label>
+                      <input 
+                        type="text" 
+                        value={passenger.lastName} 
+                        onChange={(e) => updatePassenger(idx, 'lastName', e.target.value)} 
+                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FD561E]/20 focus:border-[#FD561E] ${
+                          errors[`passenger_${idx}_lastName`] ? 'border-red-400' : 'border-gray-200'
+                        }`} 
+                        placeholder="Last name" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Date of Birth *</label>
+                      <input 
+                        type="date" 
+                        value={passenger.dob} 
+                        onChange={(e) => updatePassenger(idx, 'dob', e.target.value)} 
+                        className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FD561E]/20 focus:border-[#FD561E] ${
+                          errors[`passenger_${idx}_dob`] ? 'border-red-400' : 'border-gray-200'
+                        }`} 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Gender *</label>
+                      <div className="flex gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input 
+                            type="radio" 
+                            name={`gender_${idx}`} 
+                            value="M" 
+                            checked={passenger.gender === 'M'} 
+                            onChange={(e) => updatePassenger(idx, 'gender', e.target.value)} 
+                            className="w-3.5 h-3.5 text-[#FD561E]" 
+                          />
+                          <span className="text-sm text-gray-600">Male</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input 
+                            type="radio" 
+                            name={`gender_${idx}`} 
+                            value="F" 
+                            checked={passenger.gender === 'F'} 
+                            onChange={(e) => updatePassenger(idx, 'gender', e.target.value)} 
+                            className="w-3.5 h-3.5 text-[#FD561E]" 
+                          />
+                          <span className="text-sm text-gray-600">Female</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                  {errors[`passenger_${idx}_firstName`] && <p className="text-xs text-red-500 mt-2">{errors[`passenger_${idx}_firstName`]}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+  
+  // ============ RENDER CONTACT FORM ============
+  const renderContactForm = () => {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <button
+          onClick={() => toggleSection('contactInfo')}
+          className="w-full flex items-center justify-between p-5 hover:bg-[#FD561E]/5 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center">
+              <FaPhone className="text-emerald-500" size={18} />
+            </div>
+            <div>
+              <h2 className="font-semibold text-gray-800">Contact Information</h2>
+            </div>
+          </div>
+          {expandedSections.contactInfo ? <FaChevronUp className="text-gray-400" /> : <FaChevronDown className="text-gray-400" />}
+        </button>
+        
+        {expandedSections.contactInfo && (
+          <div className="p-5 pt-0 border-t border-gray-100">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Email Address *</label>
+                <div className="relative">
+                  <FaEnvelope className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
+                  <input 
+                    type="email" 
+                    value={contactInfo.email} 
+                    onChange={(e) => setContactInfo({ ...contactInfo, email: e.target.value })} 
+                    className={`w-full pl-9 pr-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FD561E]/20 focus:border-[#FD561E] ${
+                      errors.email ? 'border-red-400' : 'border-gray-200'
+                    }`} 
+                    placeholder="Enter email address" 
+                  />
+                </div>
+                {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Phone Number *</label>
+                <div className="flex gap-3">
+                  <select 
+                    value={contactInfo.phone.countryCode} 
+                    onChange={(e) => setContactInfo({ ...contactInfo, phone: { ...contactInfo.phone, countryCode: e.target.value } })} 
+                    className="w-24 px-2 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FD561E]/20"
+                  >
+                    <option value="91">+91 (IN)</option>
+                    <option value="1">+1 (US)</option>
+                    <option value="44">+44 (UK)</option>
+                    <option value="971">+971 (AE)</option>
+                  </select>
+                  <div className="flex-1 relative">
+                    <FaPhone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
+                    <input 
+                      type="tel" 
+                      value={contactInfo.phone.number} 
+                      onChange={(e) => setContactInfo({ ...contactInfo, phone: { ...contactInfo.phone, number: e.target.value } })} 
+                      className={`w-full pl-9 pr-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FD561E]/20 ${
+                        errors.phone ? 'border-red-400' : 'border-gray-200'
+                      }`} 
+                      placeholder="9876543210" 
+                      maxLength="10" 
+                    />
+                  </div>
+                </div>
+                {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+  
+  // ============ RENDER PAYMENT METHODS ============
+  const renderPaymentMethods = () => {
+    const methods = [
+      { id: 'card', icon: FaCreditCard, name: 'Card', subIcons: [FaCcVisa, FaCcMastercard] },
+      { id: 'upi', icon: FaMobileAlt, name: 'UPI' },
+      { id: 'netbanking', icon: FaWallet, name: 'Net Banking' }
+    ];
+    
+    return (
+      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+        <button
+          onClick={() => toggleSection('paymentMethod')}
+          className="w-full flex items-center justify-between p-5 hover:bg-[#FD561E]/5 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
+              <FaWallet className="text-purple-500" size={18} />
+            </div>
+            <div>
+              <h2 className="font-semibold text-gray-800">Payment Method</h2>
+            </div>
+          </div>
+          {expandedSections.paymentMethod ? <FaChevronUp className="text-gray-400" /> : <FaChevronDown className="text-gray-400" />}
+        </button>
+        
+        {expandedSections.paymentMethod && (
+          <div className="p-5 pt-0 border-t border-gray-100">
+            <div className="grid grid-cols-3 gap-4">
+              {methods.map((method) => (
+                <button 
+                  key={method.id}
+                  onClick={() => setPaymentMethod(method.id)} 
+                  className={`p-4 rounded-xl border-2 transition-all text-center ${
+                    paymentMethod === method.id 
+                      ? 'border-[#FD561E] bg-[#FD561E]/5' 
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <method.icon className={`text-2xl mx-auto mb-2 ${
+                    paymentMethod === method.id ? 'text-[#FD561E]' : 'text-gray-400'
+                  }`} />
+                  {method.subIcons && (
+                    <div className="flex justify-center gap-2 mb-2">
+                      {method.subIcons.map((Icon, i) => (
+                        <Icon key={i} className={`text-lg ${
+                          paymentMethod === method.id ? 'text-[#FD561E]' : 'text-gray-400'
+                        }`} />
+                      ))}
+                    </div>
+                  )}
+                  <p className={`text-sm font-medium text-center ${
+                    paymentMethod === method.id ? 'text-[#FD561E]' : 'text-gray-600'
+                  }`}>{method.name}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+  
   // ============ MAIN RENDER ============
-  if (!pricingResult || !selectedFareDetails) {
+  if (loading && !extractedData) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center bg-white p-8 rounded-2xl shadow-lg max-w-md">
-          <FaInfoCircle className="text-4xl text-red-500 mx-auto mb-4" />
+        <div className="text-center bg-white p-8 rounded-2xl shadow-sm max-w-md border border-gray-100">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FD561E] mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading fare options...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (pricingError && !extractedData) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center bg-white p-8 rounded-2xl shadow-sm max-w-md border border-gray-100">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <FaInfoCircle className="text-4xl text-red-500" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">Unable to load fares</h2>
+          <p className="text-sm text-gray-500 mb-4">{pricingError}</p>
+          <button onClick={() => navigate(-1)} className="bg-[#FD561E] text-white px-6 py-3 rounded-lg w-full hover:bg-[#e04e1b] transition-colors">Go Back</button>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!extractedData || !selectedFare) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center bg-white p-8 rounded-2xl shadow-sm max-w-md border border-gray-100">
+          <div className="w-20 h-20 bg-[#FD561E]/10 rounded-full flex items-center justify-center mx-auto mb-4">
+            <FaInfoCircle className="text-4xl text-[#FD561E]" />
+          </div>
           <h2 className="text-xl font-semibold text-gray-800 mb-2">No booking data found</h2>
-          <button onClick={() => navigate('/flights')} className="bg-[#FD561E] text-white px-6 py-3 rounded-lg w-full">Go to Search</button>
+          <p className="text-sm text-gray-500 mb-4">Please search for flights again</p>
+          <button onClick={() => navigate('/flights')} className="bg-[#FD561E] text-white px-6 py-3 rounded-lg w-full hover:bg-[#e04e1b] transition-colors">Go to Search</button>
         </div>
       </div>
     );
   }
   
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b sticky top-0 z-20">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <button onClick={() => navigate(-1)} className="flex items-center text-gray-600 hover:text-[#FD561E] transition-colors mr-4">
-                <FaArrowLeft className="mr-2" />
-                <span className="hidden sm:inline">Back</span>
-              </button>
-              <div>
-                <h1 className="text-xl font-bold text-gray-800">Review & Book</h1>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  {isRoundTrip ? 'Round Trip' : 'One Way'} • {allPricingOptions.length} Fare Option{allPricingOptions.length !== 1 ? 's' : ''} Available
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="h-1 bg-gradient-to-r from-[#FD561E] to-[#ff7b4a]"></div>
-      </div>
-      
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <div className="container mx-auto px-4 py-6">
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Left Column */}
-          <div className="lg:w-2/3 space-y-6">
-            {/* Trace ID */}
-            <div className="bg-blue-50 rounded-xl p-4 text-sm text-blue-700 flex items-center">
-              <FaInfoCircle className="mr-2" />
-              <span className="font-mono text-xs">Trace ID: {pricingResult.traceId || 'N/A'}</span>
-            </div>
-            
-            {/* Fare Options Selector */}
-            {allPricingOptions.length > 1 && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="bg-gray-50 p-4 border-b">
-                  <h3 className="font-semibold text-gray-700 flex items-center gap-2">
-                    <FaList className="text-[#FD561E]" size={16} />
-                    Available Fare Options ({allPricingOptions.length})
-                  </h3>
-                  <p className="text-xs text-gray-500 mt-1">Select a fare to view details and proceed with booking</p>
-                </div>
-                <div className="p-4 space-y-3">
-                  {allPricingOptions.map((option, idx) => renderFareOptionCard(option, idx))}
-                </div>
-              </div>
-            )}
-            
-            {/* Leg Selector for Round Trip */}
-            {isRoundTrip && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="flex">
-                  <button 
-                    onClick={() => setActiveLeg('outbound')} 
-                    className={`flex-1 py-3 text-center font-semibold transition-all ${
-                      activeLeg === 'outbound' 
-                        ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-500' 
-                        : 'bg-white text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    <FaPlane className="inline mr-2 rotate-45" size={14} /> Outbound Flight
-                  </button>
-                  <button 
-                    onClick={() => setActiveLeg('return')} 
-                    className={`flex-1 py-3 text-center font-semibold transition-all ${
-                      activeLeg === 'return' 
-                        ? 'bg-emerald-50 text-emerald-700 border-b-2 border-emerald-500' 
-                        : 'bg-white text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    <FaPlane className="inline mr-2 -rotate-45" size={14} /> Return Flight
-                  </button>
-                </div>
-              </div>
-            )}
-            
-            {/* Flight Cards */}
-            {isRoundTrip ? (
-              <>
-                {activeLeg === 'outbound' && renderFlightCard(outboundFlight, 'outbound')}
-                {activeLeg === 'return' && renderFlightCard(returnFlight, 'return')}
-              </>
-            ) : (
-              renderFlightCard(oneWayFlight, 'outbound')
-            )}
-            
-            {/* Fare Details Tabs */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <div className="border-b">
-                <div className="flex overflow-x-auto">
-                  {[
-                    { id: 'fare-details', icon: FaReceipt, label: 'Fare Details' },
-                    { id: 'fare-rules', icon: FaFileInvoice, label: 'Fare Rules' },
-                    { id: 'baggage', icon: FaSuitcase, label: 'Baggage' },
-                    { id: 'taxes', icon: FaPercent, label: 'Taxes & Fees' },
-                    { id: 'amenities', icon: FaStar, label: 'Amenities' }
-                  ].map(tab => (
-                    <button 
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)} 
-                      className={`px-5 py-3 text-center font-medium transition-colors whitespace-nowrap ${
-                        activeTab === tab.id 
-                          ? 'text-[#FD561E] border-b-2 border-[#FD561E]' 
-                          : 'text-gray-600 hover:text-gray-800'
-                      }`}
-                    >
-                      <tab.icon className="inline mr-2" size={14} /> {tab.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              
-              <div className="p-5">
-                {activeTab === 'fare-details' && renderFareDetailsTab()}
-                {activeTab === 'fare-rules' && renderFareRulesTab()}
-                {activeTab === 'baggage' && renderBaggageTab()}
-                {activeTab === 'taxes' && renderTaxesTab()}
-                {activeTab === 'amenities' && renderAmenitiesTab()}
-              </div>
-            </div>
-            
-            {/* Passenger Details */}
+          <div className="lg:w-2/3 space-y-5">
+            {renderFlightDetails()}
+            {tripType === 'round-trip' && renderReturnFlightDetails()}
+            {renderAllFares()}
+            {renderTaxDetails()}
+            {renderOptionalServices()}
+            {renderFareRules()}
             {renderPassengerForm()}
-            
-            {/* Contact Information */}
             {renderContactForm()}
-            
-            {/* Payment Method */}
             {renderPaymentMethods()}
           </div>
           
-          {/* Right Column - Price Summary */}
+          {/* Right Column - Price Summary (Sticky) */}
           <div className="lg:w-1/3">
             {renderPriceSummary()}
           </div>

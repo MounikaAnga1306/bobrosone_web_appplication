@@ -4,7 +4,6 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BaseSheet from './BaseSheet';
 import { formatTime, formatDate, formatDuration } from '../../utils/formatters';
-import { buildOneWayPricingRequest, getFlightPricing } from '../../services/pricingService';
 import toast from 'react-hot-toast';
 import { 
   FaPlane, 
@@ -111,44 +110,31 @@ const OneWaySheet = ({ isOpen, onClose, flight, passengerCounts }) => {
     return <FaCheckCircle size={11} />;
   };
 
-  const handleSelectFare = async (fare, e) => {
+  // Handle fare selection - JUST NAVIGATE, NO API CALL
+  const handleSelectFare = (fare, e) => {
     e.stopPropagation();
     
     if (loadingFareId) return;
     
+    setSelectedFareId(fare.id);
     setLoadingFareId(fare.id);
     
     try {
-      const loadingToast = toast.loading('Getting fare details...');
+      // Just navigate with the selected fare data - API call will happen in BookingReviewPage
+      toast.success('Fare selected! Proceeding to booking...');
+      onClose();
       
-      const pricingRequest = buildOneWayPricingRequest(flight, fare, passengerCounts);
-      const result = await getFlightPricing(pricingRequest);
-      
-      toast.dismiss(loadingToast);
-      
-      if (result.success) {
-        const transformedData = result.data;
-        const rawResponse = result.rawResponse;
-        
-        toast.success('Fare confirmed! Proceed with booking.');
-        onClose();
-        
-        navigate('/flights/booking/review', { 
-          state: { 
-            pricingResult: transformedData,
-            rawPricingResponse: rawResponse,
-            selectedFare: fare,
-            flight: flight,
-            passengerCounts: passengerCounts,
-            tripType: 'one-way',
-            totalPrice: fare.totalPrice
-          } 
-        });
-      } else {
-        toast.error(result.error || 'Failed to get pricing. Please try again.');
-      }
+      navigate('/flights/booking/review', { 
+        state: { 
+          selectedOutboundFare: fare,
+          outboundFlight: flight,
+          passengerCounts: passengerCounts,
+          tripType: 'one-way',
+          totalPrice: fare.totalPrice
+        } 
+      });
     } catch (error) {
-      toast.error('An unexpected error occurred. Please try again.');
+      toast.error('An error occurred. Please try again.');
     } finally {
       setLoadingFareId(null);
     }
