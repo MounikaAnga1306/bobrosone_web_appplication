@@ -40,7 +40,7 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
  
   const googleLogin = useGoogleLogin({
     scope: "email profile",
-    flow: "implicit",
+    //flow: "implicit",
     onSuccess: async (tokenResponse) => {
       console.log("✅ Google OAuth Success - token received");
       try {
