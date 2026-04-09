@@ -27,7 +27,9 @@ app.use(cors({
 
 app.use(limiter);
 app.use(express.json());
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false,
+}));
 
 // Serve frontend in production
 app.use(express.static(path.join(__dirname, "public")));
