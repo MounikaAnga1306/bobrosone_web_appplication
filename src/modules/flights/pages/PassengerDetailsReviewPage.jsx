@@ -1,7 +1,7 @@
 // src/modules/flights/pages/PassengerDetailsReviewPage.jsx
 
 import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -29,7 +29,16 @@ import {
   DialogActions,
   Snackbar,
   useMediaQuery,
-  useTheme
+  useTheme,
+  CircularProgress,
+  LinearProgress,
+  Stepper,
+  Step,
+  StepLabel,
+  StepContent,
+  Tooltip,
+  Fade,
+  Zoom
 } from '@mui/material';
 import {
   CheckCircle,
@@ -49,58 +58,107 @@ import {
   Luggage,
   Restaurant,
   Wifi,
-  Info
+  Info,
+  EventSeat,
+  AccessTime,
+  LocationOn,
+  AirplaneTicket,
+  CurrencyRupee,
+  Receipt,
+  VerifiedUser,
+  Security,
+  LocalOffer,
+  TrendingUp,
+  CalendarToday,
+  Schedule
 } from '@mui/icons-material';
 import { format } from 'date-fns';
 import { createBillDeskOrder } from '../services/paymentGatewayservices';
+import { usePricingBooking } from '../contexts/PricingBookingContext';
+import { usePnrResponse } from '../contexts/PnrResponseContext';
 
 const PassengerDetailsReviewPage = () => {
-  const location = useLocation();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
-  const [bookingConfirmation, setBookingConfirmation] = useState(null);
+  // ============ GET DATA FROM PNR RESPONSE CONTEXT ============
+  const { 
+    pnrData,
+    loading: pnrLoading,
+    getCompletePnrData,
+    getPnrNumber,
+    getAirLocatorCode,
+    getFlightSegments,
+    getPassengers,
+    getTotalPrice,
+    getWarnings,
+    getPenalties,
+    isBookingConfirmed,
+    hasWarnings
+  } = usePnrResponse();
+  
+  // Get booking data from PricingBookingContext as fallback
+  const { getCompleteBookingData } = usePricingBooking();
+  const bookingData = getCompleteBookingData();
+  
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [openRawDialog, setOpenRawDialog] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeStep, setActiveStep] = useState(2); // For stepper - step 2 = confirmed
+
+  // Use PNR data as primary source
+  const displayPnrNumber = getPnrNumber();
+  const displayAirLocatorCode = getAirLocatorCode();
+  const displayFlightSegments = getFlightSegments();
+  const displayPassengers = getPassengers();
+  const displayTotalPrice = getTotalPrice();
+  const warnings = getWarnings();
+  const penalties = getPenalties();
+  const isConfirmed = isBookingConfirmed();
+  const hasWarningsFlag = hasWarnings();
+  
+  // Fallback to booking data if PNR data not available
+  const contactInfo = bookingData?.contactInfo;
+  const selectedSeat = bookingData?.selectedSeat;
+  const selectedFare = bookingData?.selectedFare;
+  const paymentMethod = bookingData?.paymentMethod || 'Cash';
 
   // ============================================================
-  // GET DATA FROM NAVIGATION STATE
+  // LOG DATA ON MOUNT
   // ============================================================
   
   useEffect(() => {
     console.log('\n' + '='.repeat(80));
     console.log('📄 PASSENGER DETAILS REVIEW PAGE - MOUNTED');
     console.log('='.repeat(80));
-    
-    const state = location.state || {};
-    console.log('📍 Full location.state:', state);
-    console.log('📍 location.state keys:', Object.keys(state));
-    
-    const confirmationData = state.bookingConfirmation;
-    console.log('📦 bookingConfirmation from state:', confirmationData);
-    
-    if (confirmationData) {
-      console.log('✅ Booking confirmation data found!');
-      console.log('   - universalLocator:', confirmationData.universalLocator);
-      console.log('   - totalPrice:', confirmationData.totalPrice);
-      console.log('   - passengers:', confirmationData.passengersBooked?.length);
-      console.log('   - flightSegments:', confirmationData.flightSegments?.length);
-      setBookingConfirmation(confirmationData);
-    } else {
-      console.error('❌ No bookingConfirmation found in location.state!');
-    }
-    
+    console.log('📦 Data from PnrResponseContext:', pnrData);
+    console.log('   - PNR Number:', displayPnrNumber);
+    console.log('   - Airline Locator:', displayAirLocatorCode);
+    console.log('   - Total Price:', displayTotalPrice);
+    console.log('   - Booking Status:', pnrData?.bookingStatus);
+    console.log('   - Warnings:', warnings);
+    console.log('   - Flight Segments:', displayFlightSegments.length);
+    console.log('   - Passengers:', displayPassengers.length);
+    console.log('   - Penalties:', penalties);
+    console.log('   - Ticketing Deadline:', pnrData?.ticketingDeadline);
+    console.log('📦 Fallback Data from PricingBookingContext:', bookingData);
+    console.log('   - Contact Email:', contactInfo?.email);
+    console.log('   - Selected Seat:', selectedSeat?.seatCode || 'None');
     console.log('='.repeat(80) + '\n');
-  }, [location.state]);
+  }, [pnrData, displayPnrNumber, displayAirLocatorCode, displayTotalPrice, displayFlightSegments, displayPassengers, warnings, penalties, bookingData, contactInfo, selectedSeat]);
 
-  if (!bookingConfirmation) {
+  // ============================================================
+  // LOADING / NO DATA STATE
+  // ============================================================
+  
+  if (pnrLoading) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
         <Paper sx={{ p: 4, textAlign: 'center' }}>
-          <Typography variant="h6">Loading booking confirmation...</Typography>
+          <CircularProgress size={60} />
+          <Typography variant="h6" sx={{ mt: 2 }}>Loading booking confirmation...</Typography>
           <Typography color="text.secondary" sx={{ mt: 1 }}>
             Please wait while we retrieve your booking details.
           </Typography>
@@ -109,6 +167,26 @@ const PassengerDetailsReviewPage = () => {
     );
   }
 
+  if (!displayPnrNumber && !pnrData?.pnrNumber) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 4 }}>
+        <Paper sx={{ p: 4, textAlign: 'center' }}>
+          <Warning sx={{ fontSize: 60, color: 'warning.main' }} />
+          <Typography variant="h6" sx={{ mt: 2 }}>No Booking Found</Typography>
+          <Typography color="text.secondary" sx={{ mt: 1 }}>
+            Unable to retrieve booking details. Please contact support.
+          </Typography>
+          <Button variant="contained" onClick={() => navigate('/')} sx={{ mt: 3 }}>
+            Return to Home
+          </Button>
+        </Paper>
+      </Container>
+    );
+  }
+
+  // ============================================================
+  // HELPER FUNCTIONS
+  // ============================================================
   const handleCopy = (text, field) => {
     navigator.clipboard.writeText(text);
     setSnackbarMessage(`${field} copied!`);
@@ -133,6 +211,13 @@ const PassengerDetailsReviewPage = () => {
     }
   };
 
+  const formatCurrency = (amount) => {
+    if (!amount) return 'INR 0';
+    const amountStr = amount.toString();
+    const numericAmount = amountStr.replace(/[^0-9]/g, '');
+    return `INR ${parseInt(numericAmount).toLocaleString('en-IN')}`;
+  };
+
   const getFlightDuration = (dep, arr) => {
     if (!dep || !arr) return 'N/A';
     try {
@@ -148,26 +233,48 @@ const PassengerDetailsReviewPage = () => {
   const handlePrint = () => window.print();
   
   const handleDownload = () => {
-    const data = JSON.stringify(bookingConfirmation, null, 2);
+    const dataToSave = {
+      bookingConfirmation: {
+        pnrNumber: displayPnrNumber,
+        airlineLocator: displayAirLocatorCode,
+        bookingStatus: pnrData?.bookingStatus,
+        createdAt: pnrData?.createdAt
+      },
+      flightDetails: displayFlightSegments,
+      passengers: displayPassengers,
+      fareDetails: {
+        totalPrice: displayTotalPrice,
+        basePrice: pnrData?.basePrice,
+        taxes: pnrData?.taxes,
+        taxBreakdown: pnrData?.taxBreakdown,
+        baggageAllowance: pnrData?.baggageAllowance,
+        ticketingDeadline: pnrData?.ticketingDeadline,
+        isRefundable: pnrData?.isRefundable
+      },
+      contactInfo: contactInfo,
+      selectedSeat: selectedSeat
+    };
+    const data = JSON.stringify(dataToSave, null, 2);
     const blob = new Blob([data], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `booking_${bookingConfirmation.universalLocator || 'confirmation'}.json`;
+    a.download = `booking_${displayPnrNumber}_confirmation.json`;
     a.click();
     URL.revokeObjectURL(url);
-    setSnackbarMessage('Receipt downloaded!');
+    setSnackbarMessage('Booking confirmation downloaded!');
     setSnackbarOpen(true);
   };
 
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: 'Flight Booking',
-        text: `Booking: ${bookingConfirmation.universalLocator}`,
+        title: 'Flight Booking Confirmation',
+        text: `Booking confirmed! PNR: ${displayPnrNumber}`,
+        url: window.location.href
       });
     } else {
-      handleCopy(bookingConfirmation.universalLocator, 'Booking Reference');
+      handleCopy(displayPnrNumber, 'PNR Number');
     }
   };
 
@@ -175,217 +282,294 @@ const PassengerDetailsReviewPage = () => {
     navigate(-1);
   };
 
-  const calculateTotalAmount = () => {
-    if (bookingConfirmation.pricingInfo && bookingConfirmation.pricingInfo.length > 0) {
-      const total = bookingConfirmation.pricingInfo.reduce((sum, p) => {
-        const amount = p.basePrice || p.totalPrice || '0';
-        const numericAmount = parseFloat(amount.toString().replace(/[^0-9.-]/g, ''));
-        return sum + (isNaN(numericAmount) ? 0 : numericAmount);
-      }, 0);
-      return `INR${total}`;
+  // ============================================================
+  // UPDATED: SUBMIT BOOKING - NAVIGATE TO TICKET CONFIRMATION
+  // ============================================================
+  const handleSubmitBooking = async () => {
+    console.log('📤 SUBMIT BUTTON CLICKED - SENDING BOOKING DATA TO PAYMENT SERVICE');
+    console.log('📦 Booking Data:', bookingData);
+    console.log('📦 PNR Data:', pnrData);
+    
+    setIsSubmitting(true);
+
+    try {
+      const response = await createBillDeskOrder(bookingData, pnrData);
+      
+      console.log('✅ Payment Service Response:', response);
+      
+      if (!response || !response.success) {
+        throw new Error(response?.message || 'Order creation failed');
+      }
+      
+      const responseData = response.data || {};
+      const bdorderid = responseData?.bdorderid;
+      const authToken = responseData?.authToken;
+      const merchantId = "HYDBOBROS";
+      
+      console.log('📋 MERCHANT ID:', merchantId);
+      console.log('📋 BDORDERID:', bdorderid);
+      
+      if (!bdorderid) throw new Error('Order ID (bdorderid) missing from response');
+      if (!authToken) throw new Error('Auth Token missing from response');
+      
+      const billdeskUrl = `https://uat.bobros.co.in/billdesk_checkout.php?merchantId=${merchantId}&bdorderid=${bdorderid}&authToken=${encodeURIComponent(authToken)}`;
+      
+      console.log('🔗 BILLDESK CHECKOUT URL:', billdeskUrl);
+      console.log('🔄 REDIRECTING TO PAYMENT GATEWAY...');
+      
+      // Store a flag in sessionStorage to indicate we're coming from payment
+      sessionStorage.setItem('paymentInitiated', 'true');
+      sessionStorage.setItem('pnrNumber', displayPnrNumber);
+      
+      // Redirect to payment gateway
+      window.location.href = billdeskUrl;
+      
+    } catch (error) {
+      console.error('❌ PAYMENT INITIATION FAILED:', error);
+      setSnackbarMessage(`❌ Payment initiation failed: ${error.message || 'Unknown error'}`);
+      setSnackbarOpen(true);
+      setIsSubmitting(false);
     }
-    return bookingConfirmation.totalPrice || 'INR0';
   };
 
-  const handleSubmitBooking = async () => {
-  // Validation checks
-  if (!bookingConfirmation.contactInfo?.phone) {
-    setSnackbarMessage('❌ Phone number is missing. Please go back and add contact info.');
-    setSnackbarOpen(true);
-    return;
-  }
-
-  if (!bookingConfirmation.passengersBooked?.[0]?.name?.first) {
-    setSnackbarMessage('❌ Passenger name is missing. Please go back and add passenger details.');
-    setSnackbarOpen(true);
-    return;
-  }
-
-  console.log('📤 SUBMIT BUTTON CLICKED - SENDING BOOKING DATA TO SERVICE');
-  console.log('📦 Booking Data:', {
-    bookingConfirmation,
-    contactInfo: bookingConfirmation.contactInfo,
-    passengersBooked: bookingConfirmation.passengersBooked,
-    pricingInfo: bookingConfirmation.pricingInfo,
-    universalLocator: bookingConfirmation.universalLocator,
-    airLocatorCode: bookingConfirmation.airLocatorCode,
-    providerLocatorCode: bookingConfirmation.providerLocatorCode,
-    totalPrice: bookingConfirmation.totalPrice
-  });
-
-  setIsSubmitting(true);
-
-  try {
-    // Send the entire booking confirmation data to the service
-    const response = await createBillDeskOrder(bookingConfirmation);
-    
-    console.log('✅ ORDER CREATED SUCCESSFULLY:', response);
-    
-    // Check if response is valid
-    if (!response || !response.success) {
-      throw new Error(response?.message || 'Order creation failed');
+  // Get passenger type label
+  const getPassengerTypeLabel = (code) => {
+    switch(code) {
+      case 'ADT': return 'Adult';
+      case 'CNN': return 'Child';
+      case 'INF': return 'Infant';
+      default: return code;
     }
-    
-    // Extract data from response.data
-    const responseData = response.data;
-    
-    // Extract bdorderid and authToken directly from responseData
-    const bdorderid = responseData?.bdorderid;
-    const authToken = responseData?.authToken;
-    
-    // Merchant ID (hardcoded or can come from config)
-    const merchantId = "HYDBOBROS";
-    
-    console.log('📋 MERCHANT ID:', merchantId);
-    console.log('📋 BDORDERID:', bdorderid);
-    console.log('📋 AUTH TOKEN (first 50 chars):', authToken ? authToken.substring(0, 50) + '...' : 'NOT FOUND');
-    
-    // Validate required fields
-    if (!bdorderid) {
-      throw new Error('Order ID (bdorderid) missing from response');
+  };
+
+  // Get seat type label
+  const getSeatTypeLabel = (type) => {
+    switch(type) {
+      case 'window': return 'Window Seat';
+      case 'aisle': return 'Aisle Seat';
+      case 'middle': return 'Middle Seat';
+      default: return type;
     }
-    
-    if (!authToken) {
-      throw new Error('Auth Token missing from response');
-    }
-    
-    // Construct BillDesk checkout URL
-    const billdeskUrl = `https://uat.bobros.co.in/billdesk_checkout.php?merchantId=${merchantId}&bdorderid=${bdorderid}&authToken=${encodeURIComponent(authToken)}`;
-    
-    console.log('🔗 BILLDESK CHECKOUT URL:', billdeskUrl);
-    console.log('🔄 REDIRECTING TO PAYMENT GATEWAY...');
-    
-    // Redirect to BillDesk payment gateway
-    window.location.href = billdeskUrl;
-    
-  } catch (error) {
-    console.error('❌ BILLDESK ORDER CREATION FAILED:', error);
-    setSnackbarMessage(`❌ Payment initiation failed: ${error.message || 'Unknown error'}`);
-    setSnackbarOpen(true);
-    setIsSubmitting(false);
-  }
-};
+  };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      {/* Debug Info */}
-      <Paper sx={{ p: 2, mb: 3, bgcolor: '#e3f2fd' }}>
-        <Typography variant="caption" component="div" fontFamily="monospace">
-          <strong>🔍 Debug Info:</strong><br />
-          Universal Locator: {bookingConfirmation.universalLocator || 'N/A'}<br />
-          Air Locator: {bookingConfirmation.airLocatorCode || 'N/A'}<br />
-          Provider Locator: {bookingConfirmation.providerLocatorCode || 'N/A'}<br />
-          Total Price: {bookingConfirmation.totalPrice || 'N/A'}<br />
-          Passengers: {bookingConfirmation.passengersBooked?.length || 0}<br />
-          Flight Segments: {bookingConfirmation.flightSegments?.length || 0}<br />
-          Pricing Info: {bookingConfirmation.pricingInfo?.length || 0}
-        </Typography>
+    <Container maxWidth="lg" sx={{ py: 4, bgcolor: '#f5f7fa', minHeight: '100vh' }}>
+      {/* Stepper Progress */}
+      <Paper sx={{ p: 3, mb: 3, borderRadius: 3 }}>
+        <Stepper activeStep={activeStep} orientation="horizontal">
+          <Step>
+            <StepLabel>Search Flights</StepLabel>
+          </Step>
+          <Step>
+            <StepLabel>Passenger Details</StepLabel>
+          </Step>
+          <Step>
+            <StepLabel>Payment</StepLabel>
+          </Step>
+          <Step>
+            <StepLabel>Confirmation</StepLabel>
+          </Step>
+        </Stepper>
       </Paper>
 
-      {/* Header */}
-      <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-          <CheckCircle sx={{ fontSize: 48, color: 'success.main' }} />
-          <Box>
-            <Typography variant="h4" fontWeight="bold">
-              Booking Confirmed!
-            </Typography>
-            <Typography color="text.secondary">
-              Your flight has been successfully booked
-            </Typography>
-          </Box>
-        </Box>
-        {bookingConfirmation.hasWarnings && bookingConfirmation.warnings?.length > 0 && (
-          <Alert severity="warning" icon={<Warning />}>
-            <AlertTitle>Important Notices</AlertTitle>
-            {bookingConfirmation.warnings.map((w, i) => <div key={i}>• {w}</div>)}
+      {/* Warnings Alert */}
+      {hasWarningsFlag && warnings.length > 0 && (
+        <Fade in timeout={500}>
+          <Alert 
+            severity="warning" 
+            sx={{ mb: 3, borderRadius: 2 }}
+            icon={<Warning />}
+          >
+            <AlertTitle>⚠️ Booking Warnings</AlertTitle>
+            {warnings.map((warning, idx) => (
+              <Typography key={idx} variant="body2">
+                {warning.message}
+              </Typography>
+            ))}
           </Alert>
-        )}
-      </Paper>
+        </Fade>
+      )}
 
-      {/* Booking References */}
-      <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+      {/* Success Header with Animation */}
+      <Zoom in timeout={600}>
+        <Paper sx={{ 
+          p: 4, 
+          mb: 3, 
+          borderRadius: 3,
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white'
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap' }}>
+            <CheckCircle sx={{ fontSize: 64 }} />
+            <Box flex={1}>
+              <Typography variant="h4" fontWeight="bold" gutterBottom>
+                Booking Confirmed! 🎉
+              </Typography>
+              <Typography variant="body1">
+                Your flight has been successfully booked. A confirmation email has been sent to your registered email address.
+              </Typography>
+            </Box>
+            <Chip 
+              label={isConfirmed ? "CONFIRMED" : "PENDING"} 
+              sx={{ 
+                bgcolor: isConfirmed ? '#4caf50' : '#ff9800', 
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: '0.9rem',
+                p: 2
+              }}
+            />
+          </Box>
+        </Paper>
+      </Zoom>
+
+      {/* Booking References - Enhanced */}
+      <Paper sx={{ p: 3, mb: 3, borderRadius: 3 }}>
         <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <ConfirmationNumber /> Booking Reference
+          <ConfirmationNumber sx={{ color: '#667eea' }} /> Booking Reference
         </Typography>
         <Divider sx={{ mb: 2 }} />
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={4}>
-            <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'action.hover', borderRadius: 2 }}>
-              <Typography variant="caption">Universal Locator</Typography>
-              <Typography variant="h6" fontFamily="monospace">
-                {bookingConfirmation.universalLocator || 'N/A'}
-                {bookingConfirmation.universalLocator && (
-                  <IconButton size="small" onClick={() => handleCopy(bookingConfirmation.universalLocator, 'Locator')}>
-                    <ContentCopy fontSize="small" />
-                  </IconButton>
+        <Grid container spacing={3}>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Box sx={{ 
+              textAlign: 'center', 
+              p: 2.5, 
+              bgcolor: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)', 
+              borderRadius: 2,
+              border: '1px solid #e0e0e0'
+            }}>
+              <Typography variant="caption" color="text.secondary">PNR Number</Typography>
+              <Typography variant="h5" fontFamily="monospace" fontWeight="bold" sx={{ mt: 1 }}>
+                {displayPnrNumber || 'N/A'}
+                {displayPnrNumber && (
+                  <Tooltip title="Copy PNR">
+                    <IconButton size="small" onClick={() => handleCopy(displayPnrNumber, 'PNR')} sx={{ ml: 1 }}>
+                      <ContentCopy fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
                 )}
               </Typography>
             </Box>
           </Grid>
-          <Grid item xs={12} md={4}>
-            <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'action.hover', borderRadius: 2 }}>
-              <Typography variant="caption">Air Locator</Typography>
-              <Typography variant="h6" fontFamily="monospace">
-                {bookingConfirmation.airLocatorCode || 'N/A'}
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Box sx={{ textAlign: 'center', p: 2.5, bgcolor: '#f5f7fa', borderRadius: 2, border: '1px solid #e0e0e0' }}>
+              <Typography variant="caption" color="text.secondary">Airline Locator</Typography>
+              <Typography variant="h6" fontFamily="monospace" sx={{ mt: 1 }}>
+                {displayAirLocatorCode || 'N/A'}
               </Typography>
             </Box>
           </Grid>
-          <Grid item xs={12} md={4}>
-            <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'action.hover', borderRadius: 2 }}>
-              <Typography variant="caption">Provider</Typography>
-              <Typography variant="h6">
-                {bookingConfirmation.providerCode || 'N/A'}
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Box sx={{ textAlign: 'center', p: 2.5, bgcolor: '#f5f7fa', borderRadius: 2, border: '1px solid #e0e0e0' }}>
+              <Typography variant="caption" color="text.secondary">Booking Date</Typography>
+              <Typography variant="h6" sx={{ mt: 1 }}>
+                {formatDate(pnrData?.createdAt || new Date())}
               </Typography>
             </Box>
           </Grid>
         </Grid>
       </Paper>
 
-      {/* Flight Itinerary */}
-      <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+      {/* Ticketing Deadline Alert */}
+      {pnrData?.ticketingDeadline && (
+        <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
+          <AlertTitle>⏰ Ticketing Deadline</AlertTitle>
+          Please complete your payment by {formatDateTime(pnrData.ticketingDeadline)} to avoid cancellation.
+        </Alert>
+      )}
+
+      {/* Selected Seat Info - Enhanced */}
+      {selectedSeat && (
+        <Zoom in timeout={400}>
+          <Paper sx={{ p: 3, mb: 3, borderRadius: 3, bgcolor: 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)' }}>
+            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <EventSeat sx={{ color: '#4caf50' }} /> Selected Seat
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            <Box sx={{ textAlign: 'center', p: 2 }}>
+              <Typography variant="h1" fontWeight="bold" sx={{ color: '#2e7d32', fontSize: { xs: '3rem', md: '4rem' } }}>
+                {selectedSeat.seatCode}
+              </Typography>
+              <Typography variant="body1" sx={{ mt: 1 }}>
+                {getSeatTypeLabel(selectedSeat.seatType)}
+              </Typography>
+              <Chip label="Seat Confirmed" color="success" size="small" sx={{ mt: 1 }} />
+            </Box>
+          </Paper>
+        </Zoom>
+      )}
+
+      {/* Flight Itinerary - Enhanced */}
+      <Paper sx={{ p: 3, mb: 3, borderRadius: 3 }}>
         <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <FlightTakeoff /> Flight Itinerary
+          <FlightTakeoff sx={{ color: '#667eea' }} /> Flight Itinerary
         </Typography>
         <Divider sx={{ mb: 2 }} />
         
-        {bookingConfirmation.flightSegments && bookingConfirmation.flightSegments.length > 0 ? (
-          bookingConfirmation.flightSegments.map((segment, idx) => (
-            <Card key={idx} sx={{ mb: 2 }}>
-              <CardContent>
-                <Grid container spacing={2} alignItems="center">
-                  <Grid item xs={12} sm={2} sx={{ textAlign: 'center' }}>
-                    <Avatar sx={{ bgcolor: 'primary.main', margin: '0 auto' }}>
+        {displayFlightSegments.length > 0 ? (
+          displayFlightSegments.map((segment, idx) => (
+            <Card key={idx} sx={{ mb: 2, borderRadius: 2, overflow: 'hidden' }}>
+              <CardContent sx={{ p: 3 }}>
+                <Grid container spacing={3} alignItems="center">
+                  <Grid size={{ xs: 12, md: 2 }} sx={{ textAlign: 'center' }}>
+                    <Avatar sx={{ bgcolor: '#667eea', width: 56, height: 56, margin: '0 auto' }}>
                       {segment.carrier}
                     </Avatar>
-                    <Typography fontWeight="bold">{segment.carrier} {segment.flightNumber}</Typography>
-                    <Chip label={segment.classOfService} size="small" />
+                    <Typography fontWeight="bold" sx={{ mt: 1 }}>
+                      {segment.carrier} {segment.flightNumber}
+                    </Typography>
+                    <Chip 
+                      label={segment.cabinClass || segment.classOfService} 
+                      size="small" 
+                      sx={{ mt: 0.5, bgcolor: '#e3f2fd' }}
+                    />
                   </Grid>
                   
-                  <Grid item xs={12} sm={4}>
-                    <Typography variant="body2" color="text.secondary">Departure</Typography>
-                    <Typography variant="h6">{segment.origin}</Typography>
-                    <Typography variant="body2">{formatDateTime(segment.departureTime)}</Typography>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <Box sx={{ textAlign: { xs: 'center', md: 'left' } }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <LocationOn fontSize="small" /> Departure
+                      </Typography>
+                      <Typography variant="h5" fontWeight="bold">{segment.origin}</Typography>
+                      <Typography variant="body2">{formatDateTime(segment.departureTime)}</Typography>
+                      {segment.originTerminal && (
+                        <Chip label={`Terminal ${segment.originTerminal}`} size="small" variant="outlined" sx={{ mt: 0.5 }} />
+                      )}
+                    </Box>
                   </Grid>
                   
-                  <Grid item xs={12} sm={2} sx={{ textAlign: 'center' }}>
-                    <FlightTakeoff sx={{ transform: 'rotate(90deg)', color: 'primary.main' }} />
-                    <Typography variant="body2">{getFlightDuration(segment.departureTime, segment.arrivalTime)}</Typography>
+                  <Grid size={{ xs: 12, md: 2 }} sx={{ textAlign: 'center' }}>
+                    <FlightTakeoff sx={{ transform: 'rotate(90deg)', color: '#667eea' }} />
+                    <Typography variant="body2" sx={{ mt: 1 }}>
+                      {getFlightDuration(segment.departureTime, segment.arrivalTime)}
+                    </Typography>
+                    {segment.stops === 0 && (
+                      <Chip label="Direct" size="small" color="success" sx={{ mt: 0.5 }} />
+                    )}
                   </Grid>
                   
-                  <Grid item xs={12} sm={4}>
-                    <Typography variant="body2" color="text.secondary">Arrival</Typography>
-                    <Typography variant="h6">{segment.destination}</Typography>
-                    <Typography variant="body2">{formatDateTime(segment.arrivalTime)}</Typography>
+                  <Grid size={{ xs: 12, md: 4 }}>
+                    <Box sx={{ textAlign: { xs: 'center', md: 'right' } }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, justifyContent: { xs: 'center', md: 'flex-end' } }}>
+                        <LocationOn fontSize="small" /> Arrival
+                      </Typography>
+                      <Typography variant="h5" fontWeight="bold">{segment.destination}</Typography>
+                      <Typography variant="body2">{formatDateTime(segment.arrivalTime)}</Typography>
+                      {segment.destinationTerminal && (
+                        <Chip label={`Terminal ${segment.destinationTerminal}`} size="small" variant="outlined" sx={{ mt: 0.5 }} />
+                      )}
+                    </Box>
                   </Grid>
                 </Grid>
                 
-                <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                  <Chip icon={<Luggage />} label={segment.baggageAllowance || "15kg"} size="small" />
-                  <Chip icon={<Restaurant />} label="Meal" size="small" />
-                  <Chip icon={<Wifi />} label="WiFi" size="small" />
-                  <Chip label={`Status: ${segment.status || 'Confirmed'}`} size="small" color="success" />
-                </Box>
+                {/* Aircraft Info */}
+                {segment.equipment && (
+                  <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #e0e0e0' }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Aircraft: {segment.equipment} • {segment.isEticketable ? 'E-Ticket Available' : 'Paper Ticket'}
+                    </Typography>
+                  </Box>
+                )}
               </CardContent>
             </Card>
           ))
@@ -394,214 +578,329 @@ const PassengerDetailsReviewPage = () => {
         )}
       </Paper>
 
-      {/* Passengers */}
-      <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+      {/* Passengers - Enhanced */}
+      <Paper sx={{ p: 3, mb: 3, borderRadius: 3 }}>
         <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Person /> Passengers
+          <Person sx={{ color: '#667eea' }} /> Passenger Details
         </Typography>
         <Divider sx={{ mb: 2 }} />
         
         <Grid container spacing={2}>
-          {bookingConfirmation.passengersBooked && bookingConfirmation.passengersBooked.length > 0 ? (
-            bookingConfirmation.passengersBooked.map((passenger, idx) => (
-              <Grid item xs={12} md={6} key={idx}>
-                <Card>
+          {displayPassengers.length > 0 ? (
+            displayPassengers.map((passenger, idx) => (
+              <Grid size={{ xs: 12, md: 6 }} key={idx}>
+                <Card sx={{ borderRadius: 2, height: '100%' }}>
                   <CardContent>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <Box>
                         <Typography variant="h6">
-                          {passenger.name?.prefix} {passenger.name?.first} {passenger.name?.last}
+                          {passenger.prefix && `${passenger.prefix} `}{passenger.firstName} {passenger.lastName}
                         </Typography>
-                        <Typography variant="body2">Type: {passenger.type}</Typography>
-                        <Typography variant="body2">Age: {passenger.age}</Typography>
-                        <Typography variant="body2">DOB: {formatDate(passenger.dob)}</Typography>
-                        <Typography variant="body2">Gender: {passenger.gender}</Typography>
+                        <Box sx={{ mt: 1 }}>
+                          <Chip 
+                            label={getPassengerTypeLabel(passenger.type)} 
+                            size="small" 
+                            sx={{ mr: 1, mb: 0.5 }}
+                          />
+                          {passenger.age && (
+                            <Chip label={`Age: ${passenger.age}`} size="small" variant="outlined" />
+                          )}
+                        </Box>
+                        {passenger.dob && (
+                          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                            DOB: {formatDate(passenger.dob)}
+                          </Typography>
+                        )}
+                        {passenger.gender && (
+                          <Typography variant="body2" color="text.secondary">
+                            Gender: {passenger.gender}
+                          </Typography>
+                        )}
                       </Box>
-                      <Chip label={`Pax ${idx + 1}`} />
+                      <Avatar sx={{ bgcolor: '#667eea' }}>
+                        <Person />
+                      </Avatar>
                     </Box>
                   </CardContent>
                 </Card>
               </Grid>
             ))
           ) : (
-            <Grid item xs={12}>
+            <Grid size={{ xs: 12 }}>
               <Alert severity="warning">No passenger data found in booking confirmation.</Alert>
             </Grid>
           )}
         </Grid>
       </Paper>
 
-      {/* Contact & Payment */}
-      <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+      {/* Baggage & Amenities */}
+      <Paper sx={{ p: 3, mb: 3, borderRadius: 3 }}>
         <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Phone /> Contact & Payment
+          <Luggage sx={{ color: '#667eea' }} /> Baggage & Amenities
         </Typography>
         <Divider sx={{ mb: 2 }} />
         
         <Grid container spacing={2}>
-          <Grid item xs={12} md={6}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, bgcolor: 'action.hover', borderRadius: 2 }}>
-              <Email />
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Box sx={{ textAlign: 'center', p: 2, bgcolor: '#f5f7fa', borderRadius: 2 }}>
+              <Luggage sx={{ fontSize: 40, color: '#667eea' }} />
+              <Typography variant="h6" fontWeight="bold" sx={{ mt: 1 }}>
+                {pnrData?.baggageAllowance?.weight || 15} kg
+              </Typography>
+              <Typography variant="caption" color="text.secondary">Check-in Baggage</Typography>
+            </Box>
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Box sx={{ textAlign: 'center', p: 2, bgcolor: '#f5f7fa', borderRadius: 2 }}>
+              <Restaurant sx={{ fontSize: 40, color: '#667eea' }} />
+              <Typography variant="body1" sx={{ mt: 1 }}>
+                {selectedFare?.amenities?.meals ? 'Meal Included' : 'Meals Available'}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">On-board Service</Typography>
+            </Box>
+          </Grid>
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Box sx={{ textAlign: 'center', p: 2, bgcolor: '#f5f7fa', borderRadius: 2 }}>
+              <Wifi sx={{ fontSize: 40, color: '#667eea' }} />
+              <Typography variant="body1" sx={{ mt: 1 }}>
+                {selectedFare?.amenities?.wifi ? 'Wi-Fi Available' : 'No Wi-Fi'}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">Connectivity</Typography>
+            </Box>
+          </Grid>
+        </Grid>
+      </Paper>
+
+      {/* Contact & Payment - Enhanced */}
+      <Paper sx={{ p: 3, mb: 3, borderRadius: 3 }}>
+        <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Phone sx={{ color: '#667eea' }} /> Contact & Payment
+        </Typography>
+        <Divider sx={{ mb: 2 }} />
+        
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, bgcolor: '#f5f7fa', borderRadius: 2 }}>
+              <Email sx={{ color: '#667eea' }} />
               <Box>
-                <Typography variant="caption">Email</Typography>
-                <Typography>{bookingConfirmation.contactInfo?.email || 'N/A'}</Typography>
+                <Typography variant="caption" color="text.secondary">Email Address</Typography>
+                <Typography variant="body1">{contactInfo?.email || 'N/A'}</Typography>
               </Box>
             </Box>
           </Grid>
-          <Grid item xs={12} md={6}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, bgcolor: 'action.hover', borderRadius: 2 }}>
-              <Phone />
+          <Grid size={{ xs: 12, md: 6 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, bgcolor: '#f5f7fa', borderRadius: 2 }}>
+              <Phone sx={{ color: '#667eea' }} />
               <Box>
-                <Typography variant="caption">Phone</Typography>
-                <Typography>{bookingConfirmation.contactInfo?.phone || 'N/A'}</Typography>
+                <Typography variant="caption" color="text.secondary">Phone Number</Typography>
+                <Typography variant="body1">
+                  {contactInfo?.phone?.number 
+                    ? `+${contactInfo.phone.countryCode || '91'} ${contactInfo.phone.number}`
+                    : contactInfo?.phone || 'N/A'}
+                </Typography>
               </Box>
             </Box>
           </Grid>
-          <Grid item xs={12}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, bgcolor: 'action.hover', borderRadius: 2 }}>
-              <AccountBalanceWallet />
+          <Grid size={{ xs: 12 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, p: 2, bgcolor: '#f5f7fa', borderRadius: 2 }}>
+              <AccountBalanceWallet sx={{ color: '#667eea' }} />
               <Box>
-                <Typography variant="caption">Payment Method</Typography>
-                <Typography>{bookingConfirmation.paymentType || 'Cash'}</Typography>
+                <Typography variant="caption" color="text.secondary">Payment Method</Typography>
+                <Typography variant="body1">{paymentMethod}</Typography>
               </Box>
             </Box>
           </Grid>
         </Grid>
       </Paper>
 
-      {/* Fare Summary */}
-      <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+      {/* Fare Summary - Enhanced */}
+      <Paper sx={{ p: 3, mb: 3, borderRadius: 3 }}>
         <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <AccountBalanceWallet /> Fare Summary
+          <CurrencyRupee sx={{ color: '#667eea' }} /> Fare Summary
         </Typography>
         <Divider sx={{ mb: 2 }} />
         
         <Grid container spacing={3}>
-          <Grid item xs={12} md={4}>
-            <Card sx={{ bgcolor: 'success.light', textAlign: 'center' }}>
+          <Grid size={{ xs: 12, md: 5 }}>
+            <Card sx={{ bgcolor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', textAlign: 'center', height: '100%' }}>
               <CardContent>
-                <Typography variant="h4" fontWeight="bold">
-                  {calculateTotalAmount()}
+                <Typography variant="h3" fontWeight="bold" sx={{ color: 'white' }}>
+                  {formatCurrency(displayTotalPrice)}
                 </Typography>
-                <Typography>Total Amount</Typography>
+                <Typography sx={{ color: 'rgba(255,255,255,0.9)' }}>Total Amount</Typography>
+                {pnrData?.isRefundable && (
+                  <Chip label="Refundable" size="small" sx={{ mt: 2, bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }} />
+                )}
               </CardContent>
             </Card>
           </Grid>
-          <Grid item xs={12} md={8}>
+          <Grid size={{ xs: 12, md: 7 }}>
             <TableContainer component={Paper} variant="outlined">
               <Table size="small">
                 <TableHead>
-                  <TableRow sx={{ bgcolor: 'action.hover' }}>
+                  <TableRow sx={{ bgcolor: '#f5f7fa' }}>
                     <TableCell>Description</TableCell>
                     <TableCell align="right">Amount</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {bookingConfirmation.pricingInfo && bookingConfirmation.pricingInfo.length > 0 ? (
-                    bookingConfirmation.pricingInfo.map((p, idx) => (
-                      <TableRow key={idx}>
-                        <TableCell>Passenger {idx + 1}</TableCell>
-                        <TableCell align="right">{p.basePrice || p.totalPrice}</TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
+                  {pnrData?.basePrice && (
                     <TableRow>
-                      <TableCell colSpan={2} align="center">No pricing information available</TableCell>
+                      <TableCell>Base Fare</TableCell>
+                      <TableCell align="right">{formatCurrency(pnrData.basePrice)}</TableCell>
                     </TableRow>
                   )}
-                  <TableRow sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>
+                  {pnrData?.taxBreakdown && pnrData.taxBreakdown.length > 0 && (
+                    pnrData.taxBreakdown.map((tax, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell>Tax - {tax.category}</TableCell>
+                        <TableCell align="right">{formatCurrency(tax.amount)}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                  {pnrData?.taxes && !pnrData.taxBreakdown?.length && (
+                    <TableRow>
+                      <TableCell>Taxes & Fees</TableCell>
+                      <TableCell align="right">{formatCurrency(pnrData.taxes)}</TableCell>
+                    </TableRow>
+                  )}
+                  <TableRow sx={{ fontWeight: 'bold', backgroundColor: '#f5f7fa' }}>
                     <TableCell><strong>Total</strong></TableCell>
-                    <TableCell align="right"><strong>{calculateTotalAmount()}</strong></TableCell>
+                    <TableCell align="right"><strong>{formatCurrency(displayTotalPrice)}</strong></TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
             </TableContainer>
           </Grid>
         </Grid>
+        
+        {/* Cancellation/Change Policy */}
+        {(penalties?.change || penalties?.cancel) && (
+          <Box sx={{ mt: 2, p: 2, bgcolor: '#fff3e0', borderRadius: 2 }}>
+            <Typography variant="subtitle2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Security fontSize="small" /> Cancellation & Change Policy
+            </Typography>
+            <Grid container spacing={2} sx={{ mt: 1 }}>
+              {penalties.cancel && (
+                <Grid size={{ xs: 6 }}>
+                  <Typography variant="caption" color="text.secondary">Cancellation Fee</Typography>
+                  <Typography variant="body2" fontWeight="bold">
+                    {typeof penalties.cancel.amount === 'string' 
+                      ? formatCurrency(penalties.cancel.amount)
+                      : `INR ${penalties.cancel.amount?.toLocaleString() || 'N/A'}`}
+                  </Typography>
+                </Grid>
+              )}
+              {penalties.change && (
+                <Grid size={{ xs: 6 }}>
+                  <Typography variant="caption" color="text.secondary">Change Fee</Typography>
+                  <Typography variant="body2" fontWeight="bold">
+                    {typeof penalties.change.amount === 'string'
+                      ? formatCurrency(penalties.change.amount)
+                      : `INR ${penalties.change.amount?.toLocaleString() || 'N/A'}`}
+                  </Typography>
+                </Grid>
+              )}
+            </Grid>
+          </Box>
+        )}
       </Paper>
 
       {/* Actions */}
       <Box sx={{ display: 'flex', gap: 2, mt: 3, flexDirection: isMobile ? 'column' : 'row' }}>
-        <Button
-          variant="outlined"
-          startIcon={<ArrowBack />}
-          onClick={handleBack}
+        <Button 
+          variant="outlined" 
+          startIcon={<ArrowBack />} 
+          onClick={handleBack} 
           fullWidth={isMobile}
+          sx={{ borderRadius: 2 }}
         >
           Back
         </Button>
-        <Button
-          variant="outlined"
-          startIcon={<Print />}
-          onClick={handlePrint}
+        <Button 
+          variant="outlined" 
+          startIcon={<Print />} 
+          onClick={handlePrint} 
           fullWidth={isMobile}
+          sx={{ borderRadius: 2 }}
         >
           Print
         </Button>
-        <Button
-          variant="outlined"
-          startIcon={<Download />}
-          onClick={handleDownload}
+        <Button 
+          variant="outlined" 
+          startIcon={<Download />} 
+          onClick={handleDownload} 
           fullWidth={isMobile}
+          sx={{ borderRadius: 2 }}
         >
           Download
         </Button>
-        <Button
-          variant="outlined"
-          startIcon={<Share />}
-          onClick={handleShare}
+        <Button 
+          variant="outlined" 
+          startIcon={<Share />} 
+          onClick={handleShare} 
           fullWidth={isMobile}
+          sx={{ borderRadius: 2 }}
         >
           Share
         </Button>
-        <Button
-          variant="outlined"
-          startIcon={<Info />}
-          onClick={() => setOpenRawDialog(true)}
+        <Button 
+          variant="outlined" 
+          startIcon={<Info />} 
+          onClick={() => setOpenRawDialog(true)} 
           fullWidth={isMobile}
+          sx={{ borderRadius: 2 }}
         >
           Raw Data
         </Button>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<CheckCircle />}
-          onClick={handleSubmitBooking}
-          disabled={isSubmitting}
-          fullWidth={isMobile}
-          sx={{ bgcolor: '#2e7d32', '&:hover': { bgcolor: '#1b5e20' } }}
+        <Button 
+          variant="contained" 
+          startIcon={<VerifiedUser />} 
+          onClick={handleSubmitBooking} 
+          disabled={isSubmitting} 
+          fullWidth={isMobile} 
+          sx={{ 
+            bgcolor: '#2e7d32', 
+            '&:hover': { bgcolor: '#1b5e20' },
+            borderRadius: 2,
+            py: 1.5
+          }}
         >
-          {isSubmitting ? 'Submitting...' : 'Submit Booking'}
+          {isSubmitting ? <CircularProgress size={24} color="inherit" /> : 'Proceed to Payment'}
         </Button>
       </Box>
 
       {/* Raw Data Dialog */}
       <Dialog open={openRawDialog} onClose={() => setOpenRawDialog(false)} maxWidth="md" fullWidth>
-        <DialogTitle>
+        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           Raw Booking Data
-          <IconButton sx={{ position: 'absolute', right: 8, top: 8 }} onClick={() => setOpenRawDialog(false)}>
+          <IconButton onClick={() => setOpenRawDialog(false)}>
             <Close />
           </IconButton>
         </DialogTitle>
         <DialogContent>
-          <pre style={{ overflow: 'auto', fontSize: 12 }}>
-            {JSON.stringify(bookingConfirmation, null, 2)}
+          <pre style={{ overflow: 'auto', fontSize: 12, maxHeight: '60vh' }}>
+            {JSON.stringify({ pnrData, bookingData }, null, 2)}
           </pre>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenRawDialog(false)}>Close</Button>
-          <Button startIcon={<ContentCopy />} onClick={() => handleCopy(JSON.stringify(bookingConfirmation, null, 2), 'Data')}>
+          <Button 
+            startIcon={<ContentCopy />} 
+            onClick={() => handleCopy(JSON.stringify({ pnrData, bookingData }, null, 2), 'Raw Data')}
+          >
             Copy
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Snackbar */}
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={2000}
-        onClose={() => setSnackbarOpen(false)}
+      <Snackbar 
+        open={snackbarOpen} 
+        autoHideDuration={3000} 
+        onClose={() => setSnackbarOpen(false)} 
         message={snackbarMessage}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
     </Container>
   );

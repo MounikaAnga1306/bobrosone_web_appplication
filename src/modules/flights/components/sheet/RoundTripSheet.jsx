@@ -26,8 +26,6 @@ import {
 } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
-import { getFlightPricing, buildRoundTripPricingRequest } from '../../services/pricingService';
-
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
@@ -403,45 +401,8 @@ const RoundTripSheet = ({
   // Check if both legs have selected fares
   const isReadyToConfirm = selectedOutboundFare && selectedReturnFare;
 
-  // ============ DEBUG: LOG FARE STRUCTURE WHEN SELECTED ============
+  // Handle fare selection
   const handleFareSelect = (fare) => {
-    console.log('\n🔍 [handleFareSelect] Fare selected:');
-    console.log('  - leg:', activeTab);
-    console.log('  - fare.brand.name:', fare.brand?.name);
-    console.log('  - fare.fareBasis:', fare.fareBasis);
-    console.log('  - fare.bookingCode:', fare.bookingCode);
-    console.log('  - fare.hostToken:', fare.hostToken?.substring(0, 60) + '...');
-    console.log('  - fare.hostTokenRef:', fare.hostTokenRef);
-    console.log('  - fare.segments count:', fare.segments?.length);
-    console.log('  - fare.hostTokenMap size:', fare.hostTokenMap ? Object.keys(fare.hostTokenMap).length : 0);
-    console.log('  - fare.hostTokenRefMap size:', fare.hostTokenRefMap ? Object.keys(fare.hostTokenRefMap).length : 0);
-    console.log('  - fare.segmentHostTokens count:', fare.segmentHostTokens?.length);
-    
-    if (fare.segments && fare.segments.length > 0) {
-      console.log('  - Segment details:');
-      fare.segments.forEach((seg, idx) => {
-        console.log(`    Segment ${idx + 1}:`, {
-          segmentKey: seg.segmentKey,
-          hasHostToken: !!seg.hostToken,
-          hasHostTokenRef: !!seg.hostTokenRef,
-          hostTokenRef: seg.hostTokenRef,
-          bookingCode: seg.bookingCode
-        });
-      });
-    }
-    
-    if (fare.segmentHostTokens && fare.segmentHostTokens.length > 0) {
-      console.log('  - segmentHostTokens:');
-      fare.segmentHostTokens.forEach((token, idx) => {
-        console.log(`    ${idx + 1}:`, {
-          segmentKey: token.segmentKey,
-          hasHostToken: !!token.hostToken,
-          hasHostTokenRef: !!token.hostTokenRef,
-          hostTokenRef: token.hostTokenRef
-        });
-      });
-    }
-    
     if (activeTab === 'outbound') {
       setSelectedOutboundFare(fare);
     } else {
@@ -450,159 +411,37 @@ const RoundTripSheet = ({
     setPricingError(null);
   };
 
-  // ============ PRICING API INTEGRATION WITH DEBUG ============
-  const handleConfirm = async () => {
-    console.log('\n' + '='.repeat(70));
-    console.log('🔵 [handleConfirm] FUNCTION STARTED');
-    console.log('='.repeat(70));
-    
-    console.log('\n📊 [Step 0] Initial state check:');
-    console.log('  - isReadyToConfirm:', isReadyToConfirm);
-    console.log('  - selectedOutboundFare exists:', !!selectedOutboundFare);
-    console.log('  - selectedReturnFare exists:', !!selectedReturnFare);
-    console.log('  - outboundFlight exists:', !!outboundFlight);
-    console.log('  - returnFlight exists:', !!returnFlight);
-    console.log('  - passengerCounts:', passengerCounts);
-    
+  // ============ CONFIRM AND NAVIGATE - NO API CALL ============
+  const handleConfirm = () => {
     if (!isReadyToConfirm) {
-      console.log('\n❌ [Step 0] EXITING - isReadyToConfirm is false');
-      console.log('='.repeat(70) + '\n');
       return;
     }
     
-    console.log('\n✅ [Step 0] All checks passed - proceeding');
-    
-    // ============ CRITICAL DEBUG: LOG SELECTED FARE STRUCTURE ============
-    console.log('\n📦 [Step 1] Selected Fares Details with HOSTTOKEN:');
-    console.log('  - Outbound Fare:');
-    console.log('      brand:', selectedOutboundFare?.brand?.name);
-    console.log('      fareBasis:', selectedOutboundFare?.fareBasis);
-    console.log('      bookingCode:', selectedOutboundFare?.bookingCode);
-    console.log('      hostToken:', selectedOutboundFare?.hostToken?.substring(0, 50) + '...');
-    console.log('      hostTokenRef:', selectedOutboundFare?.hostTokenRef);
-    console.log('      hasSegments:', !!selectedOutboundFare?.segments);
-    console.log('      segmentsCount:', selectedOutboundFare?.segments?.length);
-    console.log('      hasHostTokenMap:', !!selectedOutboundFare?.hostTokenMap);
-    console.log('      hasHostTokenRefMap:', !!selectedOutboundFare?.hostTokenRefMap);
-    
-    if (selectedOutboundFare?.segments) {
-      console.log('      Outbound Segments:');
-      selectedOutboundFare.segments.forEach((seg, idx) => {
-        console.log(`        Segment ${idx + 1}:`, {
-          segmentKey: seg.segmentKey?.substring(0, 20) + '...',
-          hasHostToken: !!seg.hostToken,
-          hasHostTokenRef: !!seg.hostTokenRef,
-          hostTokenRef: seg.hostTokenRef
-        });
-      });
-    }
-    
-    console.log('  - Return Fare:');
-    console.log('      brand:', selectedReturnFare?.brand?.name);
-    console.log('      fareBasis:', selectedReturnFare?.fareBasis);
-    console.log('      bookingCode:', selectedReturnFare?.bookingCode);
-    console.log('      hostToken:', selectedReturnFare?.hostToken?.substring(0, 50) + '...');
-    console.log('      hostTokenRef:', selectedReturnFare?.hostTokenRef);
-    console.log('      hasSegments:', !!selectedReturnFare?.segments);
-    console.log('      segmentsCount:', selectedReturnFare?.segments?.length);
-    
-    if (selectedReturnFare?.segments) {
-      console.log('      Return Segments:');
-      selectedReturnFare.segments.forEach((seg, idx) => {
-        console.log(`        Segment ${idx + 1}:`, {
-          segmentKey: seg.segmentKey?.substring(0, 20) + '...',
-          hasHostToken: !!seg.hostToken,
-          hasHostTokenRef: !!seg.hostTokenRef,
-          hostTokenRef: seg.hostTokenRef
-        });
-      });
-    }
-    
     setIsConfirming(true);
-    setPricingError(null);
-    
-    const loadingToast = toast.loading('Getting fare details...');
     
     try {
-      console.log('\n🔨 [Step 4] Building round-trip pricing request...');
+      toast.success('Fares selected! Proceeding to booking...');
       
-      const pricingRequest = buildRoundTripPricingRequest(
-        outboundFlight,
-        selectedOutboundFare,
-        returnFlight,
-        selectedReturnFare,
-        passengerCounts
-      );
+      const navigatePath = '/flights/booking/review';
+      const navigationState = { 
+        selectedOutboundFare: selectedOutboundFare,
+        selectedReturnFare: selectedReturnFare,
+        outboundFlight: outboundFlight,
+        returnFlight: returnFlight,
+        passengerCounts: passengerCounts,
+        tripType: 'round-trip',
+        totalPrice: totalPrice
+      };
       
-      console.log('✅ [Step 4] Pricing request built successfully');
-      console.log('  - Request structure:', {
-        hasTraceId: !!pricingRequest.traceId,
-        segmentsCount: pricingRequest.segments?.length,
-        passengersCount: pricingRequest.passengers?.length,
-        bookingRequirementsCount: pricingRequest.bookingRequirements?.length
-      });
-      
-      // ============ CRITICAL: LOG BOOKING REQUIREMENTS ============
-      console.log('\n📋 [BOOKING REQUIREMENTS] Checking for hostTokenRef:');
-      pricingRequest.bookingRequirements.forEach((req, idx) => {
-        console.log(`  Req ${idx + 1}:`, {
-          segmentKey: req.segmentKey?.substring(0, 20) + '...',
-          hasHostToken: !!req.hostToken,
-          hasHostTokenRef: !!req.hostTokenRef,
-          hostTokenRef: req.hostTokenRef
-        });
-      });
-      
-      console.log('\n📡 [Step 5] Calling getFlightPricing API...');
-      const startTime = Date.now();
-      const result = await getFlightPricing(pricingRequest);
-      const endTime = Date.now();
-      console.log(`  - API call completed in ${endTime - startTime}ms`);
-      
-      console.log('\n📥 [Step 6] API Result received:');
-      console.log('  - result.success:', result.success);
-      console.log('  - result has data:', !!result.data);
-      console.log('  - result has error:', !!result.error);
-      
-      toast.dismiss(loadingToast);
-      
-      if (result.success) {
-        console.log('\n🎉 [Step 8] Pricing SUCCESS!');
-        toast.success('Fares confirmed! Proceed with booking.');
-        
-        const navigatePath = '/flights/booking/review';
-        const navigationState = { 
-          pricingResult: result.data,
-          selectedOutboundFare: selectedOutboundFare,
-          selectedReturnFare: selectedReturnFare,
-          outboundFlight: outboundFlight,
-          returnFlight: returnFlight,
-          passengerCounts: passengerCounts,
-          tripType: 'round-trip',
-          totalPrice: totalPrice
-        };
-        
-        navigate(navigatePath, { state: navigationState });
-        onClose();
-        
-      } else {
-        console.log('\n❌ [Step 8] Pricing FAILED');
-        console.log('  - Error:', result.error);
-        toast.error(result.userMessage || result.error || 'Failed to get pricing. Please try again.');
-        setPricingError(result.userMessage || result.error || 'Pricing failed');
-      }
+      navigate(navigatePath, { state: navigationState });
+      onClose();
       
     } catch (error) {
-      console.error('\n💥 [ERROR CATCH] Unexpected error in handleConfirm:');
-      console.error('  - Error message:', error.message);
-      toast.dismiss(loadingToast);
-      toast.error('An unexpected error occurred. Please try again.');
-      setPricingError(error.message || 'Network error');
-      
+      console.error('Navigation error:', error);
+      toast.error('An error occurred. Please try again.');
+      setPricingError(error.message || 'Navigation error');
     } finally {
       setIsConfirming(false);
-      console.log('\n🔚 [handleConfirm] Completed');
-      console.log('='.repeat(70) + '\n');
     }
   };
   
