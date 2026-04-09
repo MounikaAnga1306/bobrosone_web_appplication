@@ -16,13 +16,12 @@ import {
   FaTimesCircle,
   FaShieldAlt,
   FaArrowRight,
-  FaEye,
   FaCalendarCheck
 } from 'react-icons/fa';
 import { buildOneWayPricingRequest, getFlightPricing } from '../../services/pricingService';
 import toast from 'react-hot-toast';
 
-// Helper functions
+// Helper functions (keep these exactly as they are)
 const formatTime = (isoString) => {
   if (!isoString) return '--:--';
   try {
@@ -96,21 +95,62 @@ const calculateTotalTaxes = (fare) => {
 const OneWayFlightCard = ({ 
   flight, 
   onViewDetails,
-  passengerCounts = { ADT: 1, CNN: 0, INF: 0 } 
+  passengerCounts = { ADT: 1, CNN: 0, INF: 0 },
+  airlineData, // Received from parent
+  airlinesLoading // Received from parent
 }) => {
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState('flight');
   const [loading, setLoading] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
   
   const bestFare = useMemo(() => {
     if (!flight.fares || flight.fares.length === 0) return null;
     const sortedFares = [...flight.fares].sort((a, b) => a.totalPrice - b.totalPrice);
     return sortedFares[0];
   }, [flight.fares]);
-  
-  const airlineLogo = `https://logo.clearbit.com/${flight.airlineCode?.toLowerCase()}.com` 
-    || `/airlines/${flight.airlineCode}.png`;
+
+  // Use airlineData directly from props
+  const airlineLogo = useMemo(() => {
+    if (airlineData?.logo_url) return airlineData.logo_url;
+    
+    // Fallback to local or clearbit logo
+    const localLogo = `/airlines/${flight.airlineCode?.toLowerCase()}.png`;
+    const clearbitLogo = `https://logo.clearbit.com/${flight.airlineCode?.toLowerCase()}.com`;
+    
+    return localLogo || clearbitLogo;
+  }, [airlineData, flight.airlineCode]);
+
+  const airlineName = airlineData?.name || flight.airline || flight.airlineCode;
+
+  // Show loading skeleton while airline data is being fetched
+  if (airlinesLoading && !airlineData) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-100 mb-4 overflow-hidden animate-pulse">
+        <div className="p-5">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-gray-200 rounded-full"></div>
+            <div className="flex-1">
+              <div className="h-5 bg-gray-200 rounded w-32 mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded w-20"></div>
+            </div>
+            <div className="flex-1 flex justify-center">
+              <div className="h-4 bg-gray-200 rounded w-40"></div>
+            </div>
+            <div className="text-right">
+              <div className="h-6 bg-gray-200 rounded w-24 mb-2"></div>
+              <div className="h-3 bg-gray-200 rounded w-16"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!bestFare) {
+    return null;
+  }
 
   const handleViewFareRules = (e) => {
     e.stopPropagation();
@@ -170,31 +210,36 @@ const OneWayFlightCard = ({
     }
   };
 
-  if (!bestFare) {
-    return null;
-  }
-
   return (
     <div className="bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-lg transition-all duration-300 mb-4 overflow-hidden">
       {/* Main Card Content */}
       <div className="p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           
-          {/* Airline Info */}
+          {/* Airline Info with improved image loading */}
           <div className="flex items-center gap-3 min-w-[180px]">
-            <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center overflow-hidden">
+            <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center overflow-hidden relative">
               <img 
                 src={airlineLogo}
-                alt={flight.airline}
-                className="w-8 h-8 object-contain"
+                alt={airlineName}
+                className={`w-8 h-8 object-contain transition-opacity duration-300 ${
+                  imageLoaded ? 'opacity-100' : 'opacity-0'
+                }`}
+                onLoad={() => setImageLoaded(true)}
                 onError={(e) => {
+                  setImageLoaded(true);
                   e.target.onerror = null;
                   e.target.src = `https://ui-avatars.com/api/?name=${flight.airlineCode}&background=666&color=fff&size=32`;
                 }}
               />
+              {!imageLoaded && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-6 h-6 border-2 border-gray-200 border-t-gray-400 rounded-full animate-spin"></div>
+                </div>
+              )}
             </div>
             <div>
-              <div className="font-semibold text-gray-800">{flight.airline}</div>
+              <div className="font-semibold text-gray-800">{airlineName}</div>
               <div className="text-xs text-gray-400">{flight.flightNumber}</div>
             </div>
           </div>
@@ -245,13 +290,11 @@ const OneWayFlightCard = ({
               <div className="text-xs text-gray-400">per adult</div>
             </div>
             
-            {/* Single Button - Flight Details */}
             <button
               onClick={handleFlightDetails}
-              className="px-4 py-2 rounded-lg bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-gray-800 transition-all duration-200 flex items-center gap-2 text-sm font-medium border border-gray-200"
+              className="px-4 py-2 rounded-lg bg-[#FD561E] hover:bg-[#e44a18] text-white transition-all duration-200 text-sm font-medium"
             >
-              <FaEye className="text-sm" />
-              Details
+              View Details
             </button>
           </div>
         </div>
@@ -450,25 +493,6 @@ const OneWayFlightCard = ({
               </>
             )}
           </div>
-
-          {/* Book Now Button */}
-          <button
-            onClick={handleBookNow}
-            disabled={loading}
-            className="w-full mt-5 bg-gray-800 hover:bg-gray-900 text-white font-medium py-3 rounded-lg transition-all duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                Processing...
-              </>
-            ) : (
-              <>
-                <FaArrowRight size={14} />
-                Book Now at ₹{bestFare.totalPrice?.toLocaleString()}
-              </>
-            )}
-          </button>
         </div>
       )}
 
