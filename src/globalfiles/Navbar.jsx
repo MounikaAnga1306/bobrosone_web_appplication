@@ -241,22 +241,22 @@ const Navbar = () => {
                     <p className="font-semibold text-gray-800">Hey Traveller</p>
                     <p className="text-sm text-gray-500">Get exclusive deals & Manage your trips</p>
                   </div>
-                  <button onClick={() => { setOpenDropdown(false); setAuthPage("signin"); setOpenAuthModal(true); }} className="mx-4 my-3 w-[calc(100%-32px)] cursor-pointer bg-[#fd561e] text-white font-semibold py-2.5 rounded-lg">Login / Sign Up</button>
-                  <button onClick={() => { setOpenDropdown(false); setShowGuestBookings(true); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer">My Bookings</button>
-                  <button onClick={() => { setOpenDropdown(false); setPrintTin(""); setShowPrintTicket(true); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer">Print Ticket</button>
-                  <button onClick={handleOpenCancel} className="w-full text-left px-4 py-3 hover:bg-gray-50 cursor-pointer">Cancellation</button>
+                  <button onClick={() => { setOpenDropdown(false); setAuthPage("signin"); setOpenAuthModal(true); }} className="mx-4 my-3 w-[calc(100%-32px)] cursor-pointer bg-[#fd561e] text-white font-semibold py-2.5 rounded-lg ">Login / Sign Up</button>
+                  <button onClick={() => { setOpenDropdown(false); setShowGuestBookings(true); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Bookings</button>
+                  <button onClick={() => { setOpenDropdown(false); setPrintTin(""); setShowPrintTicket(true); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 hover:text-blue-500 cursor-pointer">Print Ticket</button>
+                  <button onClick={handleOpenCancel} className="w-full text-left px-4 py-3 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Cancellation</button>
                 </div>
               )}
 
               {/* LOGGED IN DROPDOWN */}
               {isLoggedIn && openDropdown && (
                 <div className="absolute right-0 mt-3 w-56 bg-white rounded-xl shadow-lg border border-gray-100 text-gray-700 overflow-hidden z-50">
-                  <button onClick={() => { setOpenDropdown(false); navigate("/my-bookings"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50">My Booking</button>
-                  <button onClick={() => { setOpenDropdown(false); navigate("/my-account"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50">My Account</button>
-                  <button onClick={handleOpenCancel} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50">Cancellation</button>
-                  <button onClick={() => { setOpenDropdown(false); setPrintTin(""); setShowPrintTicket(true); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50">Print Ticket</button>
-                  <button onClick={() => { setOpenDropdown(false); navigate("/my-profile"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50">My Profile</button>
-                  <button onClick={handleLogout} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-red-500">Logout</button>
+                  <button onClick={() => { setOpenDropdown(false); navigate("/my-bookings"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 hover:text-blue-500 cursor-pointer hover:text-blue-500">My Booking</button>
+                  <button onClick={() => { setOpenDropdown(false); navigate("/my-account"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Account</button>
+                  <button onClick={handleOpenCancel} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Cancellation</button>
+                  <button onClick={() => { setOpenDropdown(false); setPrintTin(""); setShowPrintTicket(true); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Print Ticket</button>
+                  <button onClick={() => { setOpenDropdown(false); navigate("/my-profile"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Profile</button>
+                  <button onClick={handleLogout} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-red-500 cursor-pointer ">Logout</button>
                 </div>
               )}
             </div>
