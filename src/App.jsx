@@ -61,7 +61,8 @@ import CancellationPolicy from "./modules/bus/pages/CancellationPolicy";
 import DisclaimerPolicy from "./modules/bus/pages/DisclaimerPolicy";
 
 import { GoogleOAuthProvider } from "@react-oauth/google";
-
+import BillHomeScreen from "./modules/Bill Payments/pages/BillHomeScreen";
+import BillDetails from './modules/Bill Payments/pages/BillDetails'; 
 // Wrapper (kept as-is)
 const MainContent = ({ children }) => {
   const location = useLocation();
@@ -154,6 +155,9 @@ function App() {
                     <Route path="/verify-otp" element={<VerifyOTP />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
+
+                    <Route path="/BillHomePage" element={<BillHomeScreen/>}/>
+                    <Route path="/bill-details" element={<BillDetails />} />
 
                     <Route path="/my-bookings" element={<MyBookings />} />
                     <Route path="/guest-bookings" element={<GuestBookingsPage />} />

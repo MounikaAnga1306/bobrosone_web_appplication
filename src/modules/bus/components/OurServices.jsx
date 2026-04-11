@@ -193,7 +193,7 @@ export default function OurServices() {
               }}
             ></div>
 
-            <div className="relative px-8 py-12 text-center">
+            {/* <div className="relative px-8 py-12 text-center">
               <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
                 Ready to Get Started?
               </h2>
@@ -205,7 +205,7 @@ export default function OurServices() {
                 Contact Our Team
                 <ChevronRight className="w-4 h-4" />
               </button>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
