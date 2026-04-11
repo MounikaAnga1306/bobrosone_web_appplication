@@ -155,6 +155,7 @@ const MyAccount = () => {
         onOpenCancel={handleOpenCancel}
         onOpenPrintTicket={handleOpenPrintTicket}
         onOpenForgotPassword={handleOpenForgotPassword}
+        modalOpen={showPrintTicket || showCancel || openAuthModal || showForgotPassword || showResetPasswordModal}
       >
         <div style={{ padding: isMobile ? "16px" : "24px 32px" }}>
 

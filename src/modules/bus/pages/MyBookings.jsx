@@ -70,7 +70,7 @@ const MyBookings = () => {
       const res = await axios.post("/myBookings", {
         uid: String(uid), mobile: String(mobile),
       });
-      if (res.data?.success) setBookings(res.data.bookings || []);
+      if (res.data?.success) setBookings((res.data.bookings || []).reverse());
       else setError("Failed to load bookings.");
     } catch {
       setError("Something went wrong. Please try again.");
@@ -116,6 +116,7 @@ const MyBookings = () => {
         onOpenCancel={() => setShowCancel(true)}
         onOpenPrintTicket={() => setShowPrint(true)}
         onOpenForgotPassword={handleOpenForgotPassword}
+        modalOpen={showPrint || showCancel || openAuthModal || showForgotPassword || showResetPasswordModal}
       >
         {/* ── page content ── */}
         <div style={{ maxWidth: 900, margin: "0 auto", padding: "32px 20px 48px" }}>
