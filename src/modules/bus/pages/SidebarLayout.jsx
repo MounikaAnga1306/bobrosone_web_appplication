@@ -7,9 +7,10 @@ import {
   Bus, Plane, Building2, Palmtree, Car, X
 } from "lucide-react";
 
-const SidebarLayout = ({ children, isLoggedIn, user, onLogout, onOpenAuthModal, onOpenCancel, onOpenPrintTicket, onOpenForgotPassword }) => {
+const SidebarLayout = ({ children, isLoggedIn, user, onLogout, onOpenAuthModal, onOpenCancel, onOpenPrintTicket, onOpenForgotPassword,modalOpen = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [navbarModalOpen, setNavbarModalOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [expandedSections, setExpandedSections] = useState({
@@ -51,6 +52,7 @@ const SidebarLayout = ({ children, isLoggedIn, user, onLogout, onOpenAuthModal, 
         }
       }
     };
+    
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
@@ -240,7 +242,7 @@ const SidebarLayout = ({ children, isLoggedIn, user, onLogout, onOpenAuthModal, 
         </button>
       )}
 
-      <div style={{ display: "flex", minHeight: "100vh", background: "#f5f7fa", paddingTop: "80px" }}>
+     <div style={{ display: "flex", background: "#f5f7fa", paddingTop: "80px" }}>
 
         {/* Sidebar */}
         <div
@@ -250,12 +252,12 @@ const SidebarLayout = ({ children, isLoggedIn, user, onLogout, onOpenAuthModal, 
             background: "white",
             borderRight: "1px solid #e5e7eb",
             position: "fixed",
-            top: "80px",
+            top: isMobile ? 0 : "80px",
             left: 0,
             bottom: 0,
             display: "flex",
             flexDirection: "column",
-            zIndex: 999,
+            zIndex: modalOpen ? 1 : 999,
             boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
             transition: "transform 0.3s ease-in-out",
             overflowY: "auto"
@@ -486,7 +488,7 @@ const SidebarLayout = ({ children, isLoggedIn, user, onLogout, onOpenAuthModal, 
           className="main-content"
           style={{
             flex: 1,
-            minHeight: "calc(100vh - 80px)",
+            minHeight:"auto",
             width: "100%",
             transition: "margin-left 0.3s ease-in-out"
           }}
