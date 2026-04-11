@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
-import { Edit2, Save, Mail, Phone, Gift } from "lucide-react";
+import { Mail, Phone, Gift } from "lucide-react";
 import SidebarLayout from "../pages/SidebarLayout";
 import CancellationCard from "./CancellationCard";
 import PrintTicketModal from "./PrintTicketModal";
@@ -16,8 +16,6 @@ const MyProfile = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [editing, setEditing] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [rewardBalance, setRewardBalance] = useState("0.00");
   const [isMobile, setIsMobile] = useState(false);
 
@@ -51,15 +49,9 @@ const MyProfile = () => {
     mobile: u.umob || u.mobile || "",
     gender: u.ugender || "",
     dob: u.udob || "",
-    nationality: u.unationality || "",
-    maritalStatus: u.umarital || "",
-    city: u.ucity || "",
-    state: u.ustate || "",
   });
 
   const [profile, setProfile] = useState(() => buildProfile(getUser()));
-  const [original, setOriginal] = useState(() => buildProfile(getUser()));
-  const isDirty = JSON.stringify(profile) !== JSON.stringify(original);
 
   useEffect(() => {
     const checkLoginStatus = () => {
@@ -75,9 +67,7 @@ const MyProfile = () => {
   useEffect(() => {
     if (isLoggedIn) {
       const u = getUser();
-      const p = buildProfile(u);
-      setProfile(p);
-      setOriginal(p);
+      setProfile(buildProfile(u));
     }
   }, [isLoggedIn, location.key]);
 
@@ -92,28 +82,6 @@ const MyProfile = () => {
       }
     }).catch(() => {});
   }, [location.key]);
-
-  const handleChange = (field, value) => setProfile(p => ({ ...p, [field]: value }));
-
-  const handleSave = () => {
-    const currentStored = JSON.parse(localStorage.getItem("user") || "{}");
-    const currentBase = currentStored?.user || currentStored || {};
-    const updatedBase = {
-      ...currentBase,
-      uname: `${profile.firstName} ${profile.lastName}`.trim(),
-      umail: profile.email, email: profile.email,
-      umob: profile.mobile, ugender: profile.gender,
-      udob: profile.dob, unationality: profile.nationality,
-      umarital: profile.maritalStatus, ucity: profile.city, ustate: profile.state,
-    };
-    const updated = currentStored?.user ? { ...currentStored, user: updatedBase } : updatedBase;
-    localStorage.setItem("user", JSON.stringify(updated));
-    setOriginal({ ...profile });
-    setEditing(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
-    window.dispatchEvent(new Event("storage"));
-  };
 
   const handleLogout = () => {
     localStorage.removeItem("user");
@@ -132,18 +100,27 @@ const MyProfile = () => {
   const handleOpenResetPassword = (data) => { setResetData(data); setShowForgotPassword(false); setShowResetPasswordModal(true); };
   const handleCloseResetPassword = () => setShowResetPasswordModal(false);
 
-  const inputStyle = (disabled) => ({
+  const fieldStyle = {
     width: "100%",
     padding: "10px 12px",
-    border: `1.5px solid ${disabled ? "#e5e7eb" : "#d1d5db"}`,
+    border: "1.5px solid #e5e7eb",
     borderRadius: "10px",
     fontSize: "14px",
     outline: "none",
-    background: disabled ? "#f9f9f9" : "white",
+    background: "#f9f9f9",
     color: "#1a1a2e",
-    transition: "all 0.2s",
-    boxSizing: "border-box"
-  });
+    boxSizing: "border-box",
+  };
+
+  const labelStyle = {
+    fontSize: "11px",
+    color: "#888",
+    display: "block",
+    marginBottom: "6px",
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+  };
 
   if (!isLoggedIn) return null;
 
@@ -157,6 +134,7 @@ const MyProfile = () => {
         onOpenCancel={handleOpenCancel}
         onOpenPrintTicket={handleOpenPrintTicket}
         onOpenForgotPassword={handleOpenForgotPassword}
+        modalOpen={showPrintTicket || showCancel || openAuthModal || showForgotPassword || showResetPasswordModal}
       >
         <div style={{ padding: isMobile ? "16px" : "24px 32px" }}>
 
@@ -170,14 +148,14 @@ const MyProfile = () => {
             flexDirection: isMobile ? "column" : "row",
             justifyContent: "space-between",
             alignItems: isMobile ? "flex-start" : "center",
-            gap: "16px"
+            gap: "16px",
           }}>
             <div>
               <h1 style={{ fontSize: isMobile ? "20px" : "26px", fontWeight: "700", color: "white", marginBottom: "6px" }}>
                 My Profile
               </h1>
               <p style={{ color: "rgba(255,255,255,0.8)", fontSize: "13px" }}>
-                Manage your personal information
+                Your personal information
               </p>
             </div>
 
@@ -189,7 +167,7 @@ const MyProfile = () => {
               padding: isMobile ? "10px 16px" : "12px 24px",
               border: "1px solid rgba(255,255,255,0.2)",
               alignSelf: isMobile ? "stretch" : "auto",
-              textAlign: isMobile ? "left" : "center"
+              textAlign: isMobile ? "left" : "center",
             }}>
               <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
                 <Gift size={12} /> Reward Points
@@ -200,166 +178,65 @@ const MyProfile = () => {
             </div>
           </div>
 
-          {saved && (
-            <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "12px", padding: "12px 18px", marginBottom: "16px", color: "#16a34a", fontSize: "14px", display: "flex", alignItems: "center", gap: "8px" }}>
-              ✅ Profile saved successfully!
-            </div>
-          )}
-
           {/* Profile Card */}
           <div style={{ background: "white", borderRadius: "16px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)", border: "1px solid #f0f0f0", overflow: "hidden" }}>
 
-            {/* Card Header */}
+            {/* Avatar + name row */}
             <div style={{
               padding: isMobile ? "16px" : "24px 28px",
               borderBottom: "1px solid #f0f0f0",
-              background: "#fafafa"
+              background: "#fafafa",
+              display: "flex",
+              alignItems: "center",
+              gap: "16px",
             }}>
-              {/* Avatar + name row */}
-              <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "16px" }}>
-                {/* Avatar — fixed size so it never crops or stretches */}
-                <div style={{
-                  width: "60px",
-                  height: "60px",
-                  minWidth: "60px",
-                  borderRadius: "50%",
-                  background: "linear-gradient(135deg, #fd561e, #ff8c42)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "24px",
-                  fontWeight: "bold",
-                  color: "white",
-                  flexShrink: 0
-                }}>
-                  {profile.firstName?.[0]?.toUpperCase() || "U"}
+              <div style={{
+                width: "60px", height: "60px", minWidth: "60px",
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #fd561e, #ff8c42)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "24px", fontWeight: "bold", color: "white", flexShrink: 0,
+              }}>
+                {profile.firstName?.[0]?.toUpperCase() || "U"}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: isMobile ? "17px" : "22px", fontWeight: "700", color: "#1a1a2e", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  {profile.firstName} {profile.lastName}
                 </div>
-
-                {/* Name + contact */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: isMobile ? "17px" : "22px", fontWeight: "700", color: "#1a1a2e", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {profile.firstName} {profile.lastName}
-                  </div>
-                  <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? "2px" : "16px", marginTop: "4px" }}>
-                    {profile.mobile && (
-                      <span style={{ fontSize: "12px", color: "#666", display: "flex", alignItems: "center", gap: "4px" }}>
-                        <Phone size={11} /> {profile.mobile}
-                      </span>
-                    )}
-                    {profile.email && (
-                      <span style={{ fontSize: "12px", color: "#666", display: "flex", alignItems: "center", gap: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                        <Mail size={11} /> {profile.email}
-                      </span>
-                    )}
-                  </div>
+                <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: isMobile ? "2px" : "16px", marginTop: "4px" }}>
+                  {profile.mobile && (
+                    <span style={{ fontSize: "12px", color: "#666", display: "flex", alignItems: "center", gap: "4px" }}>
+                      <Phone size={11} /> {profile.mobile}
+                    </span>
+                  )}
+                  {profile.email && (
+                    <span style={{ fontSize: "12px", color: "#666", display: "flex", alignItems: "center", gap: "4px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <Mail size={11} /> {profile.email}
+                    </span>
+                  )}
                 </div>
               </div>
-
-              {/* Edit / Save buttons */}
-              {!editing ? (
-                <button
-                  onClick={() => setEditing(true)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: "8px",
-                    padding: "10px 20px", background: "#fd561e", color: "white",
-                    border: "none", borderRadius: "10px", fontSize: "13px",
-                    fontWeight: "600", cursor: "pointer",
-                    width: isMobile ? "100%" : "auto",
-                    justifyContent: isMobile ? "center" : "flex-start"
-                  }}
-                >
-                  <Edit2 size={15} /> Edit Profile
-                </button>
-              ) : (
-                <div style={{ display: "flex", gap: "10px", flexDirection: isMobile ? "column" : "row" }}>
-                  <button
-                    onClick={() => { setProfile({ ...original }); setEditing(false); }}
-                    style={{
-                      flex: isMobile ? 1 : "none",
-                      padding: "10px 20px", border: "1.5px solid #e5e7eb",
-                      borderRadius: "10px", background: "white", fontSize: "13px",
-                      fontWeight: "600", color: "#666", cursor: "pointer"
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSave}
-                    disabled={!isDirty}
-                    style={{
-                      flex: isMobile ? 1 : "none",
-                      padding: "10px 24px", border: "none", borderRadius: "10px",
-                      background: isDirty ? "linear-gradient(135deg, #fd561e, #ff8c42)" : "#e5e7eb",
-                      fontSize: "13px", fontWeight: "700",
-                      color: isDirty ? "white" : "#aaa",
-                      cursor: isDirty ? "pointer" : "not-allowed",
-                      display: "flex", alignItems: "center", gap: "6px",
-                      justifyContent: "center"
-                    }}
-                  >
-                    <Save size={15} /> Save Changes
-                  </button>
-                </div>
-              )}
             </div>
 
-            {/* Profile Fields */}
+            {/* Fields */}
             <div style={{ padding: isMobile ? "16px" : "28px" }}>
               <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#1a1a2e", marginBottom: "16px", paddingBottom: "10px", borderBottom: "2px solid #f0f0f0" }}>
                 General Information
               </h3>
 
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: isMobile ? "14px" : "24px", marginBottom: "32px" }}>
-                {[
-                  { label: "First & Middle Name", field: "firstName", placeholder: "First Name" },
-                  { label: "Last Name", field: "lastName", placeholder: "Last Name" },
-                ].map(({ label, field, placeholder }) => (
-                  <div key={field}>
-                    <label style={{ fontSize: "11px", color: "#888", display: "block", marginBottom: "6px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>{label}</label>
-                    <input style={inputStyle(!editing)} value={profile[field]} onChange={e => handleChange(field, e.target.value)} disabled={!editing} placeholder={placeholder} />
-                  </div>
-                ))}
 
                 <div>
-                  <label style={{ fontSize: "11px", color: "#888", display: "block", marginBottom: "6px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>Gender</label>
-                  <select style={inputStyle(!editing)} value={profile.gender} onChange={e => handleChange("gender", e.target.value)} disabled={!editing}>
-                    <option value="">Select Gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
+                  <label style={labelStyle}>First Name</label>
+                  <input style={fieldStyle} value={profile.firstName} readOnly />
                 </div>
 
                 <div>
-                  <label style={{ fontSize: "11px", color: "#888", display: "block", marginBottom: "6px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>Date of Birth</label>
-                  <input type={editing ? "date" : "text"} style={inputStyle(!editing)} value={profile.dob} onChange={e => handleChange("dob", e.target.value)} disabled={!editing} placeholder="DD/MM/YYYY" />
+                  <label style={labelStyle}>Last Name</label>
+                  <input style={fieldStyle} value={profile.lastName} readOnly />
                 </div>
 
-                <div>
-                  <label style={{ fontSize: "11px", color: "#888", display: "block", marginBottom: "6px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>Nationality</label>
-                  <input style={inputStyle(!editing)} value={profile.nationality} onChange={e => handleChange("nationality", e.target.value)} disabled={!editing} placeholder="Indian" />
-                </div>
 
-                <div>
-                  <label style={{ fontSize: "11px", color: "#888", display: "block", marginBottom: "6px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>Marital Status</label>
-                  <select style={inputStyle(!editing)} value={profile.maritalStatus} onChange={e => handleChange("maritalStatus", e.target.value)} disabled={!editing}>
-                    <option value="">Select Status</option>
-                    <option value="Single">Single</option>
-                    <option value="Married">Married</option>
-                    <option value="Divorced">Divorced</option>
-                    <option value="Widowed">Widowed</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ fontSize: "11px", color: "#888", display: "block", marginBottom: "6px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>City of Residence</label>
-                  <input style={inputStyle(!editing)} value={profile.city} onChange={e => handleChange("city", e.target.value)} disabled={!editing} placeholder="City" />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: "11px", color: "#888", display: "block", marginBottom: "6px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>State</label>
-                  <input style={inputStyle(!editing)} value={profile.state} onChange={e => handleChange("state", e.target.value)} disabled={!editing} placeholder="State" />
-                </div>
               </div>
 
               <h3 style={{ fontSize: "15px", fontWeight: "700", color: "#1a1a2e", marginBottom: "16px", paddingBottom: "10px", borderBottom: "2px solid #f0f0f0" }}>
@@ -367,18 +244,20 @@ const MyProfile = () => {
               </h3>
 
               <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)", gap: isMobile ? "14px" : "24px" }}>
+
                 <div>
-                  <label style={{ fontSize: "11px", color: "#888", display: "block", marginBottom: "6px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>Mobile Number</label>
+                  <label style={labelStyle}>Mobile Number</label>
                   <div style={{ display: "flex", border: "1.5px solid #e5e7eb", borderRadius: "10px", overflow: "hidden", background: "#f9f9f9" }}>
                     <span style={{ padding: "10px 14px", background: "#f0f0f0", fontSize: "14px", color: "#555", borderRight: "1px solid #e5e7eb", fontWeight: "500", flexShrink: 0 }}>+91</span>
-                    <input style={{ flex: 1, padding: "10px 14px", fontSize: "14px", outline: "none", border: "none", background: "#f9f9f9", minWidth: 0 }} value={profile.mobile} disabled />
+                    <input style={{ flex: 1, padding: "10px 14px", fontSize: "14px", outline: "none", border: "none", background: "#f9f9f9", minWidth: 0 }} value={profile.mobile} readOnly />
                   </div>
-                  <p style={{ fontSize: "10px", color: "#aaa", marginTop: "6px" }}>Mobile number cannot be changed</p>
                 </div>
+
                 <div>
-                  <label style={{ fontSize: "11px", color: "#888", display: "block", marginBottom: "6px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>Email Address</label>
-                  <input style={inputStyle(!editing)} value={profile.email} onChange={e => handleChange("email", e.target.value)} disabled={!editing} placeholder="Enter email address" />
+                  <label style={labelStyle}>Email Address</label>
+                  <input style={fieldStyle} value={profile.email} readOnly />
                 </div>
+
               </div>
             </div>
           </div>
