@@ -7,49 +7,49 @@ import AppDownload from "../../bus/components/AppDownload";
 import PopularFlightRoutes from "../components/PopularFlightRoutes";
 import Quick_Links from "../../bus/components/Quick_Links";
 import FlightFAQ from "../components/FlightFAQ";
-import Advertisement from "../../bus/components/Advertisement";
+import FlightAdvertisement from "../../flights/components/sheet/FlightAdvertisement";
 
 const FlightSearchScreen = () => {
   return (
-    <div className="min-h-screen flex flex-col">
-      <main className="flex-grow">
+    <div className="min-h-screen flex flex-col overflow-x-hidden w-full max-w-full">
+      <main className="flex-grow w-full max-w-full overflow-x-hidden">
         {/* Flight Hero Section - FULL WIDTH */}
         <FlightHeroSection />
 
-        {/* Content Sections with consistent spacing */}
-        <div className="mt-16 md:mt-20 lg:mt-24">
-          {/* Advertisement */}
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <Advertisement />
-          </div>
+        {/* Advertisement - Added spacing from hero section */}
+        <div className="container mx-auto px-3 sm:px-4 md:px-5 lg:px-6 xl:px-8 mt-4 sm:mt-6 md:mt-24 lg:mt-24">
+          <FlightAdvertisement />
+        </div>
 
+        {/* Content Sections with consistent spacing */}
+        <div className="mt-8 sm:mt-12 md:mt-16 lg:mt-20 xl:mt-24">
           {/* Services */}
-          <div className="mt-16">
+          <div className="mt-8 sm:mt-10 md:mt-12 lg:mt-16">
             <Services />
           </div>
 
           {/* App Download */}
-          <div className="mt-16">
+          <div className="mt-8 sm:mt-10 md:mt-12 lg:mt-16">
             <AppDownload />
           </div>
 
           {/* Popular Flight Routes */}
-          <div className="mt-16">
+          <div className="mt-8 sm:mt-10 md:mt-12 lg:mt-16">
             <PopularFlightRoutes />
           </div>
 
           {/* Why Bobros */}
-          <div className="mt-16">
+          <div className="mt-8 sm:mt-10 md:mt-12 lg:mt-16">
             <WhyBobros />
           </div>
 
           {/* Quick Links */}
-          <div className="mt-16">
+          <div className="mt-8 sm:mt-10 md:mt-12 lg:mt-16">
             <Quick_Links />
           </div>
 
           {/* Flight FAQ */}
-          <div className="mt-16">
+          <div className="mt-8 sm:mt-10 md:mt-12 lg:mt-16">
             <FlightFAQ />
           </div>
         </div>
