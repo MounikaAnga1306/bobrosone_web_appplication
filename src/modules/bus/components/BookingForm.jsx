@@ -262,7 +262,7 @@ const BookingForm = () => {
                   <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${fromError ? "text-red-400" : "text-gray-400"}`} />
                   <input
                     type="text"
-                    placeholder="Hyderabad"
+                    placeholder="From"
                     className="w-full text-sm font-semibold outline-none bg-transparent py-0.5"
                     value={fromQuery}
                     onChange={(e) => {
@@ -300,7 +300,7 @@ const BookingForm = () => {
                   <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${toError || sameCityError ? "text-red-400" : "text-gray-400"}`} />
                   <input
                     type="text"
-                    placeholder="Mumbai"
+                    placeholder="To"
                     className="w-full text-sm font-semibold outline-none bg-transparent py-0.5"
                     value={toQuery}
                     onChange={(e) => {
@@ -403,7 +403,7 @@ const BookingForm = () => {
                 <p className="text-[11px] sm:text-xs text-gray-500 uppercase tracking-wide mb-1 transition-colors duration-300 group-hover:text-[#FD561E]">Depart From</p>
                 <div className={`flex items-center gap-2 pb-1.5 border-b transition-colors duration-300 ${fromError ? "border-red-400" : "border-gray-200 group-hover:border-[#FD561E]"}`}>
                   <MapPin className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors duration-300 flex-shrink-0 ${fromError ? "text-red-400" : "text-gray-400 group-hover:text-[#FD561E]"}`} />
-                  <input type="text" placeholder="Hyderabad"
+                  <input type="text" placeholder="From"
                     className="w-full text-sm sm:text-base md:text-lg font-semibold outline-none bg-transparent py-1"
                     value={fromQuery}
                     onChange={(e) => { const val = e.target.value; setFromQuery(val); setFromSelected(false); setFromCity(null); setFromError(""); setSameCityError(""); searchCities(val); }} />
@@ -431,7 +431,7 @@ const BookingForm = () => {
                 <p className="text-[11px] sm:text-xs text-gray-500 uppercase tracking-wide mb-1 transition-colors duration-300 group-hover:text-[#FD561E]">Going To</p>
                 <div className={`flex items-center gap-2 pb-1.5 border-b transition-colors duration-300 ${toError || sameCityError ? "border-red-400" : "border-gray-200 group-hover:border-[#FD561E]"}`}>
                   <MapPin className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors duration-300 flex-shrink-0 ${toError || sameCityError ? "text-red-400" : "text-gray-400 group-hover:text-[#FD561E]"}`} />
-                  <input type="text" placeholder="Mumbai"
+                  <input type="text" placeholder="To"
                     className="w-full text-sm sm:text-base md:text-lg font-semibold outline-none bg-transparent py-1"
                     value={toQuery}
                     onChange={(e) => { const val = e.target.value; setToQuery(val); setToSelected(false); setToCity(null); setToError(""); setSameCityError(""); searchToCities(val); }} />
