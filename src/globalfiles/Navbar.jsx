@@ -27,6 +27,7 @@ const Navbar = () => {
   const [printTin, setPrintTin] = useState("");
   const [showFlightPrintTicket, setShowFlightPrintTicket] = useState(false);
   const [mobileDropdownOpen, setMobileDropdownOpen] = useState(false);
+  
 
   const navigate = useNavigate();
   const location = useLocation();

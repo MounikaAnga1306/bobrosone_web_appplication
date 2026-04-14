@@ -214,10 +214,11 @@ const OneWayFlightCard = ({
     <div className="bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-lg transition-all duration-300 mb-4 overflow-hidden">
       {/* Main Card Content */}
       <div className="p-5">
+        {/* Responsive layout: On mobile, airline and price are on row 1, timeline below */}
         <div className="flex flex-wrap items-center justify-between gap-4">
           
-          {/* Airline Info with improved image loading */}
-          <div className="flex items-center gap-3 min-w-[180px]">
+          {/* Airline Info - order 1 on mobile */}
+          <div className="flex items-center gap-3 min-w-[180px] order-1">
             <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center overflow-hidden relative">
               <img 
                 src={airlineLogo}
@@ -244,8 +245,8 @@ const OneWayFlightCard = ({
             </div>
           </div>
 
-          {/* Flight Timeline */}
-          <div className="flex-1 flex items-center justify-center gap-6 md:gap-8">
+          {/* Flight Timeline - order 2 on mobile, takes full width */}
+          <div className="flex-1 flex items-center justify-center gap-6 md:gap-8 order-2 w-full md:w-auto">
             {/* Departure */}
             <div className="text-center">
               <div className="text-xl font-semibold text-gray-800">
@@ -281,8 +282,8 @@ const OneWayFlightCard = ({
             </div>
           </div>
 
-          {/* Price and Action */}
-          <div className="flex items-center gap-4">
+          {/* Price and Action - order 3 on mobile, pushed to the right */}
+          <div className="flex items-center gap-4 order-3 ml-auto md:ml-0">
             <div className="text-right">
               <div className="text-xl font-bold text-gray-800">
                 ₹{bestFare.totalPrice?.toLocaleString()}
@@ -292,7 +293,7 @@ const OneWayFlightCard = ({
             
             <button
               onClick={handleFlightDetails}
-              className="px-4 py-2 rounded-lg bg-[#FD561E] hover:bg-[#e44a18] text-white transition-all duration-200 text-sm font-medium"
+              className="px-4 py-2 rounded-lg cursor-pointer bg-[#FD561E] hover:bg-[#e44a18] text-white transition-all duration-200 text-sm font-medium whitespace-nowrap"
             >
               View Details
             </button>

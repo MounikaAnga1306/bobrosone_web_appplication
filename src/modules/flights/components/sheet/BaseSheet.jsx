@@ -46,10 +46,10 @@ const BaseSheet = ({
             </h2>
             <button
               onClick={onClose}
-              className="p-2.5 hover:bg-[#FD561E] hover:bg-opacity-10 rounded-full transition-colors group"
+              className="p-2.5 hover:bg-gray-300 hover:bg-opacity-10 rounded-full transition-colors group"
               aria-label="Close"
             >
-              <FaTimes className="w-5 h-5 text-gray-400 group-hover:text-[#FD561E]" />
+              <FaTimes className="w-5 h-5 text-gray-500 group-hover:text-black" />
             </button>
           </div>
           
