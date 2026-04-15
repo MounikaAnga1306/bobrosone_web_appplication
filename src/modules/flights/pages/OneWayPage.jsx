@@ -5,10 +5,11 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useFlightSearchContext } from '../contexts/FlightSearchContext';
 import { searchFlights } from '../services/flightSearchService';
 import { searchAirports } from '../services/airportSearchService';
-import { fetchAirlines } from '../services/airlineService'; // ADD THIS IMPORT
+import { fetchAirlines } from '../services/airlineService';
 import OneWayFlightCard from '../components/shared/OneWayFlightCard';
 import OneWaySheet from '../components/sheet/OneWaySheet';
 import FilterSidebar from '../components/shared/FilterSidebar';
+import FlightLoadingAnimation from '../utils/FlightLoadingAnimation'; // IMPORT THE EXISTING COMPONENT
 import {
   FaPlane,
   FaExclamationTriangle,
@@ -23,163 +24,6 @@ import {
   FaExchangeAlt,
   FaUser
 } from 'react-icons/fa';
-
-// ============ PREMIUM FLIGHT LOADING COMPONENT ============
-const FlightLoadingAnimation = ({ searchSummary }) => {
-  const [progress, setProgress] = useState(0);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [dots, setDots] = useState('');
-  
-  const loadingSteps = [
-    { message: "Searching the best routes", duration: 800 },
-    { message: "Checking availability", duration: 600 },
-    { message: "Finding lowest fares", duration: 700 },
-    { message: "Comparing airlines", duration: 500 },
-    { message: "Almost there...", duration: 400 }
-  ];
-  
-  useEffect(() => {
-    const dotInterval = setInterval(() => {
-      setDots(prev => prev.length >= 3 ? '' : prev + '.');
-    }, 400);
-    return () => clearInterval(dotInterval);
-  }, []);
-  
-  useEffect(() => {
-    const totalDuration = loadingSteps.reduce((sum, step) => sum + step.duration, 0);
-    const startTime = Date.now();
-    
-    const progressInterval = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      const newProgress = Math.min((elapsed / totalDuration) * 100, 100);
-      setProgress(newProgress);
-      
-      let accumulatedTime = 0;
-      for (let i = 0; i < loadingSteps.length; i++) {
-        accumulatedTime += loadingSteps[i].duration;
-        if (elapsed < accumulatedTime) {
-          setCurrentStep(i);
-          break;
-        }
-      }
-      
-      if (newProgress >= 100) {
-        clearInterval(progressInterval);
-      }
-    }, 50);
-    
-    return () => clearInterval(progressInterval);
-  }, []);
-  
-  const calculatePosition = (progress) => {
-    const screenWidth = window.innerWidth;
-    const maxLeft = screenWidth - 100;
-    const left = (progress / 100) * maxLeft;
-    const x = progress / 100;
-    const maxRise = 150;
-    const top = 350 - (maxRise * x * x);
-    const rotation = -8 * (1 - x);
-    return { left, top, rotation };
-  };
-  
-  const position = calculatePosition(progress);
-  
-  return (
-    <div className="min-h-screen bg-white overflow-hidden relative">
-      <div className="absolute inset-0 bg-white"></div>
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-gray-50 to-transparent"></div>
-      
-      <div
-        className="fixed transition-all duration-100 ease-linear"
-        style={{
-          left: `${position.left}px`,
-          top: `${position.top}px`,
-          transform: `rotate(${position.rotation}deg)`,
-          transition: 'left 0.05s linear, top 0.08s cubic-bezier(0.4, 0, 0.2, 1), transform 0.1s ease',
-          zIndex: 20
-        }}
-      >
-        <img 
-          src="/assets/flight_moving_image2.png"
-          alt="Flight"
-          className="w-32 h-32 md:w-40 md:h-40 object-contain"
-          style={{
-            filter: 'drop-shadow(0 8px 16px rgba(0, 0, 0, 0.08))',
-            transition: 'all 0.3s ease',
-            opacity: 0.95
-          }}
-          onError={(e) => {
-            e.target.src = "https://cdn-icons-png.flaticon.com/512/3095/309510.png";
-            console.warn('Flight image not found in public/assets, using fallback');
-          }}
-        />
-        
-        <div className="absolute -left-12 top-1/2 transform -translate-y-1/2 flex gap-1">
-          {[...Array(3)].map((_, i) => (
-            <div
-              key={i}
-              className="rounded-full bg-gray-200"
-              style={{
-                width: `${12 - i * 3}px`,
-                height: `${2 - i * 0.5}px`,
-                opacity: 0.3 - i * 0.1,
-                animation: `trail ${0.6 - i * 0.15}s linear infinite`,
-              }}
-            />
-          ))}
-        </div>
-      </div>
-      
-      <div className="absolute bottom-32 left-0 right-0">
-        <div className="h-px bg-gray-100 w-full"></div>
-      </div>
-      
-      <div className="absolute bottom-40 left-1/2 transform -translate-x-1/2 text-center z-10">
-        <h2 className="text-xl font-light text-gray-600 mb-2 tracking-wide">
-          {loadingSteps[currentStep]?.message}
-          <span className="inline-block w-6 text-left text-gray-400">{dots}</span>
-        </h2>
-        <p className="text-gray-400 text-sm font-light">
-          {searchSummary?.fromName} → {searchSummary?.toName}
-        </p>
-        <p className="text-gray-300 text-xs mt-1 font-light">
-          {searchSummary?.formattedDate}
-        </p>
-        
-        <div className="mt-8 w-48 mx-auto">
-          <div className="h-px bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gray-400 rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            ></div>
-          </div>
-          <div className="flex justify-between text-xs text-gray-300 mt-2 font-light">
-            <span>Depart</span>
-            <span className="text-gray-400">{Math.round(progress)}%</span>
-            <span>Arrive</span>
-          </div>
-        </div>
-      </div>
-      
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          @keyframes trail {
-            0% { 
-              transform: translateX(0); 
-              opacity: 0.3;
-              width: 12px;
-            }
-            100% { 
-              transform: translateX(-20px); 
-              opacity: 0;
-              width: 20px;
-            }
-          }
-        `
-      }} />
-    </div>
-  );
-};
 
 const OneWayPage = () => {
   const navigate = useNavigate();
@@ -196,7 +40,7 @@ const OneWayPage = () => {
   const [passengerCounts, setPassengerCounts] = useState({ ADT: 1, CNN: 0, INF: 0 });
   const [searchParamsData, setSearchParamsData] = useState(null);
   
-  // ============ AIRLINE DATA STATE (NEW) ============
+  // ============ AIRLINE DATA STATE ============
   const [airlinesMap, setAirlinesMap] = useState({});
   const [airlinesLoading, setAirlinesLoading] = useState(true);
   
@@ -383,10 +227,9 @@ const OneWayPage = () => {
     fetchFlightResults();
   }, [location.search, navigate, updateFlightResults]);
 
-  // ============ FETCH AIRLINES DATA AFTER FLIGHTS LOAD (NEW) ============
+  // ============ FETCH AIRLINES DATA AFTER FLIGHTS LOAD ============
   useEffect(() => {
     const loadAirlines = async () => {
-      // Only fetch if we have flights
       if (!flightResults.flights || flightResults.flights.length === 0) {
         setAirlinesLoading(false);
         return;
@@ -397,7 +240,6 @@ const OneWayPage = () => {
         console.log('🛫 Fetching airlines data...');
         const airlines = await fetchAirlines();
         
-        // Create a map for quick lookup by airline code
         const airlinesMapData = {};
         airlines.forEach(airline => {
           airlinesMapData[airline.code] = airline;
@@ -413,7 +255,7 @@ const OneWayPage = () => {
     };
     
     loadAirlines();
-  }, [flightResults.flights]); // Re-run when flights change
+  }, [flightResults.flights]);
 
   // ============ EDIT MODE FUNCTIONS ============
 
@@ -840,114 +682,21 @@ const OneWayPage = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // ============ LOADING STATE ============
-  if (isLoading) {
-    return <FlightLoadingAnimation searchSummary={searchSummary} />;
-  }
-
-  // ============ API ERROR STATE ============
-  if (apiError) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
-          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <FaExclamationTriangle className="text-3xl text-red-500" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-3">Search Failed</h2>
-          <p className="text-gray-600 mb-4">{apiError}</p>
-          {searchSummary && (
-            <div className="bg-gray-50 p-3 rounded-lg mb-6 text-left">
-              <p className="text-sm text-gray-600">Your search:</p>
-              <p className="font-medium text-sm mt-1">{searchSummary.fromName} → {searchSummary.toName}</p>
-              <p className="text-xs text-gray-500 mt-1">{searchSummary.formattedDate}</p>
-              <p className="text-xs text-gray-500 mt-1">{passengerText} · Economy</p>
-            </div>
-          )}
-          <div className="flex gap-3">
-            <button
-              onClick={() => window.location.reload()}
-              className="flex-1 bg-gray-100 text-gray-700 font-semibold py-3 px-4 rounded-xl hover:bg-gray-200 transition-colors"
-            >
-              Try Again
-            </button>
-            <button
-              onClick={handleModifySearch}
-              className="flex-1 bg-[#FD561E] hover:bg-[#e04e1b] text-white font-semibold py-3 px-4 rounded-xl transition-all hover:shadow-lg"
-            >
-              Modify Search
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ============ CONTEXT ERROR STATE ============
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
-          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <FaExclamationTriangle className="text-3xl text-red-500" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-3">Search Failed</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <button
-            onClick={handleModifySearch}
-            className="w-full bg-[#FD561E] hover:bg-[#e04e1b] text-white font-semibold py-3 px-4 rounded-xl transition-all hover:shadow-lg"
-          >
-            Try Search Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // ============ NO FLIGHTS STATE ============
-  if (!isLoading && !apiError && !error && (!flights || flights.length === 0)) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
-          <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <FaPlane className="text-3xl text-blue-500" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-3">No Flights Found</h2>
-          <p className="text-gray-600 mb-4">We couldn't find any flights matching your search criteria.</p>
-          {searchSummary && (
-            <div className="bg-gray-50 p-3 rounded-lg mb-6 text-left">
-              <p className="text-sm text-gray-600">You searched for:</p>
-              <p className="font-medium text-sm mt-1">{searchSummary.fromName} → {searchSummary.toName}</p>
-              <p className="text-xs text-gray-500 mt-1">{searchSummary.formattedDate}</p>
-              <p className="text-xs text-gray-500 mt-1">{passengerText} · Economy</p>
-            </div>
-          )}
-          <div className="flex gap-3">
-            <button
-              onClick={handleModifySearch}
-              className="flex-1 bg-[#FD561E] hover:bg-[#e04e1b] text-white font-semibold py-3 px-4 rounded-xl transition-all hover:shadow-lg"
-            >
-              Modify Search
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ============ MAIN RENDER ============
+  // ============ RENDER COMPONENT WITH SEARCH BAR ALWAYS VISIBLE ============
+  
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* ============ EDIT SEARCH BAR ============ */}
-      <div className="w-full bg-[#f36b32] py-3 sticky top-0 z-40 shadow-sm">
+      {/* ============ EDIT SEARCH BAR - ALWAYS VISIBLE ============ */}
+      <div className="w-full bg-[#f36b32] py-4 sticky top-0 z-40 shadow-md flight-search-bar">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_auto_1fr_auto] lg:grid-cols-[1fr_auto_1fr_140px_160px_auto] items-end gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_auto_1fr_auto] lg:grid-cols-[1fr_auto_1fr_180px_200px_auto] items-end gap-4">
             
             {/* From Field */}
             <div className="relative" ref={fromRef}>
-              <p className="text-white text-xs font-semibold mb-1">FROM</p>
+              <p className="text-white text-sm font-bold mb-2">FROM</p>
               <div className="relative">
-                <div className="flex items-center gap-2 px-4 h-12 rounded-md bg-white shadow-sm">
-                  <FaMapMarkerAlt className="text-[#f36b32] w-4 h-4" />
+                <div className="flex items-center gap-3 px-6 h-16 rounded-md bg-white shadow-md">
+                  <FaMapMarkerAlt className="text-[#f36b32] w-5 h-5" />
                   <input
                     type="text"
                     value={isEditing ? editFromDisplay : (searchSummary?.fromName || '')}
@@ -955,7 +704,7 @@ const OneWayPage = () => {
                     onFocus={isEditing ? () => setShowFromDropdown(true) : undefined}
                     placeholder="City or airport"
                     readOnly={!isEditing}
-                    className={`w-full text-sm font-semibold outline-none bg-transparent ${!isEditing ? 'cursor-pointer' : ''}`}
+                    className={`w-full text-base font-bold outline-none bg-transparent ${!isEditing ? 'cursor-pointer' : ''}`}
                     onClick={!isEditing ? openEditMode : undefined}
                   />
                   {fromLoading && <FaSpinner className="animate-spin text-gray-400" />}
@@ -965,7 +714,7 @@ const OneWayPage = () => {
                     {fromAirports.map((airport) => (
                       <div
                         key={airport.location_code}
-                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                        className="px-4 py-3 hover:bg-gray-100 cursor-pointer text-sm"
                         onClick={() => handleFromSelect(airport)}
                       >
                         <div className="font-medium">{airport.name}</div>
@@ -978,21 +727,21 @@ const OneWayPage = () => {
             </div>
 
             {/* Swap Button */}
-            <div className="flex justify-center mb-1">
+            <div className="flex justify-center mb-2">
               <button
                 onClick={isEditing ? handleSwap : openEditMode}
-                className="bg-white w-10 h-10 rounded-full flex items-center justify-center shadow hover:scale-110 transition-all duration-300"
+                className="bg-white w-12 h-12 rounded-full flex items-center justify-center shadow-md hover:scale-110 transition-all duration-300"
               >
-                <FaExchangeAlt className="w-4 h-4 text-[#f36b32]" />
+                <FaExchangeAlt className="w-5 h-5 text-[#f36b32]" />
               </button>
             </div>
 
             {/* To Field */}
             <div className="relative" ref={toRef}>
-              <p className="text-white text-xs font-semibold mb-1">TO</p>
+              <p className="text-white text-sm font-bold mb-2">TO</p>
               <div className="relative">
-                <div className="flex items-center gap-2 px-4 h-12 rounded-md bg-white shadow-sm">
-                  <FaMapMarkerAlt className="text-[#f36b32] w-4 h-4" />
+                <div className="flex items-center gap-3 px-6 h-16 rounded-md bg-white shadow-md">
+                  <FaMapMarkerAlt className="text-[#f36b32] w-5 h-5" />
                   <input
                     type="text"
                     value={isEditing ? editToDisplay : (searchSummary?.toName || '')}
@@ -1000,7 +749,7 @@ const OneWayPage = () => {
                     onFocus={isEditing ? () => setShowToDropdown(true) : undefined}
                     placeholder="City or airport"
                     readOnly={!isEditing}
-                    className={`w-full text-sm font-semibold outline-none bg-transparent ${!isEditing ? 'cursor-pointer' : ''}`}
+                    className={`w-full text-base font-bold outline-none bg-transparent ${!isEditing ? 'cursor-pointer' : ''}`}
                     onClick={!isEditing ? openEditMode : undefined}
                   />
                   {toLoading && <FaSpinner className="animate-spin text-gray-400" />}
@@ -1010,7 +759,7 @@ const OneWayPage = () => {
                     {toAirports.map((airport) => (
                       <div
                         key={airport.location_code}
-                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                        className="px-4 py-3 hover:bg-gray-100 cursor-pointer text-sm"
                         onClick={() => handleToSelect(airport)}
                       >
                         <div className="font-medium">{airport.name}</div>
@@ -1024,18 +773,18 @@ const OneWayPage = () => {
 
             {/* Date Field */}
             <div className="relative">
-              <p className="text-white text-xs font-semibold mb-1">DEPARTURE DATE</p>
+              <p className="text-white text-sm font-bold mb-2">DEPARTURE DATE</p>
               <div
                 onClick={isEditing ? () => setShowDepartureCalendar(!showDepartureCalendar) : openEditMode}
-                className="flex items-center gap-2 px-4 h-12 rounded-md bg-white shadow-sm cursor-pointer"
+                className="flex items-center gap-3 px-6 h-16 rounded-md bg-white shadow-md cursor-pointer"
               >
-                <FaCalendarAlt className="text-[#f36b32] w-4 h-4" />
+                <FaCalendarAlt className="text-[#f36b32] w-5 h-5" />
                 <input
                   type="text"
                   value={isEditing ? (editDepartureDate ? formatDate(editDepartureDate) : "") : (searchSummary?.formattedDate || '')}
                   placeholder="Select date"
                   readOnly
-                  className="w-full text-sm font-semibold outline-none bg-transparent cursor-pointer"
+                  className="w-full text-base font-bold outline-none bg-transparent cursor-pointer"
                 />
               </div>
               {showDepartureCalendar && isEditing && (
@@ -1078,20 +827,20 @@ const OneWayPage = () => {
 
             {/* Travellers Field */}
             <div className="relative" ref={travellerRef}>
-              <p className="text-white text-xs font-semibold mb-1">TRAVELLERS</p>
+              <p className="text-white text-sm font-bold mb-2">TRAVELLERS</p>
               <div
                 onClick={isEditing ? openTravellerModalEdit : openEditMode}
-                className="flex items-center gap-2 px-4 h-12 rounded-md bg-white shadow-sm cursor-pointer"
+                className="flex items-center gap-3 px-6 h-16 rounded-md bg-white shadow-md cursor-pointer"
               >
-                <FaUser className="text-[#f36b32] w-4 h-4" />
-                <span className="text-sm font-semibold text-gray-700 flex-1 truncate">
+                <FaUser className="text-[#f36b32] w-5 h-5" />
+                <span className="text-base font-bold text-gray-700 flex-1 truncate">
                   {isEditing ? (
                     editPassengers ? `${editPassengers.ADT} Adult${editPassengers.ADT !== 1 ? 's' : ''} · ${editTravelClass}` : 'Select'
                   ) : (
                     passengerText
                   )}
                 </span>
-                <FaChevronDown className="text-gray-400 w-3 h-3" />
+                <FaChevronDown className="text-gray-400 w-4 h-4" />
               </div>
             </div>
 
@@ -1100,7 +849,7 @@ const OneWayPage = () => {
               <button
                 onClick={isEditing ? handleEditSearch : openEditMode}
                 disabled={isEditing && (!editFrom || !editTo || !editDepartureDate)}
-                className="w-[150px] h-12 bg-white text-black font-bold rounded-md shadow cursor-pointer transition-all duration-300 hover:text-[#fd561e] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-[160px] h-16 bg-white text-black font-bold rounded-md shadow-md cursor-pointer transition-all duration-300 hover:text-[#fd561e] hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isEditing ? 'UPDATE SEARCH' : 'MODIFY SEARCH'}
               </button>
@@ -1109,113 +858,166 @@ const OneWayPage = () => {
         </div>
       </div>
 
-      {/* Sort and Filter Bar */}
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between gap-4">
-         
+      {/* ============ CONTENT AREA - Changes based on loading/error/results ============ */}
+      
+      {/* Loading State - Imported FlightLoadingAnimation component */}
+      {isLoading && (
+        <FlightLoadingAnimation searchSummary={searchSummary} isLoading={isLoading} />
+      )}
 
-          {/* Sort Dropdown */}
-          <div className="relative">
-           
-            
-            {showSortDropdown && (
-              <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                {sortOptions.map(option => (
-                  <button
-                    key={option.value}
-                    onClick={() => {
-                      setSortBy(option.value);
-                      setShowSortDropdown(false);
-                    }}
-                    className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
-                      sortBy === option.value ? 'text-[#FD561E] font-medium' : 'text-gray-700'
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
+      {/* API Error State */}
+      {!isLoading && apiError && (
+        <div className="min-h-[calc(100vh-200px)] flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
+            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FaExclamationTriangle className="text-3xl text-red-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">Search Failed</h2>
+            <p className="text-gray-600 mb-4">{apiError}</p>
+            {searchSummary && (
+              <div className="bg-gray-50 p-3 rounded-lg mb-6 text-left">
+                <p className="text-sm text-gray-600">Your search:</p>
+                <p className="font-medium text-sm mt-1">{searchSummary.fromName} → {searchSummary.toName}</p>
+                <p className="text-xs text-gray-500 mt-1">{searchSummary.formattedDate}</p>
+                <p className="text-xs text-gray-500 mt-1">{passengerText} · Economy</p>
               </div>
             )}
+            <div className="flex gap-3">
+              <button
+                onClick={() => window.location.reload()}
+                className="flex-1 bg-gray-100 text-gray-700 font-semibold py-3 px-4 rounded-xl hover:bg-gray-200 transition-colors"
+              >
+                Try Again
+              </button>
+              <button
+                onClick={handleModifySearch}
+                className="flex-1 bg-[#FD561E] hover:bg-[#e04e1b] text-white font-semibold py-3 px-4 rounded-xl transition-all hover:shadow-lg"
+              >
+                Modify Search
+              </button>
+            </div>
           </div>
-
-          {/* Mobile Filter Button */}
-          <button
-            onClick={() => setShowMobileFilters(true)}
-            className="lg:hidden flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium"
-          >
-            <FaFilter className="text-[#FD561E]" />
-            Filters
-            {activeFilterCount > 0 && (
-              <span className="bg-[#FD561E] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                {activeFilterCount}
-              </span>
-            )}
-          </button>
         </div>
-      </div>
+      )}
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Left Sidebar - FilterSidebar (Desktop) */}
-          <div className="hidden lg:block lg:w-1/4">
-            <FilterSidebar
-              priceRange={priceRange}
-              setPriceRange={setPriceRange}
-              selectedAirlines={selectedAirlines}
-              toggleAirline={toggleAirline}
-              selectedStops={selectedStops}
-              toggleStops={toggleStops}
-              selectedTimes={selectedTimes}
-              toggleTime={toggleTime}
-              resetFilters={resetFilters}
-              activeFilterCount={activeFilterCount}
-              airlines={airlines}
-              flightPriceRange={flightPriceRange}
-              tripDetails={{
-                from: searchSummary?.fromName,
-                to: searchSummary?.toName,
-                date: searchSummary?.formattedDate,
-                passengers: passengerText
-              }}
-              onModifySearch={handleModifySearch}
-              tripType="one-way"
-            />
+      {/* Context Error State */}
+      {!isLoading && !apiError && error && (
+        <div className="min-h-[calc(100vh-200px)] flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
+            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FaExclamationTriangle className="text-3xl text-red-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">Search Failed</h2>
+            <p className="text-gray-600 mb-6">{error}</p>
+            <button
+              onClick={handleModifySearch}
+              className="w-full bg-[#FD561E] hover:bg-[#e04e1b] text-white font-semibold py-3 px-4 rounded-xl transition-all hover:shadow-lg"
+            >
+              Try Search Again
+            </button>
           </div>
+        </div>
+      )}
 
-          {/* Right Side - Flight List */}
-          <div className="lg:w-3/4">
-            {filteredAndSortedFlights.length === 0 ? (
-              <div className="bg-white rounded-xl p-8 text-center shadow-sm">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <FaFilter className="text-2xl text-gray-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-800 mb-2">No flights match your filters</h3>
-                <p className="text-gray-600 mb-4">Try adjusting your filter criteria</p>
-                <button
-                  onClick={resetFilters}
-                  className="text-[#FD561E] font-medium hover:underline"
-                >
-                  Clear all filters
-                </button>
+      {/* No Flights State */}
+      {!isLoading && !apiError && !error && (!flights || flights.length === 0) && (
+        <div className="min-h-[calc(100vh-200px)] flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
+            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FaPlane className="text-3xl text-blue-500" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">No Flights Found</h2>
+            <p className="text-gray-600 mb-4">We couldn't find any flights matching your search criteria.</p>
+            {searchSummary && (
+              <div className="bg-gray-50 p-3 rounded-lg mb-6 text-left">
+                <p className="text-sm text-gray-600">You searched for:</p>
+                <p className="font-medium text-sm mt-1">{searchSummary.fromName} → {searchSummary.toName}</p>
+                <p className="text-xs text-gray-500 mt-1">{searchSummary.formattedDate}</p>
+                <p className="text-xs text-gray-500 mt-1">{passengerText} · Economy</p>
               </div>
-            ) : (
-              filteredAndSortedFlights.map((flight) => (
-                <OneWayFlightCard
-                  key={flight.id}
-                  flight={flight}
-                  isSelected={false}
-                  onSelect={() => {}}
-                  onViewDetails={handleViewDetails}
-                  passengerCounts={passengerCounts}
-                  airlineData={airlinesMap[flight.airlineCode]} // Pass pre-fetched airline data
-                  airlinesLoading={airlinesLoading} // Pass loading state
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={handleModifySearch}
+                className="flex-1 bg-[#FD561E] hover:bg-[#e04e1b] text-white font-semibold py-3 px-4 rounded-xl transition-all hover:shadow-lg"
+              >
+                Modify Search
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Flight Results State */}
+      {!isLoading && !apiError && !error && flights && flights.length > 0 && (
+        <>
+          {/* Sort and Filter Bar */}
+          
+
+          {/* Main Content */}
+          <div className="container mx-auto px-4 py-6">
+            <div className="flex flex-col lg:flex-row gap-6">
+              {/* Left Sidebar - FilterSidebar (Desktop) */}
+              <div className="hidden lg:block lg:w-1/4">
+                <FilterSidebar
+                  priceRange={priceRange}
+                  setPriceRange={setPriceRange}
+                  selectedAirlines={selectedAirlines}
+                  toggleAirline={toggleAirline}
+                  selectedStops={selectedStops}
+                  toggleStops={toggleStops}
+                  selectedTimes={selectedTimes}
+                  toggleTime={toggleTime}
+                  resetFilters={resetFilters}
+                  activeFilterCount={activeFilterCount}
+                  airlines={airlines}
+                  flightPriceRange={flightPriceRange}
+                  tripDetails={{
+                    from: searchSummary?.fromName,
+                    to: searchSummary?.toName,
+                    date: searchSummary?.formattedDate,
+                    passengers: passengerText
+                  }}
+                  onModifySearch={handleModifySearch}
+                  tripType="one-way"
                 />
-              ))
-            )}
+              </div>
+
+              {/* Right Side - Flight List */}
+              <div className="lg:w-3/4">
+                {filteredAndSortedFlights.length === 0 ? (
+                  <div className="bg-white rounded-xl p-8 text-center shadow-sm">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <FaFilter className="text-2xl text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-2">No flights match your filters</h3>
+                    <p className="text-gray-600 mb-4">Try adjusting your filter criteria</p>
+                    <button
+                      onClick={resetFilters}
+                      className="text-[#FD561E] font-medium hover:underline"
+                    >
+                      Clear all filters
+                    </button>
+                  </div>
+                ) : (
+                  filteredAndSortedFlights.map((flight) => (
+                    <OneWayFlightCard
+                      key={flight.id}
+                      flight={flight}
+                      isSelected={false}
+                      onSelect={() => {}}
+                      onViewDetails={handleViewDetails}
+                      passengerCounts={passengerCounts}
+                      airlineData={airlinesMap[flight.airlineCode]}
+                      airlinesLoading={airlinesLoading}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
 
       {/* OneWaySheet */}
       {showDetailSheet && selectedFlightForSheet && (
@@ -1311,7 +1113,7 @@ const OneWayPage = () => {
       )}
 
       {/* Mobile Filters Modal */}
-      {showMobileFilters && (
+      {showMobileFilters && !isLoading && flights && flights.length > 0 && (
         <div className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex animate-fadeIn">
           <div className="bg-white w-full max-w-sm ml-auto h-full overflow-auto shadow-xl">
             <div className="sticky top-0 bg-white border-b z-10">

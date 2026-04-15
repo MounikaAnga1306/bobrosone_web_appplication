@@ -60,10 +60,12 @@ import {
   FaGlassCheers,
   FaTachometerAlt,
   FaCalendarWeek,
-  FaMapMarkerAlt
+  FaMapMarkerAlt,
+  FaExclamationTriangle
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { fetchAirlines } from '../services/airlineService';
 
 // Import data extractor utilities
 import {
@@ -203,10 +205,9 @@ const BookingReviewPage = () => {
     optionalServices: false,
     fareRules: true,
     passengerDetails: true,
-    contactInfo: true,
-    paymentMethod: true
+    contactInfo: true
   });
-  const [paymentMethod, setPaymentMethod] = useState('card');
+  // REMOVED: paymentMethod state - now default to 'upi'
   const [passengers, setPassengers] = useState(() => {
     const initialPassengers = [];
     const adultCount = passengerCounts?.ADT || 1;
@@ -255,6 +256,21 @@ const BookingReviewPage = () => {
   });
   
   const [errors, setErrors] = useState({});
+  const [ageErrors, setAgeErrors] = useState([]);
+  const [airlines, setAirlines] = useState([]);
+
+  // ============ FETCH AIRLINES ============
+  useEffect(() => {
+    const loadAirlines = async () => {
+      try {
+        const rows = await fetchAirlines();
+        setAirlines(rows);
+      } catch (err) {
+        console.error('Failed to fetch airlines:', err);
+      }
+    };
+    loadAirlines();
+  }, []);
   
   // ============ FETCH PRICING API ============
   useEffect(() => {
@@ -265,7 +281,6 @@ const BookingReviewPage = () => {
         return;
       }
       
-      // Check if we already have pricing data in context
       if (bookingData?.rawPricingResponse) {
         console.log('Using existing pricing data from context');
         const allFareOptions = extractAllFareOptions(bookingData.rawPricingResponse);
@@ -317,7 +332,6 @@ const BookingReviewPage = () => {
         if (result.success && result.rawResponse) {
           console.log('✅ Pricing API successful');
           
-          // Extract data from response
           const allFareOptions = extractAllFareOptions(result.rawResponse);
           const flightSegments = extractFlightSegments(result.rawResponse);
           const optionalServices = extractOptionalServices(result.rawResponse);
@@ -353,7 +367,6 @@ const BookingReviewPage = () => {
   const flightSegments = extractedData?.flightSegments || [];
   const isConnectingFlight = flightSegments.length > 1;
   
-  // For round trip, split segments into outbound and return
   const outboundSegments = useMemo(() => {
     if (tripType !== 'round-trip') return flightSegments;
     const midPoint = Math.ceil(flightSegments.length / 2);
@@ -366,7 +379,6 @@ const BookingReviewPage = () => {
     return flightSegments.slice(midPoint);
   }, [flightSegments, tripType]);
   
-  // ============ EXTRACT SELECTED FARE SPECIFIC DATA ============
   const selectedFareBrand = selectedFare?.brand?.name;
   
   const selectedFareHostToken = useMemo(() => {
@@ -399,11 +411,9 @@ const BookingReviewPage = () => {
     return extractTaxBreakdown(rawPricingResponse, selectedFareBrand);
   }, [rawPricingResponse, selectedFareBrand]);
   
-  // Get passenger-specific pricing from selected fare
   const passengerPricing = selectedFare?.passengerPricing || {};
   const passengerTypes = selectedFare?.passengerTypes || (Object.keys(passengerPricing).length > 0 ? Object.keys(passengerPricing) : ['ADT']);
   
-  // For backward compatibility with existing UI
   const fareDetails = selectedFare;
   const taxBreakdown = selectedTaxBreakdown;
   const optionalServices = extractedData?.optionalServices || { meals: [], seats: [], baggage: [], other: [] };
@@ -418,10 +428,13 @@ const BookingReviewPage = () => {
     const updated = [...passengers];
     updated[index][field] = value;
     setPassengers(updated);
+    if (field === 'dob') {
+      setAgeErrors([]);
+    }
   };
   
   const calculateAge = (dob) => {
-    if (!dob) return 0;
+    if (!dob) return null;
     const today = new Date();
     const birthDate = new Date(dob);
     let age = today.getFullYear() - birthDate.getFullYear();
@@ -430,18 +443,43 @@ const BookingReviewPage = () => {
     return age;
   };
   
+  const validatePassengerAges = useCallback(() => {
+    const ageErrorsList = [];
+    
+    passengers.forEach((passenger, idx) => {
+      if (passenger.code === 'CNN' && passenger.dob) {
+        const age = calculateAge(passenger.dob);
+        if (age !== null && (age < 2 || age > 11)) {
+          ageErrorsList.push({
+            passengerIndex: idx,
+            passengerName: `${passenger.firstName || 'Child'} ${passenger.lastName || ''}`.trim() || `Child ${idx + 1}`,
+            message: `Child must be between 2-11 years old. Current age: ${age} years.`
+          });
+        }
+      } else if (passenger.code === 'INF' && passenger.dob) {
+        const age = calculateAge(passenger.dob);
+        if (age !== null && age >= 2) {
+          ageErrorsList.push({
+            passengerIndex: idx,
+            passengerName: `${passenger.firstName || 'Infant'} ${passenger.lastName || ''}`.trim() || `Infant ${idx + 1}`,
+            message: `Infant must be under 2 years old. Current age: ${age} years.`
+          });
+        }
+      }
+    });
+    
+    setAgeErrors(ageErrorsList);
+    return ageErrorsList.length === 0;
+  }, [passengers]);
+  
   const validateForm = useCallback(() => {
     const newErrors = {};
     
     passengers.forEach((passenger, idx) => {
       if (!passenger.firstName.trim()) newErrors[`passenger_${idx}_firstName`] = 'First name required';
       if (!passenger.lastName.trim()) newErrors[`passenger_${idx}_lastName`] = 'Last name required';
-      if (!passenger.dob) newErrors[`passenger_${idx}_dob`] = 'Date of birth required';
-      else {
-        const age = calculateAge(passenger.dob);
-        if (passenger.code === 'ADT' && age < 12) newErrors[`passenger_${idx}_dob`] = 'Adult must be 12+ years';
-        if (passenger.code === 'CNN' && (age < 2 || age > 11)) newErrors[`passenger_${idx}_dob`] = 'Child must be 2-11 years';
-        if (passenger.code === 'INF' && age > 2) newErrors[`passenger_${idx}_dob`] = 'Infant must be under 2 years';
+      if (!passenger.dob) {
+        newErrors[`passenger_${idx}_dob`] = 'Date of birth required';
       }
       if (!passenger.gender) newErrors[`passenger_${idx}_gender`] = 'Gender required';
     });
@@ -457,7 +495,9 @@ const BookingReviewPage = () => {
   }, [passengers, contactInfo]);
   
   const isFormValid = useCallback(() => {
-    const allPassengersValid = passengers.every(p => p.firstName.trim() && p.lastName.trim() && p.dob && p.gender);
+    const allPassengersValid = passengers.every(p => 
+      p.firstName.trim() && p.lastName.trim() && p.dob && p.gender
+    );
     const contactValid = contactInfo.email.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactInfo.email) && 
                          contactInfo.phone.number.trim() && /^\d{10}$/.test(contactInfo.phone.number);
     return allPassengersValid && contactValid;
@@ -467,7 +507,6 @@ const BookingReviewPage = () => {
     setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
   
-  // ============ HANDLE SELECT FARE ============
   const handleSelectFare = (index) => {
     const selectedFareData = extractedData?.allFareOptions[index];
     const brandName = selectedFareData?.brand?.name;
@@ -498,14 +537,22 @@ const BookingReviewPage = () => {
     toast.success(`Selected ${extractedData?.allFareOptions[index]?.brand?.name || 'Fare'} option`);
   };
   
-  // ============ PROCEED TO SEAT MAP ============
   const handleProceedToBooking = async () => {
+    const isAgeValid = validatePassengerAges();
+    if (!isAgeValid) {
+      toast.error('Please fix age-related issues before proceeding');
+      setExpandedSections(prev => ({ ...prev, passengerDetails: true }));
+      return;
+    }
+    
     if (!validateForm()) {
       toast.error('Please fill in all required fields');
+      setExpandedSections(prev => ({ ...prev, passengerDetails: true }));
       return;
     }
     
     const enrichedPassengers = enrichPassengersWithAges(passengers);
+    const paymentMethod = 'upi';
     
     const completeBookingData = {
       rawPricingResponse: rawPricingResponse,
@@ -540,7 +587,6 @@ const BookingReviewPage = () => {
       timestamp: new Date().toISOString()
     };
     
-    // Store everything in context
     if (initializeBookingData) initializeBookingData(completeBookingData);
     if (updatePassengersList) updatePassengersList(enrichedPassengers);
     if (updateContactInformation) updateContactInformation(contactInfo);
@@ -550,6 +596,7 @@ const BookingReviewPage = () => {
     console.log('   - Selected Fare:', selectedFare?.brand?.name);
     console.log('   - Passengers:', enrichedPassengers.length);
     console.log('   - Contact:', contactInfo.email);
+    console.log('   - Payment Method:', paymentMethod, '(Default UPI)');
     
     setTimeout(() => {
       console.log('🚀 NAVIGATING to seat map page...');
@@ -557,7 +604,10 @@ const BookingReviewPage = () => {
     }, 100);
   };
   
-  // ============ RENDER FLIGHT SEGMENTS (Reusable) ============
+  // ============ AIRLINE HELPER ============
+  const getAirline = (code) => airlines.find(a => a.code === code) || null;
+
+  // ============ RENDER FLIGHT SEGMENTS (REMOVED Aircraft/Class/Booking Code/Status) ============
   const renderFlightSegment = (segment, segIdx, isReturn = false) => {
     return (
       <div key={segIdx} className={segIdx > 0 ? 'mt-6 pt-4 border-t border-dashed border-gray-200' : ''}>
@@ -588,11 +638,19 @@ const BookingReviewPage = () => {
             <div className="text-center text-xs text-gray-400 mt-2">
               <FaStopwatch className="inline mr-1" size={10} /> {formatDuration(segment.flightTime)}
             </div>
-            {segment.codeshareInfo && (
-              <div className="text-center text-xs text-gray-400 mt-1">
-                Operated by {segment.codeshareInfo.operatingCarrier}
-              </div>
-            )}
+            {(() => {
+              const airline = getAirline(segment.carrier);
+              return airline ? (
+                <div className="flex items-center justify-center gap-1.5 mt-1.5">
+                  <img src={airline.logo_url} alt={airline.name} className="w-5 h-5 object-contain" />
+                  <span className="text-xs text-gray-500">{airline.name}</span>
+                </div>
+              ) : segment.codeshareInfo ? (
+                <div className="text-center text-xs text-gray-400 mt-1">
+                  Operated by {segment.codeshareInfo.operatingCarrier}
+                </div>
+              ) : null;
+            })()}
           </div>
           
           <div className="text-center flex-1">
@@ -602,29 +660,6 @@ const BookingReviewPage = () => {
             {segment.destinationTerminal && (
               <div className="text-xs text-gray-400 mt-0.5">Terminal {segment.destinationTerminal}</div>
             )}
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-4 border-t border-gray-100">
-          <div className="bg-gray-50 rounded-xl p-3 text-center">
-            <FaBuilding className="text-[#FD561E] mx-auto mb-1" size={14} />
-            <p className="text-xs text-gray-500">Aircraft</p>
-            <p className="text-sm font-semibold text-gray-700">{segment.equipment || 'Not specified'}</p>
-          </div>
-          <div className="bg-gray-50 rounded-xl p-3 text-center">
-            <FaChair className="text-[#FD561E] mx-auto mb-1" size={14} />
-            <p className="text-xs text-gray-500">Class</p>
-            <p className="text-sm font-semibold text-gray-700">{selectedFare?.bookingInfo?.cabinClass || 'Economy'}</p>
-          </div>
-          <div className="bg-gray-50 rounded-xl p-3 text-center">
-            <FaTicketAlt className="text-[#FD561E] mx-auto mb-1" size={14} />
-            <p className="text-xs text-gray-500">Booking Code</p>
-            <p className="text-sm font-semibold text-gray-700 font-mono">{selectedFare?.bookingInfo?.bookingCode || 'N/A'}</p>
-          </div>
-          <div className="bg-gray-50 rounded-xl p-3 text-center">
-            <FaCheckCircle className="text-emerald-500 mx-auto mb-1" size={14} />
-            <p className="text-xs text-gray-500">Status</p>
-            <p className="text-sm font-semibold text-emerald-600">Confirmed</p>
           </div>
         </div>
       </div>
@@ -642,22 +677,31 @@ const BookingReviewPage = () => {
           className="w-full flex items-center justify-between p-5 hover:bg-[#FD561E]/5 transition-colors"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#FD561E]/10 rounded-xl flex items-center justify-center">
-              <FaPlaneDeparture className="text-[#FD561E]" size={18} />
-            </div>
+            {(() => {
+              const airline = getAirline(outboundSegments[0]?.carrier);
+              return airline ? (
+                <img src={airline.logo_url} alt={airline.name} className="w-10 h-10 object-contain rounded-xl border border-gray-100 p-1 bg-white" />
+              ) : (
+                <div className="w-10 h-10 bg-[#FD561E]/10 rounded-xl flex items-center justify-center">
+                  <FaPlaneDeparture className="text-[#FD561E]" size={18} />
+                </div>
+              );
+            })()}
             <div>
               <h2 className="font-semibold text-gray-800">
                 Outbound Flight
                 {isConnectingFlight && <span className="ml-2 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Connecting Flight</span>}
               </h2>
-              <p className="text-xs text-gray-500">{outboundSegments[0]?.carrier} {outboundSegments[0]?.flightNumber}</p>
+              <p className="text-xs text-gray-500">
+                {getAirline(outboundSegments[0]?.carrier)?.name || outboundSegments[0]?.carrier} · {outboundSegments[0]?.flightNumber}
+              </p>
             </div>
           </div>
           {expandedSections.flightDetails ? <FaChevronUp className="text-gray-400" /> : <FaChevronDown className="text-gray-400" />}
         </button>
         
         {expandedSections.flightDetails && (
-          <div className="p-5 pt-0 border-t border-gray-100">
+          <div className="p-5 border-t border-gray-100">
             {outboundSegments.map((segment, segIdx) => renderFlightSegment(segment, segIdx, false))}
           </div>
         )}
@@ -665,7 +709,7 @@ const BookingReviewPage = () => {
     );
   };
   
-  // ============ RENDER RETURN FLIGHT DETAILS (for round trips) ============
+  // ============ RENDER RETURN FLIGHT DETAILS ============
   const renderReturnFlightDetails = () => {
     if (tripType !== 'round-trip' || !returnSegments.length) return null;
     
@@ -678,22 +722,31 @@ const BookingReviewPage = () => {
           className="w-full flex items-center justify-between p-5 hover:bg-[#FD561E]/5 transition-colors"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#FD561E]/10 rounded-xl flex items-center justify-center">
-              <FaPlaneArrival className="text-[#FD561E]" size={18} />
-            </div>
+            {(() => {
+              const airline = getAirline(returnSegments[0]?.carrier);
+              return airline ? (
+                <img src={airline.logo_url} alt={airline.name} className="w-10 h-10 object-contain rounded-xl border border-gray-100 p-1 bg-white" />
+              ) : (
+                <div className="w-10 h-10 bg-[#FD561E]/10 rounded-xl flex items-center justify-center">
+                  <FaPlaneArrival className="text-[#FD561E]" size={18} />
+                </div>
+              );
+            })()}
             <div>
               <h2 className="font-semibold text-gray-800">
                 Return Flight
                 {isReturnConnecting && <span className="ml-2 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Connecting Flight</span>}
               </h2>
-              <p className="text-xs text-gray-500">{returnSegments[0]?.carrier} {returnSegments[0]?.flightNumber}</p>
+              <p className="text-xs text-gray-500">
+                {getAirline(returnSegments[0]?.carrier)?.name || returnSegments[0]?.carrier} · {returnSegments[0]?.flightNumber}
+              </p>
             </div>
           </div>
           {expandedSections.returnFlightDetails ? <FaChevronUp className="text-gray-400" /> : <FaChevronDown className="text-gray-400" />}
         </button>
         
         {expandedSections.returnFlightDetails && (
-          <div className="p-5 pt-0 border-t border-gray-100">
+          <div className="p-5 border-t border-gray-100">
             {returnSegments.map((segment, segIdx) => renderFlightSegment(segment, segIdx, true))}
           </div>
         )}
@@ -875,7 +928,7 @@ const BookingReviewPage = () => {
         </button>
         
         {expandedSections.allFares && (
-          <div className="p-5 pt-0 border-t border-gray-100">
+          <div className="p-5 border-t border-gray-100">
             <div className="overflow-x-auto pb-4">
               <div className="flex gap-4 min-w-max">
                 {allFares.map((fare, idx) => {
@@ -1019,7 +1072,7 @@ const BookingReviewPage = () => {
         </button>
         
         {expandedSections.taxDetails && (
-          <div className="p-5 pt-0 border-t border-gray-100">
+          <div className="p-5 border-t border-gray-100">
             <div className="space-y-3">
               {taxBreakdown.map((tax, idx) => (
                 <div key={idx} className="flex justify-between items-center py-3 border-b border-gray-100 last:border-0">
@@ -1068,7 +1121,7 @@ const BookingReviewPage = () => {
         </button>
         
         {expandedSections.optionalServices && (
-          <div className="p-5 pt-0 border-t border-gray-100 space-y-6">
+          <div className="p-5 border-t border-gray-100 space-y-6">
             {mealOptions.length > 0 && (
               <div>
                 <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
@@ -1183,7 +1236,7 @@ const BookingReviewPage = () => {
         </button>
         
         {expandedSections.fareRules && (
-          <div className="p-5 pt-0 border-t border-gray-100">
+          <div className="p-5 border-t border-gray-100">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-gradient-to-r from-blue-50 to-white rounded-xl p-5 border border-blue-100">
                 <div className="flex items-center gap-2 mb-3">
@@ -1237,94 +1290,153 @@ const BookingReviewPage = () => {
     );
   };
   
-  // ============ RENDER PRICE SUMMARY ============
+  // ============ RENDER PRICE SUMMARY (STICKY) ============
   const renderPriceSummary = () => {
-    const formValid = isFormValid();
-    
-    let totalPrice = 0;
-    
-    if (passengerPricing && Object.keys(passengerPricing).length > 0) {
-      passengerTypes.forEach(type => {
-        const pricing = passengerPricing[type];
-        const count = passengerCounts[type] || 0;
-        if (count > 0 && pricing?.totalPrice) {
-          totalPrice += pricing.totalPrice * count;
-        }
-      });
-    } else {
-      totalPrice = selectedFare?.totalPrice || 0;
-    }
+  const formValid = isFormValid();
+  const hasAgeErrors = ageErrors.length > 0;
+  
+  let totalPrice = 0;
+  
+  if (passengerPricing && Object.keys(passengerPricing).length > 0) {
+    passengerTypes.forEach(type => {
+      const pricing = passengerPricing[type];
+      const count = passengerCounts[type] || 0;
+      if (count > 0 && pricing?.totalPrice) {
+        totalPrice += pricing.totalPrice * count;
+      }
+    });
+  } else {
+    totalPrice = selectedFare?.totalPrice || 0;
+  }
+  
+  // Calculate total with taxes
+  const totalWithTaxes = totalPrice;
+  
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      {/* Header */}
+      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+        <h2 className="font-semibold text-gray-800 flex items-center gap-2">
+          <FaRupeeSign className="text-[#FD561E]" size={16} />
+          Price Summary
+        </h2>
+      </div>
+      
+      {/* Content */}
+      <div className="p-4 space-y-4">
+        {/* Fare Breakdown Section */}
+        <div>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+            Fare Breakdown
+          </h3>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-600">Base Fare</span>
+              <span className="text-sm font-medium text-gray-800">
+                {formatPrice(selectedFare?.basePrice || totalPrice)}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-600">Taxes & Fees</span>
+              <span className="text-sm font-medium text-gray-800">
+                {formatPrice(selectedFare?.taxes || 0)}
+              </span>
+            </div>
+            <div className="pt-2 border-t border-gray-100">
+              <div className="flex justify-between items-center">
+                <span className="text-base font-bold text-gray-800">Total</span>
+                <span className="text-xl font-bold text-[#FD561E]">
+                  {formatPrice(totalWithTaxes)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Passengers Section */}
+        <div className="bg-gray-50 rounded-lg p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <FaUserFriends className="text-[#FD561E]" size={12} />
+            <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Passengers</span>
+          </div>
+          <div className="space-y-1">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Adults (12+ years)</span>
+              <span className="font-medium text-gray-800">{passengerCounts?.ADT || 1}</span>
+            </div>
+            {passengerCounts?.CNN > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Children (2-11 years)</span>
+                <span className="font-medium text-gray-800">{passengerCounts.CNN}</span>
+              </div>
+            )}
+            {passengerCounts?.INF > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Infants (0-2 years)</span>
+                <span className="font-medium text-gray-800">{passengerCounts.INF}</span>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Book Button */}
+        <button 
+          onClick={handleProceedToBooking} 
+          disabled={!formValid || loading || hasAgeErrors} 
+          className={`w-full py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all ${
+            formValid && !loading && !hasAgeErrors
+              ? 'bg-[#FD561E] hover:bg-[#e04e1b] text-white shadow-sm' 
+              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+          }`}
+        >
+          {loading ? (
+            <>
+              <FaSpinner className="animate-spin" size={14} />
+              <span>Loading...</span>
+            </>
+          ) : (
+            <>
+              <FaCreditCard size={14} /> 
+              <span>{formValid && !hasAgeErrors ? 'Proceed to Book' : hasAgeErrors ? 'Fix Age Issues First' : 'Complete Details'}</span>
+              <FaArrowRight size={12} />
+            </>
+          )}
+        </button>
+        
+        {/* Security Badges */}
+        <div className="flex items-center justify-center gap-3 text-xs text-gray-400">
+          <FaCheckCircle className="text-emerald-500" size={10} />
+          <span>Secure & Encrypted</span>
+          <span className="w-px h-2 bg-gray-200"></span>
+          <span>Price Guaranteed</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+  
+  // ============ RENDER AGE ERROR BOX ============
+  const renderAgeErrorBox = () => {
+    if (ageErrors.length === 0) return null;
     
     return (
-      <div className="bg-white rounded-2xl border border-gray-100 sticky top-24 hover:shadow-lg transition-all">
-        <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white rounded-t-2xl">
-          <h2 className="font-semibold text-gray-800 flex items-center gap-2">
-            <FaRupeeSign className="text-[#FD561E]" size={18} />
-            Price Summary
-          </h2>
-        </div>
-        <div className="p-5 space-y-4">
-          <div>
-            <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
-              <FaUserFriends className="text-[#FD561E]" size={14} />
-              Fare Breakdown
-            </h3>
-            {renderPassengerPriceBreakdown()}
+      <div className="bg-red-50 border-l-4 border-red-500 rounded-xl p-4 mb-4">
+        <div className="flex items-start gap-3">
+          <div className="flex-shrink-0">
+            <FaExclamationTriangle className="text-red-500 text-lg" />
           </div>
-          
-          <div className="bg-gray-50 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <FaUserFriends className="text-[#FD561E]" size={14} />
-              <span className="text-sm font-medium text-gray-700">Passengers</span>
-            </div>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-500">Adults (12+ years)</span>
-                <span className="font-medium text-gray-700">{passengerCounts?.ADT || 1}</span>
-              </div>
-              {passengerCounts?.CNN > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Children (2-11 years)</span>
-                  <span className="font-medium text-gray-700">{passengerCounts.CNN}</span>
-                </div>
-              )}
-              {passengerCounts?.INF > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Infants (0-2 years)</span>
-                  <span className="font-medium text-gray-700">{passengerCounts.INF}</span>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          <button 
-            onClick={handleProceedToBooking} 
-            disabled={!formValid || loading} 
-            className={`w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all ${
-              formValid && !loading 
-                ? 'bg-[#FD561E] hover:bg-[#e04e1b] text-white shadow-md hover:shadow-lg' 
-                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            }`}
-          >
-            {loading ? (
-              <>
-                <FaSpinner className="animate-spin" />
-                Loading...
-              </>
-            ) : (
-              <>
-                <FaCreditCard /> 
-                {formValid ? 'Proceed to Book' : 'Complete All Details'} 
-                <FaArrowRight size={14} />
-              </>
-            )}
-          </button>
-          
-          <div className="flex items-center justify-center gap-3 text-xs text-gray-400 pt-2">
-            <FaCheckCircle className="text-emerald-500" size={12} />
-            <span>Secure & Encrypted</span>
-            <span className="w-px h-3 bg-gray-200"></span>
-            <span>Price Guaranteed</span>
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold text-red-800 mb-2">Age Validation Errors</h3>
+            <ul className="space-y-1">
+              {ageErrors.map((error, idx) => (
+                <li key={idx} className="text-sm text-red-700">
+                  • {error.passengerName}: {error.message}
+                </li>
+              ))}
+            </ul>
+            <p className="text-xs text-red-600 mt-2">
+              Please update the date of birth for the affected passenger(s) to continue.
+            </p>
           </div>
         </div>
       </div>
@@ -1352,7 +1464,9 @@ const BookingReviewPage = () => {
         </button>
         
         {expandedSections.passengerDetails && (
-          <div className="p-5 pt-0 border-t border-gray-100">
+          <div className="p-5 border-t border-gray-100">
+            {renderAgeErrorBox()}
+            
             <div className="space-y-4">
               {passengers.map((passenger, idx) => (
                 <div key={passenger.id} className="border border-gray-100 rounded-xl p-4 hover:shadow-md transition-all">
@@ -1391,8 +1505,14 @@ const BookingReviewPage = () => {
                         placeholder="Last name" 
                       />
                     </div>
+                    
                     <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Date of Birth *</label>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">
+                        Date of Birth * 
+                        {passenger.code === 'ADT' && <span className="text-gray-400 ml-1">(Any age)</span>}
+                        {passenger.code === 'CNN' && <span className="text-gray-400 ml-1">(2-11 years)</span>}
+                        {passenger.code === 'INF' && <span className="text-gray-400 ml-1">(Under 2 years)</span>}
+                      </label>
                       <input 
                         type="date" 
                         value={passenger.dob} 
@@ -1402,6 +1522,7 @@ const BookingReviewPage = () => {
                         }`} 
                       />
                     </div>
+                    
                     <div>
                       <label className="block text-xs font-medium text-gray-500 mb-1">Gender *</label>
                       <div className="flex gap-4">
@@ -1460,7 +1581,7 @@ const BookingReviewPage = () => {
         </button>
         
         {expandedSections.contactInfo && (
-          <div className="p-5 pt-0 border-t border-gray-100">
+          <div className="p-5 border-t border-gray-100">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Email Address *</label>
@@ -1514,68 +1635,6 @@ const BookingReviewPage = () => {
     );
   };
   
-  // ============ RENDER PAYMENT METHODS ============
-  const renderPaymentMethods = () => {
-    const methods = [
-      { id: 'card', icon: FaCreditCard, name: 'Card', subIcons: [FaCcVisa, FaCcMastercard] },
-      { id: 'upi', icon: FaMobileAlt, name: 'UPI' },
-      { id: 'netbanking', icon: FaWallet, name: 'Net Banking' }
-    ];
-    
-    return (
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        <button
-          onClick={() => toggleSection('paymentMethod')}
-          className="w-full flex items-center justify-between p-5 hover:bg-[#FD561E]/5 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center">
-              <FaWallet className="text-purple-500" size={18} />
-            </div>
-            <div>
-              <h2 className="font-semibold text-gray-800">Payment Method</h2>
-            </div>
-          </div>
-          {expandedSections.paymentMethod ? <FaChevronUp className="text-gray-400" /> : <FaChevronDown className="text-gray-400" />}
-        </button>
-        
-        {expandedSections.paymentMethod && (
-          <div className="p-5 pt-0 border-t border-gray-100">
-            <div className="grid grid-cols-3 gap-4">
-              {methods.map((method) => (
-                <button 
-                  key={method.id}
-                  onClick={() => setPaymentMethod(method.id)} 
-                  className={`p-4 rounded-xl border-2 transition-all text-center ${
-                    paymentMethod === method.id 
-                      ? 'border-[#FD561E] bg-[#FD561E]/5' 
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <method.icon className={`text-2xl mx-auto mb-2 ${
-                    paymentMethod === method.id ? 'text-[#FD561E]' : 'text-gray-400'
-                  }`} />
-                  {method.subIcons && (
-                    <div className="flex justify-center gap-2 mb-2">
-                      {method.subIcons.map((Icon, i) => (
-                        <Icon key={i} className={`text-lg ${
-                          paymentMethod === method.id ? 'text-[#FD561E]' : 'text-gray-400'
-                        }`} />
-                      ))}
-                    </div>
-                  )}
-                  <p className={`text-sm font-medium text-center ${
-                    paymentMethod === method.id ? 'text-[#FD561E]' : 'text-gray-600'
-                  }`}>{method.name}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-  
   // ============ MAIN RENDER ============
   if (loading && !extractedData) {
     return (
@@ -1618,31 +1677,30 @@ const BookingReviewPage = () => {
     );
   }
   
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      <div className="container mx-auto px-4 py-6">
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Left Column */}
-          <div className="lg:w-2/3 space-y-5">
-            {renderFlightDetails()}
-            {tripType === 'round-trip' && renderReturnFlightDetails()}
-            {renderAllFares()}
-            {renderTaxDetails()}
-            {renderOptionalServices()}
-            {renderFareRules()}
-            {renderPassengerForm()}
-            {renderContactForm()}
-            {renderPaymentMethods()}
-          </div>
-          
-          {/* Right Column - Price Summary (Sticky) */}
-          <div className="lg:w-1/3">
-            {renderPriceSummary()}
-          </div>
+return (
+  <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <div className="container mx-auto px-4 py-6">
+      <div className="flex flex-col lg:flex-row lg:items-start gap-6">
+        {/* LEFT COLUMN - scrolls with the page */}
+        <div className="lg:w-2/3 space-y-5">
+          {renderFlightDetails()}
+          {tripType === 'round-trip' && renderReturnFlightDetails()}
+          {renderAllFares()}
+          {renderTaxDetails()}
+          {renderOptionalServices()}
+          {renderFareRules()}
+          {renderPassengerForm()}
+          {renderContactForm()}
+        </div>
+
+        {/* RIGHT COLUMN - sticks to viewport while page scrolls */}
+        <div className="lg:w-1/3 pt-4" style={{ position: 'sticky', top: '20px', alignSelf: 'flex-start' }}>
+          {renderPriceSummary()}
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 export default BookingReviewPage;

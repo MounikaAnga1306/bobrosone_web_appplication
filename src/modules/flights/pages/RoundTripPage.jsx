@@ -1,14 +1,17 @@
 // src/modules/flights/pages/RoundTripPage.jsx
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useFlightSearchContext } from '../contexts/FlightSearchContext';
 import { searchFlights } from '../services/flightSearchService';
+import { searchAirports } from '../services/airportSearchService';
+import { fetchAirlines } from '../services/airlineService';
 import { transformFlightData } from '../utils/flightDataTransformer';
 import RoundTripFlightCard from '../components/shared/RoundTripFlightCard';
 import BottomBar from '../components/shared/BottomBar';
 import RoundTripSheet from '../components/sheet/RoundTripSheet';
 import FilterSidebar from '../components/shared/FilterSidebar';
+import FlightLoadingAnimation from '../utils/FlightLoadingAnimation';
 import {
   FaArrowLeft,
   FaPlane,
@@ -23,190 +26,17 @@ import {
   FaInfoCircle,
   FaExchangeAlt,
   FaStar,
-  FaShieldAlt
+  FaShieldAlt,
+  FaSpinner,
+  FaUser
 } from 'react-icons/fa';
-
-// ============ PREMIUM FLIGHT LOADING COMPONENT ============
-const FlightLoadingAnimation = ({ searchSummary }) => {
-  const [progress, setProgress] = useState(0);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [dots, setDots] = useState('');
-  
-  // Loading steps for better UX
-  const loadingSteps = [
-    { message: "Searching the best routes", duration: 800 },
-    { message: "Checking availability", duration: 600 },
-    { message: "Finding lowest fares", duration: 700 },
-    { message: "Comparing airlines", duration: 500 },
-    { message: "Almost there...", duration: 400 }
-  ];
-  
-  // Animated dots effect
-  useEffect(() => {
-    const dotInterval = setInterval(() => {
-      setDots(prev => prev.length >= 3 ? '' : prev + '.');
-    }, 400);
-    return () => clearInterval(dotInterval);
-  }, []);
-  
-  // Progress animation
-  useEffect(() => {
-    const totalDuration = loadingSteps.reduce((sum, step) => sum + step.duration, 0);
-    const startTime = Date.now();
-    
-    const progressInterval = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      const newProgress = Math.min((elapsed / totalDuration) * 100, 100);
-      setProgress(newProgress);
-      
-      // Update current step based on elapsed time
-      let accumulatedTime = 0;
-      for (let i = 0; i < loadingSteps.length; i++) {
-        accumulatedTime += loadingSteps[i].duration;
-        if (elapsed < accumulatedTime) {
-          setCurrentStep(i);
-          break;
-        }
-      }
-      
-      if (newProgress >= 100) {
-        clearInterval(progressInterval);
-      }
-    }, 50);
-    
-    return () => clearInterval(progressInterval);
-  }, []);
-  
-  // Calculate flight position based on progress with takeoff trajectory
-  const calculatePosition = (progress) => {
-    const screenWidth = window.innerWidth;
-    const maxLeft = screenWidth - 100;
-    const left = (progress / 100) * maxLeft;
-    
-    const x = progress / 100;
-    const maxRise = 150;
-    const top = 350 - (maxRise * x * x);
-    const rotation = -8 * (1 - x);
-    
-    return { left, top, rotation };
-  };
-  
-  const position = calculatePosition(progress);
-  
-  return (
-    <div className="min-h-screen bg-white overflow-hidden relative">
-      {/* Clean white background */}
-      <div className="absolute inset-0 bg-white"></div>
-      
-      {/* Subtle minimal shadow line at bottom */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-gray-50 to-transparent"></div>
-      
-      {/* Animated Flight Image with Takeoff Trajectory */}
-      <div
-        className="fixed transition-all duration-100 ease-linear"
-        style={{
-          left: `${position.left}px`,
-          top: `${position.top}px`,
-          transform: `rotate(${position.rotation}deg)`,
-          transition: 'left 0.05s linear, top 0.08s cubic-bezier(0.4, 0, 0.2, 1), transform 0.1s ease',
-          zIndex: 20
-        }}
-      >
-        {/* Large Flight Image */}
-        <img 
-          src="/assets/flight_moving_image1.png"
-          alt="Flight"
-          className="w-32 h-32 md:w-40 md:h-40 object-contain"
-          style={{
-            filter: 'drop-shadow(0 8px 16px rgba(0, 0, 0, 0.08))',
-            transition: 'all 0.3s ease',
-            opacity: 0.95
-          }}
-          onError={(e) => {
-            e.target.src = "https://cdn-icons-png.flaticon.com/512/3095/3095100.png";
-            console.warn('Flight image not found in public/assets, using fallback');
-          }}
-        />
-        
-        {/* Minimal trail effect */}
-        <div className="absolute -left-12 top-1/2 transform -translate-y-1/2 flex gap-1">
-          {[...Array(3)].map((_, i) => (
-            <div
-              key={i}
-              className="rounded-full bg-gray-200"
-              style={{
-                width: `${12 - i * 3}px`,
-                height: `${2 - i * 0.5}px`,
-                opacity: 0.3 - i * 0.1,
-                animation: `trail ${0.6 - i * 0.15}s linear infinite`,
-              }}
-            />
-          ))}
-        </div>
-      </div>
-      
-      {/* Minimal horizontal reference line */}
-      <div className="absolute bottom-32 left-0 right-0">
-        <div className="h-px bg-gray-100 w-full"></div>
-      </div>
-      
-      {/* Loading Text - Centered */}
-      <div className="absolute bottom-40 left-1/2 transform -translate-x-1/2 text-center z-10">
-        <h2 className="text-xl font-light text-gray-600 mb-2 tracking-wide">
-          {loadingSteps[currentStep]?.message}
-          <span className="inline-block w-6 text-left text-gray-400">{dots}</span>
-        </h2>
-        <p className="text-gray-400 text-sm font-light">
-          {searchSummary?.fromName} → {searchSummary?.toName}
-        </p>
-        <p className="text-gray-300 text-xs mt-1 font-light">
-          {searchSummary?.departureDate} → {searchSummary?.returnDate}
-        </p>
-        
-        {/* Minimal Progress Bar */}
-        <div className="mt-8 w-48 mx-auto">
-          <div className="h-px bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gray-400 rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
-            ></div>
-          </div>
-          <div className="flex justify-between text-xs text-gray-300 mt-2 font-light">
-            <span>Depart</span>
-            <span className="text-gray-400">{Math.round(progress)}%</span>
-            <span>Arrive</span>
-          </div>
-        </div>
-      </div>
-      
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          @keyframes trail {
-            0% { 
-              transform: translateX(0); 
-              opacity: 0.3;
-              width: 12px;
-            }
-            100% { 
-              transform: translateX(-20px); 
-              opacity: 0;
-              width: 20px;
-            }
-          }
-        `
-      }} />
-    </div>
-  );
-};
 
 const RoundTripPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { 
     updateFlightResults, 
-    flightResults,
-    getSearchSummary,
-    passengerBreakdown
+    flightResults
   } = useFlightSearchContext();
 
   // ============ API LOADING STATE ============
@@ -214,6 +44,47 @@ const RoundTripPage = () => {
   const [apiError, setApiError] = useState(null);
   const [searchSummary, setSearchSummary] = useState(null);
   const [passengerCounts, setPassengerCounts] = useState({ ADT: 1, CNN: 0, INF: 0 });
+  
+  // ============ AIRLINE DATA STATE ============
+  const [airlinesMap, setAirlinesMap] = useState({});
+  const [airlinesLoading, setAirlinesLoading] = useState(true);
+  
+  // ============ EDIT MODE STATE ============
+  const [isEditing, setIsEditing] = useState(false);
+  const [editFrom, setEditFrom] = useState(null);
+  const [editTo, setEditTo] = useState(null);
+  const [editFromDisplay, setEditFromDisplay] = useState('');
+  const [editToDisplay, setEditToDisplay] = useState('');
+  const [editDepartureDate, setEditDepartureDate] = useState(null);
+  const [editReturnDate, setEditReturnDate] = useState(null);
+  const [editPassengers, setEditPassengers] = useState(null);
+  const [editTravelClass, setEditTravelClass] = useState('Economy');
+
+  // Airport search for edit mode
+  const [showFromDropdown, setShowFromDropdown] = useState(false);
+  const [showToDropdown, setShowToDropdown] = useState(false);
+  const [fromAirports, setFromAirports] = useState([]);
+  const [toAirports, setToAirports] = useState([]);
+  const [fromLoading, setFromLoading] = useState(false);
+  const [toLoading, setToLoading] = useState(false);
+  const fromRef = useRef(null);
+  const toRef = useRef(null);
+  const fromSearchTimeout = useRef(null);
+  const toSearchTimeout = useRef(null);
+
+  // Calendar state for edit mode
+  const [showDepartureCalendar, setShowDepartureCalendar] = useState(false);
+  const [showReturnCalendar, setShowReturnCalendar] = useState(false);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentReturnDate, setCurrentReturnDate] = useState(new Date());
+  const departureCalendarRef = useRef(null);
+  const returnCalendarRef = useRef(null);
+
+  // Traveller modal for edit mode
+  const [showTravellerModal, setShowTravellerModal] = useState(false);
+  const [tempPassengers, setTempPassengers] = useState([]);
+  const maxTravellers = 9;
+  const travellerRef = useRef(null);
   
   // ============ UI STATES ============
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -266,18 +137,15 @@ const RoundTripPage = () => {
       setApiError(null);
       
       try {
-        // Parse URL parameters
         const params = new URLSearchParams(location.search);
         const tripType = params.get('tripType');
         
-        // Validate trip type
         if (!tripType || tripType !== 'round-trip') {
           console.error('Invalid trip type or missing parameters');
           navigate('/flights');
           return;
         }
         
-        // Extract search parameters
         const from = params.get('from');
         const to = params.get('to');
         const fromName = params.get('fromName');
@@ -292,14 +160,12 @@ const RoundTripPage = () => {
         const travelClass = params.get('class') || 'Economy';
         const fareType = params.get('fareType') || 'regular';
         
-        // Validate required parameters
         if (!from || !to || !departureDate || !returnDate) {
           console.error('Missing required search parameters');
           navigate('/flights');
           return;
         }
         
-        // Format dates for display
         const formattedDeparture = new Date(departureDate).toLocaleDateString('en-GB', { 
           day: 'numeric', 
           month: 'short',
@@ -311,7 +177,6 @@ const RoundTripPage = () => {
           year: 'numeric'
         });
         
-        // Build search summary for display
         const summary = {
           from: { code: from, name: fromName, city: fromCity },
           to: { code: to, name: toName, city: toCity },
@@ -331,17 +196,13 @@ const RoundTripPage = () => {
         };
         
         setSearchSummary(summary);
-        
-        // Set passenger counts
         setPassengerCounts({ ADT: adults, CNN: children, INF: infants });
         
-        // Build passengers array for API
         const passengers = [];
         for (let i = 0; i < adults; i++) passengers.push({ code: 'ADT' });
         for (let i = 0; i < children; i++) passengers.push({ code: 'CNN', age: 8 });
         for (let i = 0; i < infants; i++) passengers.push({ code: 'INF', age: 1 });
         
-        // Build search data for API
         const searchData = {
           tripType: 'round-trip',
           legs: [
@@ -360,7 +221,6 @@ const RoundTripPage = () => {
           fareType
         };
         
-        // Call the API
         console.log('🔍 Calling round-trip search API with:', searchData);
         const result = await searchFlights(searchData);
         
@@ -413,19 +273,273 @@ const RoundTripPage = () => {
     fetchFlightResults();
   }, [location.search, navigate, updateFlightResults]);
 
+  // ============ FETCH AIRLINES DATA AFTER FLIGHTS LOAD ============
+  useEffect(() => {
+    const loadAirlines = async () => {
+      const allFlights = [...(flightResults.flights || []), ...(flightResults.roundTrips || [])];
+      
+      if (!allFlights.length) {
+        setAirlinesLoading(false);
+        return;
+      }
+      
+      try {
+        setAirlinesLoading(true);
+        console.log('🛫 Fetching airlines data for round trip...');
+        const airlines = await fetchAirlines();
+        
+        const airlinesMapData = {};
+        airlines.forEach(airline => {
+          airlinesMapData[airline.code] = airline;
+        });
+        
+        setAirlinesMap(airlinesMapData);
+        console.log('✅ Airlines data loaded:', Object.keys(airlinesMapData).length);
+      } catch (error) {
+        console.error('❌ Failed to load airlines:', error);
+      } finally {
+        setAirlinesLoading(false);
+      }
+    };
+    
+    loadAirlines();
+  }, [flightResults.flights, flightResults.roundTrips]);
+
+  // ============ EDIT MODE FUNCTIONS ============
+
+  const openEditMode = () => {
+    setEditFrom({ code: searchSummary?.fromCode, name: searchSummary?.fromName });
+    setEditTo({ code: searchSummary?.toCode, name: searchSummary?.toName });
+    setEditFromDisplay(`${searchSummary?.fromName} (${searchSummary?.fromCode})`);
+    setEditToDisplay(`${searchSummary?.toName} (${searchSummary?.toCode})`);
+    setEditDepartureDate(searchSummary?.rawDepartureDate ? new Date(searchSummary.rawDepartureDate) : new Date());
+    setEditReturnDate(searchSummary?.rawReturnDate ? new Date(searchSummary.rawReturnDate) : new Date());
+    setEditPassengers(passengerCounts);
+    setEditTravelClass(searchSummary?.travelClass || 'Economy');
+    setIsEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setShowFromDropdown(false);
+    setShowToDropdown(false);
+    setShowDepartureCalendar(false);
+    setShowReturnCalendar(false);
+    setShowTravellerModal(false);
+  };
+
+  const handleEditSearch = () => {
+    if (!editFrom || !editTo || !editDepartureDate || !editReturnDate) {
+      alert('Please fill all required fields');
+      return;
+    }
+    
+    if (new Date(editReturnDate) <= new Date(editDepartureDate)) {
+      alert('Return date must be after departure date');
+      return;
+    }
+    
+    const params = new URLSearchParams();
+    params.set('tripType', 'round-trip');
+    params.set('adults', editPassengers?.ADT || 1);
+    params.set('children', editPassengers?.CNN || 0);
+    params.set('infants', editPassengers?.INF || 0);
+    params.set('class', editTravelClass);
+    params.set('fareType', searchSummary?.fareType || 'regular');
+    params.set('from', editFrom.code);
+    params.set('to', editTo.code);
+    params.set('fromName', editFrom.name);
+    params.set('toName', editTo.name);
+    params.set('departureDate', formatDateForAPI(editDepartureDate));
+    params.set('returnDate', formatDateForAPI(editReturnDate));
+    
+    setIsEditing(false);
+    navigate(`/flights/round-trip?${params.toString()}`);
+  };
+
+  const searchAirportsAPI = async (searchTerm, type) => {
+    if (searchTerm.length < 3) {
+      if (type === "from") {
+        setFromAirports([]);
+        setFromLoading(false);
+      } else {
+        setToAirports([]);
+        setToLoading(false);
+      }
+      return;
+    }
+
+    try {
+      if (type === "from") {
+        setFromLoading(true);
+        const results = await searchAirports(searchTerm);
+        setFromAirports(results);
+        setFromLoading(false);
+      } else {
+        setToLoading(true);
+        const results = await searchAirports(searchTerm);
+        setToAirports(results);
+        setToLoading(false);
+      }
+    } catch (error) {
+      if (type === "from") {
+        setFromLoading(false);
+        setFromAirports([]);
+      } else {
+        setToLoading(false);
+        setToAirports([]);
+      }
+    }
+  };
+
+  const debouncedFromSearch = useCallback((value) => {
+    if (fromSearchTimeout.current) clearTimeout(fromSearchTimeout.current);
+    if (value.length >= 3) {
+      fromSearchTimeout.current = setTimeout(() => searchAirportsAPI(value, "from"), 500);
+    } else {
+      setFromAirports([]);
+      setFromLoading(false);
+    }
+  }, []);
+
+  const debouncedToSearch = useCallback((value) => {
+    if (toSearchTimeout.current) clearTimeout(toSearchTimeout.current);
+    if (value.length >= 3) {
+      toSearchTimeout.current = setTimeout(() => searchAirportsAPI(value, "to"), 500);
+    } else {
+      setToAirports([]);
+      setToLoading(false);
+    }
+  }, []);
+
+  const handleFromInputChange = (e) => {
+    const value = e.target.value;
+    setEditFromDisplay(value);
+    setEditFrom(null);
+    debouncedFromSearch(value);
+    setShowFromDropdown(true);
+  };
+
+  const handleToInputChange = (e) => {
+    const value = e.target.value;
+    setEditToDisplay(value);
+    setEditTo(null);
+    debouncedToSearch(value);
+    setShowToDropdown(true);
+  };
+
+  const handleFromSelect = (airport) => {
+    setEditFrom(airport);
+    setEditFromDisplay(`${airport.name} (${airport.location_code})`);
+    setShowFromDropdown(false);
+    setFromAirports([]);
+  };
+
+  const handleToSelect = (airport) => {
+    setEditTo(airport);
+    setEditToDisplay(`${airport.name} (${airport.location_code})`);
+    setShowToDropdown(false);
+    setToAirports([]);
+  };
+
+  const handleSwap = () => {
+    const tempFrom = editFrom;
+    const tempFromDisplay = editFromDisplay;
+    setEditFrom(editTo);
+    setEditFromDisplay(editToDisplay);
+    setEditTo(tempFrom);
+    setEditToDisplay(tempFromDisplay);
+  };
+
+  const handleDepartureDateSelect = (day) => {
+    const fullDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+    setEditDepartureDate(fullDate);
+    setShowDepartureCalendar(false);
+  };
+
+  const handleReturnDateSelect = (day) => {
+    const fullDate = new Date(currentReturnDate.getFullYear(), currentReturnDate.getMonth(), day);
+    setEditReturnDate(fullDate);
+    setShowReturnCalendar(false);
+  };
+
+  const openTravellerModalEdit = () => {
+    setTempPassengers([
+      ...Array(editPassengers?.ADT || 1).fill({ code: 'ADT' }),
+      ...Array(editPassengers?.CNN || 0).fill({ code: 'CNN', age: 8 }),
+      ...Array(editPassengers?.INF || 0).fill({ code: 'INF', age: 1 })
+    ]);
+    setShowTravellerModal(true);
+  };
+
+  const addTempPassenger = (code) => {
+    if (tempPassengers.length >= maxTravellers) return;
+    const newPassenger = { code };
+    if (code === 'CNN') newPassenger.age = 8;
+    if (code === 'INF') newPassenger.age = 1;
+    setTempPassengers([...tempPassengers, newPassenger]);
+  };
+
+  const removeTempPassenger = (index) => {
+    setTempPassengers(tempPassengers.filter((_, i) => i !== index));
+  };
+
+  const updateTempPassengerAge = (index, age) => {
+    setTempPassengers(prev => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], age: parseInt(age) };
+      return updated;
+    });
+  };
+
+  const applyPassengerChanges = () => {
+    if (!tempPassengers.some(p => p.code === 'ADT')) {
+      alert("At least one adult is required");
+      return;
+    }
+    const adults = tempPassengers.filter(p => p.code === 'ADT').length;
+    const children = tempPassengers.filter(p => p.code === 'CNN').length;
+    const infants = tempPassengers.filter(p => p.code === 'INF').length;
+    setEditPassengers({ ADT: adults, CNN: children, INF: infants });
+    setShowTravellerModal(false);
+  };
+
+  const cancelPassengerChanges = () => {
+    setTempPassengers([]);
+    setShowTravellerModal(false);
+  };
+
+  const formatDate = (date) => {
+    if (!date) return "";
+    return date.toLocaleDateString("en-GB", { day: 'numeric', month: 'short' });
+  };
+
+  const formatDateForAPI = (date) => {
+    if (!date) return null;
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Calendar helpers for edit mode
+  const getDaysInMonth = (date) => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  };
+
+  const getFirstDay = (date) => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+  };
+
+  const monthName = (date) => date.toLocaleString("default", { month: "long" });
+  const yearNum = (date) => date.getFullYear();
+
   // ============ DATA TRANSFORMATION ============
   
   const { outboundFlights, returnFlights, combinations } = useMemo(() => {
     console.log('🔄 Transforming flight data...');
     const transformed = transformFlightData(flightResults);
-    
-    // Log brand fare details
-    console.log('\n📊 [BRAND FARE DETAILS]');
-    console.log('========================================');
-    console.log(`✈️ Outbound Flights: ${transformed.outboundFlights?.length || 0}`);
-    console.log(`🔄 Return Flights: ${transformed.returnFlights?.length || 0}`);
-    console.log('========================================\n');
-    
     return transformed;
   }, [flightResults]);
 
@@ -434,7 +548,6 @@ const RoundTripPage = () => {
   const filteredOutbound = useMemo(() => {
     let filtered = [...outboundFlights];
 
-    // Price filter
     if (priceRange.min > 0 || priceRange.max < 100000) {
       filtered = filtered.filter(f => {
         const price = f.lowestPrice || f.price || 0;
@@ -442,12 +555,10 @@ const RoundTripPage = () => {
       });
     }
 
-    // Airline filter
     if (selectedAirlines.length > 0) {
       filtered = filtered.filter(f => selectedAirlines.includes(f.airline));
     }
 
-    // Stops filter
     if (selectedStops.length > 0) {
       filtered = filtered.filter(f => {
         const stops = f.stops || 0;
@@ -458,7 +569,6 @@ const RoundTripPage = () => {
       });
     }
 
-    // Time filter
     if (selectedTimes.length > 0) {
       filtered = filtered.filter(f => {
         const hour = new Date(f.departureTime).getHours();
@@ -470,7 +580,6 @@ const RoundTripPage = () => {
       });
     }
 
-    // Sorting
     switch (sortBy) {
       case 'price-low':
         filtered.sort((a, b) => (a.lowestPrice || a.price || 0) - (b.lowestPrice || b.price || 0));
@@ -610,41 +719,324 @@ const RoundTripPage = () => {
     selectedFareTypes.length +
     (priceRange.min !== getPriceRange.min || priceRange.max !== getPriceRange.max ? 1 : 0);
 
+  const passengerText = useMemo(() => {
+    const parts = [];
+    if (passengerCounts.ADT > 0) {
+      parts.push(`${passengerCounts.ADT} Adult${passengerCounts.ADT > 1 ? 's' : ''}`);
+    }
+    if (passengerCounts.CNN > 0) {
+      parts.push(`${passengerCounts.CNN} Child${passengerCounts.CNN > 1 ? 'ren' : ''}`);
+    }
+    if (passengerCounts.INF > 0) {
+      parts.push(`${passengerCounts.INF} Infant${passengerCounts.INF > 1 ? 's' : ''}`);
+    }
+    return parts.join(', ');
+  }, [passengerCounts]);
+
+  // Click outside handlers
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (fromRef.current && !fromRef.current.contains(event.target)) {
+        setShowFromDropdown(false);
+      }
+      if (toRef.current && !toRef.current.contains(event.target)) {
+        setShowToDropdown(false);
+      }
+      if (departureCalendarRef.current && !departureCalendarRef.current.contains(event.target)) {
+        setShowDepartureCalendar(false);
+      }
+      if (returnCalendarRef.current && !returnCalendarRef.current.contains(event.target)) {
+        setShowReturnCalendar(false);
+      }
+      if (travellerRef.current && !travellerRef.current.contains(event.target)) {
+        setShowTravellerModal(false);
+        setTempPassengers([]);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // ============ SEARCH BAR COMPONENT (Reused for both loading and results) ============
+  const SearchBar = () => (
+    <div className="w-full bg-[#f36b32] py-4 sticky top-0 z-40 shadow-md flight-search-bar">
+      <div className="container mx-auto px-4">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr_auto] lg:grid-cols-[1fr_auto_1fr_160px_160px_200px_auto] items-end gap-4">
+          
+          {/* From Field */}
+          <div className="relative" ref={fromRef}>
+            <p className="text-white text-sm font-bold mb-2">FROM</p>
+            <div className="relative">
+              <div className="flex items-center gap-3 px-6 h-16 rounded-md bg-white shadow-md">
+                <FaMapMarkerAlt className="text-[#f36b32] w-5 h-5" />
+                <input
+                  type="text"
+                  value={isEditing ? editFromDisplay : (searchSummary?.fromName || '')}
+                  onChange={isEditing ? handleFromInputChange : undefined}
+                  onFocus={isEditing ? () => setShowFromDropdown(true) : undefined}
+                  placeholder="City or airport"
+                  readOnly={!isEditing}
+                  className={`w-full text-base font-bold outline-none bg-transparent ${!isEditing ? 'cursor-pointer' : ''}`}
+                  onClick={!isEditing ? openEditMode : undefined}
+                />
+                {fromLoading && <FaSpinner className="animate-spin text-gray-400" />}
+              </div>
+              {showFromDropdown && isEditing && fromAirports.length > 0 && (
+                <div className="absolute left-0 top-full w-full bg-white shadow-lg rounded-md max-h-60 overflow-y-auto z-50 border border-gray-100 mt-1">
+                  {fromAirports.map((airport) => (
+                    <div
+                      key={airport.location_code}
+                      className="px-4 py-3 hover:bg-gray-100 cursor-pointer text-sm"
+                      onClick={() => handleFromSelect(airport)}
+                    >
+                      <div className="font-medium">{airport.name}</div>
+                      <div className="text-xs text-gray-500">{airport.location_code}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Swap Button */}
+          <div className="flex justify-center mb-2">
+            <button
+              onClick={isEditing ? handleSwap : openEditMode}
+              className="bg-white w-12 h-12 rounded-full flex items-center justify-center shadow-md hover:scale-110 transition-all duration-300"
+            >
+              <FaExchangeAlt className="w-5 h-5 text-[#f36b32]" />
+            </button>
+          </div>
+
+          {/* To Field */}
+          <div className="relative" ref={toRef}>
+            <p className="text-white text-sm font-bold mb-2">TO</p>
+            <div className="relative">
+              <div className="flex items-center gap-3 px-6 h-16 rounded-md bg-white shadow-md">
+                <FaMapMarkerAlt className="text-[#f36b32] w-5 h-5" />
+                <input
+                  type="text"
+                  value={isEditing ? editToDisplay : (searchSummary?.toName || '')}
+                  onChange={isEditing ? handleToInputChange : undefined}
+                  onFocus={isEditing ? () => setShowToDropdown(true) : undefined}
+                  placeholder="City or airport"
+                  readOnly={!isEditing}
+                  className={`w-full text-base font-bold outline-none bg-transparent ${!isEditing ? 'cursor-pointer' : ''}`}
+                  onClick={!isEditing ? openEditMode : undefined}
+                />
+                {toLoading && <FaSpinner className="animate-spin text-gray-400" />}
+              </div>
+              {showToDropdown && isEditing && toAirports.length > 0 && (
+                <div className="absolute left-0 top-full w-full bg-white shadow-lg rounded-md max-h-60 overflow-y-auto z-50 border border-gray-100 mt-1">
+                  {toAirports.map((airport) => (
+                    <div
+                      key={airport.location_code}
+                      className="px-4 py-3 hover:bg-gray-100 cursor-pointer text-sm"
+                      onClick={() => handleToSelect(airport)}
+                    >
+                      <div className="font-medium">{airport.name}</div>
+                      <div className="text-xs text-gray-500">{airport.location_code}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Departure Date Field */}
+          <div className="relative">
+            <p className="text-white text-sm font-bold mb-2">DEPARTURE</p>
+            <div
+              onClick={isEditing ? () => setShowDepartureCalendar(!showDepartureCalendar) : openEditMode}
+              className="flex items-center gap-3 px-6 h-16 rounded-md bg-white shadow-md cursor-pointer"
+            >
+              <FaCalendarAlt className="text-[#f36b32] w-5 h-5" />
+              <input
+                type="text"
+                value={isEditing ? (editDepartureDate ? formatDate(editDepartureDate) : "") : (searchSummary?.departureDate || '')}
+                placeholder="Select date"
+                readOnly
+                className="w-full text-base font-bold outline-none bg-transparent cursor-pointer"
+              />
+            </div>
+            {showDepartureCalendar && isEditing && (
+              <div 
+                ref={departureCalendarRef}
+                className="absolute top-full left-0 mt-2 bg-white rounded-md shadow-xl p-4 w-72 z-50"
+              >
+                <div className="flex justify-between items-center mb-3">
+                  <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}>
+                    <FaChevronLeft className="text-gray-600" />
+                  </button>
+                  <h2 className="font-semibold text-sm">{monthName(currentDate)} {yearNum(currentDate)}</h2>
+                  <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}>
+                    <FaChevronRight className="text-gray-600" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-7 text-center text-xs text-gray-500 mb-2">
+                  {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(day => <div key={day}>{day}</div>)}
+                </div>
+                <div className="grid grid-cols-7 gap-1 text-center">
+                  {[...Array(getFirstDay(currentDate))].map((_, i) => <div key={i}></div>)}
+                  {[...Array(getDaysInMonth(currentDate))].map((_, i) => {
+                    const day = i + 1;
+                    const isPast = new Date(currentDate.getFullYear(), currentDate.getMonth(), day) < new Date();
+                    return (
+                      <button
+                        key={day}
+                        onClick={() => !isPast && handleDepartureDateSelect(day)}
+                        disabled={isPast}
+                        className={`p-2 rounded text-sm ${isPast ? 'text-gray-300' : 'hover:bg-gray-100'}`}
+                      >
+                        {day}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Return Date Field */}
+          <div className="relative">
+            <p className="text-white text-sm font-bold mb-2">RETURN</p>
+            <div
+              onClick={isEditing ? () => setShowReturnCalendar(!showReturnCalendar) : openEditMode}
+              className="flex items-center gap-3 px-6 h-16 rounded-md bg-white shadow-md cursor-pointer"
+            >
+              <FaCalendarAlt className="text-[#f36b32] w-5 h-5" />
+              <input
+                type="text"
+                value={isEditing ? (editReturnDate ? formatDate(editReturnDate) : "") : (searchSummary?.returnDate || '')}
+                placeholder="Select date"
+                readOnly
+                className="w-full text-base font-bold outline-none bg-transparent cursor-pointer"
+              />
+            </div>
+            {showReturnCalendar && isEditing && (
+              <div 
+                ref={returnCalendarRef}
+                className="absolute top-full left-0 mt-2 bg-white rounded-md shadow-xl p-4 w-72 z-50"
+              >
+                <div className="flex justify-between items-center mb-3">
+                  <button onClick={() => setCurrentReturnDate(new Date(currentReturnDate.getFullYear(), currentReturnDate.getMonth() - 1, 1))}>
+                    <FaChevronLeft className="text-gray-600" />
+                  </button>
+                  <h2 className="font-semibold text-sm">{monthName(currentReturnDate)} {yearNum(currentReturnDate)}</h2>
+                  <button onClick={() => setCurrentReturnDate(new Date(currentReturnDate.getFullYear(), currentReturnDate.getMonth() + 1, 1))}>
+                    <FaChevronRight className="text-gray-600" />
+                  </button>
+                </div>
+                <div className="grid grid-cols-7 text-center text-xs text-gray-500 mb-2">
+                  {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(day => <div key={day}>{day}</div>)}
+                </div>
+                <div className="grid grid-cols-7 gap-1 text-center">
+                  {[...Array(getFirstDay(currentReturnDate))].map((_, i) => <div key={i}></div>)}
+                  {[...Array(getDaysInMonth(currentReturnDate))].map((_, i) => {
+                    const day = i + 1;
+                    const isPast = new Date(currentReturnDate.getFullYear(), currentReturnDate.getMonth(), day) < new Date();
+                    return (
+                      <button
+                        key={day}
+                        onClick={() => !isPast && handleReturnDateSelect(day)}
+                        disabled={isPast}
+                        className={`p-2 rounded text-sm ${isPast ? 'text-gray-300' : 'hover:bg-gray-100'}`}
+                      >
+                        {day}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Travellers Field */}
+          <div className="relative" ref={travellerRef}>
+            <p className="text-white text-sm font-bold mb-2">TRAVELLERS</p>
+            <div
+              onClick={isEditing ? openTravellerModalEdit : openEditMode}
+              className="flex items-center gap-3 px-6 h-16 rounded-md bg-white shadow-md cursor-pointer"
+            >
+              <FaUser className="text-[#f36b32] w-5 h-5" />
+              <span className="text-base font-bold text-gray-700 flex-1 truncate">
+                {isEditing ? (
+                  editPassengers ? `${editPassengers.ADT} Adult${editPassengers.ADT !== 1 ? 's' : ''} · ${editTravelClass}` : 'Select'
+                ) : (
+                  passengerText
+                )}
+              </span>
+              <FaChevronDown className="text-gray-400 w-4 h-4" />
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <div>
+            <button
+              onClick={isEditing ? handleEditSearch : openEditMode}
+              disabled={isEditing && (!editFrom || !editTo || !editDepartureDate || !editReturnDate)}
+              className="w-[160px] h-16 bg-white text-black font-bold rounded-md shadow-md cursor-pointer transition-all duration-300 hover:text-[#fd561e] hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isEditing ? 'UPDATE SEARCH' : 'MODIFY SEARCH'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   // ============ LOADING STATE ============
   if (isLoading) {
-    return <FlightLoadingAnimation searchSummary={searchSummary} />;
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <SearchBar />
+        <FlightLoadingAnimation 
+          searchSummary={{
+            fromCode: searchSummary?.fromCode,
+            fromName: searchSummary?.fromName,
+            toCode: searchSummary?.toCode,
+            toName: searchSummary?.toName,
+            formattedDate: `Departure: ${searchSummary?.departureDate} | Return: ${searchSummary?.returnDate}`
+          }}
+          isLoading={isLoading}
+        />
+      </div>
+    );
   }
 
   // ============ API ERROR STATE ============
   if (apiError) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
-          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <FaExclamationTriangle className="text-3xl text-red-500" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-3">Search Failed</h2>
-          <p className="text-gray-600 mb-4">{apiError}</p>
-          {searchSummary && (
-            <div className="bg-gray-50 p-3 rounded-lg mb-6 text-left">
-              <p className="text-sm text-gray-600">Your search:</p>
-              <p className="font-medium text-sm mt-1">{searchSummary.fromName} → {searchSummary.toName}</p>
-              <p className="text-xs text-gray-500 mt-1">{searchSummary.departureDate} → {searchSummary.returnDate}</p>
+      <div className="min-h-screen bg-gray-50">
+        <SearchBar />
+        <div className="flex items-center justify-center p-4 min-h-[calc(100vh-200px)]">
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
+            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FaExclamationTriangle className="text-3xl text-red-500" />
             </div>
-          )}
-          <div className="flex gap-3">
-            <button
-              onClick={() => window.location.reload()}
-              className="flex-1 bg-gray-100 text-gray-700 font-semibold py-3 px-4 rounded-xl hover:bg-gray-200 transition-colors"
-            >
-              Try Again
-            </button>
-            <button
-              onClick={() => navigate('/flights')}
-              className="flex-1 bg-[#FD561E] hover:bg-[#e04e1b] text-white font-semibold py-3 px-4 rounded-xl transition-all hover:shadow-lg"
-            >
-              Modify Search
-            </button>
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">Search Failed</h2>
+            <p className="text-gray-600 mb-4">{apiError}</p>
+            {searchSummary && (
+              <div className="bg-gray-50 p-3 rounded-lg mb-6 text-left">
+                <p className="text-sm text-gray-600">Your search:</p>
+                <p className="font-medium text-sm mt-1">{searchSummary.fromName} → {searchSummary.toName}</p>
+                <p className="text-xs text-gray-500 mt-1">{searchSummary.departureDate} → {searchSummary.returnDate}</p>
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={() => window.location.reload()}
+                className="flex-1 bg-gray-100 text-gray-700 font-semibold py-3 px-4 rounded-xl hover:bg-gray-200 transition-colors"
+              >
+                Try Again
+              </button>
+              <button
+                onClick={() => navigate('/flights')}
+                className="flex-1 bg-[#FD561E] hover:bg-[#e04e1b] text-white font-semibold py-3 px-4 rounded-xl transition-all hover:shadow-lg"
+              >
+                Modify Search
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -654,180 +1046,50 @@ const RoundTripPage = () => {
   // ============ NO FLIGHTS STATE ============
   if (!isLoading && !apiError && (!outboundFlights.length || !returnFlights.length)) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
-          <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <FaPlane className="text-3xl text-blue-500" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-3">No Flights Found</h2>
-          <p className="text-gray-600 mb-4">We couldn't find any flights matching your search criteria.</p>
-          {searchSummary && (
-            <div className="bg-gray-50 p-3 rounded-lg mb-6 text-left">
-              <p className="text-sm text-gray-600">You searched for:</p>
-              <p className="font-medium text-sm mt-1">{searchSummary.fromName} → {searchSummary.toName}</p>
-              <p className="text-xs text-gray-500 mt-1">{searchSummary.departureDate} → {searchSummary.returnDate}</p>
+      <div className="min-h-screen bg-gray-50">
+        <SearchBar />
+        <div className="flex items-center justify-center p-4 min-h-[calc(100vh-200px)]">
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
+            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <FaPlane className="text-3xl text-blue-500" />
             </div>
-          )}
-          <button
-            onClick={() => navigate('/flights')}
-            className="w-full bg-[#FD561E] hover:bg-[#e04e1b] text-white font-semibold py-3 px-4 rounded-xl transition-all hover:shadow-lg"
-          >
-            Modify Search
-          </button>
+            <h2 className="text-2xl font-bold text-gray-800 mb-3">No Flights Found</h2>
+            <p className="text-gray-600 mb-4">We couldn't find any flights matching your search criteria.</p>
+            {searchSummary && (
+              <div className="bg-gray-50 p-3 rounded-lg mb-6 text-left">
+                <p className="text-sm text-gray-600">You searched for:</p>
+                <p className="font-medium text-sm mt-1">{searchSummary.fromName} → {searchSummary.toName}</p>
+                <p className="text-xs text-gray-500 mt-1">{searchSummary.departureDate} → {searchSummary.returnDate}</p>
+              </div>
+            )}
+            <button
+              onClick={() => navigate('/flights')}
+              className="w-full bg-[#FD561E] hover:bg-[#e04e1b] text-white font-semibold py-3 px-4 rounded-xl transition-all hover:shadow-lg"
+            >
+              Modify Search
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
-  // ============ MAIN RENDER ============
+  // ============ MAIN RENDER WITH RESULTS - Search Bar Always Visible ============
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b sticky top-0 z-20">
-        <div className="container mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => navigate('/flights')}
-              className="flex items-center text-gray-600 hover:text-[#FD561E] transition-colors font-medium group"
-            >
-              <FaArrowLeft className="mr-2 text-sm group-hover:-translate-x-1 transition-transform" />
-              <span className="hidden sm:inline">Modify</span>
-            </button>
+      {/* Search Bar - Always Visible */}
+      <SearchBar />
 
-            <div className="text-center flex-1 max-w-2xl mx-4">
-              {/* Search Summary Card */}
-              <div className="bg-orange-50 rounded-full px-4 py-2 inline-flex items-center space-x-3 text-sm flex-wrap justify-center gap-2">
-                <FaMapMarkerAlt className="text-[#FD561E] text-xs" />
-                <span className="font-medium">{searchSummary?.fromCode || 'DEL'}</span>
-                <FaExchangeAlt className="text-gray-400 text-xs" />
-                <span className="font-medium">{searchSummary?.toCode || 'BOM'}</span>
-                <span className="w-px h-4 bg-gray-300"></span>
-                <FaCalendarAlt className="text-gray-400 text-xs" />
-                <span>{searchSummary?.departureDate || '26 Mar'}</span>
-                <FaChevronRight className="text-gray-400 text-xs" />
-                <FaCalendarAlt className="text-gray-400 text-xs" />
-                <span>{searchSummary?.returnDate || '28 Mar'}</span>
-                <span className="w-px h-4 bg-gray-300"></span>
-                <FaUserFriends className="text-gray-400 text-xs" />
-                <span>{passengerCounts.ADT} Adult{passengerCounts.ADT !== 1 ? 's' : ''}</span>
-              </div>
-            </div>
+      {/* Fare Type Selection */}
+      
+      
+      {/* Results Stats and Sort Bar */}
+      
 
-            <div className="flex items-center gap-2">
-              {/* Filter Button */}
-              <button
-                onClick={() => setShowMobileFilters(true)}
-                className="lg:hidden flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg hover:border-[#FD561E] hover:text-[#FD561E] transition-colors relative"
-              >
-                <FaFilter className="text-sm" />
-                {activeFilterCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-[#FD561E] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {activeFilterCount}
-                  </span>
-                )}
-              </button>
-
-              {/* Sort Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowSortDropdown(!showSortDropdown)}
-                  className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg hover:border-[#FD561E] transition-colors text-sm"
-                >
-                  <span className="hidden sm:inline">Sort by:</span>
-                  <span className="font-medium text-[#FD561E]">
-                    {sortOptions.find(o => o.value === sortBy)?.label.split(': ')[1] || 'Price'}
-                  </span>
-                  <FaChevronDown className={`text-xs transition-transform ${showSortDropdown ? 'rotate-180' : ''}`} />
-                </button>
-
-                {showSortDropdown && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border z-40 py-1">
-                    {sortOptions.map(option => (
-                      <button
-                        key={option.value}
-                        onClick={() => {
-                          setSortBy(option.value);
-                          setShowSortDropdown(false);
-                        }}
-                        className={`w-full text-left px-4 py-2.5 text-sm hover:bg-orange-50 transition-colors
-                          ${sortBy === option.value ? 'text-[#FD561E] font-medium bg-orange-50' : 'text-gray-700'}`}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Fare Type Selection */}
-        <div className="border-t border-gray-200 bg-white">
-          <div className="container mx-auto px-4 py-3">
-            <div className="flex items-center gap-4 overflow-x-auto pb-2">
-              <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Fare Type:</span>
-              {fareTypes.map((fare) => {
-                const Icon = fare.icon;
-                const isSelected = selectedFareTypes.includes(fare.id);
-                return (
-                  <button
-                    key={fare.id}
-                    onClick={() => {
-                      setSelectedFareTypes(prev =>
-                        prev.includes(fare.id)
-                          ? prev.filter(f => f !== fare.id)
-                          : [...prev, fare.id]
-                      );
-                    }}
-                    className={`
-                      flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap
-                      transition-all duration-200 border
-                      ${isSelected 
-                        ? `bg-${fare.color}-50 border-${fare.color}-200 text-${fare.color}-700` 
-                        : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
-                      }
-                    `}
-                  >
-                    <Icon className={isSelected ? `text-${fare.color}-500` : 'text-gray-400'} size={14} />
-                    {fare.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-        
-        {/* Results Stats */}
-        <div className="bg-gray-50 border-t px-4 py-2">
-          <div className="container mx-auto flex justify-between items-center text-sm">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center">
-                <span className="font-bold text-[#FD561E]">{outboundFlights.length}</span>
-                <span className="text-gray-600 ml-1">Outbound •</span>
-                <span className="font-bold text-[#FD561E] ml-1">{returnFlights.length}</span>
-                <span className="text-gray-600 ml-1">Return</span>
-              </div>
-              {activeFilterCount > 0 && (
-                <button
-                  onClick={resetFilters}
-                  className="text-xs text-gray-500 hover:text-[#FD561E] underline"
-                >
-                  Clear all filters
-                </button>
-              )}
-            </div>
-            <div className="flex items-center text-gray-500">
-              <FaInfoCircle className="mr-1 text-xs" />
-              <span className="text-xs">Select outbound & return</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
+      {/* Main Content */}
       <div className="container mx-auto px-4 py-6">
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Left Sidebar - Filters */}
+          {/* Left Sidebar - Filters (Desktop) */}
           <div className="hidden lg:block lg:w-1/4">
             <FilterSidebar
               priceRange={priceRange}
@@ -863,7 +1125,7 @@ const RoundTripPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Outbound Column */}
               <div>
-                <div className="bg-blue-50 rounded-t-xl p-3 mb-4 sticky top-20 z-10">
+                <div className="bg-blue-50 rounded-t-xl p-3 mb-4 sticky top-[200px] z-10">
                   <div className="flex items-center justify-between">
                     <h2 className="font-semibold text-blue-800 flex items-center gap-2">
                       <FaPlane className="rotate-45" />
@@ -887,6 +1149,8 @@ const RoundTripPage = () => {
                       isSelected={selectedRoundTrip.outbound?.id === flight.id}
                       onSelect={() => handleFlightSelect(flight, 'outbound')}
                       legIndex={0}
+                      airlineData={airlinesMap[flight.airlineCode]}
+                      airlinesLoading={airlinesLoading}
                     />
                   ))}
                 </div>
@@ -894,7 +1158,7 @@ const RoundTripPage = () => {
 
               {/* Return Column */}
               <div>
-                <div className="bg-green-50 rounded-t-xl p-3 mb-4 sticky top-20 z-10">
+                <div className="bg-green-50 rounded-t-xl p-3 mb-4 sticky top-[200px] z-10">
                   <div className="flex items-center justify-between">
                     <h2 className="font-semibold text-green-800 flex items-center gap-2">
                       <FaPlane className="-rotate-45" />
@@ -918,6 +1182,8 @@ const RoundTripPage = () => {
                       isSelected={selectedRoundTrip.return?.id === flight.id}
                       onSelect={() => handleFlightSelect(flight, 'return')}
                       legIndex={1}
+                      airlineData={airlinesMap[flight.airlineCode]}
+                      airlinesLoading={airlinesLoading}
                     />
                   ))}
                 </div>
@@ -1075,6 +1341,89 @@ const RoundTripPage = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Traveller Modal for Edit Mode */}
+      {showTravellerModal && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/50" onClick={cancelPassengerChanges} />
+          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 w-96 bg-white rounded-xl shadow-2xl p-5">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-semibold text-gray-900">Select Travellers</h3>
+              <button onClick={cancelPassengerChanges} className="text-gray-400 hover:text-gray-600">
+                <FaTimes />
+              </button>
+            </div>
+            
+            <div className="mb-4 p-3 bg-orange-50 rounded-lg">
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-600">Max {maxTravellers} travellers</span>
+                <span className={`text-sm font-bold ${tempPassengers.length >= maxTravellers ? "text-red-600" : "text-green-600"}`}>
+                  {tempPassengers.length}/{maxTravellers}
+                </span>
+              </div>
+            </div>
+            
+            <div className="space-y-3 mb-4 max-h-60 overflow-y-auto">
+              {tempPassengers.map((p, i) => (
+                <div key={i} className="flex gap-2 p-3 bg-gray-50 rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium text-gray-700">
+                        {p.code === 'ADT' && 'Adult'}
+                        {p.code === 'CNN' && 'Child'}
+                        {p.code === 'INF' && 'Infant'}
+                      </span>
+                      <button onClick={() => removeTempPassenger(i)} className="text-gray-400 hover:text-red-500">
+                        <FaTimes className="w-3 h-3" />
+                      </button>
+                    </div>
+                    {(p.code === 'CNN' || p.code === 'INF') && (
+                      <select
+                        value={p.age || (p.code === 'CNN' ? 8 : 1)}
+                        onChange={(e) => updateTempPassengerAge(i, e.target.value)}
+                        className="w-full mt-2 px-3 py-2 text-sm border border-gray-200 rounded-lg"
+                      >
+                        {p.code === 'CNN' && [...Array(10)].map((_, a) => (
+                          <option key={a+2} value={a+2}>{a+2} years</option>
+                        ))}
+                        {p.code === 'INF' && [...Array(3)].map((_, a) => (
+                          <option key={a} value={a}>{a} year{a !== 1 ? 's' : ''}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-2 mb-6">
+              <button className="flex-1 py-2 text-sm border rounded-lg hover:border-[#FD561E] hover:text-[#FD561E]" onClick={() => addTempPassenger('ADT')} disabled={tempPassengers.length >= maxTravellers}>+ Adult</button>
+              <button className="flex-1 py-2 text-sm border rounded-lg hover:border-[#FD561E] hover:text-[#FD561E]" onClick={() => addTempPassenger('CNN')} disabled={tempPassengers.length >= maxTravellers}>+ Child</button>
+              <button className="flex-1 py-2 text-sm border rounded-lg hover:border-[#FD561E] hover:text-[#FD561E]" onClick={() => addTempPassenger('INF')} disabled={tempPassengers.length >= maxTravellers}>+ Infant</button>
+            </div>
+
+            <div className="mb-6">
+              <h4 className="font-medium text-gray-700 mb-3">Travel Class</h4>
+              <div className="grid grid-cols-2 gap-2">
+                {["Economy", "Premium Economy", "Business", "First"].map(cls => (
+                  <button
+                    key={cls}
+                    className={`py-2 rounded-lg text-sm font-medium ${editTravelClass === cls ? "bg-[#FD561E] text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+                    onClick={() => setEditTravelClass(cls)}
+                  >
+                    {cls}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button className="flex-1 bg-gray-100 py-3 rounded-lg font-medium" onClick={cancelPassengerChanges}>Cancel</button>
+              <button className="flex-1 bg-[#FD561E] text-white py-3 rounded-lg font-medium" onClick={applyPassengerChanges}>Apply</button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
