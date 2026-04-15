@@ -9,6 +9,7 @@ import { fetchAirlines } from '../services/airlineService';
 import OneWayFlightCard from '../components/shared/OneWayFlightCard';
 import OneWaySheet from '../components/sheet/OneWaySheet';
 import FilterSidebar from '../components/shared/FilterSidebar';
+import FlightLoadingAnimation from '../utils/FlightLoadingAnimation'; // IMPORT THE EXISTING COMPONENT
 import {
   FaPlane, FaExclamationTriangle, FaFilter, FaTimes, FaChevronDown,
   FaChevronRight, FaCalendarAlt, FaMapMarkerAlt, FaInfoCircle, FaSpinner,
@@ -595,7 +596,7 @@ const OneWayPage = () => {
           <div className="relative">{showSortDropdown&&(<div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">{sortOptions.map(o=><button key={o.value} onClick={()=>{setSortBy(o.value);setShowSortDropdown(false);}} className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${sortBy===o.value?'text-[#FD561E] font-medium':'text-gray-700'}`}>{o.label}</button>)}</div>)}</div>
           <button onClick={()=>setShowMobileFilters(true)} className="lg:hidden flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium"><FaFilter className="text-[#FD561E]" />Filters{activeFilterCount>0&&<span className="bg-[#FD561E] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{activeFilterCount}</span>}</button>
         </div>
-      </div>
+      )}
 
       <div className="container mx-auto px-4 py-6">
         <div className="flex flex-col lg:flex-row gap-6">
@@ -608,9 +609,88 @@ const OneWayPage = () => {
             ):(
               filteredAndSortedFlights.map(flight=><OneWayFlightCard key={flight.id} flight={flight} isSelected={false} onSelect={()=>{}} onViewDetails={handleViewDetails} passengerCounts={passengerCounts} airlineData={airlinesMap[flight.airlineCode]} airlinesLoading={airlinesLoading} />)
             )}
+            <div className="flex gap-3">
+              <button
+                onClick={handleModifySearch}
+                className="flex-1 bg-[#FD561E] hover:bg-[#e04e1b] text-white font-semibold py-3 px-4 rounded-xl transition-all hover:shadow-lg"
+              >
+                Modify Search
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Flight Results State */}
+      {!isLoading && !apiError && !error && flights && flights.length > 0 && (
+        <>
+          {/* Sort and Filter Bar */}
+          
+
+          {/* Main Content */}
+          <div className="container mx-auto px-4 py-6">
+            <div className="flex flex-col lg:flex-row gap-6">
+              {/* Left Sidebar - FilterSidebar (Desktop) */}
+              <div className="hidden lg:block lg:w-1/4">
+                <FilterSidebar
+                  priceRange={priceRange}
+                  setPriceRange={setPriceRange}
+                  selectedAirlines={selectedAirlines}
+                  toggleAirline={toggleAirline}
+                  selectedStops={selectedStops}
+                  toggleStops={toggleStops}
+                  selectedTimes={selectedTimes}
+                  toggleTime={toggleTime}
+                  resetFilters={resetFilters}
+                  activeFilterCount={activeFilterCount}
+                  airlines={airlines}
+                  flightPriceRange={flightPriceRange}
+                  tripDetails={{
+                    from: searchSummary?.fromName,
+                    to: searchSummary?.toName,
+                    date: searchSummary?.formattedDate,
+                    passengers: passengerText
+                  }}
+                  onModifySearch={handleModifySearch}
+                  tripType="one-way"
+                />
+              </div>
+
+              {/* Right Side - Flight List */}
+              <div className="lg:w-3/4">
+                {filteredAndSortedFlights.length === 0 ? (
+                  <div className="bg-white rounded-xl p-8 text-center shadow-sm">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <FaFilter className="text-2xl text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-2">No flights match your filters</h3>
+                    <p className="text-gray-600 mb-4">Try adjusting your filter criteria</p>
+                    <button
+                      onClick={resetFilters}
+                      className="text-[#FD561E] font-medium hover:underline"
+                    >
+                      Clear all filters
+                    </button>
+                  </div>
+                ) : (
+                  filteredAndSortedFlights.map((flight) => (
+                    <OneWayFlightCard
+                      key={flight.id}
+                      flight={flight}
+                      isSelected={false}
+                      onSelect={() => {}}
+                      onViewDetails={handleViewDetails}
+                      passengerCounts={passengerCounts}
+                      airlineData={airlinesMap[flight.airlineCode]}
+                      airlinesLoading={airlinesLoading}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {showDetailSheet&&selectedFlightForSheet&&<OneWaySheet isOpen={showDetailSheet} onClose={handleCloseSheet} flight={selectedFlightForSheet} passengerCounts={passengerCounts}  airlineData={airlinesMap[selectedFlightForSheet?.airlineCode]} 
   airlinesLoading={airlinesLoading}  />}

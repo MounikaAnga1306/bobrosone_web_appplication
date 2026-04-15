@@ -48,7 +48,7 @@ export const createBillDeskOrder = async (bookingData, pnrData) => {
     //amount: calculatedAmount.toFixed(2),  // Dynamic from selected fare
     amount:"1.00",
     user_id: phoneNumber,                 // Dynamic from contact info
-    paymentfor: "flight",                 // Hardcoded (always flight)
+    paymentfor: "FBD",                 // Hardcoded (always flight)
     universal_locator_code: pnrNumber,    // Dynamic from PNR response
     air_locator_code: airLocatorCode,     // Dynamic from PNR response
     provider_locator_code: providerLocatorCode, // Dynamic from PNR response

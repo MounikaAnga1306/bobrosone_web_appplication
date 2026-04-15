@@ -189,7 +189,8 @@ function App() {
         <FlightSearchProvider>
           <HotelSearchProvider>
             <Router>
-              <div className="min-h-screen bg-gray-100 flex flex-col w-full overflow-x-hidden">
+              {/* ✅ FIXED: removed overflow-x-hidden — it was breaking position: sticky on all descendant pages */}
+              <div className="min-h-screen bg-gray-100 flex flex-col w-full">
                 <Navbar />
                
                 {/* MainContent wraps all routes and applies padding conditionally */}
