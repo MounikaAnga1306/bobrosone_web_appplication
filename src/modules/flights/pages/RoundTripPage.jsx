@@ -888,7 +888,19 @@ const RoundTripPage = () => {
       {renderDesktopBar()}
       {renderMobileBar()}
 
-      <div className="container mx-auto px-4 py-6 pb-32">
+  // ============ MAIN RENDER WITH RESULTS - Search Bar Always Visible ============
+ 
+      {/* Search Bar - Always Visible */}
+      <SearchBar />
+
+      {/* Fare Type Selection */}
+      
+      
+      {/* Results Stats and Sort Bar */}
+      
+
+      {/* Main Content */}
+      <div className="container mx-auto px-4 py-6">
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="hidden lg:block lg:w-1/4">
             <FilterSidebar priceRange={priceRange} setPriceRange={setPriceRange} selectedAirlines={selectedAirlines} toggleAirline={(airline) => { setSelectedAirlines(prev => prev.includes(airline) ? prev.filter(a => a !== airline) : [...prev, airline]); }} selectedStops={selectedStops} toggleStops={(stop) => { setSelectedStops(prev => prev.includes(stop) ? prev.filter(s => s !== stop) : [...prev, stop]); }} selectedTimes={selectedTimes} toggleTime={(time) => { setSelectedTimes(prev => prev.includes(time) ? prev.filter(t => t !== time) : [...prev, time]); }} resetFilters={resetFilters} activeFilterCount={activeFilterCount} airlines={airlines} flightPriceRange={getPriceRange} tripType="round-trip" />

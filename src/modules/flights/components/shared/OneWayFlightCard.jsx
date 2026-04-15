@@ -16,12 +16,14 @@ import {
   FaTimesCircle,
   FaShieldAlt,
   FaArrowRight,
-  FaCalendarCheck
+  FaCalendarCheck,
+  FaUsers,
+  FaExclamationTriangle
 } from 'react-icons/fa';
 import { buildOneWayPricingRequest, getFlightPricing } from '../../services/pricingService';
 import toast from 'react-hot-toast';
 
-// Helper functions (keep these exactly as they are)
+// Helper functions
 const formatTime = (isoString) => {
   if (!isoString) return '--:--';
   try {
@@ -92,12 +94,265 @@ const calculateTotalTaxes = (fare) => {
   return 0;
 };
 
+// Helper function to get seat availability status
+const getSeatAvailabilityStatus = (bookingCount) => {
+  const count = parseInt(bookingCount);
+  if (isNaN(count)) return { text: 'Check Availability', color: 'text-gray-600', bg: 'bg-gray-50', icon: '❓' };
+  if (count >= 9) return { text: 'High Availability', color: 'text-green-600', bg: 'bg-green-50', icon: '✅' };
+  if (count >= 5) return { text: 'Limited Seats', color: 'text-amber-600', bg: 'bg-amber-50', icon: '⚠️' };
+  if (count >= 1) return { text: 'Last Few Seats!', color: 'text-red-600', bg: 'bg-red-50', icon: '🔴' };
+  return { text: 'Check Availability', color: 'text-gray-600', bg: 'bg-gray-50', icon: '❓' };
+};
+
+// Helper function to get meal info
+const getMealInfo = (fare) => {
+  // Check for meal info in amenities
+  if (fare?.amenities?.meals === true) {
+    const mealType = fare?.amenities?.mealType || fare?.amenities?.meal_type;
+    if (mealType) {
+      return { text: `${mealType} meal included`, icon: '🍽️', color: 'text-green-600' };
+    }
+    return { text: 'Complimentary meal included', icon: '🍽️', color: 'text-green-600' };
+  }
+  if (fare?.amenities?.mealType) {
+    return { text: `${fare.amenities.mealType} meal available`, icon: '🍱', color: 'text-blue-600' };
+  }
+  if (fare?.amenities?.meal_type) {
+    return { text: `${fare.amenities.meal_type} meal available`, icon: '🍱', color: 'text-blue-600' };
+  }
+  return { text: 'Meals available for purchase', icon: '💰', color: 'text-gray-500' };
+};
+
+// Helper function to get cancellation policy text
+// Helper function to get cancellation policy text with DEBUG logs
+const getCancellationPolicy = (fare) => {
+  console.log('🔍 [CANCELLATION POLICY DEBUG]', {
+    hasFare: !!fare,
+    hasPenalties: !!fare?.penalties,
+    hasCancel: !!fare?.penalties?.cancel,
+    cancelAmount: fare?.penalties?.cancel?.amount,
+    cancelAmountType: typeof fare?.penalties?.cancel?.amount,
+    cancelPercentage: fare?.penalties?.cancel?.percentage,
+    refundable: fare?.refundable,
+    fullPenalties: fare?.penalties
+  });
+  
+  // Check for amount first (most specific)
+  if (fare?.penalties?.cancel?.amount) {
+    const amount = fare.penalties.cancel.amount;
+    console.log('✅ [CANCELLATION] Found amount:', amount, 'Type:', typeof amount);
+    
+    if (amount > 0) {
+      console.log('✅ [CANCELLATION] Amount > 0, showing fixed fee');
+      return {
+        text: `₹${amount.toLocaleString()} cancellation fee`,
+        amount: amount,
+        type: 'fixed'
+      };
+    } else if (amount === 0) {
+      console.log('✅ [CANCELLATION] Amount = 0, showing free cancellation');
+      return {
+        text: 'Free cancellation',
+        type: 'free',
+        isFree: true
+      };
+    }
+  }
+  
+  // Check for percentage
+  if (fare?.penalties?.cancel?.percentage) {
+    const percentageValue = parseFloat(fare.penalties.cancel.percentage);
+    console.log('✅ [CANCELLATION] Found percentage:', fare.penalties.cancel.percentage, 'Parsed:', percentageValue);
+    
+    if (percentageValue > 0) {
+      console.log('✅ [CANCELLATION] Percentage > 0, showing percentage fee');
+      return {
+        text: `${percentageValue}% cancellation fee`,
+        percentage: percentageValue,
+        type: 'percentage'
+      };
+    } else if (percentageValue === 0) {
+      console.log('✅ [CANCELLATION] Percentage = 0, showing free cancellation');
+      return {
+        text: 'Free cancellation',
+        type: 'free',
+        isFree: true
+      };
+    }
+  }
+  
+  // Check refundable flag
+  if (fare?.refundable === true) {
+    console.log('✅ [CANCELLATION] Refundable = true, showing refundable with fees');
+    return {
+      text: 'Refundable with applicable fees',
+      type: 'refundable'
+    };
+  }
+  
+  // Default fallback
+  console.log('❌ [CANCELLATION] No penalty data found, showing non-refundable');
+  return {
+    text: 'Non-refundable',
+    type: 'non-refundable'
+  };
+};
+
+// Helper function to get change policy text with DEBUG logs
+const getChangePolicy = (fare) => {
+  console.log('🔍 [CHANGE POLICY DEBUG]', {
+    hasFare: !!fare,
+    hasPenalties: !!fare?.penalties,
+    hasChange: !!fare?.penalties?.change,
+    changeAmount: fare?.penalties?.change?.amount,
+    changeAmountType: typeof fare?.penalties?.change?.amount,
+    changePercentage: fare?.penalties?.change?.percentage,
+    refundable: fare?.refundable,
+    fullPenalties: fare?.penalties
+  });
+  
+  // Check for amount first
+  if (fare?.penalties?.change?.amount) {
+    const amount = fare.penalties.change.amount;
+    console.log('✅ [CHANGE] Found amount:', amount, 'Type:', typeof amount);
+    
+    if (amount > 0) {
+      console.log('✅ [CHANGE] Amount > 0, showing fixed fee');
+      return {
+        text: `₹${amount.toLocaleString()} + fare difference`,
+        amount: amount,
+        type: 'fixed'
+      };
+    } else if (amount === 0) {
+      console.log('✅ [CHANGE] Amount = 0, showing free changes');
+      return {
+        text: 'Free date changes',
+        type: 'free',
+        isFree: true
+      };
+    }
+  }
+  
+  // Check for percentage
+  if (fare?.penalties?.change?.percentage) {
+    const percentageValue = parseFloat(fare.penalties.change.percentage);
+    console.log('✅ [CHANGE] Found percentage:', fare.penalties.change.percentage, 'Parsed:', percentageValue);
+    
+    if (percentageValue > 0) {
+      console.log('✅ [CHANGE] Percentage > 0, showing percentage fee');
+      return {
+        text: `${percentageValue}% + fare difference`,
+        percentage: percentageValue,
+        type: 'percentage'
+      };
+    } else if (percentageValue === 0) {
+      console.log('✅ [CHANGE] Percentage = 0, showing free changes');
+      return {
+        text: 'Free date changes',
+        type: 'free',
+        isFree: true
+      };
+    }
+  }
+  
+  // Check refundable flag
+  if (fare?.refundable === true) {
+    console.log('✅ [CHANGE] Refundable = true, showing changes allowed');
+    return {
+      text: 'Changes allowed with applicable fees',
+      type: 'allowed'
+    };
+  }
+  
+  // Default fallback
+  console.log('❌ [CHANGE] No penalty data found, showing changes not allowed');
+  return {
+    text: 'Changes not allowed',
+    type: 'not-allowed'
+  };
+};
+
+// Helper function to get change policy text
+// const getChangePolicy = (fare) => {
+//   // Check for amount first
+//   if (fare.penalties?.change?.amount && fare.penalties.change.amount > 0) {
+//     return {
+//       text: `₹${fare.penalties.change.amount.toLocaleString()} + fare difference`,
+//       amount: fare.penalties.change.amount,
+//       type: 'fixed'
+//     };
+//   }
+  
+//   // Check for percentage - only if > 0
+//   if (fare.penalties?.change?.percentage) {
+//     const percentageValue = parseFloat(fare.penalties.change.percentage);
+//     if (percentageValue > 0) {
+//       return {
+//         text: `${percentageValue}% + fare difference`,
+//         percentage: percentageValue,
+//         type: 'percentage'
+//       };
+//     }
+//   }
+  
+//   // Check for free changes
+//   if (fare.penalties?.change?.amount === 0 || 
+//       (fare.penalties?.change?.percentage && parseFloat(fare.penalties.change.percentage) === 0)) {
+//     return {
+//       text: 'Free date changes',
+//       type: 'free',
+//       isFree: true
+//     };
+//   }
+  
+//   // Check refundable flag
+//   if (fare.refundable === true) {
+//     return {
+//       text: 'Changes allowed with applicable fees',
+//       type: 'allowed'
+//     };
+//   }
+  
+//   return {
+//     text: 'Changes not allowed',
+//     type: 'not-allowed'
+//   };
+// };
+
+// Helper function to get baggage info
+const getBaggageInfo = (fare) => {
+  // Check baggage.checked structure
+  if (fare?.baggage?.checked) {
+    const checked = fare.baggage.checked;
+    const weight = checked.weight || 15;
+    const unit = checked.unit || 'kg';
+    const pieces = checked.pieces || 1;
+    
+    return {
+      checkIn: `${weight} ${unit}`,
+      pieces: pieces,
+      cabin: '7 kg (1 piece)',
+      hasExtra: fare.baggage?.extra_available || false
+    };
+  }
+  // Fallback to simple baggage weight
+  const weight = fare?.baggage?.weight || 15;
+  const unit = fare?.baggage?.unit || 'kg';
+  
+  return {
+    checkIn: `${weight} ${unit}`,
+    pieces: 1,
+    cabin: '7 kg (1 piece)',
+    hasExtra: false
+  };
+};
+
 const OneWayFlightCard = ({ 
   flight, 
   onViewDetails,
   passengerCounts = { ADT: 1, CNN: 0, INF: 0 },
-  airlineData, // Received from parent
-  airlinesLoading // Received from parent
+  airlineData,
+  airlinesLoading
 }) => {
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(false);
@@ -111,18 +366,36 @@ const OneWayFlightCard = ({
     return sortedFares[0];
   }, [flight.fares]);
 
-  // Use airlineData directly from props
   const airlineLogo = useMemo(() => {
     if (airlineData?.logo_url) return airlineData.logo_url;
-    
-    // Fallback to local or clearbit logo
     const localLogo = `/airlines/${flight.airlineCode?.toLowerCase()}.png`;
     const clearbitLogo = `https://logo.clearbit.com/${flight.airlineCode?.toLowerCase()}.com`;
-    
     return localLogo || clearbitLogo;
   }, [airlineData, flight.airlineCode]);
 
   const airlineName = airlineData?.name || flight.airline || flight.airlineCode;
+
+  // ✅ FIXED: Dynamic values from API - using correct field names
+  const seatAvailability = getSeatAvailabilityStatus(bestFare?.seatsAvailable || flight.seatsAvailable || bestFare?.bookingCount);
+  const mealInfo = getMealInfo(bestFare);
+  const cancellationPolicy = getCancellationPolicy(bestFare);
+  const changePolicy = getChangePolicy(bestFare);
+  const baggageInfo = getBaggageInfo(bestFare);
+  
+  // ✅ FIXED: Terminal information - using flight level fields
+  const hasTerminalInfo = flight.originTerminal || flight.destinationTerminal;
+  const originTerminal = flight.originTerminal;
+  const destinationTerminal = flight.destinationTerminal;
+  
+  // ✅ FIXED: Aircraft info
+  const aircraft = flight.equipment || flight.aircraft || 'Not specified';
+  
+  // ✅ FIXED: Cabin class
+  const cabinClass = bestFare?.cabinClass || flight.cabinClass || 'Economy';
+  
+  // ✅ FIXED: Fare basis and booking code
+  const fareBasis = bestFare?.fareBasis;
+  const bookingCode = bestFare?.bookingCode;
 
   // Show loading skeleton while airline data is being fetched
   if (airlinesLoading && !airlineData) {
@@ -266,7 +539,7 @@ const OneWayFlightCard = ({
                 <FaPlane className="absolute -top-2 left-1/2 transform -translate-x-1/2 text-gray-300 text-xs rotate-90 bg-white px-1" />
               </div>
               <div className="text-xs text-gray-500 mt-1">
-                {flight.stops === 0 ? 'Direct' : `${flight.stops} stop`}
+                {flight.stops === 0 ? 'Direct' : `${flight.stops} stop${flight.stops > 1 ? 's' : ''}`}
               </div>
             </div>
 
@@ -298,6 +571,31 @@ const OneWayFlightCard = ({
               View Details
             </button>
           </div>
+        </div>
+
+        {/* ✅ FIXED: Dynamic Badges Row - Using correct data */}
+        <div className="mt-4 pt-3 border-t border-gray-50 flex flex-wrap gap-2">
+          {/* Seat Availability Badge */}
+          <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${seatAvailability.bg} ${seatAvailability.color}`}>
+            <FaUsers size={10} />
+            {seatAvailability.text}
+          </div>
+          
+          {/* Meals Badge */}
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-600">
+            <span>{mealInfo.icon}</span>
+            {mealInfo.text}
+          </div>
+          
+          {/* Terminal Info Badge (only if available) */}
+          {hasTerminalInfo && (
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-purple-50 text-purple-600">
+              <FaMapMarkerAlt size={10} />
+              {originTerminal && `T${originTerminal}`}
+              {originTerminal && destinationTerminal && ' → '}
+              {destinationTerminal && `T${destinationTerminal}`}
+            </div>
+          )}
         </div>
 
         {/* Layover Info */}
@@ -367,15 +665,18 @@ const OneWayFlightCard = ({
             {/* Flight Details Tab */}
             {activeTab === 'flight' && (
               <>
-                {/* Route */}
+                {/* Route with Terminal Info */}
                 <div className="bg-white rounded-lg p-4 border border-gray-100">
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex-1">
                       <div className="text-sm text-gray-500">Departure</div>
                       <div className="font-medium text-gray-800">{flight.origin}</div>
                       <div className="text-xs text-gray-400">{formatDateTime(flight.departureTime)}</div>
-                      {flight.originTerminal && (
-                        <div className="text-xs text-gray-500 mt-1">Terminal {flight.originTerminal}</div>
+                      {originTerminal && (
+                        <div className="text-xs text-purple-600 mt-1 flex items-center gap-1">
+                          <FaMapMarkerAlt size={10} />
+                          Terminal {originTerminal}
+                        </div>
                       )}
                     </div>
                     <div className="text-center px-2">
@@ -387,8 +688,11 @@ const OneWayFlightCard = ({
                       <div className="text-sm text-gray-500">Arrival</div>
                       <div className="font-medium text-gray-800">{flight.destination}</div>
                       <div className="text-xs text-gray-400">{formatDateTime(flight.arrivalTime)}</div>
-                      {flight.destinationTerminal && (
-                        <div className="text-xs text-gray-500 mt-1">Terminal {flight.destinationTerminal}</div>
+                      {destinationTerminal && (
+                        <div className="text-xs text-purple-600 mt-1 flex items-center justify-end gap-1">
+                          Terminal {destinationTerminal}
+                          <FaMapMarkerAlt size={10} />
+                        </div>
                       )}
                     </div>
                   </div>
@@ -401,28 +705,62 @@ const OneWayFlightCard = ({
                       <FaChair className="text-gray-400" size={12} />
                       <span className="text-xs text-gray-500">AIRCRAFT</span>
                     </div>
-                    <p className="text-sm font-medium text-gray-800">{flight.aircraft || 'Not specified'}</p>
-                    <p className="text-xs text-gray-400 mt-1">{bestFare.cabinClass || 'Economy'} Class</p>
+                    <p className="text-sm font-medium text-gray-800">{aircraft}</p>
+                    <p className="text-xs text-gray-400 mt-1">{cabinClass} Class</p>
                   </div>
                   <div className="bg-white rounded-lg p-3 border border-gray-100">
                     <div className="flex items-center gap-2 mb-2">
                       <FaSuitcase className="text-gray-400" size={12} />
                       <span className="text-xs text-gray-500">BAGGAGE</span>
                     </div>
-                    <p className="text-sm font-medium text-gray-800">{bestFare.baggage?.weight || 15} kg</p>
-                    <p className="text-xs text-gray-400">Check-in baggage</p>
+                    <p className="text-sm font-medium text-gray-800">{baggageInfo.checkIn}</p>
+                    <p className="text-xs text-gray-400">
+                      Check-in ({baggageInfo.pieces} piece{baggageInfo.pieces > 1 ? 's' : ''})
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">Cabin: {baggageInfo.cabin}</p>
+                    {baggageInfo.hasExtra && (
+                      <p className="text-xs text-green-600 mt-1">Extra baggage available</p>
+                    )}
                   </div>
                 </div>
 
-                {/* Meals */}
+                {/* Meals Info */}
                 <div className="bg-white rounded-lg p-3 border border-gray-100">
                   <div className="flex items-center gap-2">
                     <FaUtensils className="text-gray-400" size={12} />
                     <span className="text-xs text-gray-500">MEALS</span>
                   </div>
-                  <p className="text-sm text-gray-700 mt-1">
-                    {bestFare.amenities?.meals ? 'Complimentary meal included' : 'Meals available for purchase'}
+                  <p className="text-sm text-gray-700 mt-1 flex items-center gap-2">
+                    <span>{mealInfo.icon}</span>
+                    {mealInfo.text}
                   </p>
+                  {bestFare?.amenities?.mealType && (
+                    <p className="text-xs text-gray-500 mt-1">Type: {bestFare.amenities.mealType}</p>
+                  )}
+                </div>
+
+                {/* Seat Availability */}
+                <div className="bg-white rounded-lg p-3 border border-gray-100">
+                  <div className="flex items-center gap-2">
+                    <FaUsers className="text-gray-400" size={12} />
+                    <span className="text-xs text-gray-500">SEAT AVAILABILITY</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={`text-sm font-medium ${seatAvailability.color}`}>
+                      {seatAvailability.text}
+                    </span>
+                    {(bestFare?.seatsAvailable || flight.seatsAvailable) && (
+                      <span className="text-xs text-gray-400">
+                        ({bestFare?.seatsAvailable || flight.seatsAvailable} seats available in this class)
+                      </span>
+                    )}
+                  </div>
+                  {seatAvailability.text === 'Last Few Seats!' && (
+                    <div className="mt-2 text-xs text-red-500 flex items-center gap-1">
+                      <FaExclamationTriangle size={10} />
+                      Book soon! Limited inventory
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -448,6 +786,18 @@ const OneWayFlightCard = ({
                     </div>
                   </div>
                 </div>
+
+                {/* Fare Basis Info */}
+                {(fareBasis || bookingCode) && (
+                  <div className="bg-gray-50 rounded-lg p-2">
+                    <p className="text-xs text-gray-400 text-center">
+                      {fareBasis && `Fare Basis: ${fareBasis}`}
+                      {fareBasis && bookingCode && ' | '}
+                      {bookingCode && `Booking Class: ${bookingCode}`}
+                    </p>
+                  </div>
+                )}
+
                 <div className="bg-blue-50/30 rounded-lg p-3">
                   <p className="text-xs text-gray-500 flex items-start gap-2">
                     <FaInfoCircle size={12} className="mt-0.5 flex-shrink-0 text-gray-400" />
@@ -460,35 +810,86 @@ const OneWayFlightCard = ({
             {/* Policies Tab */}
             {activeTab === 'cancellation' && (
               <>
+                {/* Cancellation Policy */}
                 <div className="bg-white rounded-lg p-4 border border-gray-100">
                   <div className="flex items-center gap-2 mb-3">
-                    <FaTimesCircle className="text-gray-400" size={14} />
+                    <FaTimesCircle className={`text-gray-400 ${
+                      cancellationPolicy.type === 'non-refundable' ? 'text-red-500' : ''
+                    }`} size={14} />
                     <span className="text-sm font-medium text-gray-700">Cancellation</span>
                   </div>
-                  <p className="text-sm text-gray-600">
-                    {bestFare.penalties?.cancel?.amount 
-                      ? `Cancellation fee: ₹${bestFare.penalties.cancel.amount.toLocaleString()}`
-                      : bestFare.penalties?.cancel?.percentage
-                      ? `Cancellation fee: ${bestFare.penalties.cancel.percentage}% of fare`
-                      : bestFare.refundable 
-                        ? 'Refundable with applicable fees'
-                        : 'Non-refundable'}
+                  <p className={`text-sm ${
+                    cancellationPolicy.type === 'non-refundable' ? 'text-red-600 font-medium' : 'text-gray-600'
+                  }`}>
+                    {cancellationPolicy.text}
                   </p>
+                  {cancellationPolicy.type === 'percentage' && (
+                    <div className="mt-2 p-2 bg-amber-50 rounded">
+                      <p className="text-xs text-amber-700">
+                        {cancellationPolicy.percentage}% of the total fare will be charged as cancellation fee
+                      </p>
+                    </div>
+                  )}
+                  {cancellationPolicy.type === 'fixed' && cancellationPolicy.amount > 0 && (
+                    <div className="mt-2 p-2 bg-amber-50 rounded">
+                      <p className="text-xs text-amber-700">
+                        Fixed cancellation fee of ₹{cancellationPolicy.amount.toLocaleString()} applies
+                      </p>
+                    </div>
+                  )}
+                  {cancellationPolicy.type === 'refundable' && (
+                    <div className="mt-2 p-2 bg-green-50 rounded">
+                      <p className="text-xs text-green-700">
+                        Full refund minus applicable service fees
+                      </p>
+                    </div>
+                  )}
                 </div>
 
+                {/* Date Change Policy */}
                 <div className="bg-white rounded-lg p-4 border border-gray-100">
                   <div className="flex items-center gap-2 mb-3">
                     <FaCalendarCheck className="text-gray-400" size={14} />
                     <span className="text-sm font-medium text-gray-700">Date Change</span>
                   </div>
                   <p className="text-sm text-gray-600">
-                    {bestFare.penalties?.change?.amount 
-                      ? `Change fee: ₹${bestFare.penalties.change.amount.toLocaleString()} + fare difference`
-                      : bestFare.penalties?.change?.percentage
-                      ? `Change fee: ${bestFare.penalties.change.percentage}% of fare + fare difference`
-                      : bestFare.refundable
-                      ? 'Changes allowed with applicable fees'
-                      : 'Changes not allowed'}
+                    {changePolicy.text}
+                  </p>
+                  {changePolicy.type === 'percentage' && (
+                    <div className="mt-2 p-2 bg-amber-50 rounded">
+                      <p className="text-xs text-amber-700">
+                        {changePolicy.percentage}% of fare + fare difference for date changes
+                      </p>
+                    </div>
+                  )}
+                  {changePolicy.type === 'fixed' && changePolicy.amount > 0 && (
+                    <div className="mt-2 p-2 bg-amber-50 rounded">
+                      <p className="text-xs text-amber-700">
+                        Change fee of ₹{changePolicy.amount.toLocaleString()} + fare difference
+                      </p>
+                    </div>
+                  )}
+                  {changePolicy.type === 'allowed' && (
+                    <div className="mt-2 p-2 bg-green-50 rounded">
+                      <p className="text-xs text-green-700">
+                        Changes permitted with applicable fare difference and service fees
+                      </p>
+                    </div>
+                  )}
+                  {changePolicy.type === 'not-allowed' && (
+                    <div className="mt-2 p-2 bg-red-50 rounded">
+                      <p className="text-xs text-red-700">
+                        Date changes are not permitted for this fare
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Additional Info */}
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs text-gray-500 flex items-start gap-2">
+                    <FaShieldAlt size={12} className="mt-0.5 flex-shrink-0 text-gray-400" />
+                    <span>Terms and conditions apply. Please review before booking.</span>
                   </p>
                 </div>
               </>

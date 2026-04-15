@@ -1,5 +1,5 @@
 // src/modules/flights/pages/OneWayPage.jsx
-
+ 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useFlightSearchContext } from '../contexts/FlightSearchContext';
@@ -14,7 +14,7 @@ import {
   FaChevronRight, FaCalendarAlt, FaMapMarkerAlt, FaInfoCircle, FaSpinner,
   FaExchangeAlt, FaUser, FaChevronLeft, FaArrowLeft, FaPencilAlt,
 } from 'react-icons/fa';
-
+ 
 const FlightLoadingAnimation = ({ searchSummary }) => {
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
@@ -79,12 +79,12 @@ const FlightLoadingAnimation = ({ searchSummary }) => {
     </div>
   );
 };
-
+ 
 const OneWayPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { updateFlightResults, flightResults } = useFlightSearchContext();
-
+ 
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState(null);
   const [searchSummary, setSearchSummary] = useState(null);
@@ -92,7 +92,7 @@ const OneWayPage = () => {
   const [searchParamsData, setSearchParamsData] = useState(null);
   const [airlinesMap, setAirlinesMap] = useState({});
   const [airlinesLoading, setAirlinesLoading] = useState(true);
-
+ 
   const [isEditing, setIsEditing] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const originalSnapshot = useRef(null);
@@ -103,7 +103,7 @@ const OneWayPage = () => {
   const [editDepartureDate, setEditDepartureDate] = useState(null);
   const [editPassengers, setEditPassengers] = useState(null);
   const [editTravelClass, setEditTravelClass] = useState('Economy');
-
+ 
   const [showFromDropdown, setShowFromDropdown] = useState(false);
   const [showToDropdown, setShowToDropdown] = useState(false);
   const [fromAirports, setFromAirports] = useState([]);
@@ -114,17 +114,17 @@ const OneWayPage = () => {
   const toRef = useRef(null);
   const fromSearchTimeout = useRef(null);
   const toSearchTimeout = useRef(null);
-
+ 
   const [showDepartureCalendar, setShowDepartureCalendar] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const departureCalendarRef = useRef(null);
-
+ 
   const [showTravellerModal, setShowTravellerModal] = useState(false);
   const [tempPassengers, setTempPassengers] = useState([]);
   const [tempTravelClass, setTempTravelClass] = useState('Economy');
   const maxTravellers = 9;
   const travellerRef = useRef(null);
-
+ 
   const [showDetailSheet, setShowDetailSheet] = useState(false);
   const [selectedFlightForSheet, setSelectedFlightForSheet] = useState(null);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
@@ -134,7 +134,7 @@ const OneWayPage = () => {
   const [selectedAirlines, setSelectedAirlines] = useState([]);
   const [selectedStops, setSelectedStops] = useState([]);
   const [selectedTimes, setSelectedTimes] = useState([]);
-
+ 
   const sortOptions = [
     { value: 'price-low', label: 'Price: Low to High' },
     { value: 'price-high', label: 'Price: High to Low' },
@@ -142,7 +142,7 @@ const OneWayPage = () => {
     { value: 'departure', label: 'Departure: Earliest' },
     { value: 'arrival', label: 'Arrival: Earliest' }
   ];
-
+ 
   // ✅ DD-MM-YYYY format — matches home page exactly
   const formatDateDDMMYYYY = (input) => {
     if (!input) return '';
@@ -156,13 +156,13 @@ const OneWayPage = () => {
     const year = d.getFullYear();
     return `${day}-${month}-${year}`;
   };
-
+ 
   const formatDateForAPI = (date) => {
     if (!date) return null;
     const d = new Date(date);
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
   };
-
+ 
   const checkHasChanges = useCallback((fromCode, toCode, date, passengers, travelClass) => {
     if (!originalSnapshot.current) return false;
     const orig = originalSnapshot.current;
@@ -177,7 +177,7 @@ const OneWayPage = () => {
       travelClass !== orig.travelClass
     );
   }, []);
-
+ 
   // Automatically update hasChanges whenever any edit field changes
   useEffect(() => {
     if (!isEditing) return;
@@ -186,7 +186,7 @@ const OneWayPage = () => {
     const changed = checkHasChanges(fromCode, toCode, editDepartureDate, editPassengers, editTravelClass);
     setHasChanges(changed);
   }, [editFrom, editTo, editDepartureDate, editPassengers, editTravelClass, isEditing, checkHasChanges]);
-
+ 
   useEffect(() => {
     const fetchFlightResults = async () => {
       setIsLoading(true);
@@ -241,7 +241,7 @@ const OneWayPage = () => {
     };
     fetchFlightResults();
   }, [location.search, navigate, updateFlightResults]);
-
+ 
   useEffect(() => {
   const loadAirlines = async () => {
     if (!flightResults.flights || flightResults.flights.length === 0) {
@@ -269,7 +269,7 @@ const OneWayPage = () => {
   };
   loadAirlines();
 }, [flightResults.flights]);
-
+ 
   const openEditMode = () => {
     if (!searchSummary) return;
     originalSnapshot.current = { fromCode: searchSummary.fromCode, toCode: searchSummary.toCode, departureDate: searchSummary.rawDepartureDate, adults: passengerCounts.ADT, children: passengerCounts.CNN, infants: passengerCounts.INF, travelClass: searchSummary.travelClass || 'Economy' };
@@ -286,9 +286,9 @@ const OneWayPage = () => {
     setHasChanges(false);
     setIsEditing(true);
   };
-
+ 
   const cancelEdit = () => { setIsEditing(false); setHasChanges(false); setShowFromDropdown(false); setShowToDropdown(false); setShowDepartureCalendar(false); setShowTravellerModal(false); setFromAirports([]); setToAirports([]); };
-
+ 
   const handleEditSearch = () => {
     if (!hasChanges || !editFrom || !editTo || !editDepartureDate) return;
     const params = new URLSearchParams();
@@ -308,7 +308,7 @@ const OneWayPage = () => {
     setIsEditing(false); setHasChanges(false);
     navigate(`/flights/results?${params.toString()}`);
   };
-
+ 
   const searchAirportsAPI = async (searchTerm, type) => {
     if (searchTerm.length < 3) { if (type==="from"){setFromAirports([]);setFromLoading(false);}else{setToAirports([]);setToLoading(false);} return; }
     try {
@@ -316,18 +316,18 @@ const OneWayPage = () => {
       else { setToLoading(true); setToAirports(await searchAirports(searchTerm)); setToLoading(false); }
     } catch { if(type==="from"){setFromLoading(false);setFromAirports([]);}else{setToLoading(false);setToAirports([]);} }
   };
-
+ 
   const debouncedFromSearch = useCallback((value) => { if(fromSearchTimeout.current)clearTimeout(fromSearchTimeout.current); if(value.length>=3)fromSearchTimeout.current=setTimeout(()=>searchAirportsAPI(value,"from"),500); else{setFromAirports([]);setFromLoading(false);} }, []);
   const debouncedToSearch = useCallback((value) => { if(toSearchTimeout.current)clearTimeout(toSearchTimeout.current); if(value.length>=3)toSearchTimeout.current=setTimeout(()=>searchAirportsAPI(value,"to"),500); else{setToAirports([]);setToLoading(false);} }, []);
-
+ 
   const handleFromInputChange = (e) => { setEditFromDisplay(e.target.value); setEditFrom(null); debouncedFromSearch(e.target.value); setShowFromDropdown(true); };
   const handleToInputChange = (e) => { setEditToDisplay(e.target.value); setEditTo(null); debouncedToSearch(e.target.value); setShowToDropdown(true); };
-
+ 
   const handleFromSelect = (airport) => { setEditFrom(airport); setEditFromDisplay(`${airport.name} (${airport.location_code})`); setShowFromDropdown(false); setFromAirports([]); };
   const handleToSelect = (airport) => { setEditTo(airport); setEditToDisplay(`${airport.name} (${airport.location_code})`); setShowToDropdown(false); setToAirports([]); };
   const handleSwap = () => { const tf=editFrom,tfd=editFromDisplay; setEditFrom(editTo); setEditFromDisplay(editToDisplay); setEditTo(tf); setEditToDisplay(tfd); };
   const handleDateSelect = (day) => { const d=new Date(currentDate.getFullYear(),currentDate.getMonth(),day); setEditDepartureDate(d); setShowDepartureCalendar(false); };
-
+ 
   const openTravellerModalEdit = () => { setTempPassengers([...Array.from({length:editPassengers?.ADT||1},()=>({code:'ADT'})),...Array.from({length:editPassengers?.CNN||0},()=>({code:'CNN',age:8})),...Array.from({length:editPassengers?.INF||0},()=>({code:'INF',age:1}))]); setTempTravelClass(editTravelClass); setShowTravellerModal(true); };
   const addTempPassenger = (code) => { if(tempPassengers.length>=maxTravellers)return; const p={code}; if(code==='CNN')p.age=8; if(code==='INF')p.age=1; setTempPassengers([...tempPassengers,p]); };
   const removeTempPassenger = (index) => setTempPassengers(tempPassengers.filter((_,i)=>i!==index));
@@ -339,34 +339,34 @@ const OneWayPage = () => {
     setEditPassengers(np); setEditTravelClass(tempTravelClass); setShowTravellerModal(false);
   };
   const cancelPassengerChanges = () => { setTempPassengers([]); setShowTravellerModal(false); };
-
+ 
   const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth()+1, 0).getDate();
   const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
   const monthName = currentDate.toLocaleString("default", { month: "long" });
   const calYear = currentDate.getFullYear();
-
+ 
   const handleCloseSheet = () => { setShowDetailSheet(false); setSelectedFlightForSheet(null); };
   const handleViewDetails = (flight) => { setSelectedFlightForSheet(flight); setShowDetailSheet(true); };
   const handleModifySearch = () => navigate('/flights');
-
+ 
   const { flights, error } = flightResults;
-
+ 
   const flightPriceRange = useMemo(() => {
     if (!flights?.length) return { min: 0, max: 100000 };
     const prices = flights.map(f=>f.lowestPrice||f.price).filter(p=>!isNaN(p)&&p>0);
     if (!prices.length) return { min: 0, max: 100000 };
     return { min: Math.min(...prices), max: Math.max(...prices) };
   }, [flights]);
-
+ 
   useEffect(() => { if(flightPriceRange.min!==0||flightPriceRange.max!==100000)setPriceRange(flightPriceRange); }, [flightPriceRange]);
-
+ 
   const airlines = useMemo(() => {
     if (!flights?.length) return [];
     const map = new Map();
     flights.forEach(f => { const k=f.airline||f.airlineCode; if(!map.has(k))map.set(k,{name:f.airline,code:f.airlineCode,count:1}); else map.get(k).count+=1; });
     return Array.from(map.values()).sort((a,b)=>a.name.localeCompare(b.name));
   }, [flights]);
-
+ 
   const filteredAndSortedFlights = useMemo(() => {
     if (!flights?.length) return [];
     let filtered = [...flights];
@@ -377,16 +377,16 @@ const OneWayPage = () => {
     switch(sortBy){case 'price-low':filtered.sort((a,b)=>(a.lowestPrice||0)-(b.lowestPrice||0));break;case 'price-high':filtered.sort((a,b)=>(b.lowestPrice||0)-(a.lowestPrice||0));break;case 'duration':filtered.sort((a,b)=>(a.duration||0)-(b.duration||0));break;case 'departure':filtered.sort((a,b)=>new Date(a.departureTime)-new Date(b.departureTime));break;case 'arrival':filtered.sort((a,b)=>new Date(a.arrivalTime)-new Date(b.arrivalTime));break;}
     return filtered;
   }, [flights, priceRange, selectedAirlines, selectedStops, selectedTimes, sortBy, flightPriceRange]);
-
+ 
   const resetFilters = () => { setPriceRange({min:flightPriceRange.min,max:flightPriceRange.max}); setSelectedAirlines([]); setSelectedStops([]); setSelectedTimes([]); };
   const activeFilterCount = selectedAirlines.length+selectedStops.length+selectedTimes.length+(priceRange.min!==flightPriceRange.min||priceRange.max!==flightPriceRange.max?1:0);
   const toggleAirline = (a) => setSelectedAirlines(prev=>prev.includes(a)?prev.filter(x=>x!==a):[...prev,a]);
   const toggleStops = (s) => setSelectedStops(prev=>prev.includes(s)?prev.filter(x=>x!==s):[...prev,s]);
   const toggleTime = (t) => setSelectedTimes(prev=>prev.includes(t)?prev.filter(x=>x!==t):[...prev,t]);
-
+ 
   const passengerText = useMemo(() => { const p=[]; if(passengerCounts.ADT>0)p.push(`${passengerCounts.ADT} Adult${passengerCounts.ADT>1?'s':''}`); if(passengerCounts.CNN>0)p.push(`${passengerCounts.CNN} Child${passengerCounts.CNN>1?'ren':''}`); if(passengerCounts.INF>0)p.push(`${passengerCounts.INF} Infant${passengerCounts.INF>1?'s':''}`); return p.join(', '); }, [passengerCounts]);
   const editPassengerText = useMemo(() => { if(!editPassengers)return''; const p=[]; if((editPassengers.ADT||0)>0)p.push(`${editPassengers.ADT} Adult${editPassengers.ADT>1?'s':''}`); if((editPassengers.CNN||0)>0)p.push(`${editPassengers.CNN} Child${editPassengers.CNN>1?'ren':''}`); if((editPassengers.INF||0)>0)p.push(`${editPassengers.INF} Infant${editPassengers.INF>1?'s':''}`); return `${p.join(', ')} · ${editTravelClass}`; }, [editPassengers, editTravelClass]);
-
+ 
   useEffect(() => {
     const h = (e) => {
       if(fromRef.current&&!fromRef.current.contains(e.target))setShowFromDropdown(false);
@@ -397,9 +397,9 @@ const OneWayPage = () => {
     document.addEventListener("mousedown",h);
     return ()=>document.removeEventListener("mousedown",h);
   }, []);
-
+ 
   if (isLoading) return <FlightLoadingAnimation searchSummary={searchSummary} />;
-
+ 
   if (apiError) return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
@@ -411,7 +411,7 @@ const OneWayPage = () => {
       </div>
     </div>
   );
-
+ 
   if (error) return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
@@ -422,7 +422,7 @@ const OneWayPage = () => {
       </div>
     </div>
   );
-
+ 
   if (!isLoading&&!apiError&&!error&&(!flights||flights.length===0)) return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
@@ -434,10 +434,10 @@ const OneWayPage = () => {
       </div>
     </div>
   );
-
+ 
   return (
     <div className="min-h-screen bg-gray-50">
-
+ 
       {/* MOBILE & TABLET ONLY */}
       <div className="lg:hidden w-full bg-white border-b border-gray-100 sticky top-0 z-40 shadow-sm">
         {!isEditing && (
@@ -525,7 +525,7 @@ const OneWayPage = () => {
           </div>
         )}
       </div>
-
+ 
       {/* DESKTOP ONLY */}
       <div className="hidden lg:block w-full bg-[#f36b32] py-3 sticky top-0 z-40 shadow-sm">
         <div className="container mx-auto px-4">
@@ -589,14 +589,14 @@ const OneWayPage = () => {
           </div>
         </div>
       </div>
-
+ 
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between gap-4">
           <div className="relative">{showSortDropdown&&(<div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">{sortOptions.map(o=><button key={o.value} onClick={()=>{setSortBy(o.value);setShowSortDropdown(false);}} className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${sortBy===o.value?'text-[#FD561E] font-medium':'text-gray-700'}`}>{o.label}</button>)}</div>)}</div>
           <button onClick={()=>setShowMobileFilters(true)} className="lg:hidden flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium"><FaFilter className="text-[#FD561E]" />Filters{activeFilterCount>0&&<span className="bg-[#FD561E] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{activeFilterCount}</span>}</button>
         </div>
       </div>
-
+ 
       <div className="container mx-auto px-4 py-6">
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="hidden lg:block lg:w-1/4">
@@ -611,10 +611,10 @@ const OneWayPage = () => {
           </div>
         </div>
       </div>
-
-      {showDetailSheet&&selectedFlightForSheet&&<OneWaySheet isOpen={showDetailSheet} onClose={handleCloseSheet} flight={selectedFlightForSheet} passengerCounts={passengerCounts}  airlineData={airlinesMap[selectedFlightForSheet?.airlineCode]} 
+ 
+      {showDetailSheet&&selectedFlightForSheet&&<OneWaySheet isOpen={showDetailSheet} onClose={handleCloseSheet} flight={selectedFlightForSheet} passengerCounts={passengerCounts}  airlineData={airlinesMap[selectedFlightForSheet?.airlineCode]}
   airlinesLoading={airlinesLoading}  />}
-
+ 
       {showTravellerModal&&(
         <>
           <div className="fixed inset-0 z-40 bg-black/50" onClick={cancelPassengerChanges} />
@@ -641,7 +641,7 @@ const OneWayPage = () => {
           </div>
         </>
       )}
-
+ 
       {showMobileFilters&&(
         <div className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex">
           <div className="bg-white w-full max-w-sm ml-auto h-full overflow-auto shadow-xl">
@@ -659,5 +659,6 @@ const OneWayPage = () => {
     </div>
   );
 };
-
+ 
 export default OneWayPage;
+ 
