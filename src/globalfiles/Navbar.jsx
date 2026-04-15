@@ -11,6 +11,7 @@ import ResetPassword from "../modules/bus/pages/ResetPassword";
 import GuestBookings from "../modules/bus/pages/GuestBookings";
 import CancellationCard from "../modules/bus/pages/CancellationCard";
 import PrintTicketModal from "../modules/bus/pages/PrintTicketModal";
+import PrintFlightTicketModal from "../modules/flights/pages/PrintFlightTicketModal";
 
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -24,7 +25,9 @@ const Navbar = () => {
   const [showCancel, setShowCancel] = useState(false);
   const [showPrintTicket, setShowPrintTicket] = useState(false);
   const [printTin, setPrintTin] = useState("");
+  const [showFlightPrintTicket, setShowFlightPrintTicket] = useState(false);
   const [mobileDropdownOpen, setMobileDropdownOpen] = useState(false);
+  
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -243,7 +246,7 @@ const Navbar = () => {
                   </div>
                   <button onClick={() => { setOpenDropdown(false); setAuthPage("signin"); setOpenAuthModal(true); }} className="mx-4 my-3 w-[calc(100%-32px)] cursor-pointer bg-[#fd561e] text-white font-semibold py-2.5 rounded-lg ">Login / Sign Up</button>
                   <button onClick={() => { setOpenDropdown(false); setShowGuestBookings(true); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Bookings</button>
-                  <button onClick={() => { setOpenDropdown(false); setPrintTin(""); setShowPrintTicket(true); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 hover:text-blue-500 cursor-pointer">Print Ticket</button>
+                  <button onClick={() => { setOpenDropdown(false); if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); } else { setPrintTin(""); setShowPrintTicket(true); } }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 hover:text-blue-500 cursor-pointer">Print Ticket</button>
                   <button onClick={handleOpenCancel} className="w-full text-left px-4 py-3 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Cancellation</button>
                 </div>
               )}
@@ -254,7 +257,7 @@ const Navbar = () => {
                   <button onClick={() => { setOpenDropdown(false); navigate("/my-bookings"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 hover:text-blue-500 cursor-pointer hover:text-blue-500">My Booking</button>
                   <button onClick={() => { setOpenDropdown(false); navigate("/my-account"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Account</button>
                   <button onClick={handleOpenCancel} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Cancellation</button>
-                  <button onClick={() => { setOpenDropdown(false); setPrintTin(""); setShowPrintTicket(true); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Print Ticket</button>
+                  <button onClick={() => { setOpenDropdown(false); if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); } else { setPrintTin(""); setShowPrintTicket(true); } }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Print Ticket</button>
                   <button onClick={() => { setOpenDropdown(false); navigate("/my-profile"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Profile</button>
                   <button onClick={handleLogout} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-red-500 cursor-pointer ">Logout</button>
                 </div>
@@ -348,7 +351,7 @@ const Navbar = () => {
                           </div>
                           <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); setAuthPage("signin"); setOpenAuthModal(true); }} className="w-full text-left px-4 py-2.5 bg-[#fd561e] text-white font-medium text-sm">Login / Sign Up</button>
                           <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); setShowGuestBookings(true); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Bookings</button>
-                          <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); setPrintTin(""); setShowPrintTicket(true); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Print Ticket</button>
+                          <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); } else { setPrintTin(""); setShowPrintTicket(true); } }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Print Ticket</button>
                           <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); handleOpenCancel(); }} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm">Cancellation</button>
                         </>
                       ) : (
@@ -356,7 +359,7 @@ const Navbar = () => {
                           <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-bookings"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Booking</button>
                           <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-account"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Account</button>
                           <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); handleOpenCancel(); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Cancellation</button>
-                          <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); setPrintTin(""); setShowPrintTicket(true); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Print Ticket</button>
+                          <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); } else { setPrintTin(""); setShowPrintTicket(true); } }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Print Ticket</button>
                           <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-profile"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Profile</button>
                           <button onClick={handleLogout} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-red-500 text-sm">Logout</button>
                         </>
@@ -389,12 +392,20 @@ const Navbar = () => {
         )}
       </nav>
 
-      {showCancel && <CancellationCard onClose={() => setShowCancel(false)} />}
+       {showCancel && <CancellationCard onClose={() => setShowCancel(false)} />}
       {showPrintTicket && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 w-[90%] sm:w-[420px] mx-4 relative">
             <button onClick={() => setShowPrintTicket(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700">✕</button>
             <PrintTicketModal onClose={() => setShowPrintTicket(false)} prefillTin={printTin} />
+          </div>
+        </div>
+      )}
+      {showFlightPrintTicket && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 w-[90%] sm:w-[440px] mx-4 relative">
+            <button onClick={() => setShowFlightPrintTicket(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700">✕</button>
+            <PrintFlightTicketModal onClose={() => setShowFlightPrintTicket(false)} />
           </div>
         </div>
       )}

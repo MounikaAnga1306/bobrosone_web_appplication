@@ -165,6 +165,34 @@ app.get("/cities", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch cities" });
   }
 });
+// =========================
+// GMAIL VERIFY ENDPOINT
+// =========================
+app.get("/gmailverify", async (req, res) => {
+  try {
+    const { email } = req.query;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: "Email is required" });
+    }
+
+    const url = `${process.env.BASE_URL}/gmailVerify?email=${encodeURIComponent(email)}`;
+
+    const requestData = { url, method: "GET" };
+    const headers = oauth.toHeader(oauth.authorize(requestData));
+
+    const response = await axios.get(url, { headers });
+
+    res.json(response.data);
+
+  } catch (error) {
+    console.error("Gmail Verify Error:", error.response?.data || error.message);
+    if (error.response?.status === 404) {
+      return res.status(404).json({ success: false, message: "Google account not registered" });
+    }
+    res.status(500).json({ success: false, message: "Gmail verification failed" });
+  }
+});
 
 // =========================
 // SEARCH TRIPS ENDPOINT (UPDATED with cancellation policy)
@@ -769,6 +797,135 @@ app.get("/cancellation-policy/:tripId", async (req, res) => {
     });
   }
 });
+
+// =========================
+// BILL PAYMENT VALIDATE ENDPOINT
+// =========================
+app.post("/bill/validate-payment", async (req, res) => {
+  try {
+    const { billerid, customerDetails, authenticatorValues, additionalValidation } = req.body;
+
+    if (!billerid || !customerDetails?.mobile) {
+      return res.status(400).json({
+        success: false,
+        message: "billerid and customer mobile required"
+      });
+    }
+
+  const authenticatorsFromUI = authenticatorValues
+  ? Object.entries(authenticatorValues)
+      .filter(([key]) => !key.startsWith('original_param_name_'))
+      .filter(([key, val]) => val !== '')
+      .map(([key, val]) => {
+        const originalKey = authenticatorValues[`original_param_name_${key}`] || key;
+        return {
+          parameter_name: originalKey,
+          value: val
+        };
+      })
+  : [];
+    const finalPayload = {
+      customerid: customerDetails.mobile,
+      billerid: billerid,
+      authenticatorsFromUI: authenticatorsFromUI,
+      customer: {
+        firstname: customerDetails.name || "",
+        lastname: "NA",
+        mobile: customerDetails.mobile,
+        email: customerDetails.email || ""
+      },
+      device: {
+        init_channel: "Internet",
+        ip: req.ip || req.connection.remoteAddress || "0.0.0.0",
+        mac: "AB:CD:EF:GH"
+      }
+    };
+
+    if (additionalValidation && Object.keys(additionalValidation).length > 0) {
+      finalPayload.additional_validation_details = additionalValidation;
+    }
+
+    const url = `${process.env.BASE_URL}/temp-payments/validate-payment`;
+
+    const requestData = { url, method: "POST", body: finalPayload };
+    const headers = oauth.toHeader(oauth.authorize(requestData));
+    headers["Content-Type"] = "application/json";
+
+    console.log("Bill Validate Payload:", JSON.stringify(finalPayload, null, 2));
+
+    const response = await axios.post(url, finalPayload, { headers });
+
+    console.log("Bill Validate Response:", JSON.stringify(response.data, null, 2));
+
+    res.json({ success: true, data: response.data });
+
+  } catch (error) {
+    console.error("Bill Validate Error:", error.response?.data || error.message);
+    res.status(error.response?.status || 500).json({
+      success: false,
+      message: error.response?.data?.message || error.message || "Validation failed",
+      error: error.response?.data
+    });
+  }
+});
+
+// =========================
+// PRINT FLIGHT TICKET ENDPOINT
+// =========================
+// app.post("/printFlightTicket", async (req, res) => {
+//   try {
+//     const { providerLocatorCode, ticketNumber } = req.body;
+
+//     console.log("[printFlightTicket] req.body received:", JSON.stringify(req.body, null, 2));
+
+//     if (!providerLocatorCode || !ticketNumber) {
+//       console.warn("[printFlightTicket] Missing fields — providerLocatorCode:", providerLocatorCode, "| ticketNumber:", ticketNumber);
+//       return res.status(400).json({
+//         success: false,
+//         message: "providerLocatorCode and ticketNumber are required"
+//       });
+//     }
+
+//     const url = `https://api.bobros.org/flights/retrieve-document/print-ticket`;
+
+//     // ✅ payload must match exactly what we send to axios
+//     const payload = { providerLocatorCode, ticketNumber };
+
+//     // ✅ OAuth signature built from the SAME payload we send
+//     const requestData = { url, method: "POST", body: payload };
+//     const headers = oauth.toHeader(oauth.authorize(requestData));
+//     headers["Content-Type"] = "application/json";
+
+//     console.log("[printFlightTicket] Upstream URL:", url);
+//     console.log("[printFlightTicket] Payload to upstream:", JSON.stringify(payload, null, 2));
+//     console.log("[printFlightTicket] OAuth headers:", JSON.stringify(headers, null, 2));
+
+//     const response = await axios.post(url, payload, { headers });
+
+//     console.log("[printFlightTicket] Upstream status:", response.status);
+//     console.log("[printFlightTicket] Upstream response:", JSON.stringify(response.data, null, 2));
+
+//     res.json({ success: true, data: response.data });
+
+//   } catch (error) {
+//     console.error("[printFlightTicket] ERROR status:", error.response?.status);
+//     console.error("[printFlightTicket] ERROR data:", JSON.stringify(error.response?.data, null, 2));
+//     console.error("[printFlightTicket] ERROR headers:", JSON.stringify(error.response?.headers, null, 2));
+//     console.error("[printFlightTicket] ERROR message:", error.message);
+
+//     res.status(error.response?.status || 500).json({
+//       success: false,
+//       message: error.response?.data?.message || "Failed to fetch flight ticket",
+//       debug: {
+//         status: error.response?.status,
+//         upstreamUrl: `https://api.bobros.org/flights/retrieve-document/print-ticket`,
+//         upstreamPayload: { providerLocatorCode: req.body?.providerLocatorCode, ticketNumber: req.body?.ticketNumber },
+//         upstreamError: error.response?.data,
+//         upstreamHeaders: error.response?.headers
+//       }
+//     });
+//   }
+// });
 
 // =========================
 // React Routing Support
