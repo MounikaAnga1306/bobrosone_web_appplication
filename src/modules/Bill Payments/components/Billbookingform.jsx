@@ -6,8 +6,8 @@ import {
 } from "lucide-react";
 
 const tabs = [
-  { id: "bus",          label: "Bus",          icon: Bus },
   { id: "billpayments", label: "Bill Payments", icon: ClipboardList },
+  { id: "bus",          label: "Bus",          icon: Bus },
   { id: "flights",      label: "Flights",       icon: Plane },
   { id: "hotels",       label: "Hotels",        icon: Building2 },
   { id: "holidays",     label: "Holidays",      icon: Palmtree },
@@ -15,7 +15,8 @@ const tabs = [
 ];
 
 const tabRoutes = {
-  bus: "/", billpayments: "/BillHomePage",
+  billpayments: "/BillHomePage",
+  bus: "/", 
   flights: "/flights", hotels: "/hotels",
   holidays: "/holidays", cabs: "/cabs",
 };

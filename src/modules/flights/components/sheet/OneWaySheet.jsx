@@ -297,7 +297,7 @@ const OneWaySheet = ({ isOpen, onClose, flight, passengerCounts, airlineData, ai
     }
   }, [needsHorizontalScroll]);
 
-  // ✅ KEY FIX: handleSelectFare uses useCallback, no stopPropagation issues
+  // ✅ MODIFIED: Open review page in a new tab using localStorage
   const handleSelectFare = useCallback(
     (fare) => {
       if (loadingFareId) return;
@@ -308,20 +308,23 @@ const OneWaySheet = ({ isOpen, onClose, flight, passengerCounts, airlineData, ai
       // Small delay so user sees the loading state before sheet closes
       setTimeout(() => {
         setLoadingFareId(null);
-        toast.success('Fare selected! Proceeding to booking...');
+        // Prepare data to pass to review page
+        const bookingState = {
+          selectedOutboundFare: fare,
+          outboundFlight: flight,
+          passengerCounts,
+          tripType: 'one-way',
+          totalPrice: fare.totalPrice,
+        };
+        // Store in localStorage (will be read by BookingReviewPage)
+        localStorage.setItem('bookingReviewState', JSON.stringify(bookingState));
+        toast.success('Opening booking page in a new tab...');
+        // Open in new tab
+        window.open('/flights/booking/review', '_blank');
         onClose();
-        navigate('/flights/booking/review', {
-          state: {
-            selectedOutboundFare: fare,
-            outboundFlight: flight,
-            passengerCounts,
-            tripType: 'one-way',
-            totalPrice: fare.totalPrice,
-          },
-        });
       }, 300);
     },
-    [loadingFareId, onClose, navigate, flight, passengerCounts]
+    [loadingFareId, onClose, flight, passengerCounts]
   );
 
   const scrollLeft = () => scrollContainerRef.current?.scrollBy({ left: -300, behavior: 'smooth' });

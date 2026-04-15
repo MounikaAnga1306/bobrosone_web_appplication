@@ -1439,9 +1439,32 @@ const BookingReviewPage = () => {
             </p>
           </div>
         </div>
+        
+        {/* Proceed Button */}
+        <button
+          onClick={handleProceedToBooking}
+          disabled={!formValid || loading}
+          className={`w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all ${
+            formValid && !loading
+              ? 'bg-[#FD561E] hover:bg-[#e04e1b] text-white shadow-md hover:shadow-lg'
+              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+          }`}
+        >
+          {loading ? (
+            <><FaSpinner className="animate-spin" />Loading...</>
+          ) : (
+            <><FaCreditCard />{formValid ? 'Proceed to Book' : 'Complete All Details'}<FaArrowRight size={14} /></>
+          )}
+        </button>
+        
+        <div className="flex items-center justify-center gap-3 text-xs text-gray-400 pt-2">
+          <FaCheckCircle className="text-emerald-500" size={12} /><span>Secure & Encrypted</span>
+          <span className="w-px h-3 bg-gray-200"></span><span>Price Guaranteed</span>
+        </div>
       </div>
-    );
-  };
+    </div>
+  );
+};
   
   // ============ RENDER PASSENGER FORM ============
   const renderPassengerForm = () => {
