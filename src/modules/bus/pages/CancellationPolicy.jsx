@@ -1,4 +1,10 @@
+import React, {useEffect } from "react";
+
 const CancellationPolicy = () => {
+   useEffect(() => {
+      window.scrollTo(0, 0);
+    }, []);
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 mt-20 text-gray-800">
       

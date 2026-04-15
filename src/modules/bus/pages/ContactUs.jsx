@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState,useEffect } from "react";
 import { Phone, Mail, MapPin, Send, User, MessageSquare, CheckCircle, Clock } from "lucide-react";
 
 const inputStyle = {
@@ -43,6 +43,11 @@ const Field = ({ label, icon, children }) => (
 );
 
 const ContactUs = () => {
+
+   useEffect(() => {
+      window.scrollTo(0, 0);
+    }, []);
+    
   const [formData, setFormData] = useState({ name: "", email: "", phone: "", message: "" });
   const [submitted, setSubmitted] = useState(false);
 
