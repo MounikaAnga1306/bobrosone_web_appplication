@@ -40,26 +40,29 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
  
   const googleLogin = useGoogleLogin({
     scope: "email profile",
-    flow: "implicit",
+    //flow: "implicit",
     onSuccess: async (tokenResponse) => {
+      console.log("✅ Google OAuth Success - token received");
       try {
         const res = await axios.get("https://www.googleapis.com/oauth2/v2/userinfo", {
           headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
         });
+        console.log("✅ Userinfo received:", res.data.email);
         const email = res.data.email;
         const verify = await axios.get(`${API_URL}/gmailverify`, { params: { email } });
+        console.log("✅ Gmail verify response:", verify.data);
         localStorage.setItem("user", JSON.stringify(verify.data));
         localStorage.setItem("isLoggedIn", "true");
         window.dispatchEvent(new Event("storage"));
         closeModal();
         navigate("/");
       } catch (error) {
-        console.error("Google Login API Error:", error?.response?.data || error.message);
+        console.error("❌ Google Login API Error:", error?.response?.data || error.message);
         alert("Google account not registered or server error.");
       }
     },
     onError: (error) => {
-      console.error("Google OAuth Error:", error);
+      console.error("❌ Google OAuth Error:", error);
       alert("Google sign-in failed. Please try again.");
     },
   });
@@ -186,7 +189,7 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
             onClick={() => googleLogin()} 
             className="w-full border border-gray-200 flex items-center justify-center cursor-pointer gap-2 py-2 sm:py-2.5 rounded-xl hover:bg-gray-50 text-xs sm:text-sm font-medium transition-all"
           >
-            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="G" className="w-4 h-4 sm:w-5 sm:h-5 cursor-pointer" /> 
+            <img src="/assets/google-Icon.png" alt="G" className="w-4 h-4 sm:w-5 sm:h-5 cursor-pointer" /> 
             Sign in with Google
           </button>
  

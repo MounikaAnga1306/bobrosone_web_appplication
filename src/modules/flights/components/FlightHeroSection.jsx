@@ -18,12 +18,15 @@ import {
   FaTrash,
   FaChevronLeft,
   FaChevronRight,
+  FaArrowUp,
+  FaArrowDown,
 } from "react-icons/fa";
 import { Bus, Plane, Building2, Palmtree, Car } from "lucide-react";
 
 const tabs = [
   { id: "flights", label: "Flights", icon: Plane },
   { id: "bus", label: "Bus", icon: Bus },
+  { id: "billpayments", label: "Bill Payments", icon: Bus },
   { id: "hotels", label: "Hotels", icon: Building2 },
   { id: "holidays", label: "Holidays", icon: Palmtree },
   { id: "cabs", label: "Cabs", icon: Car },
@@ -39,33 +42,23 @@ const tabRoutes = {
 
 // 15 travel-related background images
 const backgroundImages = [
-  // Modern Airports & Aircraft
-  "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", // Airplane wing at sunset
-  "https://images.unsplash.com/photo-1542296332-2e4473faf563?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", // Airport terminal modern architecture
-  "https://images.unsplash.com/photo-1556388158-158ea5ccacbd?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", // Plane taking off at golden hour
-  
-  // Beautiful Destinations
-  "https://images.unsplash.com/photo-1506929562872-bb421503ef21?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", // Tropical beach paradise
-  "https://images.unsplash.com/photo-1476514525539-6d127b40e0c8?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", // Mountain lake reflection
-  "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", // Majestic mountains
-  
-  // City Skylines
-  "https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", // New York skyline
-  "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", // San Francisco Golden Gate
-  "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", // Dubai cityscape
-  
-  // Scenic Views
-  "https://images.unsplash.com/photo-1469474968028-56623f02e42e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2074&q=80", // Forest pathway
-  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2073&q=80", // Tropical beach with palm trees
-  "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", // Crystal clear lake
-  
-  // Cultural & Iconic
-  "https://images.unsplash.com/photo-1533105079780-92b9be482077?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", // Eiffel Tower
-  "https://images.unsplash.com/photo-1504215680859-0262fb1e90c3?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", // Colosseum Rome
-  "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80", // Taj Mahal
+  "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+  "https://images.unsplash.com/photo-1542296332-2e4473faf563?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+  "https://images.unsplash.com/photo-1556388158-158ea5ccacbd?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+  "https://images.unsplash.com/photo-1506929562872-bb421503ef21?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+  "https://images.unsplash.com/photo-1476514525539-6d127b40e0c8?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+  "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+  "https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+  "https://images.unsplash.com/photo-1501594907352-04cda38ebc29?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+  "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+  "https://images.unsplash.com/photo-1469474968028-56623f02e42e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2074&q=80",
+  "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2073&q=80",
+  "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+  "https://images.unsplash.com/photo-1533105079780-92b9be482077?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+  "https://images.unsplash.com/photo-1504215680859-0262fb1e90c3?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+  "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
 ];
 
-// Special fares for flights
 const flightSpecialFares = [
   { id: "regular", label: "Regular", desc: "Regular fares" },
   { id: "student", label: "Student", desc: "Extra 10% off" },
@@ -90,6 +83,11 @@ const FlightHeroSection = () => {
     removeLeg: contextRemoveLeg,
     updateLeg,
   } = useFlightSearchContext();
+
+  // Responsive state
+  const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(true);
 
   // ============ CAROUSEL STATE ============
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -197,6 +195,20 @@ const FlightHeroSection = () => {
   const toSearchTimeout = useRef(null);
   const legSearchTimeouts = useRef({});
 
+  // ============ RESPONSIVE HANDLER ============
+  useEffect(() => {
+    const checkScreenSize = () => {
+      const width = window.innerWidth;
+      setIsMobile(width < 768);
+      setIsTablet(width >= 768 && width < 1024);
+      setIsDesktop(width >= 1024);
+    };
+    
+    checkScreenSize();
+    window.addEventListener("resize", checkScreenSize);
+    return () => window.removeEventListener("resize", checkScreenSize);
+  }, []);
+
   // ============ CAROUSEL HANDLERS ============
   const goToPreviousImage = () => {
     if (isTransitioning) return;
@@ -245,11 +257,14 @@ const FlightHeroSection = () => {
     return `${parts.join(', ')} · ${travelClass}`;
   };
 
-  const formatDate = (date) => {
-    if (!date) return "";
-    return date.toLocaleDateString("en-GB");
-  };
-
+ const formatDate = (date) => {
+  if (!date) return "";
+  const d = new Date(date);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}-${month}-${year}`;
+};
   const formatDateForAPI = (date) => {
     if (!date) return null;
     const d = new Date(date);
@@ -812,6 +827,31 @@ const FlightHeroSection = () => {
     navigate(tabRoutes[tab.id]);
   };
 
+  // Get dynamic height based on device and trip type
+  const getSectionHeight = () => {
+    if (isMobile) {
+      return tripType === 'multi-city' ? 'min-h-[950px]' : 'min-h-[780px]';
+    } else if (isTablet) {
+      return tripType === 'multi-city' ? 'min-h-[800px]' : 'min-h-[620px]';
+    } else {
+      return tripType === 'multi-city' ? 'min-h-[750px]' : 'h-[590px]';
+    }
+  };
+
+  // Get heading font size
+  const getHeadingSize = () => {
+    if (isMobile) return 'text-2xl';
+    if (isTablet) return 'text-3xl';
+    return 'text-4xl';
+  };
+
+  // Get padding for booking card
+  const getCardPadding = () => {
+    if (isMobile) return 'p-4';
+    if (isTablet) return 'p-5';
+    return 'p-6';
+  };
+
   // ============ TRAVELLER MODAL COMPONENT ============
   const TravellerModal = () => (
     <div 
@@ -823,21 +863,21 @@ const FlightHeroSection = () => {
         }
       }}
     >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-4 sm:p-6">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold text-gray-900">Select Travellers</h3>
+          <h3 className="text-lg sm:text-xl font-semibold text-gray-900">Select Travellers</h3>
           <button 
             onClick={cancelPassengerChanges} 
             className="text-gray-400 hover:text-gray-600 transition-colors"
           >
-            <FaTimes className="w-5 h-5" />
+            <FaTimes className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
         </div>
         
         <div className="mb-4 p-3 bg-orange-50 rounded-lg">
           <div className="flex justify-between">
-            <span className="text-sm font-medium text-gray-600">Max {maxTravellers} travellers</span>
-            <span className={`text-sm font-bold ${
+            <span className="text-xs sm:text-sm font-medium text-gray-600">Max {maxTravellers} travellers</span>
+            <span className={`text-xs sm:text-sm font-bold ${
               tempPassengers.length >= maxTravellers ? "text-red-600" : "text-green-600"
             }`}>
               {tempPassengers.length}/{maxTravellers}
@@ -850,7 +890,7 @@ const FlightHeroSection = () => {
             <div key={i} className="flex gap-2 p-3 bg-gray-50 rounded-lg">
               <div className="flex-1">
                 <div className="flex justify-between items-center">
-                  <span className="font-medium text-gray-700">
+                  <span className="font-medium text-gray-700 text-sm">
                     {p.code === 'ADT' && 'Adult (12+ years)'}
                     {p.code === 'CNN' && 'Child (2-11 years)'}
                     {p.code === 'INF' && 'Infant (0-2 years)'}
@@ -877,7 +917,7 @@ const FlightHeroSection = () => {
             </div>
           ))}
           {tempPassengers.length === 0 && (
-            <div className="text-center py-8 text-gray-400">
+            <div className="text-center py-8 text-gray-400 text-sm">
               No travellers added. Click below to add.
             </div>
           )}
@@ -885,21 +925,21 @@ const FlightHeroSection = () => {
 
         <div className="grid grid-cols-3 gap-2 mb-6">
           <button
-            className="py-2 text-sm rounded-lg border border-gray-200 text-gray-700 hover:border-[#FD561E] hover:text-[#FD561E] transition-colors disabled:opacity-50"
+            className="py-2 text-xs sm:text-sm rounded-lg border border-gray-200 text-gray-700 hover:border-[#FD561E] hover:text-[#FD561E] transition-colors disabled:opacity-50"
             onClick={() => addTempPassenger('ADT')}
             disabled={tempPassengers.length >= maxTravellers}
           >
             + Adult
           </button>
           <button
-            className="py-2 text-sm rounded-lg border border-gray-200 text-gray-700 hover:border-[#FD561E] hover:text-[#FD561E] transition-colors disabled:opacity-50"
+            className="py-2 text-xs sm:text-sm rounded-lg border border-gray-200 text-gray-700 hover:border-[#FD561E] hover:text-[#FD561E] transition-colors disabled:opacity-50"
             onClick={() => addTempPassenger('CNN')}
             disabled={tempPassengers.length >= maxTravellers}
           >
             + Child
           </button>
           <button
-            className="py-2 text-sm rounded-lg border border-gray-200 text-gray-700 hover:border-[#FD561E] hover:text-[#FD561E] transition-colors disabled:opacity-50"
+            className="py-2 text-xs sm:text-sm rounded-lg border border-gray-200 text-gray-700 hover:border-[#FD561E] hover:text-[#FD561E] transition-colors disabled:opacity-50"
             onClick={() => addTempPassenger('INF')}
             disabled={tempPassengers.length >= maxTravellers}
           >
@@ -908,12 +948,12 @@ const FlightHeroSection = () => {
         </div>
 
         <div className="mb-6">
-          <h4 className="font-medium text-gray-700 mb-3">Travel Class</h4>
+          <h4 className="font-medium text-gray-700 mb-3 text-sm">Travel Class</h4>
           <div className="grid grid-cols-2 gap-2">
             {["Economy", "Premium Economy", "Business", "First"].map(cls => (
               <button
                 key={cls}
-                className={`py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                className={`py-2 px-3 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                   travelClass === cls
                     ? "bg-[#FD561E] text-white"
                     : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -928,13 +968,13 @@ const FlightHeroSection = () => {
 
         <div className="flex gap-3">
           <button 
-            className="flex-1 bg-gray-100 py-3 rounded-lg font-medium text-gray-700 hover:bg-gray-200 transition-colors" 
+            className="flex-1 bg-gray-100 py-3 rounded-lg font-medium text-gray-700 hover:bg-gray-200 transition-colors text-sm" 
             onClick={cancelPassengerChanges}
           >
             Cancel
           </button>
           <button 
-            className="flex-1 bg-[#FD561E] text-white py-3 rounded-lg font-medium hover:bg-[#e54d1a] transition-colors" 
+            className="flex-1 bg-[#FD561E] text-white py-3 rounded-lg font-medium hover:bg-[#e54d1a] transition-colors text-sm" 
             onClick={applyPassengerChanges}
           >
             Apply
@@ -948,18 +988,18 @@ const FlightHeroSection = () => {
   const renderMultiCityForm = () => (
     <div className="space-y-4">
       {legs.map((leg, index) => (
-        <div key={leg.id} className="flex items-center gap-3 relative">
+        <div key={leg.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 relative">
           {/* Flight Label */}
           <div className="w-16 text-xs font-medium text-gray-500">
             Flight {index + 1}
           </div>
           
           {/* From Field */}
-          <div className="flex-1 relative" id={`leg-from-${index}`}>
+          <div className="flex-1 w-full sm:w-auto relative" id={`leg-from-${index}`}>
             <div className={`flex items-center gap-2 pb-2 border-b-2 transition-colors ${
               leg.fromError ? "border-red-400" : "border-gray-200 hover:border-[#FD561E]"
             }`}>
-              <FaMapMarkerAlt className={`w-4 h-4 ${leg.fromError ? "text-red-400" : "text-gray-400"}`} />
+              <FaMapMarkerAlt className={`w-4 h-4 flex-shrink-0 ${leg.fromError ? "text-red-400" : "text-gray-400"}`} />
               <input
                 type="text"
                 value={leg.fromDisplay}
@@ -968,7 +1008,7 @@ const FlightHeroSection = () => {
                 placeholder="From"
                 className="w-full text-sm font-medium outline-none bg-transparent"
               />
-              {leg.fromLoading && <FaSpinner className="animate-spin text-gray-400" />}
+              {leg.fromLoading && <FaSpinner className="animate-spin text-gray-400 flex-shrink-0" />}
             </div>
             {leg.fromError && (
               <p className="text-red-500 text-xs mt-1">{leg.fromError}</p>
@@ -981,7 +1021,7 @@ const FlightHeroSection = () => {
                     className="px-3 py-2 hover:bg-orange-50 cursor-pointer text-sm"
                     onClick={() => handleLegAirportSelect(airport, index, 'from')}
                   >
-                    <div className="font-medium">{airport.name}</div>
+                    <div className="font-medium truncate">{airport.name}</div>
                     <div className="text-xs text-gray-500">{airport.location_code}</div>
                   </div>
                 ))}
@@ -990,11 +1030,11 @@ const FlightHeroSection = () => {
           </div>
 
           {/* To Field */}
-          <div className="flex-1 relative" id={`leg-to-${index}`}>
+          <div className="flex-1 w-full sm:w-auto relative" id={`leg-to-${index}`}>
             <div className={`flex items-center gap-2 pb-2 border-b-2 transition-colors ${
               leg.toError ? "border-red-400" : "border-gray-200 hover:border-[#FD561E]"
             }`}>
-              <FaMapMarkerAlt className={`w-4 h-4 ${leg.toError ? "text-red-400" : "text-gray-400"}`} />
+              <FaMapMarkerAlt className={`w-4 h-4 flex-shrink-0 ${leg.toError ? "text-red-400" : "text-gray-400"}`} />
               <input
                 type="text"
                 value={leg.toDisplay}
@@ -1003,7 +1043,7 @@ const FlightHeroSection = () => {
                 placeholder="To"
                 className="w-full text-sm font-medium outline-none bg-transparent"
               />
-              {leg.toLoading && <FaSpinner className="animate-spin text-gray-400" />}
+              {leg.toLoading && <FaSpinner className="animate-spin text-gray-400 flex-shrink-0" />}
             </div>
             {leg.toError && (
               <p className="text-red-500 text-xs mt-1">{leg.toError}</p>
@@ -1016,7 +1056,7 @@ const FlightHeroSection = () => {
                     className="px-3 py-2 hover:bg-orange-50 cursor-pointer text-sm"
                     onClick={() => handleLegAirportSelect(airport, index, 'to')}
                   >
-                    <div className="font-medium">{airport.name}</div>
+                    <div className="font-medium truncate">{airport.name}</div>
                     <div className="text-xs text-gray-500">{airport.location_code}</div>
                   </div>
                 ))}
@@ -1025,7 +1065,7 @@ const FlightHeroSection = () => {
           </div>
 
           {/* Date Field */}
-          <div className="w-[110px] relative">
+          <div className="w-full sm:w-[110px] relative">
             <div 
               onClick={() => {
                 const newDate = prompt("Select date (YYYY-MM-DD):", leg.date ? formatDateForAPI(leg.date) : "");
@@ -1035,7 +1075,7 @@ const FlightHeroSection = () => {
               }}
               className="flex items-center gap-2 pb-2 border-b-2 border-gray-200 hover:border-[#FD561E] transition-colors cursor-pointer"
             >
-              <FaCalendarAlt className="w-4 h-4 text-gray-400" />
+              <FaCalendarAlt className="w-4 h-4 text-gray-400 flex-shrink-0" />
               <input
                 type="text"
                 value={leg.date ? formatDate(leg.date) : ""}
@@ -1050,7 +1090,7 @@ const FlightHeroSection = () => {
           {index >= 2 && (
             <button
               onClick={() => removeLegHandler(index)}
-              className="text-gray-400 hover:text-red-500 transition-colors ml-1"
+              className="text-gray-400 hover:text-red-500 transition-colors ml-auto sm:ml-1 mt-2 sm:mt-0"
             >
               <FaTrash className="w-4 h-4" />
             </button>
@@ -1071,12 +1111,12 @@ const FlightHeroSection = () => {
       {/* Travellers Field for Multi-City */}
       <div className="mt-4 pt-2 border-t border-gray-100">
         <div
-          className="flex items-center gap-3 pb-2 border-b-2 border-gray-200 hover:border-[#FD561E] transition-colors cursor-pointer w-full md:w-64"
+          className="flex items-center gap-3 pb-2 border-b-2 border-gray-200 hover:border-[#FD561E] transition-colors cursor-pointer w-full sm:w-64"
           onClick={openTravellerModal}
         >
-          <FaUser className="text-gray-400 w-4 h-4" />
-          <span className="text-sm font-medium text-gray-700 flex-1">{formatTravellersText()}</span>
-          <FaChevronDown className={`text-gray-400 w-3 h-3 transition-transform ${showTravellerModal ? "rotate-180" : ""}`} />
+          <FaUser className="text-gray-400 w-4 h-4 flex-shrink-0" />
+          <span className="text-sm font-medium text-gray-700 flex-1 truncate">{formatTravellersText()}</span>
+          <FaChevronDown className={`text-gray-400 w-3 h-3 transition-transform flex-shrink-0 ${showTravellerModal ? "rotate-180" : ""}`} />
         </div>
       </div>
     </div>
@@ -1084,13 +1124,13 @@ const FlightHeroSection = () => {
 
   // ============ RENDER ONE-WAY/ROUND-TRIP FORM ============
   const renderOneWayRoundTripForm = () => (
-    <div className="flex items-center gap-4">
+    <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4">
       {/* From Field */}
       <div className="flex-1 relative" ref={fromRef}>
         <div className={`flex items-center gap-2 pb-2 border-b-2 transition-colors ${
           fromError || sameCityError ? "border-red-400" : "border-gray-200 hover:border-[#FD561E]"
         }`}>
-          <FaMapMarkerAlt className={`w-4 h-4 ${fromError || sameCityError ? "text-red-400" : "text-gray-400"}`} />
+          <FaMapMarkerAlt className={`w-4 h-4 flex-shrink-0 ${fromError || sameCityError ? "text-red-400" : "text-gray-400"}`} />
           <input
             type="text"
             value={fromDisplay}
@@ -1099,7 +1139,7 @@ const FlightHeroSection = () => {
             placeholder="From"
             className="w-full text-sm font-medium outline-none bg-transparent"
           />
-          {fromLoading && <FaSpinner className="animate-spin text-gray-400" />}
+          {fromLoading && <FaSpinner className="animate-spin text-gray-400 flex-shrink-0" />}
         </div>
         {fromError && (
           <p className="text-red-500 text-xs mt-1">{fromError}</p>
@@ -1112,7 +1152,7 @@ const FlightHeroSection = () => {
                 className="px-3 py-2 hover:bg-orange-50 cursor-pointer text-sm"
                 onClick={() => handleAirportSelect(airport, "from")}
               >
-                <div className="font-medium">{airport.name}</div>
+                <div className="font-medium truncate">{airport.name}</div>
                 <div className="text-xs text-gray-500">{airport.location_code}</div>
               </div>
             ))}
@@ -1120,21 +1160,26 @@ const FlightHeroSection = () => {
         )}
       </div>
 
-      {/* Swap Button */}
-      <button
-        className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-all duration-500 hover:rotate-180 flex-shrink-0"
-        onClick={handleSwapCities}
-        disabled={!selectedFromAirport || !selectedToAirport}
-      >
-        <FaExchangeAlt className="w-4 h-4 text-gray-600" />
-      </button>
+     {/* Swap Button - Rotate 90 degrees on mobile to show vertical arrows */}
+<div className="flex justify-center">
+  <button
+    className={`p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-all duration-300 hover:scale-110 flex-shrink-0 ${
+      isMobile ? 'rotate-90' : 'hover:rotate-180'
+    }`}
+    onClick={handleSwapCities}
+    disabled={!selectedFromAirport || !selectedToAirport}
+    title="Swap cities"
+  >
+    <FaExchangeAlt className="w-4 h-4 text-gray-600" />
+  </button>
+</div>
 
       {/* To Field */}
       <div className="flex-1 relative" ref={toRef}>
         <div className={`flex items-center gap-2 pb-2 border-b-2 transition-colors ${
           toError || sameCityError ? "border-red-400" : "border-gray-200 hover:border-[#FD561E]"
         }`}>
-          <FaMapMarkerAlt className={`w-4 h-4 ${toError || sameCityError ? "text-red-400" : "text-gray-400"}`} />
+          <FaMapMarkerAlt className={`w-4 h-4 flex-shrink-0 ${toError || sameCityError ? "text-red-400" : "text-gray-400"}`} />
           <input
             type="text"
             value={toDisplay}
@@ -1143,7 +1188,7 @@ const FlightHeroSection = () => {
             placeholder="To"
             className="w-full text-sm font-medium outline-none bg-transparent"
           />
-          {toLoading && <FaSpinner className="animate-spin text-gray-400" />}
+          {toLoading && <FaSpinner className="animate-spin text-gray-400 flex-shrink-0" />}
         </div>
         {(toError || sameCityError) && (
           <p className="text-red-500 text-xs mt-1">{sameCityError || toError}</p>
@@ -1156,7 +1201,7 @@ const FlightHeroSection = () => {
                 className="px-3 py-2 hover:bg-orange-50 cursor-pointer text-sm"
                 onClick={() => handleAirportSelect(airport, "to")}
               >
-                <div className="font-medium">{airport.name}</div>
+                <div className="font-medium truncate">{airport.name}</div>
                 <div className="text-xs text-gray-500">{airport.location_code}</div>
               </div>
             ))}
@@ -1165,7 +1210,7 @@ const FlightHeroSection = () => {
       </div>
 
       {/* Departure Date */}
-      <div className="w-[110px] relative">
+      <div className="w-full md:w-[110px] relative">
         <div
           onClick={() => {
             setShowDepartureCalendar(!showDepartureCalendar);
@@ -1174,7 +1219,7 @@ const FlightHeroSection = () => {
           }}
           className="flex items-center gap-2 pb-2 border-b-2 border-gray-200 hover:border-[#FD561E] transition-colors cursor-pointer"
         >
-          <FaCalendarAlt className="w-4 h-4 text-gray-400" />
+          <FaCalendarAlt className="w-4 h-4 text-gray-400 flex-shrink-0" />
           <input
             type="text"
             value={formatDate(departureDate)}
@@ -1185,22 +1230,22 @@ const FlightHeroSection = () => {
         </div>
         {showDepartureCalendar && (
           <div 
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50"
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
             onClick={(e) => {
               if (e.target === e.currentTarget) setShowDepartureCalendar(false);
             }}
           >
-            <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-4xl mx-4">
-              <div className="flex gap-6">
-                <div className="w-[350px]">
+            <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-6 max-w-full sm:max-w-4xl mx-4 overflow-x-auto">
+              <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+                <div className="w-full sm:w-[350px]">
                   <div className="flex justify-between items-center mb-4">
                     <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="p-2 hover:bg-gray-100 rounded-lg">
                       <FaChevronLeft className="w-5 h-5" />
                     </button>
-                    <h2 className="font-semibold text-lg">{currentDate.toLocaleString("default", { month: "long" })} {currentDate.getFullYear()}</h2>
+                    <h2 className="font-semibold text-base sm:text-lg">{currentDate.toLocaleString("default", { month: "long" })} {currentDate.getFullYear()}</h2>
                     <div className="w-10" />
                   </div>
-                  <div className="grid grid-cols-7 text-center text-sm text-gray-500 mb-2">
+                  <div className="grid grid-cols-7 text-center text-xs sm:text-sm text-gray-500 mb-2">
                     {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(day => <div key={day} className="py-2">{day}</div>)}
                   </div>
                   <div className="grid grid-cols-7 gap-1 text-center">
@@ -1214,7 +1259,7 @@ const FlightHeroSection = () => {
                           key={day}
                           onClick={() => !isPastDate && handleDateSelect(day, false, 0)}
                           disabled={isPastDate}
-                          className={`py-2 rounded-lg ${isSelected ? "bg-[#FD561E] text-white" : isPastDate ? "text-gray-300 cursor-not-allowed" : "hover:bg-orange-100"}`}
+                          className={`py-1 sm:py-2 rounded-lg text-xs sm:text-sm ${isSelected ? "bg-[#FD561E] text-white" : isPastDate ? "text-gray-300 cursor-not-allowed" : "hover:bg-orange-100"}`}
                         >
                           {day}
                         </button>
@@ -1222,15 +1267,15 @@ const FlightHeroSection = () => {
                     })}
                   </div>
                 </div>
-                <div className="w-[350px]">
+                <div className="w-full sm:w-[350px]">
                   <div className="flex justify-between items-center mb-4">
                     <div className="w-10" />
-                    <h2 className="font-semibold text-lg">{new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1).toLocaleString("default", { month: "long" })} {currentDate.getFullYear()}</h2>
+                    <h2 className="font-semibold text-base sm:text-lg">{new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1).toLocaleString("default", { month: "long" })} {currentDate.getFullYear()}</h2>
                     <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))} className="p-2 hover:bg-gray-100 rounded-lg">
                       <FaChevronRight className="w-5 h-5" />
                     </button>
                   </div>
-                  <div className="grid grid-cols-7 text-center text-sm text-gray-500 mb-2">
+                  <div className="grid grid-cols-7 text-center text-xs sm:text-sm text-gray-500 mb-2">
                     {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(day => <div key={day} className="py-2">{day}</div>)}
                   </div>
                   <div className="grid grid-cols-7 gap-1 text-center">
@@ -1244,7 +1289,7 @@ const FlightHeroSection = () => {
                           key={day}
                           onClick={() => !isPastDate && handleDateSelect(day, false, 1)}
                           disabled={isPastDate}
-                          className={`py-2 rounded-lg ${isSelected ? "bg-[#FD561E] text-white" : isPastDate ? "text-gray-300 cursor-not-allowed" : "hover:bg-orange-100"}`}
+                          className={`py-1 sm:py-2 rounded-lg text-xs sm:text-sm ${isSelected ? "bg-[#FD561E] text-white" : isPastDate ? "text-gray-300 cursor-not-allowed" : "hover:bg-orange-100"}`}
                         >
                           {day}
                         </button>
@@ -1263,7 +1308,7 @@ const FlightHeroSection = () => {
 
       {/* Return Date */}
       {tripType === "round-trip" && (
-        <div className="w-[110px] relative">
+        <div className="w-full md:w-[110px] relative">
           <div
             onClick={() => {
               setShowReturnCalendar(!showReturnCalendar);
@@ -1272,7 +1317,7 @@ const FlightHeroSection = () => {
             }}
             className="flex items-center gap-2 pb-2 border-b-2 border-gray-200 hover:border-[#FD561E] transition-colors cursor-pointer"
           >
-            <FaCalendarAlt className="w-4 h-4 text-gray-400" />
+            <FaCalendarAlt className="w-4 h-4 text-gray-400 flex-shrink-0" />
             <input
               type="text"
               value={formatDate(returnDate)}
@@ -1283,22 +1328,22 @@ const FlightHeroSection = () => {
           </div>
           {showReturnCalendar && (
             <div 
-              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50"
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
               onClick={(e) => {
                 if (e.target === e.currentTarget) setShowReturnCalendar(false);
               }}
             >
-              <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-4xl mx-4">
-                <div className="flex gap-6">
-                  <div className="w-[350px]">
+              <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-6 max-w-full sm:max-w-4xl mx-4 overflow-x-auto">
+                <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+                  <div className="w-full sm:w-[350px]">
                     <div className="flex justify-between items-center mb-4">
                       <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="p-2 hover:bg-gray-100 rounded-lg">
                         <FaChevronLeft className="w-5 h-5" />
                       </button>
-                      <h2 className="font-semibold text-lg">{currentDate.toLocaleString("default", { month: "long" })} {currentDate.getFullYear()}</h2>
+                      <h2 className="font-semibold text-base sm:text-lg">{currentDate.toLocaleString("default", { month: "long" })} {currentDate.getFullYear()}</h2>
                       <div className="w-10" />
                     </div>
-                    <div className="grid grid-cols-7 text-center text-sm text-gray-500 mb-2">
+                    <div className="grid grid-cols-7 text-center text-xs sm:text-sm text-gray-500 mb-2">
                       {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(day => <div key={day} className="py-2">{day}</div>)}
                     </div>
                     <div className="grid grid-cols-7 gap-1 text-center">
@@ -1312,7 +1357,7 @@ const FlightHeroSection = () => {
                             key={day}
                             onClick={() => !isPastDate && handleDateSelect(day, true, 0)}
                             disabled={isPastDate}
-                            className={`py-2 rounded-lg ${isSelected ? "bg-[#FD561E] text-white" : isPastDate ? "text-gray-300 cursor-not-allowed" : "hover:bg-orange-100"}`}
+                            className={`py-1 sm:py-2 rounded-lg text-xs sm:text-sm ${isSelected ? "bg-[#FD561E] text-white" : isPastDate ? "text-gray-300 cursor-not-allowed" : "hover:bg-orange-100"}`}
                           >
                             {day}
                           </button>
@@ -1320,15 +1365,15 @@ const FlightHeroSection = () => {
                       })}
                     </div>
                   </div>
-                  <div className="w-[350px]">
+                  <div className="w-full sm:w-[350px]">
                     <div className="flex justify-between items-center mb-4">
                       <div className="w-10" />
-                      <h2 className="font-semibold text-lg">{new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1).toLocaleString("default", { month: "long" })} {currentDate.getFullYear()}</h2>
+                      <h2 className="font-semibold text-base sm:text-lg">{new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1).toLocaleString("default", { month: "long" })} {currentDate.getFullYear()}</h2>
                       <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))} className="p-2 hover:bg-gray-100 rounded-lg">
                         <FaChevronRight className="w-5 h-5" />
                       </button>
                     </div>
-                    <div className="grid grid-cols-7 text-center text-sm text-gray-500 mb-2">
+                    <div className="grid grid-cols-7 text-center text-xs sm:text-sm text-gray-500 mb-2">
                       {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(day => <div key={day} className="py-2">{day}</div>)}
                     </div>
                     <div className="grid grid-cols-7 gap-1 text-center">
@@ -1342,7 +1387,7 @@ const FlightHeroSection = () => {
                             key={day}
                             onClick={() => !isPastDate && handleDateSelect(day, true, 1)}
                             disabled={isPastDate}
-                            className={`py-2 rounded-lg ${isSelected ? "bg-[#FD561E] text-white" : isPastDate ? "text-gray-300 cursor-not-allowed" : "hover:bg-orange-100"}`}
+                            className={`py-1 sm:py-2 rounded-lg text-xs sm:text-sm ${isSelected ? "bg-[#FD561E] text-white" : isPastDate ? "text-gray-300 cursor-not-allowed" : "hover:bg-orange-100"}`}
                           >
                             {day}
                           </button>
@@ -1360,15 +1405,15 @@ const FlightHeroSection = () => {
         </div>
       )}
 
-      {/* Travellers Field - In the same row for one-way/round-trip */}
-      <div className="w-[180px] relative">
+      {/* Travellers Field */}
+      <div className="w-full md:w-[180px] relative">
         <div
           className="flex items-center gap-2 pb-2 border-b-2 border-gray-200 hover:border-[#FD561E] transition-colors cursor-pointer"
           onClick={openTravellerModal}
         >
-          <FaUser className="text-gray-400 w-4 h-4" />
+          <FaUser className="text-gray-400 w-4 h-4 flex-shrink-0" />
           <span className="text-sm font-medium text-gray-700 truncate flex-1">{formatTravellersText()}</span>
-          <FaChevronDown className={`text-gray-400 w-3 h-3 transition-transform ${showTravellerModal ? "rotate-180" : ""}`} />
+          <FaChevronDown className={`text-gray-400 w-3 h-3 transition-transform flex-shrink-0 ${showTravellerModal ? "rotate-180" : ""}`} />
         </div>
       </div>
     </div>
@@ -1376,110 +1421,110 @@ const FlightHeroSection = () => {
 
   // ============ MAIN RENDER ============
   return (
-    <section className={`relative ${tripType === 'multi-city' ? 'min-h-[750px]' : 'h-[590px]'} flex items-center justify-center overflow-hidden`}>
+    <section className={`relative ${getSectionHeight()} flex items-center justify-center overflow-hidden`}>
       {/* Carousel Background */}
       <div className="absolute inset-0">
-      {backgroundImages.map((img, idx) => (
-        <div
-          key={idx}
-          className={`absolute inset-0 w-full h-full transition-opacity duration-700 ${
-            idx === currentImageIndex ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          {/* Enhanced Image with brightness filter */}
-          <div className="relative w-full h-full">
-            <img
-              src={img}
-              alt={`Travel background ${idx + 1}`}
-              className="w-full h-full object-cover brightness-105 contrast-105"
-              loading={idx === 0 ? "eager" : "lazy"}
-            />
-            {/* Gradient Overlay - More subtle and modern */}
-            <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/40" />
-          </div>
-        </div>
-      ))}
-      
-      {/* Optional: Soft vignette effect for better focus on content */}
-      <div className="absolute inset-0 bg-radial-gradient from-transparent via-transparent to-black/30 pointer-events-none" />
-      
-      {/* Carousel Navigation Buttons - Enhanced styling */}
-      <button
-        onClick={goToPreviousImage}
-        className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/40 hover:bg-white/60 backdrop-blur-md rounded-full p-3 transition-all duration-300 z-10 shadow-lg hover:scale-110"
-      >
-        <FaChevronLeft className="w-6 h-6 text-white drop-shadow-md" />
-      </button>
-      <button
-        onClick={goToNextImage}
-        className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/40 hover:bg-white/60 backdrop-blur-md rounded-full p-3 transition-all duration-300 z-10 shadow-lg hover:scale-110"
-      >
-        <FaChevronRight className="w-6 h-6 text-white drop-shadow-md" />
-      </button>
-      
-      {/* Carousel Dots - Enhanced visibility */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-        {backgroundImages.map((_, idx) => (
-          <button
+        {backgroundImages.map((img, idx) => (
+          <div
             key={idx}
-            onClick={() => {
-              if (!isTransitioning) {
-                setIsTransitioning(true);
-                setCurrentImageIndex(idx);
-                setTimeout(() => setIsTransitioning(false), 500);
-              }
-            }}
-            className={`transition-all duration-300 ${
-              idx === currentImageIndex
-                ? "bg-white w-8 h-2 rounded-full shadow-md"
-                : "bg-white/50 hover:bg-white/80 w-2 h-2 rounded-full"
+            className={`absolute inset-0 w-full h-full transition-opacity duration-700 ${
+              idx === currentImageIndex ? "opacity-100" : "opacity-0"
             }`}
-          />
+          >
+            <div className="relative w-full h-full">
+              <img
+                src={img}
+                alt={`Travel background ${idx + 1}`}
+                className="w-full h-full object-cover brightness-105 contrast-105"
+                loading={idx === 0 ? "eager" : "lazy"}
+              />
+              <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/20 to-black/40" />
+            </div>
+          </div>
         ))}
+        
+        <div className="absolute inset-0 bg-radial-gradient from-transparent via-transparent to-black/30 pointer-events-none" />
+        
+        {/* Carousel Navigation Buttons - Hide on mobile */}
+        {!isMobile && (
+          <>
+            <button
+              onClick={goToPreviousImage}
+              className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 bg-white/40 hover:bg-white/60 backdrop-blur-md rounded-full p-2 sm:p-3 transition-all duration-300 z-10 shadow-lg hover:scale-110"
+            >
+              <FaChevronLeft className="w-4 h-4 sm:w-6 sm:h-6 text-white drop-shadow-md" />
+            </button>
+            <button
+              onClick={goToNextImage}
+              className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 bg-white/40 hover:bg-white/60 backdrop-blur-md rounded-full p-2 sm:p-3 transition-all duration-300 z-10 shadow-lg hover:scale-110"
+            >
+              <FaChevronRight className="w-4 h-4 sm:w-6 sm:h-6 text-white drop-shadow-md" />
+            </button>
+          </>
+        )}
+        
+        {/* Carousel Dots */}
+        <div className="absolute bottom-3 sm:bottom-6 left-1/2 -translate-x-1/2 flex gap-1 sm:gap-2 z-10">
+          {backgroundImages.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => {
+                if (!isTransitioning) {
+                  setIsTransitioning(true);
+                  setCurrentImageIndex(idx);
+                  setTimeout(() => setIsTransitioning(false), 500);
+                }
+              }}
+              className={`transition-all duration-300 ${
+                idx === currentImageIndex
+                  ? "bg-white w-4 sm:w-8 h-1 sm:h-2 rounded-full shadow-md"
+                  : "bg-white/50 hover:bg-white/80 w-1 sm:w-2 h-1 sm:h-2 rounded-full"
+              }`}
+            />
+          ))}
+        </div>
       </div>
-    </div>
 
-    {/* Content - Text shadow for better readability */}
-    
       {/* Content */}
-      <div className="relative z-10 w-full max-w-6xl px-6">
-        {/* Heading */}
-        <div className="text-center mb-6 text-white">
-          <h1 className="text-4xl font-bold mb-2">Your Journey, Our Priority</h1>
-          <p className="text-base opacity-90">Book flights at the best prices with exclusive deals</p>
+      <div className="relative z-10 w-full max-w-6xl px-3 sm:px-6">
+        {/* Heading - Moved down on mobile to avoid logo/hamburger overlap */}
+        <div className={`text-center text-white ${isMobile ? 'mb-4 -mt-6' : 'mb-6'}`}>
+          <h1 className={`${getHeadingSize()} font-bold mb-2`}>Your Journey, Our Priority</h1>
+          <p className="text-xs sm:text-base opacity-90">Book flights at the best prices with exclusive deals</p>
         </div>
 
         {/* Booking Card */}
-        <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-6 border border-white/20">
+        <div className={`bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl ${getCardPadding()} border border-white/20`}>
           {/* Tabs */}
-          <div className="flex gap-3 mb-6">
+          <div className="flex flex-wrap gap-2 sm:gap-3 mb-4 sm:mb-6">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;
               return (
-                <button
-                  key={tab.id}
-                  onClick={() => handleTabClick(tab)}
-                  className={`flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${
-                    active
-                      ? "bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white shadow-md"
-                      : "bg-white/80 text-gray-600 hover:text-[#FD561E] border border-gray-200"
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  {tab.label}
-                </button>
+               // AFTER
+<button
+  key={tab.id}
+  onClick={() => handleTabClick(tab)}
+  className={`hidden lg:flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${
+    active
+      ? "bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white shadow-md"
+      : "bg-white/80 text-gray-600 hover:text-[#FD561E] border border-gray-200"
+  }`}
+>
+  <Icon className="w-4 h-4" />
+  <span>{tab.label}</span>
+</button>
               );
             })}
           </div>
 
           {/* Trip Type */}
-          <div className="flex mb-5">
+          <div className="flex mb-4 sm:mb-5 overflow-x-auto pb-2">
             <div className="flex bg-gray-100 rounded-lg p-1 gap-1">
               {["one-way", "round-trip", "multi-city"].map((type) => (
                 <button
                   key={type}
-                  className={`px-4 py-1.5 text-sm font-medium rounded-md transition capitalize ${
+                  className={`px-3 sm:px-4 py-1 sm:py-1.5 text-xs sm:text-sm font-medium rounded-md transition capitalize whitespace-nowrap ${
                     tripType === type
                       ? "bg-white text-gray-900 shadow-sm"
                       : "text-gray-600 hover:text-gray-800"
@@ -1497,37 +1542,37 @@ const FlightHeroSection = () => {
             {tripType === 'multi-city' ? renderMultiCityForm() : renderOneWayRoundTripForm()}
 
             {/* Special Fares */}
-            <div className="flex flex-wrap items-center gap-3 pt-2">
-              <span className="text-xs font-bold uppercase tracking-wide text-gray-600">Special Fares</span>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-2">
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wide text-gray-600">Special Fares</span>
               {flightSpecialFares.map((fare) => {
                 const active = activeFare === fare.id;
                 return (
                   <button
                     key={fare.id}
                     onClick={() => setActiveFare(fare.id)}
-                    className={`px-3 py-1.5 rounded-lg border text-xs transition-all ${
+                    className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border text-[10px] sm:text-xs transition-all ${
                       active
                         ? "border-[#FD561E] bg-orange-50 shadow-sm"
                         : "border-gray-200 text-gray-600 hover:border-[#FD561E]"
                     }`}
                   >
-                    <span className="font-semibold block text-xs">{fare.label}</span>
-                    <span className="text-[10px] text-gray-500">{fare.desc}</span>
+                    <span className="font-semibold block text-[10px] sm:text-xs">{fare.label}</span>
+                    <span className="text-[8px] sm:text-[10px] text-gray-500 hidden sm:block">{fare.desc}</span>
                   </button>
                 );
               })}
             </div>
 
-            {/* Search Button - Original Position */}
-            <div className="absolute left-1/2 -bottom-8 transform -translate-x-1/2">
+            {/* Search Button */}
+            <div className="flex justify-center pt-6 sm:pt-8">
               <button
                 onClick={handleSearch}
                 disabled={flightResults.loading}
-                className="bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white cursor-pointer px-16 py-4 rounded-full text-lg font-semibold shadow-xl hover:scale-110 transition-all duration-300 disabled:opacity-50"
+                className="bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white cursor-pointer px-8 sm:px-16 py-3 sm:py-4 rounded-full text-sm sm:text-lg font-semibold shadow-xl hover:scale-105 transition-all duration-300 disabled:opacity-50"
               >
                 {flightResults.loading ? (
                   <div className="flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                    <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 border-2 border-white border-t-transparent"></div>
                     <span>SEARCHING...</span>
                   </div>
                 ) : (
@@ -1541,6 +1586,8 @@ const FlightHeroSection = () => {
 
       {/* Traveller Modal */}
       {showTravellerModal && <TravellerModal />}
+      
+     
     </section>
   );
 };

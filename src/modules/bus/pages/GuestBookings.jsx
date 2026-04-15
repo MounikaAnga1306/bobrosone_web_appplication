@@ -55,7 +55,7 @@ const GuestBookings = ({ onClose }) => {
           onClose();
           navigate("/guest-bookings", {
             state: {
-              bookings: res.data.bookings || [],
+              bookings: (res.data.bookings || []).reverse(),
               mobile: mobile
             }
           });
