@@ -131,6 +131,7 @@ const Navbar = () => {
 
   const getActiveTab = () => {
     if (location.pathname === "/" || location.pathname === "/HomePage") return "bus";
+     if (location.pathname === "/BillHomePage") return "billpayment";
     if (location.pathname.startsWith("/results")) return "bus";
     if (location.pathname.startsWith("/flights")) return "flights";
     if (location.pathname.startsWith("/hotels")) return "hotels";

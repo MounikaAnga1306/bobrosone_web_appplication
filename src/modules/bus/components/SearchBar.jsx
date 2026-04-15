@@ -56,6 +56,21 @@ const useSearchState = (location, params) => {
     }
   }, [location.state, params]);
 
+  useEffect(() => {
+  if (!from && !to) {
+    const urlFrom = params.get("fromName");
+    const urlTo = params.get("toName");
+    if (urlFrom) setFrom(decodeURIComponent(urlFrom));
+    if (urlTo) setTo(decodeURIComponent(urlTo));
+    else {
+      const storedFrom = sessionStorage.getItem("sourceName");
+      const storedTo = sessionStorage.getItem("destinationName");
+      if (storedFrom) setFrom(storedFrom);
+      if (storedTo) setTo(storedTo);
+    }
+  }
+}, [from, to, params]);
+
   const handleSwap = () => {
     setFrom(to);
     setTo(from);

@@ -649,10 +649,10 @@ app.post("/cancel/data", async (req, res) => {
     res.json(response.data);
  
   } catch (error) {
-    console.error("Cancel Data Error:", error.response?.data || error.message);
+    console.error("Cancel Data Error:", error.response?.data?.error ||  error.response?.data ||  error.message);
     res.status(500).json({
       success: false,
-      message: error.response?.data || "OTP verification failed"
+      message: error.response?.data?.error ||   error.response?.data?.message || "OTP verification failed"
     });
   }
 });

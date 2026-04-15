@@ -35,6 +35,7 @@ const tabs = [
 const tabRoutes = {
   bus: "/",
   flights: "/flights",
+  billpayments: "/BillHomePage",
   hotels: "/hotels",
   holidays: "/holidays",
   cabs: "/cabs",

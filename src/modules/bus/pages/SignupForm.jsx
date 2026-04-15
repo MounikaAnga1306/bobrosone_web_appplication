@@ -1,7 +1,99 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
-import { User, Mail, Phone, Lock, Eye, EyeOff, X, Trash2, ArrowLeft } from "lucide-react";
+import { User, Mail, Phone, Lock, Eye, EyeOff, X, Trash2, ArrowLeft, CheckCircle } from "lucide-react";
+
+import { createPortal } from "react-dom";
+
+// ─────────────────────────────────────────────────────────────
+// SUCCESS TOAST — renders via portal outside modal stack
+// ─────────────────────────────────────────────────────────────
+const SuccessToast = ({ message, subtitle, onDone }) => {
+  React.useEffect(() => {
+    const t = setTimeout(onDone, 2800);
+    return () => clearTimeout(t);
+  }, [onDone]);
+
+  return createPortal(
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 2147483647,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "rgba(0,0,0,0.55)",
+        backdropFilter: "blur(4px)",
+        WebkitBackdropFilter: "blur(4px)",
+      }}
+    >
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: "20px",
+          padding: "32px 40px",
+          boxShadow: "0 25px 60px rgba(0,0,0,0.18)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: "16px",
+          minWidth: "280px",
+          maxWidth: "340px",
+          animation: "toastPop 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards",
+        }}
+      >
+        {/* Green circle with checkmark */}
+        <div
+          style={{
+            width: "72px",
+            height: "72px",
+            borderRadius: "50%",
+            background: "linear-gradient(135deg, #22c55e, #16a34a)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 8px 24px rgba(34,197,94,0.35)",
+            animation: "checkBounce 0.5s 0.2s cubic-bezier(0.34,1.56,0.64,1) both",
+          }}
+        >
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <p style={{ fontWeight: 700, fontSize: "18px", color: "#111827", margin: 0 }}>{message}</p>
+          <p style={{ fontSize: "13px", color: "#6b7280", margin: "6px 0 0 0" }}>{subtitle}</p>
+        </div>
+        {/* Progress bar */}
+        <div style={{ width: "100%", height: "3px", background: "#f3f4f6", borderRadius: "999px", overflow: "hidden" }}>
+          <div style={{
+            height: "100%",
+            background: "linear-gradient(90deg, #FD561E, #ff8a5b)",
+            borderRadius: "999px",
+            animation: "shrink 2.8s linear forwards",
+          }} />
+        </div>
+      </div>
+      <style>{`
+        @keyframes toastPop {
+          0% { opacity: 0; transform: scale(0.6) translateY(30px); }
+          100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes checkBounce {
+          0% { transform: scale(0); opacity: 0; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes shrink {
+          from { width: 100%; }
+          to { width: 0%; }
+        }
+      `}</style>
+    </div>,
+    document.body
+  );
+};
+
 
 // ─────────────────────────────────────────────────────────────
 // LEFT PANEL — Responsive image
@@ -195,6 +287,8 @@ const SignUpForm = ({ closeModal, openSignin, openVerifyOtp }) => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({ user: "", email: "", mobile: "", password: "", confirmPassword: "" });
   const [error, setError] = useState("");
+  // ── NEW: success toast state ──
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
 
   useEffect(() => {
     if (location.state) {
@@ -215,7 +309,8 @@ const SignUpForm = ({ closeModal, openSignin, openVerifyOtp }) => {
         mobile: Number(formData.mobile), 
         password: formData.password 
       });
-      openVerifyOtp(formData);
+      // ── Show success toast, then go to OTP ──
+      setShowSuccessToast(true);
     } catch (err) { 
       setError(err.response?.data?.message || "Signup failed. User may already exist."); 
     }
@@ -229,141 +324,155 @@ const SignUpForm = ({ closeModal, openSignin, openVerifyOtp }) => {
   );
 
   return (
-    <div className="flex items-center justify-center p-3 sm:p-4 min-h-screen md:min-h-0">
-      {/* Container - Responsive width */}
-      <div 
-        className="relative bg-white rounded-2xl shadow-2xl flex flex-col md:flex-row items-stretch overflow-hidden w-full max-w-[95%] sm:max-w-[500px] md:max-w-[900px] mx-auto"
-        style={{ maxHeight: "90vh", minHeight: "auto" }}
-      >
-        <LeftImagePanel />
+    <>
+      {/* ── Success Toast ── */}
+      {showSuccessToast && (
+        <SuccessToast
+          message="Successfully Registered!"
+          subtitle="Welcome to BOBROS!"
+          onDone={() => {
+            setShowSuccessToast(false);
+            openVerifyOtp(formData);
+          }}
+        />
+      )}
 
-        <div className="flex-1 p-5 sm:p-6 md:p-8 lg:p-10 overflow-y-auto bg-white" style={{ maxHeight: "90vh" }}>
-          <button 
-            onClick={closeModal} 
-            className="absolute top-3 right-3 sm:top-5 sm:right-5 text-gray-400 hover:text-black z-10 bg-white rounded-full p-1"
-          >
-            <X size={18} className="sm:w-5 -mt-2 -mr-1 sm:h-5 md:w-6 md:h-6" />
-          </button>
+      <div className="flex items-center justify-center p-3 sm:p-4 min-h-screen md:min-h-0">
+        {/* Container - Responsive width */}
+        <div 
+          className="relative bg-white rounded-2xl shadow-2xl flex flex-col md:flex-row items-stretch overflow-hidden w-full max-w-[95%] sm:max-w-[500px] md:max-w-[900px] mx-auto"
+          style={{ maxHeight: "90vh", minHeight: "auto" }}
+        >
+          <LeftImagePanel />
 
-          {showDeletion ? (
-            <AccountDeletionCard onBack={() => setShowDeletion(false)} onClose={closeModal} />
-          ) : (
-            <div className="flex flex-col h-full justify-center">
-              <h2 className="text-xl sm:text-2xl font-bold text-center text-gray-800 mb-1">
-                Sign up with <span className="text-[#fd561e]">BOBROS</span>
-              </h2>
-              <p className="text-center text-gray-500 text-xs sm:text-sm mb-4 sm:mb-6 md:mb-8">
-                Avail Great Discounts and Earn Reward Points
-              </p>
-              
-              {error && (
-                <p className="text-red-500 text-xs mb-3 sm:mb-4 text-center bg-red-50 p-2 rounded-lg">
-                  {error}
+          <div className="flex-1 p-5 sm:p-6 md:p-8 lg:p-10 overflow-y-auto bg-white" style={{ maxHeight: "90vh" }}>
+            <button 
+              onClick={closeModal} 
+              className="absolute top-3 right-3 sm:top-5 sm:right-5 text-gray-400 hover:text-black z-10 bg-white rounded-full p-1"
+            >
+              <X size={18} className="sm:w-5 -mt-2 -mr-1 sm:h-5 md:w-6 md:h-6" />
+            </button>
+
+            {showDeletion ? (
+              <AccountDeletionCard onBack={() => setShowDeletion(false)} onClose={closeModal} />
+            ) : (
+              <div className="flex flex-col h-full justify-center">
+                <h2 className="text-xl sm:text-2xl font-bold text-center text-gray-800 mb-1">
+                  Sign up with <span className="text-[#fd561e]">BOBROS</span>
+                </h2>
+                <p className="text-center text-gray-500 text-xs sm:text-sm mb-4 sm:mb-6 md:mb-8">
+                  Avail Great Discounts and Earn Reward Points
                 </p>
-              )}
-
-              <form onSubmit={handleSignup}>
-                {/* Username and Email - Responsive grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 sm:gap-x-4">
-                  <InputField 
-                    icon={User} 
-                    type="text" 
-                    name="user" 
-                    placeholder="Username" 
-                    value={formData.user} 
-                    onChange={handleChange} 
-                    required 
-                  />
-                  <InputField 
-                    icon={Mail} 
-                    type="email" 
-                    name="email" 
-                    placeholder="Email Address" 
-                    value={formData.email} 
-                    onChange={handleChange} 
-                    required 
-                  />
-                </div>
                 
-                <InputField 
-                  icon={Phone} 
-                  type="tel" 
-                  name="mobile" 
-                  placeholder="Mobile Number" 
-                  value={formData.mobile} 
-                  onChange={(e) => setFormData({ ...formData, mobile: e.target.value.replace(/\D/g, "").slice(0, 10) })} 
-                  required 
-                />
+                {error && (
+                  <p className="text-red-500 text-xs mb-3 sm:mb-4 text-center bg-red-50 p-2 rounded-lg">
+                    {error}
+                  </p>
+                )}
 
-                {/* Password fields - Responsive grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 sm:gap-x-4">
-                  <div className="relative">
+                <form onSubmit={handleSignup}>
+                  {/* Username and Email - Responsive grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 sm:gap-x-4">
                     <InputField 
-                      icon={Lock} 
-                      type={showPassword ? "text" : "password"} 
-                      name="password" 
-                      placeholder="Password" 
-                      value={formData.password} 
+                      icon={User} 
+                      type="text" 
+                      name="user" 
+                      placeholder="Username" 
+                      value={formData.user} 
                       onChange={handleChange} 
                       required 
                     />
-                    <button 
-                      type="button" 
-                      onClick={() => setShowPassword(!showPassword)} 
-                      className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      {showPassword ? <EyeOff size={14} className="sm:w-4 -mt-3 sm:h-4" /> : <Eye size={14} className="sm:w-4 -mt-3 sm:h-4" />}
-                    </button>
-                  </div>
-                  <div className="relative">
                     <InputField 
-                      icon={Lock} 
-                      type={showConfirmPassword ? "text" : "password"} 
-                      name="confirmPassword" 
-                      placeholder="Confirm Password" 
-                      value={formData.confirmPassword} 
+                      icon={Mail} 
+                      type="email" 
+                      name="email" 
+                      placeholder="Email Address" 
+                      value={formData.email} 
                       onChange={handleChange} 
                       required 
                     />
-                    <button 
-                      type="button" 
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)} 
-                      className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                    >
-                      {showConfirmPassword ? <EyeOff size={14} className="sm:w-4 -mt-3 sm:h-4" /> : <Eye size={14} className="sm:w-4 -mt-3 sm:h-4" />}
-                    </button>
                   </div>
-                </div>
+                  
+                  <InputField 
+                    icon={Phone} 
+                    type="tel" 
+                    name="mobile" 
+                    placeholder="Mobile Number" 
+                    value={formData.mobile} 
+                    onChange={(e) => setFormData({ ...formData, mobile: e.target.value.replace(/\D/g, "").slice(0, 10) })} 
+                    required 
+                  />
 
-                <button 
-                  type="submit" 
-                  className="w-full bg-[#FD561E] text-white py-2.5 sm:py-3.5 rounded-xl font-bold hover:bg-[#e64d19] transition shadow-lg mt-2 text-sm sm:text-base"
-                >
-                  Sign Up
-                </button>
-              </form>
+                  {/* Password fields - Responsive grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 sm:gap-x-4">
+                    <div className="relative">
+                      <InputField 
+                        icon={Lock} 
+                        type={showPassword ? "text" : "password"} 
+                        name="password" 
+                        placeholder="Password" 
+                        value={formData.password} 
+                        onChange={handleChange} 
+                        required 
+                      />
+                      <button 
+                        type="button" 
+                        onClick={() => setShowPassword(!showPassword)} 
+                        className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showPassword ? <EyeOff size={14} className="sm:w-4 -mt-3 sm:h-4" /> : <Eye size={14} className="sm:w-4 -mt-3 sm:h-4" />}
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <InputField 
+                        icon={Lock} 
+                        type={showConfirmPassword ? "text" : "password"} 
+                        name="confirmPassword" 
+                        placeholder="Confirm Password" 
+                        value={formData.confirmPassword} 
+                        onChange={handleChange} 
+                        required 
+                      />
+                      <button 
+                        type="button" 
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)} 
+                        className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showConfirmPassword ? <EyeOff size={14} className="sm:w-4 -mt-3 sm:h-4" /> : <Eye size={14} className="sm:w-4 -mt-3 sm:h-4" />}
+                      </button>
+                    </div>
+                  </div>
 
-              <p className="text-center text-xs sm:text-sm mt-4 sm:mt-6">
-                Already Registered?{" "}
-                <span onClick={openSignin} className="text-[#FD561E] font-bold cursor-pointer hover:underline">
-                  Sign in
-                </span>
-              </p>
+                  <button 
+                    type="submit" 
+                    className="w-full bg-[#FD561E] text-white py-2.5 sm:py-3.5 rounded-xl font-bold hover:bg-[#e64d19] transition shadow-lg mt-2 text-sm sm:text-base"
+                  >
+                    Sign Up
+                  </button>
+                </form>
 
-              <div className="mt-6 sm:mt-8 pt-3 sm:pt-4 border-t border-gray-100 text-center">
-                <p className="text-[10px] sm:text-xs text-gray-400">No longer wish to use BOBROS Account?</p>
-                <p 
-                  onClick={() => setShowDeletion(true)} 
-                  className="text-xs sm:text-sm text-[#FD561E] cursor-pointer font-bold mt-1 hover:underline"
-                >
-                  Request for Deletion
+                <p className="text-center text-xs sm:text-sm mt-4 sm:mt-6">
+                  Already Registered?{" "}
+                  <span onClick={openSignin} className="text-[#FD561E] font-bold cursor-pointer hover:underline">
+                    Sign in
+                  </span>
                 </p>
+
+                <div className="mt-6 sm:mt-8 pt-3 sm:pt-4 border-t border-gray-100 text-center">
+                  <p className="text-[10px] sm:text-xs text-gray-400">No longer wish to use BOBROS Account?</p>
+                  <p 
+                    onClick={() => setShowDeletion(true)} 
+                    className="text-xs sm:text-sm text-[#FD561E] cursor-pointer font-bold mt-1 hover:underline"
+                  >
+                    Request for Deletion
+                  </p>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
