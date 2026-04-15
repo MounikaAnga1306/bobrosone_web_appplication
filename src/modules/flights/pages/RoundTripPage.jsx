@@ -1040,8 +1040,7 @@ const RoundTripPage = () => {
       {showMobileSearchModal && <MobileSearchModal />}
 
   // ============ MAIN RENDER WITH RESULTS - Search Bar Always Visible ============
-  return (
-    <div className="min-h-screen bg-gray-50">
+ 
       {/* Search Bar - Always Visible */}
       <SearchBar />
 
