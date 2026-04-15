@@ -60,10 +60,12 @@ import {
   FaGlassCheers,
   FaTachometerAlt,
   FaCalendarWeek,
-  FaMapMarkerAlt
+  FaMapMarkerAlt,
+  FaExclamationTriangle
 } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { fetchAirlines } from '../services/airlineService';
 
 // Import data extractor utilities
 import {
@@ -196,10 +198,9 @@ const BookingReviewPage = () => {
     optionalServices: false,
     fareRules: true,
     passengerDetails: true,
-    contactInfo: true,
-    paymentMethod: true
+    contactInfo: true
   });
-  const [paymentMethod, setPaymentMethod] = useState('card');
+  // REMOVED: paymentMethod state - now default to 'upi'
   const [passengers, setPassengers] = useState(() => {
     const initialPassengers = [];
     const adultCount = passengerCounts?.ADT || 1;
@@ -224,6 +225,21 @@ const BookingReviewPage = () => {
   });
   
   const [errors, setErrors] = useState({});
+  const [ageErrors, setAgeErrors] = useState([]);
+  const [airlines, setAirlines] = useState([]);
+
+  // ============ FETCH AIRLINES ============
+  useEffect(() => {
+    const loadAirlines = async () => {
+      try {
+        const rows = await fetchAirlines();
+        setAirlines(rows);
+      } catch (err) {
+        console.error('Failed to fetch airlines:', err);
+      }
+    };
+    loadAirlines();
+  }, []);
   
   useEffect(() => {
     const fetchPricing = async () => {
@@ -340,10 +356,13 @@ const BookingReviewPage = () => {
     const updated = [...passengers];
     updated[index][field] = value;
     setPassengers(updated);
+    if (field === 'dob') {
+      setAgeErrors([]);
+    }
   };
   
   const calculateAge = (dob) => {
-    if (!dob) return 0;
+    if (!dob) return null;
     const today = new Date();
     const birthDate = new Date(dob);
     let age = today.getFullYear() - birthDate.getFullYear();
@@ -352,17 +371,42 @@ const BookingReviewPage = () => {
     return age;
   };
   
+  const validatePassengerAges = useCallback(() => {
+    const ageErrorsList = [];
+    
+    passengers.forEach((passenger, idx) => {
+      if (passenger.code === 'CNN' && passenger.dob) {
+        const age = calculateAge(passenger.dob);
+        if (age !== null && (age < 2 || age > 11)) {
+          ageErrorsList.push({
+            passengerIndex: idx,
+            passengerName: `${passenger.firstName || 'Child'} ${passenger.lastName || ''}`.trim() || `Child ${idx + 1}`,
+            message: `Child must be between 2-11 years old. Current age: ${age} years.`
+          });
+        }
+      } else if (passenger.code === 'INF' && passenger.dob) {
+        const age = calculateAge(passenger.dob);
+        if (age !== null && age >= 2) {
+          ageErrorsList.push({
+            passengerIndex: idx,
+            passengerName: `${passenger.firstName || 'Infant'} ${passenger.lastName || ''}`.trim() || `Infant ${idx + 1}`,
+            message: `Infant must be under 2 years old. Current age: ${age} years.`
+          });
+        }
+      }
+    });
+    
+    setAgeErrors(ageErrorsList);
+    return ageErrorsList.length === 0;
+  }, [passengers]);
+  
   const validateForm = useCallback(() => {
     const newErrors = {};
     passengers.forEach((passenger, idx) => {
       if (!passenger.firstName.trim()) newErrors[`passenger_${idx}_firstName`] = 'First name required';
       if (!passenger.lastName.trim()) newErrors[`passenger_${idx}_lastName`] = 'Last name required';
-      if (!passenger.dob) newErrors[`passenger_${idx}_dob`] = 'Date of birth required';
-      else {
-        const age = calculateAge(passenger.dob);
-        if (passenger.code === 'ADT' && age < 12) newErrors[`passenger_${idx}_dob`] = 'Adult must be 12+ years';
-        if (passenger.code === 'CNN' && (age < 2 || age > 11)) newErrors[`passenger_${idx}_dob`] = 'Child must be 2-11 years';
-        if (passenger.code === 'INF' && age > 2) newErrors[`passenger_${idx}_dob`] = 'Infant must be under 2 years';
+      if (!passenger.dob) {
+        newErrors[`passenger_${idx}_dob`] = 'Date of birth required';
       }
       if (!passenger.gender) newErrors[`passenger_${idx}_gender`] = 'Gender required';
     });
@@ -375,7 +419,9 @@ const BookingReviewPage = () => {
   }, [passengers, contactInfo]);
   
   const isFormValid = useCallback(() => {
-    const allPassengersValid = passengers.every(p => p.firstName.trim() && p.lastName.trim() && p.dob && p.gender);
+    const allPassengersValid = passengers.every(p => 
+      p.firstName.trim() && p.lastName.trim() && p.dob && p.gender
+    );
     const contactValid = contactInfo.email.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactInfo.email) && 
                          contactInfo.phone.number.trim() && /^\d{10}$/.test(contactInfo.phone.number);
     return allPassengersValid && contactValid;
@@ -511,21 +557,30 @@ const BookingReviewPage = () => {
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-lg transition-all">
         <button onClick={() => toggleSection('flightDetails')} className="w-full flex items-center justify-between p-5 hover:bg-[#FD561E]/5 transition-colors">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#FD561E]/10 rounded-xl flex items-center justify-center">
-              <FaPlaneDeparture className="text-[#FD561E]" size={18} />
-            </div>
+            {(() => {
+              const airline = getAirline(outboundSegments[0]?.carrier);
+              return airline ? (
+                <img src={airline.logo_url} alt={airline.name} className="w-10 h-10 object-contain rounded-xl border border-gray-100 p-1 bg-white" />
+              ) : (
+                <div className="w-10 h-10 bg-[#FD561E]/10 rounded-xl flex items-center justify-center">
+                  <FaPlaneDeparture className="text-[#FD561E]" size={18} />
+                </div>
+              );
+            })()}
             <div>
               <h2 className="font-semibold text-gray-800">
                 Outbound Flight
                 {isConnectingFlight && <span className="ml-2 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Connecting Flight</span>}
               </h2>
-              <p className="text-xs text-gray-500">{outboundSegments[0]?.carrier} {outboundSegments[0]?.flightNumber}</p>
+              <p className="text-xs text-gray-500">
+                {getAirline(outboundSegments[0]?.carrier)?.name || outboundSegments[0]?.carrier} · {outboundSegments[0]?.flightNumber}
+              </p>
             </div>
           </div>
           {expandedSections.flightDetails ? <FaChevronUp className="text-gray-400" /> : <FaChevronDown className="text-gray-400" />}
         </button>
         {expandedSections.flightDetails && (
-          <div className="p-5 pt-0 border-t border-gray-100">
+          <div className="p-5 border-t border-gray-100">
             {outboundSegments.map((segment, segIdx) => renderFlightSegment(segment, segIdx, false))}
           </div>
         )}
@@ -540,21 +595,30 @@ const BookingReviewPage = () => {
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden hover:shadow-lg transition-all">
         <button onClick={() => toggleSection('returnFlightDetails')} className="w-full flex items-center justify-between p-5 hover:bg-[#FD561E]/5 transition-colors">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#FD561E]/10 rounded-xl flex items-center justify-center">
-              <FaPlaneArrival className="text-[#FD561E]" size={18} />
-            </div>
+            {(() => {
+              const airline = getAirline(returnSegments[0]?.carrier);
+              return airline ? (
+                <img src={airline.logo_url} alt={airline.name} className="w-10 h-10 object-contain rounded-xl border border-gray-100 p-1 bg-white" />
+              ) : (
+                <div className="w-10 h-10 bg-[#FD561E]/10 rounded-xl flex items-center justify-center">
+                  <FaPlaneArrival className="text-[#FD561E]" size={18} />
+                </div>
+              );
+            })()}
             <div>
               <h2 className="font-semibold text-gray-800">
                 Return Flight
                 {isReturnConnecting && <span className="ml-2 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Connecting Flight</span>}
               </h2>
-              <p className="text-xs text-gray-500">{returnSegments[0]?.carrier} {returnSegments[0]?.flightNumber}</p>
+              <p className="text-xs text-gray-500">
+                {getAirline(returnSegments[0]?.carrier)?.name || returnSegments[0]?.carrier} · {returnSegments[0]?.flightNumber}
+              </p>
             </div>
           </div>
           {expandedSections.returnFlightDetails ? <FaChevronUp className="text-gray-400" /> : <FaChevronDown className="text-gray-400" />}
         </button>
         {expandedSections.returnFlightDetails && (
-          <div className="p-5 pt-0 border-t border-gray-100">
+          <div className="p-5 border-t border-gray-100">
             {returnSegments.map((segment, segIdx) => renderFlightSegment(segment, segIdx, true))}
           </div>
         )}
@@ -865,7 +929,7 @@ const BookingReviewPage = () => {
           {expandedSections.taxDetails ? <FaChevronUp className="text-gray-400" /> : <FaChevronDown className="text-gray-400" />}
         </button>
         {expandedSections.taxDetails && (
-          <div className="p-5 pt-0 border-t border-gray-100">
+          <div className="p-5 border-t border-gray-100">
             <div className="space-y-3">
               {taxBreakdown.map((tax, idx) => (
                 <div key={idx} className="flex justify-between items-center py-3 border-b border-gray-100 last:border-0">
@@ -904,7 +968,7 @@ const BookingReviewPage = () => {
           {expandedSections.optionalServices ? <FaChevronUp className="text-gray-400" /> : <FaChevronDown className="text-gray-400" />}
         </button>
         {expandedSections.optionalServices && (
-          <div className="p-5 pt-0 border-t border-gray-100 space-y-6">
+          <div className="p-5 border-t border-gray-100 space-y-6">
             {mealOptions.length > 0 && (
               <div>
                 <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2"><FaUtensils className="text-[#FD561E]" size={14} />Meal Options ({mealOptions.length})</h3>
@@ -979,7 +1043,7 @@ const BookingReviewPage = () => {
           {expandedSections.fareRules ? <FaChevronUp className="text-gray-400" /> : <FaChevronDown className="text-gray-400" />}
         </button>
         {expandedSections.fareRules && (
-          <div className="p-5 pt-0 border-t border-gray-100">
+          <div className="p-5 border-t border-gray-100">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-gradient-to-r from-blue-50 to-white rounded-xl p-5 border border-blue-100">
                 <div className="flex items-center gap-2 mb-3"><FaExchangeAlt className="text-blue-500" size={20} /><h3 className="font-semibold text-gray-800">Date Change Policy</h3></div>
@@ -1071,7 +1135,9 @@ const BookingReviewPage = () => {
           {expandedSections.passengerDetails ? <FaChevronUp className="text-gray-400" /> : <FaChevronDown className="text-gray-400" />}
         </button>
         {expandedSections.passengerDetails && (
-          <div className="p-5 pt-0 border-t border-gray-100">
+          <div className="p-5 border-t border-gray-100">
+            {renderAgeErrorBox()}
+            
             <div className="space-y-4">
               {passengers.map((passenger, idx) => (
                 <div key={passenger.id} className="border border-gray-100 rounded-xl p-4 hover:shadow-md transition-all">
@@ -1091,10 +1157,12 @@ const BookingReviewPage = () => {
                       <label className="block text-xs font-medium text-gray-500 mb-1">Last Name *</label>
                       <input type="text" value={passenger.lastName} onChange={(e) => updatePassenger(idx, 'lastName', e.target.value)} className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FD561E]/20 focus:border-[#FD561E] ${errors[`passenger_${idx}_lastName`] ? 'border-red-400' : 'border-gray-200'}`} placeholder="Last name" />
                     </div>
+                    
                     <div>
                       <label className="block text-xs font-medium text-gray-500 mb-1">Date of Birth *</label>
                       <input type="date" value={passenger.dob} onChange={(e) => updatePassenger(idx, 'dob', e.target.value)} className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#FD561E]/20 focus:border-[#FD561E] ${errors[`passenger_${idx}_dob`] ? 'border-red-400' : 'border-gray-200'}`} />
                     </div>
+                    
                     <div>
                       <label className="block text-xs font-medium text-gray-500 mb-1">Gender *</label>
                       <div className="flex gap-4">
@@ -1124,7 +1192,7 @@ const BookingReviewPage = () => {
           {expandedSections.contactInfo ? <FaChevronUp className="text-gray-400" /> : <FaChevronDown className="text-gray-400" />}
         </button>
         {expandedSections.contactInfo && (
-          <div className="p-5 pt-0 border-t border-gray-100">
+          <div className="p-5 border-t border-gray-100">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1">Email Address *</label>
@@ -1248,7 +1316,8 @@ const BookingReviewPage = () => {
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 export default BookingReviewPage;
