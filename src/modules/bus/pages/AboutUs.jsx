@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { User } from "lucide-react";
 
 const values = [
@@ -48,6 +48,10 @@ const team = [
 ];
 
 export default function AboutUs() {
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
   return (
     <div className="bg-gray-50  mt-20 min-h-screen">
 

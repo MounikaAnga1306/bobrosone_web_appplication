@@ -176,13 +176,65 @@ const BookingReviewPage = () => {
     setRawPricingResponse
   } = usePricingBooking();
   
-  const selectedOutboundFare = state.selectedOutboundFare;
-  const selectedReturnFare = state.selectedReturnFare;
-  const outboundFlight = state.outboundFlight;
-  const returnFlight = state.returnFlight;
-  const passengerCounts = state.passengerCounts || { ADT: 1, CNN: 0, INF: 0 };
-  const tripType = state.tripType || 'one-way';
-  const totalPriceFromState = state.totalPrice || 0;
+  // ─────────────────────────────────────────────────────────────────────────
+  //  NEW: Prevent browser back button from leaving this page
+  // ─────────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    // Push a dummy state so that the back button has somewhere to go
+    // but we will immediately push it again to stay on the same page.
+    window.history.pushState(null, '', window.location.href);
+    
+    const handlePopState = (event) => {
+      // When back is clicked, push another dummy state → stay on same page
+      window.history.pushState(null, '', window.location.href);
+      // Optional: show a small toast or notification
+      toast.info('You are on the booking review page. Please complete your booking.', {
+        icon: 'ℹ️',
+        duration: 2000
+      });
+    };
+    
+    window.addEventListener('popstate', handlePopState);
+    
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+  
+  // Optional: detect if opened in a new tab (via window.open)
+  const isNewTab = !!window.opener;
+  
+ // ─────────────────────────────────────────────────────────────────────────
+// FALLBACK: read from localStorage if state is empty (when opened in new tab)
+// ─────────────────────────────────────────────────────────────────────────
+const [localState, setLocalState] = useState(null);
+
+useEffect(() => {
+  if (Object.keys(state).length === 0) {
+    const stored = localStorage.getItem('bookingReviewState');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        setLocalState(parsed);
+        // Clear after reading to avoid stale data
+        localStorage.removeItem('bookingReviewState');
+      } catch (e) {
+        console.error('Failed to parse localStorage data', e);
+      }
+    }
+  }
+}, []);
+
+// Use either React Router state or localStorage fallback
+const finalState = Object.keys(state).length > 0 ? state : (localState || {});
+
+const selectedOutboundFare = finalState.selectedOutboundFare;
+const selectedReturnFare = finalState.selectedReturnFare;
+const outboundFlight = finalState.outboundFlight;
+const returnFlight = finalState.returnFlight;
+const passengerCounts = finalState.passengerCounts || { ADT: 1, CNN: 0, INF: 0 };
+const tripType = finalState.tripType || 'one-way';
+const totalPriceFromState = finalState.totalPrice || 0;
   
   const [extractedData, setExtractedData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -441,7 +493,8 @@ const BookingReviewPage = () => {
     if (updateContactInformation) updateContactInformation(contactInfo);
     if (updatePaymentMethodType) updatePaymentMethodType(paymentMethod);
     
-    setTimeout(() => navigate('/flights/booking/seat-map'), 100);
+    // Navigate to seat map (works in same tab or new tab)
+    navigate('/flights/booking/seat-map');
   };
   
   const renderFlightSegment = (segment, segIdx, isReturn = false) => {
@@ -687,16 +740,7 @@ const BookingReviewPage = () => {
 
         {expandedSections.allFares && (
           <div className="p-5 pt-0 border-t border-gray-100">
-            {/*
-              ── LAYOUT LOGIC ──────────────────────────────────────────────
-              • 1 fare   → centered, max-w-sm
-              • 2 fares  → stacked mobile / side-by-side sm+
-              • 3 fares  → stacked mobile / 3-col lg+
-              • 4+ fares → horizontal scroll; card width fills ~90% on mobile,
-                           fixed 280px on sm+; no crop
-            */}
             {allFares.length >= 4 ? (
-              // ── Horizontal scroll (4+ fares) ──────────────────────────
               <div>
                 <div
                   className="flex gap-3 overflow-x-auto pb-3"
@@ -737,19 +781,16 @@ const BookingReviewPage = () => {
                 )}
               </div>
             ) : allFares.length === 1 ? (
-              // ── Single fare — centered ─────────────────────────────────
               <div className="flex justify-center">
                 <div className="w-full max-w-sm">
                   {renderFareCardWrapper(allFares[0], 0)}
                 </div>
               </div>
             ) : allFares.length === 2 ? (
-              // ── 2 fares — stacked mobile, side-by-side sm+ ────────────
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {allFares.map((fare, idx) => renderFareCardWrapper(fare, idx))}
               </div>
             ) : (
-              // ── 3 fares — stacked mobile, 3-col lg+ ───────────────────
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {allFares.map((fare, idx) => renderFareCardWrapper(fare, idx))}
               </div>
@@ -760,7 +801,6 @@ const BookingReviewPage = () => {
     );
   };
 
-  // Shared card content renderer (keeps DRY)
   const renderFareCardContent = (fare, idx, isSelected, isLowest, primaryPrice, primaryPassengerType, farePassengerTypes, farePassengerPricing, cabinClass) => (
     <>
       <div className="p-4">
@@ -828,7 +868,6 @@ const BookingReviewPage = () => {
     </>
   );
 
-  // Wrapper for grid layouts (1–3 fares)
   const renderFareCardWrapper = (fare, idx) => {
     const isSelected = selectedFareIndex === idx;
     const isLowest = idx === 0;
@@ -1008,54 +1047,87 @@ const BookingReviewPage = () => {
     );
   };
   
+  // ============ STICKY PRICE SUMMARY FIX ============
   const renderPriceSummary = () => {
-    const formValid = isFormValid();
-    let totalPrice = 0;
-    if (passengerPricing && Object.keys(passengerPricing).length > 0) {
-      passengerTypes.forEach(type => {
-        const pricing = passengerPricing[type];
-        const count = passengerCounts[type] || 0;
-        if (count > 0 && pricing?.totalPrice) totalPrice += pricing.totalPrice * count;
-      });
-    } else {
-      totalPrice = selectedFare?.totalPrice || 0;
-    }
-    
-    return (
-      <div className="bg-white rounded-2xl border border-gray-100 sticky top-24 hover:shadow-lg transition-all">
-        <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white rounded-t-2xl">
-          <h2 className="font-semibold text-gray-800 flex items-center gap-2"><FaRupeeSign className="text-[#FD561E]" size={18} />Price Summary</h2>
+  const formValid = isFormValid();
+  let totalPrice = 0;
+  if (passengerPricing && Object.keys(passengerPricing).length > 0) {
+    passengerTypes.forEach(type => {
+      const pricing = passengerPricing[type];
+      const count = passengerCounts[type] || 0;
+      if (count > 0 && pricing?.totalPrice) totalPrice += pricing.totalPrice * count;
+    });
+  } else {
+    totalPrice = selectedFare?.totalPrice || 0;
+  }
+  
+  return (
+    <div className="block lg:fixed lg:top-24 lg:right-4 xl:right-40 lg:w-80 xl:w-96 lg:z-40 bg-white rounded-2xl border border-gray-100 shadow-lg mb-6 lg:mb-0">
+      <div className="p-5 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white rounded-t-2xl">
+        <h2 className="font-semibold text-gray-800 flex items-center gap-2">
+          <FaRupeeSign className="text-[#FD561E]" size={18} />Price Summary
+        </h2>
+      </div>
+      <div className="p-5 space-y-4">
+        {/* Fare Breakdown */}
+        <div>
+          <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2">
+            <FaUserFriends className="text-[#FD561E]" size={14} />Fare Breakdown
+          </h3>
+          {renderPassengerPriceBreakdown()}
         </div>
-        <div className="p-5 space-y-4">
-          <div>
-            <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center gap-2"><FaUserFriends className="text-[#FD561E]" size={14} />Fare Breakdown</h3>
-            {renderPassengerPriceBreakdown()}
+        
+        {/* Passenger Info */}
+        <div className="bg-gray-50 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <FaUserFriends className="text-[#FD561E]" size={14} />
+            <span className="text-sm font-medium text-gray-700">Passengers</span>
           </div>
-          <div className="bg-gray-50 rounded-xl p-4">
-            <div className="flex items-center gap-2 mb-3"><FaUserFriends className="text-[#FD561E]" size={14} /><span className="text-sm font-medium text-gray-700">Passengers</span></div>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-gray-500">Adults (12+ years)</span><span className="font-medium text-gray-700">{passengerCounts?.ADT || 1}</span></div>
-              {passengerCounts?.CNN > 0 && <div className="flex justify-between"><span className="text-gray-500">Children (2-11 years)</span><span className="font-medium text-gray-700">{passengerCounts.CNN}</span></div>}
-              {passengerCounts?.INF > 0 && <div className="flex justify-between"><span className="text-gray-500">Infants (0-2 years)</span><span className="font-medium text-gray-700">{passengerCounts.INF}</span></div>}
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-500">Adults (12+ years)</span>
+              <span className="font-medium text-gray-700">{passengerCounts?.ADT || 1}</span>
             </div>
+            {passengerCounts?.CNN > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-500">Children (2-11 years)</span>
+                <span className="font-medium text-gray-700">{passengerCounts.CNN}</span>
+              </div>
+            )}
+            {passengerCounts?.INF > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-500">Infants (0-2 years)</span>
+                <span className="font-medium text-gray-700">{passengerCounts.INF}</span>
+              </div>
+            )}
           </div>
-          <button
-            onClick={handleProceedToBooking}
-            disabled={!formValid || loading}
-            className={`w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all ${
-              formValid && !loading ? 'bg-[#FD561E] hover:bg-[#e04e1b] text-white shadow-md hover:shadow-lg' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            }`}
-          >
-            {loading ? (<><FaSpinner className="animate-spin" />Loading...</>) : (<><FaCreditCard />{formValid ? 'Proceed to Book' : 'Complete All Details'}<FaArrowRight size={14} /></>)}
-          </button>
-          <div className="flex items-center justify-center gap-3 text-xs text-gray-400 pt-2">
-            <FaCheckCircle className="text-emerald-500" size={12} /><span>Secure & Encrypted</span>
-            <span className="w-px h-3 bg-gray-200"></span><span>Price Guaranteed</span>
-          </div>
+        </div>
+        
+        {/* Proceed Button */}
+        <button
+          onClick={handleProceedToBooking}
+          disabled={!formValid || loading}
+          className={`w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all ${
+            formValid && !loading
+              ? 'bg-[#FD561E] hover:bg-[#e04e1b] text-white shadow-md hover:shadow-lg'
+              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+          }`}
+        >
+          {loading ? (
+            <><FaSpinner className="animate-spin" />Loading...</>
+          ) : (
+            <><FaCreditCard />{formValid ? 'Proceed to Book' : 'Complete All Details'}<FaArrowRight size={14} /></>
+          )}
+        </button>
+        
+        <div className="flex items-center justify-center gap-3 text-xs text-gray-400 pt-2">
+          <FaCheckCircle className="text-emerald-500" size={12} /><span>Secure & Encrypted</span>
+          <span className="w-px h-3 bg-gray-200"></span><span>Price Guaranteed</span>
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+};
   
   const renderPassengerForm = () => {
     return (
@@ -1229,6 +1301,12 @@ const BookingReviewPage = () => {
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      {/* Optional indicator when opened in a new tab */}
+      {/* {isNewTab && (
+        <div className="bg-blue-50 border-b border-blue-100 text-center py-2 text-xs text-blue-600">
+         // ℹ️ This page opened in a new tab. Use the browser's back button to return to the previous tab.
+        </div>
+      )} */}
       <div className="container mx-auto px-4 py-6">
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="lg:w-2/3 space-y-5">
@@ -1242,7 +1320,7 @@ const BookingReviewPage = () => {
             {renderContactForm()}
             {renderPaymentMethods()}
           </div>
-          <div className="lg:w-1/3">
+          <div className="lg:w-1/3 mb-8">
             {renderPriceSummary()}
           </div>
         </div>
