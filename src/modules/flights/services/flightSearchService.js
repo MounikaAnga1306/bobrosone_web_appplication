@@ -81,22 +81,89 @@ const extractPenalties = (pricingInfo) => {
   const changePenalty = pricingInfo['air:ChangePenalty'];
   const cancelPenalty = pricingInfo['air:CancelPenalty'];
   
+  // Helper function to parse amount from "INR5000.0" format
+  const parseAmount = (penalty) => {
+    if (!penalty) return 0;
+    
+    // Check for air:Amount object
+    const amountObj = penalty['air:Amount'];
+    if (amountObj) {
+      // If amount is an object with _ property (like { _: "INR5000.0" })
+      if (typeof amountObj === 'object' && amountObj._) {
+        const amountStr = amountObj._;
+        // Extract numeric value from "INR5000.0" -> 5000.0
+        const numericMatch = amountStr.match(/(\d+\.?\d*)/);
+        return numericMatch ? parseFloat(numericMatch[1]) : 0;
+      }
+      // If amount is a string directly
+      if (typeof amountObj === 'string') {
+        const numericMatch = amountObj.match(/(\d+\.?\d*)/);
+        return numericMatch ? parseFloat(numericMatch[1]) : 0;
+      }
+      // If amount is a number
+      if (typeof amountObj === 'number') {
+        return amountObj;
+      }
+    }
+    
+    // Check for amount in $ attribute (alternative format)
+    if (penalty.$?.Amount) {
+      const numericMatch = penalty.$.Amount.match(/(\d+\.?\d*)/);
+      return numericMatch ? parseFloat(numericMatch[1]) : 0;
+    }
+    
+    return 0;
+  };
+  
+  // Parse change penalty amount
+  let changeAmount = 0;
+  let changePercentage = '0.00';
+  if (changePenalty) {
+    changeAmount = parseAmount(changePenalty);
+    // Parse percentage if exists
+    const percentageObj = changePenalty['air:Percentage'];
+    if (percentageObj) {
+      if (typeof percentageObj === 'object' && percentageObj._) {
+        changePercentage = percentageObj._;
+      } else if (typeof percentageObj === 'string') {
+        changePercentage = percentageObj;
+      }
+    }
+    console.log('💰 [PENALTY] Change Amount:', changeAmount, 'Raw:', changePenalty['air:Amount']);
+  }
+  
+  // Parse cancel penalty amount
+  let cancelAmount = 0;
+  let cancelPercentage = '0.00';
+  if (cancelPenalty) {
+    cancelAmount = parseAmount(cancelPenalty);
+    // Parse percentage if exists
+    const percentageObj = cancelPenalty['air:Percentage'];
+    if (percentageObj) {
+      if (typeof percentageObj === 'object' && percentageObj._) {
+        cancelPercentage = percentageObj._;
+      } else if (typeof percentageObj === 'string') {
+        cancelPercentage = percentageObj;
+      }
+    }
+    console.log('💰 [PENALTY] Cancel Amount:', cancelAmount, 'Raw:', cancelPenalty['air:Amount']);
+  }
+  
   return {
     change: {
       applies: changePenalty?.$?.PenaltyApplies || 'Unknown',
-      amount: parseFloat(changePenalty?.['air:Amount']?._ || 0),
-      percentage: changePenalty?.['air:Percentage']?._ || '0.00',
+      amount: changeAmount,
+      percentage: changePercentage,
       noShow: changePenalty?.$?.NoShow === 'true'
     },
     cancel: {
       applies: cancelPenalty?.$?.PenaltyApplies || 'Unknown',
-      amount: parseFloat(cancelPenalty?.['air:Amount']?._ || 0),
-      percentage: cancelPenalty?.['air:Percentage']?._ || '0.00',
+      amount: cancelAmount,
+      percentage: cancelPercentage,
       noShow: cancelPenalty?.$?.NoShow === 'true'
     }
   };
 };
-
 /**
  * Extract baggage allowance from fare info
  */
@@ -184,6 +251,10 @@ const extractAmenities = (fareInfo, brand, penalties) => {
 /**
  * Build host token map for quick lookup
  */
+// ============================================================================
+// FIXED: buildHostTokenMap - Same name, improved mapping
+// ============================================================================
+
 const buildHostTokenMap = (hostTokens) => {
   const tokenMap = {};
   safeArray(hostTokens).forEach(token => {
@@ -232,6 +303,10 @@ const buildBrandMap = (brandList) => {
 /**
  * Build flight details map for quick lookup
  */
+// ============================================================================
+// FIXED: buildFlightDetailsMap - Same name, fixed to include terminal info
+// ============================================================================
+
 const buildFlightDetailsMap = (flightDetailsList) => {
   const detailsMap = {};
   safeArray(flightDetailsList).forEach(details => {
@@ -243,6 +318,7 @@ const buildFlightDetailsMap = (flightDetailsList) => {
         arrivalTime: details.$?.ArrivalTime,
         flightTime: details.$?.FlightTime,
         equipment: details.$?.Equipment,
+        // ✅ FIX: Ensure terminal info is captured
         originTerminal: details.$?.OriginTerminal || details?.OriginTerminal,
         destinationTerminal: details.$?.DestinationTerminal || details?.DestinationTerminal
       };
@@ -291,6 +367,10 @@ const formatDuration = (ms) => {
  * Parse flight segments with terminal fallbacks
  * Structure: FlightOption → air:Option → air:BookingInfo → SegmentRef
  */
+// ============================================================================
+// FIXED: parseFlightSegments - Same name, fixed implementation
+// ============================================================================
+
 const parseFlightSegments = (flightOptions, segmentMap, detailsMap, hostTokenMap = {}) => {
   const optionsList = safeArray(flightOptions);
   const segmentsList = [];
@@ -310,8 +390,12 @@ const parseFlightSegments = (flightOptions, segmentMap, detailsMap, hostTokenMap
         const segment = segmentMap[segmentRef];
         if (!segment || !segment.$) return null;
         
-        const flightDetails = detailsMap[segment?.['air:FlightDetailsRef']?.$?.Key];
-        const hostTokenRef = bi.$?.HostTokenRef;  // ← CRITICAL: Get the reference key
+        // ✅ FIX: Get flight details for terminal info
+        const flightDetailsRef = segment?.['air:FlightDetailsRef'];
+        const flightDetails = detailsMap[flightDetailsRef?.$?.Key];
+        
+        const hostTokenRef = bi.$?.HostTokenRef;
+        const hostToken = hostTokenMap[hostTokenRef] || null;
         
         let operatingCarrier = segment.$?.Carrier;
         let operatingFlightNumber = segment.$?.FlightNumber;
@@ -323,7 +407,7 @@ const parseFlightSegments = (flightOptions, segmentMap, detailsMap, hostTokenMap
         }
         
         return {
-          segmentKey: segment.$?.Key,  // ← CRITICAL: Keep the segmentKey
+          segmentKey: segment.$?.Key,
           group: segment.$?.Group,
           carrier: segment.$?.Carrier,
           operatingCarrier: operatingCarrier,
@@ -334,12 +418,15 @@ const parseFlightSegments = (flightOptions, segmentMap, detailsMap, hostTokenMap
           departureTime: segment.$?.DepartureTime,
           arrivalTime: segment.$?.ArrivalTime,
           duration: parseDuration(segment.$?.FlightTime),
-          equipment: segment.$?.Equipment || flightDetails?.equipment || null,
+          equipment: flightDetails?.equipment || segment.$?.Equipment,
+          // ✅ FIX: Add terminal info from flightDetails
+          originTerminal: flightDetails?.originTerminal || segment.$?.OriginTerminal,
+          destinationTerminal: flightDetails?.destinationTerminal || segment.$?.DestinationTerminal,
           bookingCode: bi.$?.BookingCode,
           cabinClass: bi.$?.CabinClass || 'Economy',
           seatsAvailable: parseInt(bi.$?.BookingCount) || 9,
-          hostTokenRef: hostTokenRef,  // ← CRITICAL: Store the reference key
-          hostToken: hostTokenMap[hostTokenRef] || null,  // ← CRITICAL: Store the actual token
+          hostTokenRef: hostTokenRef,
+          hostToken: hostToken,
           supplierCode: segment.$?.SupplierCode
         };
       }).filter(Boolean);
@@ -353,105 +440,13 @@ const parseFlightSegments = (flightOptions, segmentMap, detailsMap, hostTokenMap
   return segmentsList;
 };
 
-/**
- * Extract brand details with full information
- */
-const extractBrandDetails = (brand, fareInfo) => {
-  if (!brand) {
-    const fareBasis = fareInfo?.$?.FareBasis || '';
-    return {
-      id: null,
-      name: inferBrandFromFareBasis(fareBasis),
-      description: '',
-      upsell: '',
-      marketingText: '',
-      features: [],
-      titles: {},
-      images: []
-    };
-  }
-  
-  let description = '';
-  let upsell = '';
-  let marketingText = '';
-  let features = [];
-  const titles = {};
-  const images = [];
-  
-  const textElements = brand['air:Text'];
-  if (textElements) {
-    safeArray(textElements).forEach(text => {
-      if (text._ && text.$) {
-        const cleanLine = text._.replace(/\s+/g, ' ').trim();
-        if (text.$?.Type === 'Upsell' && cleanLine.length > 5 && 
-            !cleanLine.includes('***') && !cleanLine.includes('Disclaimer')) {
-          features.push(cleanLine);
-        } else if (text.$?.Type === 'MarketingAgent') {
-          marketingText = cleanLine;
-        }
-      }
-      if (text.$?.Type === 'Strapline') {
-        description = text._ || '';
-      }
-    });
-  }
-  
-  const titleElements = brand['air:Title'];
-  if (titleElements) {
-    safeArray(titleElements).forEach(title => {
-      if (title._ && title.$) {
-        titles[title.$?.Type?.toLowerCase() || 'unknown'] = title._;
-      }
-    });
-  }
-  
-  const imageElements = brand['air:ImageLocation'];
-  if (imageElements) {
-    safeArray(imageElements).forEach(img => {
-      if (img._ && img.$) {
-        images.push({
-          url: img._,
-          type: img.$?.Type || 'unknown',
-          width: img.$?.ImageWidth,
-          height: img.$?.ImageHeight
-        });
-      }
-    });
-  }
-  
-  return {
-    id: brand.$?.BrandID,
-    name: titles.external || brand.$?.Name || 'Economy',
-    shortName: titles.short || brand.$?.Name || 'Economy',
-    tier: brand.$?.BrandTier,
-    carrier: brand.$?.Carrier,
-    description,
-    upsell,
-    marketingText,
-    features,
-    titles,
-    images,
-    brandedDetailsAvailable: brand.$?.BrandedDetailsAvailable === 'true'
-  };
-};
+// ============================================================================
+// CORRECTED EXTRACT FARE OPTIONS WITH PROPER MAPPING
+// ============================================================================
 
-/**
- * Infer brand name from fare basis code
- */
-const inferBrandFromFareBasis = (fareBasis) => {
-  if (!fareBasis) return 'Economy';
-  const basis = fareBasis.toUpperCase();
-  if (basis.includes('FLEX') || basis.includes('FLX')) return 'Flexi';
-  if (basis.includes('BUS') || basis.includes('C')) return 'Business';
-  if (basis.includes('PREM') || basis.includes('W')) return 'Premium Economy';
-  if (basis.includes('ECO') || basis.includes('Y')) return 'Economy';
-  if (basis.includes('SAVER') || basis.includes('L') || basis.includes('T')) return 'Saver';
-  return 'Economy';
-};
-
-// ----------------------------------------------------------------------------
-// FARE OPTION EXTRACTION
-// ----------------------------------------------------------------------------
+// ============================================================================
+// FIXED: extractFareOptions - Same name, fixed implementation
+// ============================================================================
 
 const extractFareOptions = (pricePoint, pricingInfo, fareInfoKeys, fareInfoMap, 
                             segmentMap, detailsMap, brandMap, brandByIdMap, brandOriginalMap,
@@ -480,6 +475,7 @@ const extractFareOptions = (pricePoint, pricingInfo, fareInfoKeys, fareInfoMap,
     const flightOptions = pricingInfo['air:FlightOptionsList']?.['air:FlightOption'];
     if (!flightOptions) continue;
     
+    // ✅ Use the fixed parseFlightSegments (same name)
     const segmentsList = parseFlightSegments(flightOptions, segmentMap, detailsMap, hostTokenMap);
     if (!segmentsList.length) continue;
     
@@ -535,8 +531,15 @@ const extractFareOptions = (pricePoint, pricingInfo, fareInfoKeys, fareInfoMap,
           carrier: brand.carrier
         },
         baggage: {
-          checked: baggage.checked,
-          carryon: baggage.carryon
+          checked: {
+            weight: baggage.checked.weight_kg,
+            unit: baggage.checked.unit || 'kg',
+            pieces: baggage.checked.pieces
+          },
+          carryon: {
+            weight: baggage.carryon.weight_kg,
+            pieces: baggage.carryon.pieces
+          }
         },
         fareBasis: fareInfo.$?.FareBasis,
         fareRuleKey,
@@ -559,9 +562,11 @@ const extractFareOptions = (pricePoint, pricingInfo, fareInfoKeys, fareInfoMap,
   return fareOptions;
 };
 
-// ----------------------------------------------------------------------------
-// ONE-WAY TRANSFORMATION
-// ----------------------------------------------------------------------------
+/**
+ * Infer brand name from fare basis code
+ */
+
+
 
 const transformOneWayResponse = (data, passengerCount, traceId) => {
   try {
@@ -1765,6 +1770,103 @@ const transformTravelportResponse = (apiResponse, passengerCount, expectedLegCou
     console.error('❌ Transform error:', error);
     throw error;
   }
+};
+
+
+
+// ============================================================================
+// EXTRACT BRAND DETAILS
+// ============================================================================
+
+const extractBrandDetails = (brand, fareInfo) => {
+  if (!brand) {
+    const fareBasis = fareInfo?.$?.FareBasis || '';
+    return {
+      id: null,
+      name: inferBrandFromFareBasis(fareBasis),
+      description: '',
+      upsell: '',
+      marketingText: '',
+      features: [],
+      titles: {},
+      images: []
+    };
+  }
+  
+  let description = '';
+  let upsell = '';
+  let marketingText = '';
+  let features = [];
+  const titles = {};
+  const images = [];
+  
+  const textElements = brand['air:Text'];
+  if (textElements) {
+    safeArray(textElements).forEach(text => {
+      if (text._ && text.$) {
+        const cleanLine = text._.replace(/\s+/g, ' ').trim();
+        if (text.$?.Type === 'Upsell' && cleanLine.length > 5 && 
+            !cleanLine.includes('***') && !cleanLine.includes('Disclaimer')) {
+          features.push(cleanLine);
+        } else if (text.$?.Type === 'MarketingAgent') {
+          marketingText = cleanLine;
+        }
+      }
+      if (text.$?.Type === 'Strapline') {
+        description = text._ || '';
+      }
+    });
+  }
+  
+  const titleElements = brand['air:Title'];
+  if (titleElements) {
+    safeArray(titleElements).forEach(title => {
+      if (title._ && title.$) {
+        titles[title.$?.Type?.toLowerCase() || 'unknown'] = title._;
+      }
+    });
+  }
+  
+  const imageElements = brand['air:ImageLocation'];
+  if (imageElements) {
+    safeArray(imageElements).forEach(img => {
+      if (img._ && img.$) {
+        images.push({
+          url: img._,
+          type: img.$?.Type || 'unknown',
+          width: img.$?.ImageWidth,
+          height: img.$?.ImageHeight
+        });
+      }
+    });
+  }
+  
+  return {
+    id: brand.$?.BrandID,
+    name: titles.external || brand.$?.Name || 'Economy',
+    shortName: titles.short || brand.$?.Name || 'Economy',
+    tier: brand.$?.BrandTier,
+    carrier: brand.$?.Carrier,
+    description,
+    upsell,
+    marketingText,
+    features,
+    titles,
+    images,
+    brandedDetailsAvailable: brand.$?.BrandedDetailsAvailable === 'true'
+  };
+};
+
+// Helper function for brand inference
+const inferBrandFromFareBasis = (fareBasis) => {
+  if (!fareBasis) return 'Economy';
+  const basis = fareBasis.toUpperCase();
+  if (basis.includes('FLEX') || basis.includes('FLX')) return 'Flexi';
+  if (basis.includes('BUS') || basis.includes('C')) return 'Business';
+  if (basis.includes('PREM') || basis.includes('W')) return 'Premium Economy';
+  if (basis.includes('ECO') || basis.includes('Y')) return 'Economy';
+  if (basis.includes('SAVER') || basis.includes('L') || basis.includes('T')) return 'Saver';
+  return 'Economy';
 };
 
 // ----------------------------------------------------------------------------
