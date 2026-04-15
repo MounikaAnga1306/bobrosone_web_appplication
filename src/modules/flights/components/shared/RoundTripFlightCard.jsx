@@ -53,22 +53,6 @@ const formatDateTime = (isoString) => {
   } catch { return ''; }
 };
 
-const formatDateTime = (isoString) => {
-  if (!isoString) return '';
-  try {
-    const date = new Date(isoString);
-    return date.toLocaleString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
-  } catch {
-    return '';
-  }
-};
-
 const parsePrice = (price) => {
   if (typeof price === 'number') return price;
   if (!price) return 0;
