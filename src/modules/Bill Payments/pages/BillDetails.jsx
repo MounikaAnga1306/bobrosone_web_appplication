@@ -14,6 +14,7 @@ const BillDetails = () => {
   const [step, setStep] = useState(1);
   const [validationError, setValidationError] = useState(false);
   const [validationErrorMsg, setValidationErrorMsg] = useState('');
+  const [billSummary, setBillSummary] = useState(null); // store full bill summary
 
   useEffect(() => {
     const storedData = localStorage.getItem('billData');
@@ -41,65 +42,139 @@ const BillDetails = () => {
   };
 
   const handleFetchBill = async (e) => {
-    e.preventDefault();
-    if (!e.target.checkValidity()) {
-      e.target.reportValidity();
-      return;
-    }
-    setFetchingBill(true);
-    setValidationError(false);
-    setValidationErrorMsg('');
-    try {
-      const payload = {
-        billerid: billData?.billerid,
-        customerDetails: {
-          name: customerDetails?.name || '',
-          mobile: customerDetails?.mobile || '',
-          email: customerDetails?.email || '',
-        },
-        authenticatorValues: formData,
-      };
-      console.log("Validate Payload:", payload);
-      const response = await axios.post('/bill/validate-payment', payload);
-      console.log("Validate Response:", response.data);
+  e.preventDefault();
+  if (!e.target.checkValidity()) {
+    e.target.reportValidity();
+    return;
+  }
+  setFetchingBill(true);
+  setValidationError(false);
+  setValidationErrorMsg('');
+  try {
+    const payload = {
+      billerid: billData?.billerid,
+      customerDetails: {
+        name: customerDetails?.name || '',
+        mobile: customerDetails?.mobile || '',
+        email: customerDetails?.email || '',
+      },
+      authenticatorValues: formData,
+    };
+    console.log("Validate Payload:", payload);
+    const response = await axios.post('/bill/validate-payment', payload);
+    console.log("Validate Response:", response.data);
 
-      if (response.data?.success) {
-        const data = response.data.data;
-        setBillAmount(
-          data?.amount || data?.billAmount || data?.dueAmount ||
-          data?.Bill_Amount || data?.totalAmount || ''
-        );
-        setCustomerDetails(prev => ({
-          ...prev,
-          name: data?.customerName || data?.customer_name || prev?.name || '',
-          mobile: data?.mobile || data?.mobileNumber || prev?.mobile || '',
-          email: data?.email || prev?.email || '',
-          dueDate: data?.dueDate || data?.due_date || data?.DueDate || '',
-          billNumber: data?.billNumber || data?.bill_number || data?.referenceId || data?.BillNumber || '',
-        }));
-        setValidationError(false);
-        setStep(2);
-      } else {
-        setValidationError(true);
-        setValidationErrorMsg(
-          response.data?.error?.message ||
-          response.data?.message ||
-          "Unable to validate your bill at the moment. Please try again later."
-        );
+    if (response.data?.success) {
+      const rawData = response.data.data || response.data;
+      // The actual bill details are inside rawData.data (nested) -> billlist[0]
+      const nestedData = rawData.data || rawData;
+      console.log("Nested data:", nestedData);
+      
+      // Extract bill details from billlist array
+      let billDetails = null;
+      if (nestedData.billlist && Array.isArray(nestedData.billlist) && nestedData.billlist.length > 0) {
+        billDetails = nestedData.billlist[0];
+        console.log("Bill details from billlist:", billDetails);
       }
-    } catch (error) {
-      console.error("Error:", error);
+      
+      if (!billDetails) {
+        throw new Error("No bill details found in response");
+      }
+      
+      // Try multiple possible field names for amount, bill number, due date
+      const amount = 
+        billDetails?.bill_amount || 
+        billDetails?.amount || 
+        billDetails?.totalAmount || 
+        billDetails?.dueAmount ||
+        billDetails?.BillAmount ||
+        null;
+      
+      const billNumber = 
+        billDetails?.bill_number || 
+        billDetails?.billNumber || 
+        billDetails?.referenceId ||
+        'N/A';
+      
+      const dueDate = 
+        billDetails?.due_date || 
+        billDetails?.dueDate || 
+        billDetails?.DueDate ||
+        'N/A';
+      
+      const status = 
+        billDetails?.status || 
+        billDetails?.bill_status ||
+        'Pending';
+      
+      if (!amount) {
+        console.error("Amount not found in billDetails", billDetails);
+        setValidationError(true);
+        setValidationErrorMsg("Bill amount not found. Please try again.");
+        setFetchingBill(false);
+        return;
+      }
+      
+      // Customer details from nestedData or billDetails
+      const customerName = 
+        billDetails?.customer_name || 
+        billDetails?.customerName || 
+        nestedData?.customer_name ||
+        customerDetails?.name || '';
+      
+      const customerMobile = 
+        billDetails?.mobile || 
+        billDetails?.customer_mobile ||
+        nestedData?.customerid ||  // from your log: customerid is the mobile
+        customerDetails?.mobile || '';
+      
+      const customerEmail = 
+        billDetails?.email || 
+        customerDetails?.email || '';
+      
+      console.log("Final extracted bill data:", { amount, billNumber, dueDate, status, customerName, customerMobile, customerEmail });
+      
+      setBillAmount(amount);
+      setBillSummary({
+        billNumber,
+        dueDate,
+        status,
+        customerName,
+        mobile: customerMobile,
+        email: customerEmail,
+      });
+      
+      setCustomerDetails({
+        name: customerName,
+        mobile: customerMobile,
+        email: customerEmail,
+        dueDate: dueDate,
+        billNumber: billNumber,
+      });
+      
+      setValidationError(false);
+      setStep(2);
+    } else {
       setValidationError(true);
       setValidationErrorMsg(
-        error.response?.data?.error?.message ||
-        error.response?.data?.message ||
-        error.response?.data?.detail?.message ||
+        response.data?.error?.message ||
+        response.data?.message ||
         "Unable to validate your bill at the moment. Please try again later."
       );
-    } finally {
-      setFetchingBill(false);
     }
-  };
+  } catch (error) {
+    console.error("Error:", error);
+    setValidationError(true);
+    setValidationErrorMsg(
+      error.response?.data?.error?.message ||
+      error.response?.data?.message ||
+      error.response?.data?.detail?.message ||
+      "Unable to validate your bill at the moment. Please try again later."
+    );
+  } finally {
+    setFetchingBill(false);
+  }
+};
 
   const handlePayment = async () => {
     setLoading(true);
@@ -110,6 +185,9 @@ const BillDetails = () => {
         customerDetails,
       });
       setStep(3);
+      // Here you would integrate actual payment gateway
+      // For now, just show success or navigate
+      alert("Payment integration will go here. Bill amount: ₹" + billAmount);
     } catch (error) {
       console.error("Payment error:", error);
       alert("Error processing payment. Please try again.");
@@ -154,7 +232,7 @@ const BillDetails = () => {
     );
   }
 
-  // ✅ Reusable biller info card content
+  // Reusable biller info card content
   const BillerInfoCard = () => (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
       <div className="p-6 text-center border-b border-gray-100">
@@ -260,175 +338,138 @@ const BillDetails = () => {
           </div>
         </div>
 
-        {/* ✅ Mobile/iPad: Biller card — stepper కింద, grid పైన */}
+        {/* Mobile/iPad: Biller card */}
         <div className="lg:hidden mb-5">
           <BillerInfoCard />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start relative">
 
-          {/* ✅ Desktop only sidebar */}
+          {/* Desktop sidebar */}
           <div className="hidden lg:block lg:col-span-1 sticky top-24 self-start">
             <BillerInfoCard />
           </div>
 
           {/* Right Panel */}
           <div className="lg:col-span-2">
-            <form onSubmit={handleFetchBill}>
-
-              {/* Card 1: Account Identifier */}
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-4">
-                <div className="flex items-center gap-3 mb-5 pb-3 border-b border-gray-100">
-                  <div className="w-7 h-7 rounded-full bg-[#fd561e] text-white flex items-center justify-center text-xs font-bold">1</div>
-                  <span className="text-xs font-bold uppercase text-gray-600">Account Identifier</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {authenticators.map((auth, index) => {
-                    const paramName = auth.parameter_name || '';
-                    const safeFieldName = paramName.replace(/\s+/g, '_');
-                    const label = paramName || safeFieldName;
-                    const optional = auth.optional === 'Y';
-                    const regex = auth.regex || '';
-                    const listOfValues = auth.list_of_values;
-                    return (
-                      <div key={index}>
-                        <label className="block text-sm font-semibold text-gray-700 mb-1">
-                          {label} {!optional && <span className="text-[#fd561e]">*</span>}
-                        </label>
-                        {listOfValues && Array.isArray(listOfValues) && listOfValues.length > 0 ? (
-                          <select
-                            name={safeFieldName}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] outline-none transition bg-gray-50"
-                            required={!optional}
-                            value={formData[safeFieldName] || ''}
-                            onChange={(e) => handleInputChange(safeFieldName, e.target.value)}
-                          >
-                            <option value="">Select {label}</option>
-                            {listOfValues.map((item, idx) => (
-                              <option key={idx} value={item.value || item}>
-                                {item.name || item.value || item}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <input
-                            type="text"
-                            name={safeFieldName}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] outline-none transition bg-gray-50"
-                            placeholder={`Enter your ${label.toLowerCase()}`}
-                            required={!optional}
-                            pattern={regex || undefined}
-                            value={formData[safeFieldName] || ''}
-                            onChange={(e) => handleInputChange(safeFieldName, e.target.value)}
-                          />
-                        )}
-                        <span className="text-xs text-[#fd561e] mt-1 flex items-center gap-1">
-                          <i className="fa-solid fa-circle-info"></i> Find this on your previous bill
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Card 2: Customer Details */}
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-4">
-                <div className="flex items-center gap-3 mb-5 pb-3 border-b border-gray-100">
-                  <div className="w-7 h-7 rounded-full bg-[#fd561e] text-white flex items-center justify-center text-xs font-bold">2</div>
-                  <span className="text-xs font-bold uppercase text-gray-600">Customer Details</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      Full Name <span className="text-[#fd561e]">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="customer_name"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] outline-none transition bg-gray-50"
-                      required
-                      pattern="[A-Za-z\s]{3,}"
-                      title="Enter valid full name (minimum 3 letters, only alphabets)"
-                      value={customerDetails?.name || ''}
-                      onChange={(e) => setCustomerDetails(prev => ({ ...prev, name: e.target.value }))}
-                    />
+            {!billAmount ? (
+              // Show form if bill not fetched yet
+              <form onSubmit={handleFetchBill}>
+                {/* Card 1: Account Identifier */}
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-4">
+                  <div className="flex items-center gap-3 mb-5 pb-3 border-b border-gray-100">
+                    <div className="w-7 h-7 rounded-full bg-[#fd561e] text-white flex items-center justify-center text-xs font-bold">1</div>
+                    <span className="text-xs font-bold uppercase text-gray-600">Account Identifier</span>
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      Mobile Number <span className="text-[#fd561e]">*</span>
-                    </label>
-                    <input
-                      type="tel"
-                      name="customer_mobile"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] outline-none transition bg-gray-50"
-                      required
-                      maxLength="10"
-                      pattern="[6-9]\d{9}"
-                      title="Enter valid 10-digit mobile number starting with 6-9"
-                      value={customerDetails?.mobile || ''}
-                      onChange={(e) => setCustomerDetails(prev => ({ ...prev, mobile: e.target.value }))}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">
-                      Email Address <span className="text-[#fd561e]">*</span>
-                    </label>
-                    <input
-                      type="email"
-                      name="customer_email"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] outline-none transition bg-gray-50"
-                      required
-                      pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
-                      title="Enter valid email address (example@domain.com)"
-                      value={customerDetails?.email || ''}
-                      onChange={(e) => setCustomerDetails(prev => ({ ...prev, email: e.target.value }))}
-                    />
-                    <span className="text-xs text-[#fd561e] mt-1 flex items-center gap-1">
-                      <i className="fa-solid fa-circle-info"></i> Payment receipt will be sent here
-                    </span>
-                  </div>
-                </div>
-
-                {billData.billerConsent && (
-                  <div className="mt-4 p-3 bg-orange-50 border-l-4 border-[#fd561e] rounded-lg text-sm text-gray-700">
-                    {billData.billerConsent}
-                  </div>
-                )}
-
-                {billAmount && customerDetails && (
-                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <h3 className="font-semibold text-green-800 mb-3">Bill Details</h3>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Bill Number:</span>
-                        <span className="font-medium">{customerDetails.billNumber}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Due Date:</span>
-                        <span className="font-medium text-red-600">{customerDetails.dueDate}</span>
-                      </div>
-                      <div className="flex justify-between border-t pt-2 mt-2">
-                        <span className="text-gray-800 font-semibold">Bill Amount:</span>
-                        <span className="text-xl font-bold text-green-600">₹{billAmount}</span>
-                      </div>
-                      {billData.customer_conv_fee && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Convenience Fee:</span>
-                          <span className="font-medium">₹{billData.customer_conv_fee}</span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {authenticators.map((auth, index) => {
+                      const paramName = auth.parameter_name || '';
+                      const safeFieldName = paramName.replace(/\s+/g, '_');
+                      const label = paramName || safeFieldName;
+                      const optional = auth.optional === 'Y';
+                      const regex = auth.regex || '';
+                      const listOfValues = auth.list_of_values;
+                      return (
+                        <div key={index}>
+                          <label className="block text-sm font-semibold text-gray-700 mb-1">
+                            {label} {!optional && <span className="text-[#fd561e]">*</span>}
+                          </label>
+                          {listOfValues && Array.isArray(listOfValues) && listOfValues.length > 0 ? (
+                            <select
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] outline-none transition bg-gray-50"
+                              required={!optional}
+                              value={formData[safeFieldName] || ''}
+                              onChange={(e) => handleInputChange(safeFieldName, e.target.value)}
+                            >
+                              <option value="">Select {label}</option>
+                              {listOfValues.map((item, idx) => (
+                                <option key={idx} value={item.value || item}>
+                                  {item.name || item.value || item}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <input
+                              type="text"
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] outline-none transition bg-gray-50"
+                              placeholder={`Enter your ${label.toLowerCase()}`}
+                              required={!optional}
+                              pattern={regex || undefined}
+                              value={formData[safeFieldName] || ''}
+                              onChange={(e) => handleInputChange(safeFieldName, e.target.value)}
+                            />
+                          )}
+                          <span className="text-xs text-[#fd561e] mt-1 flex items-center gap-1">
+                            <i className="fa-solid fa-circle-info"></i> Find this on your previous bill
+                          </span>
                         </div>
-                      )}
-                      <div className="flex justify-between border-t pt-2 mt-2">
-                        <span className="text-gray-800 font-bold">Total Payable:</span>
-                        <span className="text-xl font-bold text-[#fd561e]">
-                          ₹{parseFloat(billAmount) + parseFloat(billData.customer_conv_fee || 0)}
-                        </span>
-                      </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Card 2: Customer Details */}
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-4">
+                  <div className="flex items-center gap-3 mb-5 pb-3 border-b border-gray-100">
+                    <div className="w-7 h-7 rounded-full bg-[#fd561e] text-white flex items-center justify-center text-xs font-bold">2</div>
+                    <span className="text-xs font-bold uppercase text-gray-600">Customer Details</span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Full Name <span className="text-[#fd561e]">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] outline-none transition bg-gray-50"
+                        required
+                        pattern="[A-Za-z\s]{3,}"
+                        title="Enter valid full name (minimum 3 letters, only alphabets)"
+                        value={customerDetails?.name || ''}
+                        onChange={(e) => setCustomerDetails(prev => ({ ...prev, name: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Mobile Number <span className="text-[#fd561e]">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] outline-none transition bg-gray-50"
+                        required
+                        maxLength="10"
+                        pattern="[6-9]\d{9}"
+                        title="Enter valid 10-digit mobile number starting with 6-9"
+                        value={customerDetails?.mobile || ''}
+                        onChange={(e) => setCustomerDetails(prev => ({ ...prev, mobile: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        Email Address <span className="text-[#fd561e]">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] outline-none transition bg-gray-50"
+                        required
+                        pattern="^[^\s@]+@[^\s@]+\.[^\s@]+$"
+                        title="Enter valid email address (example@domain.com)"
+                        value={customerDetails?.email || ''}
+                        onChange={(e) => setCustomerDetails(prev => ({ ...prev, email: e.target.value }))}
+                      />
+                      <span className="text-xs text-[#fd561e] mt-1 flex items-center gap-1">
+                        <i className="fa-solid fa-circle-info"></i> Payment receipt will be sent here
+                      </span>
                     </div>
                   </div>
-                )}
 
-                <div className="text-center mt-6">
-                  {!billAmount ? (
+                  {billData.billerConsent && (
+                    <div className="mt-4 p-3 bg-orange-50 border-l-4 border-[#fd561e] rounded-lg text-sm text-gray-700">
+                      {billData.billerConsent}
+                    </div>
+                  )}
+
+                  <div className="text-center mt-6">
                     <button
                       type="submit"
                       disabled={fetchingBill}
@@ -436,19 +477,88 @@ const BillDetails = () => {
                     >
                       {fetchingBill ? "Fetching..." : "Continue →"}
                     </button>
-                  ) : (
+                  </div>
+                </div>
+              </form>
+            ) : (
+              // Show Bill Summary after successful fetch
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-4">
+                <div className="flex items-center gap-3 mb-5 pb-3 border-b border-gray-100">
+                  <div className="w-7 h-7 rounded-full bg-green-500 text-white flex items-center justify-center text-xs font-bold">✓</div>
+                  <span className="text-xs font-bold uppercase text-gray-600">Bill Summary</span>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="bg-green-50 p-4 rounded-xl border border-green-200">
+                    <h3 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
+                      <i className="fa-solid fa-receipt"></i> Bill Details
+                    </h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center pb-2 border-b border-green-100">
+                        <span className="text-gray-600">Bill Number:</span>
+                        <span className="font-mono font-semibold">{billSummary?.billNumber || customerDetails?.billNumber || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between items-center pb-2 border-b border-green-100">
+                        <span className="text-gray-600">Due Date:</span>
+                        <span className="font-medium text-red-600">{billSummary?.dueDate || customerDetails?.dueDate || 'N/A'}</span>
+                      </div>
+                      {billSummary?.billPeriod && (
+                        <div className="flex justify-between items-center pb-2 border-b border-green-100">
+                          <span className="text-gray-600">Bill Period:</span>
+                          <span className="font-medium">{billSummary.billPeriod}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center pt-2">
+                        <span className="text-gray-800 font-semibold text-lg">Bill Amount:</span>
+                        <span className="text-2xl font-bold text-green-600">₹{billAmount}</span>
+                      </div>
+                      {billData.customer_conv_fee && parseFloat(billData.customer_conv_fee) > 0 && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Convenience Fee:</span>
+                          <span className="font-medium">₹{billData.customer_conv_fee}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center pt-2 border-t-2 border-green-200 mt-2">
+                        <span className="text-gray-800 font-bold text-lg">Total Payable:</span>
+                        <span className="text-2xl font-bold text-[#fd561e]">
+                          ₹{(parseFloat(billAmount) + parseFloat(billData.customer_conv_fee || 0)).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
+                    <h3 className="font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                      <i className="fa-solid fa-user"></i> Customer Information
+                    </h3>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Name:</span>
+                        <span className="font-medium">{customerDetails?.name || billSummary?.customerName || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Mobile:</span>
+                        <span className="font-medium">{customerDetails?.mobile || billSummary?.mobile || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Email:</span>
+                        <span className="font-medium">{customerDetails?.email || billSummary?.email || 'N/A'}</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="text-center pt-4">
                     <button
-                      type="button"
                       onClick={handlePayment}
                       disabled={loading}
                       className="bg-gradient-to-r from-green-500 to-green-600 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:scale-105 transition-all duration-300 disabled:opacity-50"
                     >
                       {loading ? "Processing..." : "Proceed to Pay →"}
                     </button>
-                  )}
+                  </div>
                 </div>
               </div>
-            </form>
+            )}
           </div>
         </div>
       </div>
