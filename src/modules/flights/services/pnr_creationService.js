@@ -49,6 +49,30 @@ class PNRCreationService {
   }
 
   // ============================================================
+  // CALCULATE AGE FROM DOB
+  // ============================================================
+  calculateAgeFromDOB(dobString, travelDateString) {
+    if (!dobString) return null;
+    
+    const dob = new Date(dobString);
+    const travelDate = travelDateString ? new Date(travelDateString) : new Date();
+    
+    let age = travelDate.getFullYear() - dob.getFullYear();
+    const monthDiff = travelDate.getMonth() - dob.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && travelDate.getDate() < dob.getDate())) {
+      age--;
+    }
+    
+    // INF: If age is 0, return 1 (as per requirement)
+    if (age === 0) {
+      return 1;
+    }
+    
+    return age;
+  }
+
+  // ============================================================
   // GROUP PASSENGERS BY TYPE AND REORDER (INF MUST BE SECOND IN EACH GROUP)
   // ============================================================
   groupAndReorderPassengers(passengers) {
@@ -135,65 +159,88 @@ class PNRCreationService {
   // BUILD AIR PRICING INFO LIST (One per passenger type, not per passenger)
   // UPDATED: Supports multiple fareInfos and bookingInfos for round trips
   // ============================================================
-  buildAirPricingInfoList(consolidatedPricing, orderedPassengers) {
-  const airPricingInfoList = [];
-  const processedTypes = new Set();
-  
-  // NO MAPPING NEEDED - use codes as-is
-  // const reverseTypeMapping = { ... };  // REMOVE THIS
-  
-  for (const passenger of orderedPassengers) {
-    const passengerType = passenger.code;
+  buildAirPricingInfoList(consolidatedPricing, orderedPassengers, travelDate) {
+    const airPricingInfoList = [];
+    const processedTypes = new Set();
     
-    if (processedTypes.has(passengerType)) continue;
-    processedTypes.add(passengerType);
+    // NO MAPPING NEEDED - use codes as-is
+    // const reverseTypeMapping = { ... };  // REMOVE THIS
     
-    const pricingInfo = consolidatedPricing[passengerType];
-    
-    if (!pricingInfo) {
-      console.error(`❌ No consolidated pricing for type: ${passengerType}`);
-      throw new Error(`Cannot build AirPricingInfo for type: ${passengerType}`);
+    for (const passenger of orderedPassengers) {
+      const passengerType = passenger.code;
+      
+      if (processedTypes.has(passengerType)) continue;
+      processedTypes.add(passengerType);
+      
+      const pricingInfo = consolidatedPricing[passengerType];
+      
+      if (!pricingInfo) {
+        console.error(`❌ No consolidated pricing for type: ${passengerType}`);
+        throw new Error(`Cannot build AirPricingInfo for type: ${passengerType}`);
+      }
+      
+      // ✅ Use the SAME code for fareInfos (no mapping)
+      const gdsPassengerType = passengerType;  // Direct use
+      
+      // Build passengerTypes array for all passengers of this type
+      const passengerTypesList = pricingInfo.passengers.map((p, idx) => {
+        let ageValue = p.age;
+        
+        // If age is not provided or is 0 for INF, calculate from DOB
+        if (!ageValue || (passengerType === 'INF' && ageValue === 0)) {
+          if (p.dob) {
+            const calculatedAge = this.calculateAgeFromDOB(p.dob, travelDate);
+            if (calculatedAge !== null) {
+              ageValue = calculatedAge;
+              console.log(`   📊 ${passengerType} ${p.firstName} ${p.lastName}: Calculated age ${ageValue} from DOB ${p.dob}`);
+            }
+          }
+        }
+        
+        // Final fallback defaults
+        if (!ageValue) {
+          if (passengerType === 'ADT') ageValue = 30;
+          else if (passengerType === 'INF') ageValue = 1;  // Changed from 0 to 1
+          else if (passengerType === 'CNN') ageValue = 8;
+        }
+        
+        return {
+          code: p.code,
+          bookingTravelerRef: this.getBookingTravelerRef(p, orderedPassengers),
+          age: ageValue.toString()
+        };
+      });
+      
+      // Update fareInfos with passenger type (NO MAPPING)
+      const updatedFareInfos = pricingInfo.fareInfos.map(fi => ({
+        ...fi,
+        passengerTypeCode: gdsPassengerType  // Use same code
+      }));
+      
+      // Build AirPricingInfo
+      const airPricingInfo = {
+        key: pricingInfo.apiKey,
+        totalPrice: pricingInfo.totalPrice,
+        basePrice: pricingInfo.basePrice,
+        taxes: pricingInfo.taxes,
+        pricingMethod: pricingInfo.pricingMethod,
+        refundable: pricingInfo.refundable ? "true" : "false",
+        eticketability: pricingInfo.eticketability,
+        platingCarrier: pricingInfo.platingCarrier,
+        fareInfos: updatedFareInfos,
+        bookingInfos: pricingInfo.bookingInfos,
+        passengerTypes: passengerTypesList
+      };
+      
+      airPricingInfoList.push(airPricingInfo);
+      
+      console.log(`\n✅ Built AirPricingInfo for ${passengerType}:`);
+      console.log(`   - GDS Passenger Code: ${gdsPassengerType} (unchanged)`);
+      console.log(`   - Passenger ages: ${passengerTypesList.map(pt => `${pt.code}:${pt.age}`).join(', ')}`);
     }
     
-    // ✅ Use the SAME code for fareInfos (no mapping)
-    const gdsPassengerType = passengerType;  // Direct use
-    
-    // Build passengerTypes array for all passengers of this type
-    const passengerTypesList = pricingInfo.passengers.map((p, idx) => ({
-      code: p.code,
-      bookingTravelerRef: this.getBookingTravelerRef(p, orderedPassengers),
-      age: p.age?.toString() || (p.code === 'ADT' ? "30" : p.code === 'INF' ? "0" : "8")
-    }));
-    
-    // Update fareInfos with passenger type (NO MAPPING)
-    const updatedFareInfos = pricingInfo.fareInfos.map(fi => ({
-      ...fi,
-      passengerTypeCode: gdsPassengerType  // Use same code
-    }));
-    
-    // Build AirPricingInfo
-    const airPricingInfo = {
-      key: pricingInfo.apiKey,
-      totalPrice: pricingInfo.totalPrice,
-      basePrice: pricingInfo.basePrice,
-      taxes: pricingInfo.taxes,
-      pricingMethod: pricingInfo.pricingMethod,
-      refundable: pricingInfo.refundable ? "true" : "false",
-      eticketability: pricingInfo.eticketability,
-      platingCarrier: pricingInfo.platingCarrier,
-      fareInfos: updatedFareInfos,
-      bookingInfos: pricingInfo.bookingInfos,
-      passengerTypes: passengerTypesList
-    };
-    
-    airPricingInfoList.push(airPricingInfo);
-    
-    console.log(`\n✅ Built AirPricingInfo for ${passengerType}:`);
-    console.log(`   - GDS Passenger Code: ${gdsPassengerType} (unchanged)`);
+    return airPricingInfoList;
   }
-  
-  return airPricingInfoList;
-}
 
   // ============================================================
   // BUILD HOST TOKENS LIST (One per hostTokenRef, supports multiple per type)
@@ -355,9 +402,17 @@ class PNRCreationService {
       
       console.log(`\n📦 Extracting ${airSegmentsArray.length} segment(s):`);
       
+      // Get travel date for age calculation (from first segment)
+      let travelDate = null;
       const segmentsForRequest = [];
       for (const seg of airSegmentsArray) {
         const segAttrs = seg.$ || seg;
+        
+        // Capture travel date from first segment
+        if (!travelDate && segAttrs.DepartureTime) {
+          travelDate = segAttrs.DepartureTime;
+        }
+        
         const segment = {
           key: segAttrs.Key,
           group: segAttrs.Group,
@@ -495,7 +550,7 @@ class PNRCreationService {
       // STEP 8: BUILD AIR PRICING INFO LIST (One per passenger type)
       // ============================================================
       
-      const airPricingInfoList = this.buildAirPricingInfoList(consolidatedPricing, orderedPassengers);
+      const airPricingInfoList = this.buildAirPricingInfoList(consolidatedPricing, orderedPassengers, travelDate);
       
       // ============================================================
       // STEP 9: BUILD HOST TOKENS LIST (Collects all unique host tokens)
@@ -540,15 +595,50 @@ class PNRCreationService {
       // STEP 11: BUILD PASSENGERS LIST (IN ORDERED ORDER)
       // ============================================================
       
-      const passengersList = orderedPassengers.map((p, idx) => ({
-        code: p.code,
-        firstName: (p.firstName || "").toUpperCase().trim(),
-        lastName: (p.lastName || "").toUpperCase().trim(),
-        dob: p.dob,
-        gender: p.gender || "F",
-        nationality: p.nationality || "IN",
-        age: p.age
-      }));
+      // const passengersList = orderedPassengers.map((p, idx) => ({
+      //   code: p.code,
+      //   firstName: (p.firstName || "").toUpperCase().trim(),
+      //   lastName: (p.lastName || "").toUpperCase().trim(),
+      //   dob: p.dob,
+      //   gender: p.gender || "F",
+      //   nationality: p.nationality || "IN",
+      //   age: p.age
+      // }));
+
+      // ============================================================
+// STEP 11: BUILD PASSENGERS LIST (IN ORDERED ORDER) WITH CORRECTED AGES
+// ============================================================
+      
+const passengersList = orderedPassengers.map((p, idx) => {
+  let correctedAge = p.age;
+  
+  // Fix INF age from 0 to 1
+  if (p.code === 'INF' && (!correctedAge || correctedAge === 0)) {
+    if (p.dob && travelDate) {
+      const calculatedAge = this.calculateAgeFromDOB(p.dob, travelDate);
+      if (calculatedAge !== null && calculatedAge > 0) {
+        correctedAge = calculatedAge;
+        console.log(`   🔄 INF ${p.firstName} ${p.lastName}: Age corrected from ${p.age} to ${correctedAge} in passengersList`);
+      } else {
+        correctedAge = 1;
+        console.log(`   🔄 INF ${p.firstName} ${p.lastName}: Age corrected from ${p.age} to 1 (default) in passengersList`);
+      }
+    } else {
+      correctedAge = 1;
+      console.log(`   🔄 INF ${p.firstName} ${p.lastName}: Age corrected from ${p.age} to 1 (default, no DOB) in passengersList`);
+    }
+  }
+  
+  return {
+    code: p.code,
+    firstName: (p.firstName || "").toUpperCase().trim(),
+    lastName: (p.lastName || "").toUpperCase().trim(),
+    dob: p.dob,
+    gender: p.gender || "F",
+    nationality: p.nationality || "IN",
+    age: correctedAge  // Use corrected age
+  };
+});
       
       // ============================================================
       // STEP 12: BUILD FINAL REQUEST

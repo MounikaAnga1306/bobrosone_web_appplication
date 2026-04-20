@@ -133,39 +133,28 @@ const PassengerDetailsReviewPage = () => {
       const body = envelope?.['SOAP:Body'];
       
       // Check for SOAP Fault (Error response)
-      const soapFault = body?.['SOAP:Fault'];
-      if (soapFault) {
-        const errorInfo = soapFault?.detail?.['air:AvailabilityErrorInfo'];
-        const airSegmentError = errorInfo?.['air:AirSegmentError'];
-        const airSegment = airSegmentError?.['air:AirSegment']?.$ || {};
-        const errorMessage = airSegmentError?.['air:ErrorMessage'];
-        
-        const error = {
-          type: 'SOAP_FAULT',
-          faultCode: soapFault.faultcode,
-          faultString: soapFault.faultstring,
-          errorCode: errorInfo?.['common_v54_0:Code'],
-          errorService: errorInfo?.['common_v54_0:Service'],
-          errorType: errorInfo?.['common_v54_0:Type'],
-          errorDescription: errorInfo?.['common_v54_0:Description'],
-          transactionId: errorInfo?.['common_v54_0:TransactionId'],
-          traceId: errorInfo?.['common_v54_0:TraceId'],
-          airSegment: {
-            carrier: airSegment.Carrier,
-            flightNumber: airSegment.FlightNumber,
-            origin: airSegment.Origin,
-            destination: airSegment.Destination,
-            departureTime: airSegment.DepartureTime,
-            arrivalTime: airSegment.ArrivalTime,
-            classOfService: airSegment.ClassOfService
-          },
-          errorMessage: errorMessage
-        };
-        
-        setApiError(error);
-        setOpenErrorDialog(true);
-        return null;
-      }
+      // Check for SOAP Fault (Error response)
+const soapFault = body?.['SOAP:Fault'];
+if (soapFault) {
+  // Get the ErrorInfo from the correct path
+  const errorInfo = soapFault?.detail?.['common_v54_0:ErrorInfo'];
+  
+  const error = {
+    type: 'SOAP_FAULT',
+    faultCode: soapFault.faultcode,
+    faultString: soapFault.faultstring,  // ← This is the main error message you want
+    errorCode: errorInfo?.['common_v54_0:Code'],
+    errorService: errorInfo?.['common_v54_0:Service'],
+    errorType: errorInfo?.['common_v54_0:Type'],
+    errorDescription: errorInfo?.['common_v54_0:Description'],
+    transactionId: errorInfo?.['common_v54_0:TransactionId'],
+    traceId: errorInfo?.['common_v54_0:TraceId']
+  };
+  
+  setApiError(error);
+  setOpenErrorDialog(true);
+  return null;
+}
       
       // Continue with normal parsing if no error
       const airCreateReservationRsp = body?.['universal:AirCreateReservationRsp'];
