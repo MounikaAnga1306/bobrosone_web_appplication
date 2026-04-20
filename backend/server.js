@@ -389,6 +389,7 @@ app.post("/billdesk/order", async (req, res) => {
         }
       }
     );
+     console.log("billdesktest.php RAW response:", JSON.stringify(response.data));
 
 
     res.json(response.data);
