@@ -438,8 +438,9 @@ const RoundTripSheet = ({
     } catch (error) {
       toast.error('An error occurred. Please try again.');
       setPricingError(error.message || 'Navigation error');
-    } finally {
+      // ✅ Reset on error so user can try again
       setIsConfirming(false);
+      hasNavigated.current = false;
     }
   };
 
@@ -447,6 +448,13 @@ const RoundTripSheet = ({
   const currentSelectedFare = activeTab === 'outbound' ? selectedOutboundFare : selectedReturnFare;
   const currentFares        = currentFlight?.fares || [];
   const currentFareCount    = currentFares.length;
+
+  // ✅ Reset navigation ref when sheet closes
+  const handleClose = () => {
+    hasNavigated.current = false;
+    setIsConfirming(false);
+    onClose();
+  };
 
   if (!isOpen) return null;
 

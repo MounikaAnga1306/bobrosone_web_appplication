@@ -249,7 +249,7 @@ const FareCard = ({ fare, index, loadingFareId, selectedFareId, onSelect }) => {
 
 // ─── Main OneWaySheet ─────────────────────────────────────────────────────────
 
-const OneWaySheet = ({ isOpen, onClose, flight, passengerCounts, airlineData, airlinesLoading }) => {
+const OneWaySheet = ({ isOpen, onClose, flight, passengerCounts, airlineData, airlinesLoading, traceId }) => {
   const navigate = useNavigate();
   const [selectedFareId, setSelectedFareId] = useState(null);
   const [loadingFareId, setLoadingFareId] = useState(null);
