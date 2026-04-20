@@ -1039,10 +1039,10 @@ const RoundTripPage = () => {
       <MobileSearchBar />
       {showMobileSearchModal && <MobileSearchModal />}
 
-  // ============ MAIN RENDER WITH RESULTS - Search Bar Always Visible ============
+  
  
       {/* Search Bar - Always Visible */}
-      <SearchBar />
+      
 
       {/* Fare Type Selection */}
       
@@ -1061,58 +1061,59 @@ const RoundTripPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
               {/* Outbound Column */}
-              <div>
-                <div className="bg-blue-50 rounded-t-xl p-3 mb-4 sticky top-[200px] z-10">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <FaPlane className="text-blue-600 rotate-45" size={14} />
-                      <div className="font-semibold text-blue-800 text-base">
-                        {searchSummary?.fromCode} → {searchSummary?.toCode}
-                      </div>
-                    </div>
-                    {selectedRoundTrip.outbound && (
-                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                        Selected
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-blue-600 mt-1 truncate max-w-full" title={`${searchSummary?.fromName} → ${searchSummary?.toName}`}>
-                    {truncateAirportName(searchSummary?.fromName)} → {truncateAirportName(searchSummary?.toName)}
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  {filteredOutbound.map(flight => (
-                    <RoundTripFlightCard key={flight.id} flight={flight} isSelected={selectedRoundTrip.outbound?.id === flight.id} onSelect={() => handleFlightSelect(flight, 'outbound')} legIndex={0} airlineData={airlinesMap[flight.airlineCode]} airlinesLoading={airlinesLoading} />
-                  ))}
-                </div>
-              </div>
+{/* Outbound Column */}
+<div>
+  <div className="bg-blue-50 rounded-t-xl p-3 mb-4">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <FaPlane className="text-blue-600 rotate-45" size={14} />
+        <div className="font-semibold text-blue-800 text-base">
+          {searchSummary?.fromCode} → {searchSummary?.toCode}
+        </div>
+      </div>
+      {selectedRoundTrip.outbound && (
+        <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+          Selected
+        </span>
+      )}
+    </div>
+    <div className="text-xs text-blue-600 mt-1 truncate max-w-full" title={`${searchSummary?.fromName} → ${searchSummary?.toName}`}>
+      {truncateAirportName(searchSummary?.fromName)} → {truncateAirportName(searchSummary?.toName)}
+    </div>
+  </div>
+  <div className="space-y-4">
+    {filteredOutbound.map(flight => (
+      <RoundTripFlightCard key={flight.id} flight={flight} isSelected={selectedRoundTrip.outbound?.id === flight.id} onSelect={() => handleFlightSelect(flight, 'outbound')} legIndex={0} airlineData={airlinesMap[flight.airlineCode]} airlinesLoading={airlinesLoading} />
+    ))}
+  </div>
+</div>
 
-              {/* Return Column */}
-              <div>
-                <div className="bg-green-50 rounded-t-xl p-3 mb-4 sticky top-[200px] z-10">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <FaPlane className="text-green-600 -rotate-45" size={14} />
-                      <div className="font-semibold text-green-800 text-base">
-                        {searchSummary?.toCode} → {searchSummary?.fromCode}
-                      </div>
-                    </div>
-                    {selectedRoundTrip.return && (
-                      <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-                        Selected
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-green-600 mt-1 truncate max-w-full" title={`${searchSummary?.toName} → ${searchSummary?.fromName}`}>
-                    {truncateAirportName(searchSummary?.toName)} → {truncateAirportName(searchSummary?.fromName)}
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  {filteredReturn.map(flight => (
-                    <RoundTripFlightCard key={flight.id} flight={flight} isSelected={selectedRoundTrip.return?.id === flight.id} onSelect={() => handleFlightSelect(flight, 'return')} legIndex={1} airlineData={airlinesMap[flight.airlineCode]} airlinesLoading={airlinesLoading} />
-                  ))}
-                </div>
-              </div>
+{/* Return Column */}
+<div>
+  <div className="bg-green-50 rounded-t-xl p-3 mb-4">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <FaPlane className="text-green-600 -rotate-45" size={14} />
+        <div className="font-semibold text-green-800 text-base">
+          {searchSummary?.toCode} → {searchSummary?.fromCode}
+        </div>
+      </div>
+      {selectedRoundTrip.return && (
+        <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+          Selected
+        </span>
+      )}
+    </div>
+    <div className="text-xs text-green-600 mt-1 truncate max-w-full" title={`${searchSummary?.toName} → ${searchSummary?.fromName}`}>
+      {truncateAirportName(searchSummary?.toName)} → {truncateAirportName(searchSummary?.fromName)}
+    </div>
+  </div>
+  <div className="space-y-4">
+    {filteredReturn.map(flight => (
+      <RoundTripFlightCard key={flight.id} flight={flight} isSelected={selectedRoundTrip.return?.id === flight.id} onSelect={() => handleFlightSelect(flight, 'return')} legIndex={1} airlineData={airlinesMap[flight.airlineCode]} airlinesLoading={airlinesLoading} />
+    ))}
+  </div>
+</div>
 
             </div>
           </div>
@@ -1124,7 +1125,7 @@ const RoundTripPage = () => {
       )}
 
       {showDetailSheet && (
-        <RoundTripSheet isOpen={showDetailSheet} onClose={handleCloseSheet} outboundFlight={selectedRoundTrip.outbound} returnFlight={selectedRoundTrip.return} passengerCounts={passengerCounts} onFaresSelected={handleFaresSelected} />
+        <RoundTripSheet isOpen={showDetailSheet} onClose={handleCloseSheet} outboundFlight={selectedRoundTrip.outbound} returnFlight={selectedRoundTrip.return} passengerCounts={passengerCounts} onFaresSelected={handleFaresSelected}   traceId={flightResults?.traceId}/>
       )}
 
       {showMobileFilters && (

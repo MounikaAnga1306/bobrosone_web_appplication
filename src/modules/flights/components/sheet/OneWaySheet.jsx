@@ -249,7 +249,7 @@ const FareCard = ({ fare, index, loadingFareId, selectedFareId, onSelect }) => {
 
 // ─── Main OneWaySheet ─────────────────────────────────────────────────────────
 
-const OneWaySheet = ({ isOpen, onClose, flight, passengerCounts, airlineData, airlinesLoading }) => {
+const OneWaySheet = ({ isOpen, onClose, flight, passengerCounts, airlineData, airlinesLoading, traceId }) => {
   const navigate = useNavigate();
   const [selectedFareId, setSelectedFareId] = useState(null);
   const [loadingFareId, setLoadingFareId] = useState(null);
@@ -297,7 +297,7 @@ const OneWaySheet = ({ isOpen, onClose, flight, passengerCounts, airlineData, ai
     }
   }, [needsHorizontalScroll]);
 
-  // ✅ KEY FIX: handleSelectFare uses useCallback, no stopPropagation issues
+  // handleSelectFare with traceId
   const handleSelectFare = useCallback(
     (fare) => {
       if (loadingFareId) return;
@@ -317,11 +317,12 @@ const OneWaySheet = ({ isOpen, onClose, flight, passengerCounts, airlineData, ai
             passengerCounts,
             tripType: 'one-way',
             totalPrice: fare.totalPrice,
+            traceId: traceId,
           },
         });
       }, 300);
     },
-    [loadingFareId, onClose, navigate, flight, passengerCounts]
+    [loadingFareId, onClose, navigate, flight, passengerCounts, traceId]
   );
 
   const scrollLeft = () => scrollContainerRef.current?.scrollBy({ left: -300, behavior: 'smooth' });

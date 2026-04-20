@@ -708,6 +708,7 @@ export const buildOneWayPricingRequest = (flight, selectedFare, passengerCounts)
       departureTime: seg.departureTime,
       arrivalTime: seg.arrivalTime,
       flightTime: seg.duration?.toString() || seg.flightTime,
+      distance: seg.distance, // ✅ ADD THIS LINE - Include distance
       equipment: seg.equipment,
       changeOfPlane: "false",
       optionalServicesIndicator: "false",
@@ -733,17 +734,25 @@ export const buildOneWayPricingRequest = (flight, selectedFare, passengerCounts)
   };
 };
 
-export const buildRoundTripPricingRequest = (outboundFlight, outboundFare, returnFlight, returnFare, passengerCounts) => {
+export const buildRoundTripPricingRequest = (outboundFlight, outboundFare, returnFlight, returnFare, passengerCounts, traceId = null) => {
   let outboundSegments = outboundFlight?.segments || [outboundFlight];
   outboundSegments = outboundSegments.map((seg) => ({
-    ...seg, segmentKey: seg.segmentKey || seg.key, flightTime: seg.duration?.toString() || seg.flightTime,
-    status: seg.status || "KK", supplierCode: seg.supplierCode || "6E"
+    ...seg, 
+    segmentKey: seg.segmentKey || seg.key, 
+    flightTime: seg.duration?.toString() || seg.flightTime,
+    distance: seg.distance, // ✅ ADD DISTANCE HERE
+    status: seg.status || "KK", 
+    supplierCode: seg.supplierCode || "6E"
   }));
   
   let returnSegments = returnFlight?.segments || [returnFlight];
   returnSegments = returnSegments.map(seg => ({
-    ...seg, segmentKey: seg.segmentKey || seg.key, flightTime: seg.duration?.toString() || seg.flightTime,
-    status: seg.status || "KK", supplierCode: seg.supplierCode || "6E"
+    ...seg, 
+    segmentKey: seg.segmentKey || seg.key, 
+    flightTime: seg.duration?.toString() || seg.flightTime,
+    distance: seg.distance, // ✅ ADD DISTANCE HERE
+    status: seg.status || "KK", 
+    supplierCode: seg.supplierCode || "6E"
   }));
   
   const outboundIs6E = outboundSegments[0]?.carrier === '6E';
@@ -761,7 +770,11 @@ export const buildRoundTripPricingRequest = (outboundFlight, outboundFare, retur
       hostTokenString = outboundFare.hostTokenMap[segmentKey];
       hostTokenRefString = outboundFare.hostTokenRefMap?.[segmentKey];
     }
-    const bookingReq = { segmentKey: segmentKey, bookingCode: outboundFare.bookingCode || seg.bookingCode, fareBasis: outboundFare.fareBasis };
+    const bookingReq = { 
+      segmentKey: segmentKey, 
+      bookingCode: outboundFare.bookingCode || seg.bookingCode, 
+      fareBasis: outboundFare.fareBasis 
+    };
     if (outboundIs6E && hostTokenString) {
       bookingReq.hostToken = hostTokenString;
       if (hostTokenRefString) bookingReq.hostTokenRef = hostTokenRefString;
@@ -780,7 +793,11 @@ export const buildRoundTripPricingRequest = (outboundFlight, outboundFare, retur
       hostTokenString = returnFare.hostTokenMap[segmentKey];
       hostTokenRefString = returnFare.hostTokenRefMap?.[segmentKey];
     }
-    const bookingReq = { segmentKey: segmentKey, bookingCode: returnFare.bookingCode || seg.bookingCode, fareBasis: returnFare.fareBasis };
+    const bookingReq = { 
+      segmentKey: segmentKey, 
+      bookingCode: returnFare.bookingCode || seg.bookingCode, 
+      fareBasis: returnFare.fareBasis 
+    };
     if (returnIs6E && hostTokenString) {
       bookingReq.hostToken = hostTokenString;
       if (hostTokenRefString) bookingReq.hostTokenRef = hostTokenRefString;
@@ -790,25 +807,51 @@ export const buildRoundTripPricingRequest = (outboundFlight, outboundFare, retur
   
   return {
     currencyCode: "INR",
-    traceId: `PRC-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+    traceId: traceId || `PRC-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`, // ✅ USE PROVIDED TRACE ID
     segments: [
       ...outboundSegments.map(seg => ({
-        segmentKey: seg.segmentKey, carrier: seg.carrier, flightNumber: seg.flightNumber, origin: seg.origin,
-        destination: seg.destination, departureTime: seg.departureTime, arrivalTime: seg.arrivalTime,
-        flightTime: seg.flightTime, equipment: seg.equipment, changeOfPlane: "false", optionalServicesIndicator: "false",
+        segmentKey: seg.segmentKey, 
+        carrier: seg.carrier, 
+        flightNumber: seg.flightNumber, 
+        origin: seg.origin,
+        destination: seg.destination, 
+        departureTime: seg.departureTime, 
+        arrivalTime: seg.arrivalTime,
+        flightTime: seg.flightTime, 
+        distance: seg.distance, // ✅ ADD DISTANCE HERE
+        equipment: seg.equipment, 
+        changeOfPlane: "false", 
+        optionalServicesIndicator: "false",
         ...(outboundIs6E ? { status: seg.status || "KK", supplierCode: seg.supplierCode || "6E" } : {
-          ETicketability: "Yes", LinkAvailability: "true", PolledAvailabilityOption: "Polled avail used",
-          AvailabilitySource: "S", ParticipantLevel: "Secure Sell", AvailabilityDisplayType: "Fare Shop/Optimal Shop"
+          ETicketability: "Yes", 
+          LinkAvailability: "true", 
+          PolledAvailabilityOption: "Polled avail used",
+          AvailabilitySource: "S", 
+          ParticipantLevel: "Secure Sell", 
+          AvailabilityDisplayType: "Fare Shop/Optimal Shop"
         }),
         group: 0
       })),
       ...returnSegments.map(seg => ({
-        segmentKey: seg.segmentKey, carrier: seg.carrier, flightNumber: seg.flightNumber, origin: seg.origin,
-        destination: seg.destination, departureTime: seg.departureTime, arrivalTime: seg.arrivalTime,
-        flightTime: seg.flightTime, equipment: seg.equipment, changeOfPlane: "false", optionalServicesIndicator: "false",
+        segmentKey: seg.segmentKey, 
+        carrier: seg.carrier, 
+        flightNumber: seg.flightNumber, 
+        origin: seg.origin,
+        destination: seg.destination, 
+        departureTime: seg.departureTime, 
+        arrivalTime: seg.arrivalTime,
+        flightTime: seg.flightTime, 
+        distance: seg.distance, // ✅ ADD DISTANCE HERE
+        equipment: seg.equipment, 
+        changeOfPlane: "false", 
+        optionalServicesIndicator: "false",
         ...(returnIs6E ? { status: seg.status || "KK", supplierCode: seg.supplierCode || "6E" } : {
-          ETicketability: "Yes", LinkAvailability: "true", PolledAvailabilityOption: "Polled avail used",
-          AvailabilitySource: "S", ParticipantLevel: "Secure Sell", AvailabilityDisplayType: "Fare Shop/Optimal Shop"
+          ETicketability: "Yes", 
+          LinkAvailability: "true", 
+          PolledAvailabilityOption: "Polled avail used",
+          AvailabilitySource: "S", 
+          ParticipantLevel: "Secure Sell", 
+          AvailabilityDisplayType: "Fare Shop/Optimal Shop"
         }),
         group: 1
       }))

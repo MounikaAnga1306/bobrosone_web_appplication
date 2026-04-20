@@ -1,6 +1,6 @@
 // src/modules/flights/components/sheet/RoundTripSheet.jsx
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   FaTimes, 
@@ -382,7 +382,8 @@ const RoundTripSheet = ({
   outboundFlight, 
   returnFlight, 
   passengerCounts,
-  onFaresSelected 
+  onFaresSelected,
+  traceId  // ✅ ADD traceId to props
 }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('outbound');
@@ -390,6 +391,9 @@ const RoundTripSheet = ({
   const [selectedReturnFare, setSelectedReturnFare] = useState(null);
   const [isConfirming, setIsConfirming] = useState(false);
   const [pricingError, setPricingError] = useState(null);
+  
+  // ✅ Add ref to prevent multiple navigation
+  const hasNavigated = useRef(false);
 
   // Calculate total price
   const totalPrice = useMemo(() => {
@@ -411,9 +415,28 @@ const RoundTripSheet = ({
     setPricingError(null);
   };
 
-  // ============ CONFIRM AND NAVIGATE - NO API CALL ============
+  // ============ CONFIRM AND NAVIGATE WITH TRACE ID - PREVENT MULTIPLE CLICKS ============
   const handleConfirm = () => {
+    // ✅ Prevent multiple clicks
     if (!isReadyToConfirm) {
+      toast.error('Please select fares for both outbound and return flights');
+      return;
+    }
+    
+    if (isConfirming) {
+      console.log('⏭️ Already processing, skipping duplicate click');
+      return;
+    }
+    
+    if (hasNavigated.current) {
+      console.log('⏭️ Already navigated, skipping');
+      return;
+    }
+    
+    // ✅ Validate traceId exists
+    if (!traceId) {
+      console.error('❌ Missing traceId - cannot proceed to booking');
+      toast.error('Missing search trace ID. Please search again.');
       return;
     }
     
@@ -430,18 +453,28 @@ const RoundTripSheet = ({
         returnFlight: returnFlight,
         passengerCounts: passengerCounts,
         tripType: 'round-trip',
-        totalPrice: totalPrice
+        totalPrice: totalPrice,
+        traceId: traceId  // ✅ Pass traceId in navigation state
       };
       
+      console.log('🚀 Navigating to booking with traceId:', traceId);
+      
+      // ✅ Mark as navigated before navigation
+      hasNavigated.current = true;
+      
+      // ✅ Navigate
       navigate(navigatePath, { state: navigationState });
+      
+      // ✅ Close the sheet
       onClose();
       
     } catch (error) {
       console.error('Navigation error:', error);
       toast.error('An error occurred. Please try again.');
       setPricingError(error.message || 'Navigation error');
-    } finally {
+      // ✅ Reset on error so user can try again
       setIsConfirming(false);
+      hasNavigated.current = false;
     }
   };
   
@@ -450,11 +483,18 @@ const RoundTripSheet = ({
   const currentFares = currentFlight?.fares || [];
   const currentFareCount = currentFares.length;
 
+  // ✅ Reset navigation ref when sheet closes
+  const handleClose = () => {
+    hasNavigated.current = false;
+    setIsConfirming(false);
+    onClose();
+  };
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center">
-      <div className="absolute inset-0" onClick={onClose} />
+      <div className="absolute inset-0" onClick={handleClose} />
       
       <div className="relative bg-white w-full max-w-3xl max-h-[90vh] rounded-t-2xl sm:rounded-2xl overflow-hidden flex flex-col shadow-2xl">
         {/* Header */}
@@ -471,7 +511,7 @@ const RoundTripSheet = ({
             </p>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
             <FaTimes size={20} className="text-gray-500" />
@@ -567,8 +607,9 @@ const RoundTripSheet = ({
           
           <div className="flex items-center justify-between gap-4">
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="px-6 py-3 rounded-xl font-semibold border-2 border-gray-200 text-gray-600 hover:bg-gray-50 transition-all duration-200"
+              disabled={isConfirming}
             >
               Cancel
             </button>

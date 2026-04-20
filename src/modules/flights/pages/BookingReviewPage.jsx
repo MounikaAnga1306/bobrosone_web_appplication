@@ -1,6 +1,6 @@
 // src/modules/flights/pages/BookingReviewPage.jsx
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaArrowLeft,
@@ -259,6 +259,10 @@ const BookingReviewPage = () => {
   const [ageErrors, setAgeErrors] = useState([]);
   const [airlines, setAirlines] = useState([]);
 
+  // ============ REFS TO PREVENT DUPLICATE API CALLS ============
+  const hasFetchedPricing = useRef(false);
+  const isFetchingPricing = useRef(false);
+
   // ============ FETCH AIRLINES ============
   useEffect(() => {
     const loadAirlines = async () => {
@@ -271,16 +275,36 @@ const BookingReviewPage = () => {
     };
     loadAirlines();
   }, []);
-  
+
   // ============ FETCH PRICING API ============
   useEffect(() => {
     const fetchPricing = async () => {
+      // ✅ This prevents duplicate calls
+      if (hasFetchedPricing.current || isFetchingPricing.current) {
+        console.log('⏭️ Skipping duplicate pricing fetch');
+        return;
+      }
+      
       if (!selectedOutboundFare) {
         console.log('No selected fares found in navigation state');
         setLoading(false);
         return;
       }
       
+      // Get traceId from navigation state
+      const searchTraceId = state.traceId;
+      
+      if (!searchTraceId) {
+        console.error('❌ Missing traceId in navigation state');
+        toast.error('Missing search trace ID. Please search again.');
+        setLoading(false);
+        setPricingError('Missing traceId from search. Please search again.');
+        return;
+      }
+      
+      console.log('✅ Using traceId from navigation state:', searchTraceId);
+      
+      // Check if we already have pricing data in context
       if (bookingData?.rawPricingResponse) {
         console.log('Using existing pricing data from context');
         const allFareOptions = extractAllFareOptions(bookingData.rawPricingResponse);
@@ -296,11 +320,13 @@ const BookingReviewPage = () => {
           tripType: tripType
         });
         setLoading(false);
+        hasFetchedPricing.current = true; // ✅ Mark as fetched
         return;
       }
       
       setLoading(true);
       setPricingError(null);
+      isFetchingPricing.current = true; // ✅ Mark as fetching
       
       const loadingToast = toast.loading('Fetching fare details...');
       
@@ -313,16 +339,18 @@ const BookingReviewPage = () => {
             selectedOutboundFare,
             returnFlight,
             selectedReturnFare,
-            passengerCounts
+            passengerCounts,
+            searchTraceId
           );
-          console.log('Building round-trip pricing request');
+          console.log('Building round-trip pricing request with traceId:', searchTraceId);
         } else {
           pricingRequest = buildOneWayPricingRequest(
             outboundFlight,
             selectedOutboundFare,
-            passengerCounts
+            passengerCounts,
+            searchTraceId
           );
-          console.log('Building one-way pricing request');
+          console.log('Building one-way pricing request with traceId:', searchTraceId);
         }
         
         const result = await getFlightPricing(pricingRequest);
@@ -330,7 +358,7 @@ const BookingReviewPage = () => {
         toast.dismiss(loadingToast);
         
         if (result.success && result.rawResponse) {
-          console.log('✅ Pricing API successful');
+          console.log('✅ Pricing API successful with traceId:', searchTraceId);
           
           const allFareOptions = extractAllFareOptions(result.rawResponse);
           const flightSegments = extractFlightSegments(result.rawResponse);
@@ -345,6 +373,7 @@ const BookingReviewPage = () => {
             tripType: tripType
           });
           
+          hasFetchedPricing.current = true; // ✅ Mark as fetched
           toast.success('Fare options loaded successfully');
         } else {
           throw new Error(result.error || 'Failed to get pricing');
@@ -355,13 +384,18 @@ const BookingReviewPage = () => {
         setPricingError(error.message);
       } finally {
         setLoading(false);
+        isFetchingPricing.current = false; // ✅ Reset fetching flag
       }
     };
     
     fetchPricing();
-  }, [selectedOutboundFare, selectedReturnFare, outboundFlight, returnFlight, passengerCounts, tripType, bookingData?.rawPricingResponse]);
-  
-  // ============ Get selected fare details from extracted data ============
+    
+    // ✅ Cleanup on unmount
+    return () => {
+      isFetchingPricing.current = false;
+    };
+  }, [selectedOutboundFare, selectedReturnFare, outboundFlight, returnFlight, passengerCounts, tripType, bookingData?.rawPricingResponse, state.traceId]);
+
   const selectedFare = extractedData?.allFareOptions?.[selectedFareIndex];
   const rawPricingResponse = extractedData?.rawPricingResponse;
   const flightSegments = extractedData?.flightSegments || [];
@@ -607,7 +641,7 @@ const BookingReviewPage = () => {
   // ============ AIRLINE HELPER ============
   const getAirline = (code) => airlines.find(a => a.code === code) || null;
 
-  // ============ RENDER FLIGHT SEGMENTS (REMOVED Aircraft/Class/Booking Code/Status) ============
+  // ============ RENDER FLIGHT SEGMENTS ============
   const renderFlightSegment = (segment, segIdx, isReturn = false) => {
     return (
       <div key={segIdx} className={segIdx > 0 ? 'mt-6 pt-4 border-t border-dashed border-gray-200' : ''}>
@@ -1292,128 +1326,128 @@ const BookingReviewPage = () => {
   
   // ============ RENDER PRICE SUMMARY (STICKY) ============
   const renderPriceSummary = () => {
-  const formValid = isFormValid();
-  const hasAgeErrors = ageErrors.length > 0;
-  
-  let totalPrice = 0;
-  
-  if (passengerPricing && Object.keys(passengerPricing).length > 0) {
-    passengerTypes.forEach(type => {
-      const pricing = passengerPricing[type];
-      const count = passengerCounts[type] || 0;
-      if (count > 0 && pricing?.totalPrice) {
-        totalPrice += pricing.totalPrice * count;
-      }
-    });
-  } else {
-    totalPrice = selectedFare?.totalPrice || 0;
-  }
-  
-  // Calculate total with taxes
-  const totalWithTaxes = totalPrice;
-  
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
-        <h2 className="font-semibold text-gray-800 flex items-center gap-2">
-          <FaRupeeSign className="text-[#FD561E]" size={16} />
-          Price Summary
-        </h2>
-      </div>
-      
-      {/* Content */}
-      <div className="p-4 space-y-4">
-        {/* Fare Breakdown Section */}
-        <div>
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-            Fare Breakdown
-          </h3>
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Base Fare</span>
-              <span className="text-sm font-medium text-gray-800">
-                {formatPrice(selectedFare?.basePrice || totalPrice)}
-              </span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Taxes & Fees</span>
-              <span className="text-sm font-medium text-gray-800">
-                {formatPrice(selectedFare?.taxes || 0)}
-              </span>
-            </div>
-            <div className="pt-2 border-t border-gray-100">
+    const formValid = isFormValid();
+    const hasAgeErrors = ageErrors.length > 0;
+    
+    let totalPrice = 0;
+    
+    if (passengerPricing && Object.keys(passengerPricing).length > 0) {
+      passengerTypes.forEach(type => {
+        const pricing = passengerPricing[type];
+        const count = passengerCounts[type] || 0;
+        if (count > 0 && pricing?.totalPrice) {
+          totalPrice += pricing.totalPrice * count;
+        }
+      });
+    } else {
+      totalPrice = selectedFare?.totalPrice || 0;
+    }
+    
+    // Calculate total with taxes
+    const totalWithTaxes = totalPrice;
+    
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        {/* Header */}
+        <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+          <h2 className="font-semibold text-gray-800 flex items-center gap-2">
+            <FaRupeeSign className="text-[#FD561E]" size={16} />
+            Price Summary
+          </h2>
+        </div>
+        
+        {/* Content */}
+        <div className="p-4 space-y-4">
+          {/* Fare Breakdown Section */}
+          <div>
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+              Fare Breakdown
+            </h3>
+            <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-base font-bold text-gray-800">Total</span>
-                <span className="text-xl font-bold text-[#FD561E]">
-                  {formatPrice(totalWithTaxes)}
+                <span className="text-sm text-gray-600">Base Fare</span>
+                <span className="text-sm font-medium text-gray-800">
+                  {formatPrice(selectedFare?.basePrice || totalPrice)}
                 </span>
               </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Taxes & Fees</span>
+                <span className="text-sm font-medium text-gray-800">
+                  {formatPrice(selectedFare?.taxes || 0)}
+                </span>
+              </div>
+              <div className="pt-2 border-t border-gray-100">
+                <div className="flex justify-between items-center">
+                  <span className="text-base font-bold text-gray-800">Total</span>
+                  <span className="text-xl font-bold text-[#FD561E]">
+                    {formatPrice(totalWithTaxes)}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-        
-        {/* Passengers Section */}
-        <div className="bg-gray-50 rounded-lg p-3">
-          <div className="flex items-center gap-2 mb-2">
-            <FaUserFriends className="text-[#FD561E]" size={12} />
-            <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Passengers</span>
-          </div>
-          <div className="space-y-1">
-            <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Adults (12+ years)</span>
-              <span className="font-medium text-gray-800">{passengerCounts?.ADT || 1}</span>
+          
+          {/* Passengers Section */}
+          <div className="bg-gray-50 rounded-lg p-3">
+            <div className="flex items-center gap-2 mb-2">
+              <FaUserFriends className="text-[#FD561E]" size={12} />
+              <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Passengers</span>
             </div>
-            {passengerCounts?.CNN > 0 && (
+            <div className="space-y-1">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Children (2-11 years)</span>
-                <span className="font-medium text-gray-800">{passengerCounts.CNN}</span>
+                <span className="text-gray-600">Adults (12+ years)</span>
+                <span className="font-medium text-gray-800">{passengerCounts?.ADT || 1}</span>
               </div>
-            )}
-            {passengerCounts?.INF > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Infants (0-2 years)</span>
-                <span className="font-medium text-gray-800">{passengerCounts.INF}</span>
-              </div>
-            )}
+              {passengerCounts?.CNN > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Children (2-11 years)</span>
+                  <span className="font-medium text-gray-800">{passengerCounts.CNN}</span>
+                </div>
+              )}
+              {passengerCounts?.INF > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Infants (0-2 years)</span>
+                  <span className="font-medium text-gray-800">{passengerCounts.INF}</span>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-        
-        {/* Book Button */}
-        <button 
-          onClick={handleProceedToBooking} 
-          disabled={!formValid || loading || hasAgeErrors} 
-          className={`w-full py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all ${
-            formValid && !loading && !hasAgeErrors
-              ? 'bg-[#FD561E] hover:bg-[#e04e1b] text-white shadow-sm' 
-              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-          }`}
-        >
-          {loading ? (
-            <>
-              <FaSpinner className="animate-spin" size={14} />
-              <span>Loading...</span>
-            </>
-          ) : (
-            <>
-              <FaCreditCard size={14} /> 
-              <span>{formValid && !hasAgeErrors ? 'Proceed to Book' : hasAgeErrors ? 'Fix Age Issues First' : 'Complete Details'}</span>
-              <FaArrowRight size={12} />
-            </>
-          )}
-        </button>
-        
-        {/* Security Badges */}
-        <div className="flex items-center justify-center gap-3 text-xs text-gray-400">
-          <FaCheckCircle className="text-emerald-500" size={10} />
-          <span>Secure & Encrypted</span>
-          <span className="w-px h-2 bg-gray-200"></span>
-          <span>Price Guaranteed</span>
+          
+          {/* Book Button */}
+          <button 
+            onClick={handleProceedToBooking} 
+            disabled={!formValid || loading || hasAgeErrors} 
+            className={`w-full py-2.5 rounded-lg font-medium flex items-center justify-center gap-2 transition-all ${
+              formValid && !loading && !hasAgeErrors
+                ? 'bg-[#FD561E] hover:bg-[#e04e1b] text-white shadow-sm' 
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            {loading ? (
+              <>
+                <FaSpinner className="animate-spin" size={14} />
+                <span>Loading...</span>
+              </>
+            ) : (
+              <>
+                <FaCreditCard size={14} /> 
+                <span>{formValid && !hasAgeErrors ? 'Proceed to Book' : hasAgeErrors ? 'Fix Age Issues First' : 'Complete Details'}</span>
+                <FaArrowRight size={12} />
+              </>
+            )}
+          </button>
+          
+          {/* Security Badges */}
+          <div className="flex items-center justify-center gap-3 text-xs text-gray-400">
+            <FaCheckCircle className="text-emerald-500" size={10} />
+            <span>Secure & Encrypted</span>
+            <span className="w-px h-2 bg-gray-200"></span>
+            <span>Price Guaranteed</span>
+          </div>
         </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
   
   // ============ RENDER AGE ERROR BOX ============
   const renderAgeErrorBox = () => {
@@ -1677,30 +1711,30 @@ const BookingReviewPage = () => {
     );
   }
   
-return (
-  <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-    <div className="container mx-auto px-4 py-6">
-      <div className="flex flex-col lg:flex-row lg:items-start gap-6">
-        {/* LEFT COLUMN - scrolls with the page */}
-        <div className="lg:w-2/3 space-y-5">
-          {renderFlightDetails()}
-          {tripType === 'round-trip' && renderReturnFlightDetails()}
-          {renderAllFares()}
-          {renderTaxDetails()}
-          {renderOptionalServices()}
-          {renderFareRules()}
-          {renderPassengerForm()}
-          {renderContactForm()}
-        </div>
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      <div className="container mx-auto px-4 py-6">
+        <div className="flex flex-col lg:flex-row lg:items-start gap-6">
+          {/* LEFT COLUMN - scrolls with the page */}
+          <div className="lg:w-2/3 space-y-5">
+            {renderFlightDetails()}
+            {tripType === 'round-trip' && renderReturnFlightDetails()}
+            {renderAllFares()}
+            {renderTaxDetails()}
+            {renderOptionalServices()}
+            {renderFareRules()}
+            {renderPassengerForm()}
+            {renderContactForm()}
+          </div>
 
-        {/* RIGHT COLUMN - sticks to viewport while page scrolls */}
-        <div className="lg:w-1/3 pt-4" style={{ position: 'sticky', top: '20px', alignSelf: 'flex-start' }}>
-          {renderPriceSummary()}
+          {/* RIGHT COLUMN - sticks to viewport while page scrolls */}
+          <div className="lg:w-1/3 pt-4" style={{ position: 'sticky', top: '20px', alignSelf: 'flex-start' }}>
+            {renderPriceSummary()}
+          </div>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
 };
 
 export default BookingReviewPage;
