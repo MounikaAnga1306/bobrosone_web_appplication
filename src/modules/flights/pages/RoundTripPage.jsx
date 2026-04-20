@@ -888,10 +888,10 @@ const RoundTripPage = () => {
       {renderDesktopBar()}
       {renderMobileBar()}
 
-  // ============ MAIN RENDER WITH RESULTS - Search Bar Always Visible ============
+  
  
       {/* Search Bar - Always Visible */}
-      <SearchBar />
+      
 
       {/* Fare Type Selection */}
       
@@ -969,7 +969,7 @@ const RoundTripPage = () => {
       )}
 
       {showDetailSheet && (
-        <RoundTripSheet isOpen={showDetailSheet} onClose={handleCloseSheet} outboundFlight={selectedRoundTrip.outbound} returnFlight={selectedRoundTrip.return} passengerCounts={passengerCounts} onFaresSelected={handleFaresSelected} />
+        <RoundTripSheet isOpen={showDetailSheet} onClose={handleCloseSheet} outboundFlight={selectedRoundTrip.outbound} returnFlight={selectedRoundTrip.return} passengerCounts={passengerCounts} onFaresSelected={handleFaresSelected}   traceId={flightResults?.traceId}/>
       )}
 
       {/* Mobile filters panel */}
