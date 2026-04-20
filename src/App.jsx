@@ -37,6 +37,7 @@ import Navbar from "./globalfiles/Navbar";
 import FooterBottom from "./globalfiles/FooterBottom";
  
 import Home from "./modules/bus/pages/HomePage";
+import Holiday from "./modules/Holiday Package/pages/Holidayhomepage"
 import BusResultsPage from "./modules/bus/pages/BusResultsPage";
 import BookingSuccess from "./modules/bus/pages/BookingSuccess";
 import PaymentStatus from "./modules/bus/pages/PaymentStatus";
@@ -59,7 +60,7 @@ import PrivacyPolicy from "./modules/bus/pages/PrivacyPolicy";
 import TermsAndConditions from "./modules/bus/pages/TermsAndConditions";
 import CancellationPolicy from "./modules/bus/pages/CancellationPolicy";
 import DisclaimerPolicy from "./modules/bus/pages/DisclaimerPolicy";
-
+import ItServicesPage from "./modules/bus/components/ItServicesPage";
 // ✅ ADDED: Bill Payment imports
 import BillHomeScreen from "./modules/Bill Payments/pages/BillHomeScreen";
 import BillDetails from './modules/Bill Payments/pages/BillDetails';
@@ -97,7 +98,9 @@ const MainContent = ({ children }) => {
     pathname === "/privacy" ||
     pathname === "/terms" ||
     pathname === "/cancel" ||
-    pathname === "/disclaimer";
+    pathname === "/disclaimer" ||
+    pathname === "/holiday" ||
+    pathname === "/ItService";
  
   // ========== HOTEL ROUTES (NO PADDING) ==========
   const isHotelRoute =
@@ -178,6 +181,14 @@ const BothProvidersLayout = () => {
     </PricingBookingProvider>
   );
 };
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+}
  
 // ============================================
 // MAIN APP COMPONENT
@@ -189,6 +200,7 @@ function App() {
         <FlightSearchProvider>
           <HotelSearchProvider>
             <Router>
+              <ScrollToTop/>
               {/* ✅ FIXED: removed overflow-x-hidden — it was breaking position: sticky on all descendant pages */}
               <div className="min-h-screen bg-gray-100 flex flex-col w-full">
                 <Navbar />
@@ -199,6 +211,8 @@ function App() {
                     {/* Bus Routes - Home */}
                     <Route path="/" element={<Home />} />
                     <Route path="/HomePage" element={<Home />} />
+                    <Route path="/holiday" element={<Holiday/>} />
+                    <Route path="/ItService" element={<ItServicesPage/>} />
  
                     {/* Bus Routes - Static Pages */}
                     <Route path="/about" element={<AboutUs />} />
