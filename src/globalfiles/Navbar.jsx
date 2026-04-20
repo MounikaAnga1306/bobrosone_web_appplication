@@ -107,7 +107,7 @@ const Navbar = () => {
     setShowCancel(true);
   };
 
-  const dynamicPages = ["/", "/HomePage", "/flights", "/BillHomePage", "/hotels", "/cabs", "/holidays"];
+  const dynamicPages = ["/", "/HomePage", "/flights", "/BillHomePage", "/hotels", "/cabs", "/Holiday"];
   const isDynamicPage = dynamicPages.includes(location.pathname);
   const isSolid = !isDynamicPage || scrolled;
   const noFixedNavbarPages = ["/results"];
@@ -125,16 +125,17 @@ const Navbar = () => {
     { id: "billpayment", label: "Bill Payments", icon: Bus, path: "/BillHomePage" },
     { id: "flights", label: "Flights", icon: Plane, path: "/flights" },
     { id: "hotels", label: "Hotels", icon: Building2, path: "/hotels" },
-    { id: "holidays", label: "Holidays", icon: Palmtree, path: "/holidays" },
+    { id: "holidays", label: "Holidays", icon: Palmtree, path: "/Holiday" },
     { id: "cabs", label: "Cabs", icon: Car, path: "/cabs" },
   ];
 
   const getActiveTab = () => {
     if (location.pathname === "/" || location.pathname === "/HomePage") return "bus";
+     if (location.pathname === "/BillHomePage") return "billpayment";
     if (location.pathname.startsWith("/results")) return "bus";
     if (location.pathname.startsWith("/flights")) return "flights";
     if (location.pathname.startsWith("/hotels")) return "hotels";
-    if (location.pathname.startsWith("/holidays")) return "holidays";
+    if (location.pathname.startsWith("/Holiday")) return "holidays";
     if (location.pathname.startsWith("/cabs")) return "cabs";
     return "";
   };

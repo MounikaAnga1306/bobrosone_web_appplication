@@ -25,7 +25,7 @@ export default function Quick_Links() {
                 "Cab Booking",
               ].map((item) => (
                 <li key={item}>
-                  <a href="#" className="text-gray-700 text-xs sm:text-sm hover:text-orange-500 transition-colors duration-200">
+                  <a href="#" className="text-gray-700 text-xs sm:text-sm hover:text-orange-500 hover:underline transition-colors duration-200">
                     {item}
                   </a>
                 </li>
@@ -40,32 +40,32 @@ export default function Quick_Links() {
             </h3>
             <ul className="space-y-1.5 sm:space-y-2">
               <li>
-                <Link to="/about" className="text-gray-700 text-xs sm:text-sm hover:text-orange-500 transition-colors duration-200">
+                <Link to="/about" className="text-gray-700 text-xs sm:text-sm hover:text-orange-500  hover:underline transition-colors duration-200">
                   About Us
                 </Link>
               </li>
               <li>
-                <Link to="/contact" className="text-gray-700 text-xs sm:text-sm hover:text-orange-500 transition-colors duration-200">
+                <Link to="/contact" className="text-gray-700 text-xs sm:text-sm hover:text-orange-500 hover:underline transition-colors duration-200">
                   Contact Us
                 </Link>
               </li>
               <li>
-                <a href="/terms" className="text-gray-700 text-xs sm:text-sm hover:text-orange-500 transition-colors duration-200">
+                <a href="/terms" className="text-gray-700 text-xs sm:text-sm hover:text-orange-500 hover:underline transition-colors duration-200">
                   Terms of service
                 </a>
               </li>
               <li>
-                <a href="/privacy" className="text-gray-700 text-xs sm:text-sm hover:text-orange-500 transition-colors duration-200">
+                <a href="/privacy" className="text-gray-700 text-xs sm:text-sm hover:text-orange-500  hover:underline transition-colors duration-200">
                   Privacy Policy
                 </a>
               </li>
               <li>
-                <Link to="/cancel" className="text-gray-700 text-xs sm:text-sm hover:text-orange-500 transition-colors duration-200">
+                <Link to="/cancel" className="text-gray-700 text-xs sm:text-sm hover:text-orange-500 hover:underline transition-colors duration-200">
                   Cancellation & Refund Policy
                 </Link>
               </li>
               <li>
-                <Link to="/disclaimer" className="text-gray-700 text-xs sm:text-sm hover:text-orange-500 transition-colors duration-200">
+                <Link to="/disclaimer" className="text-gray-700 text-xs sm:text-sm hover:text-orange-500 hover:underline transition-colors duration-200">
                   Disclaimer Policy
                 </Link>
               </li>
@@ -80,7 +80,7 @@ export default function Quick_Links() {
             <ul className="space-y-1.5 sm:space-y-2">
               {["PNR Status", "Offers", "Airline Routes"].map((item) => (
                 <li key={item}>
-                  <a href="#" className="text-gray-700 text-xs sm:text-sm hover:text-orange-500 transition-colors duration-200">
+                  <a href="#" className="text-gray-700 text-xs sm:text-sm hover:text-orange-500 hover:underline transition-colors duration-200">
                     {item}
                   </a>
                 </li>
@@ -102,7 +102,7 @@ export default function Quick_Links() {
                 "My Account",
               ].map((item) => (
                 <li key={item}>
-                  <a href="#" className="text-gray-700 text-xs sm:text-sm hover:text-orange-500 transition-colors duration-200">
+                  <a href="#" className="text-gray-700 text-xs sm:text-sm hover:text-orange-500 hover:underline transition-colors duration-200">
                     {item}
                   </a>
                 </li>

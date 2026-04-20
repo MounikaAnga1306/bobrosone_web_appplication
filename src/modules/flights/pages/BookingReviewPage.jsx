@@ -1450,32 +1450,53 @@ const BookingReviewPage = () => {
   };
   
   // ============ RENDER AGE ERROR BOX ============
-  const renderAgeErrorBox = () => {
-    if (ageErrors.length === 0) return null;
-    
-    return (
-      <div className="bg-red-50 border-l-4 border-red-500 rounded-xl p-4 mb-4">
-        <div className="flex items-start gap-3">
-          <div className="flex-shrink-0">
-            <FaExclamationTriangle className="text-red-500 text-lg" />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-sm font-semibold text-red-800 mb-2">Age Validation Errors</h3>
-            <ul className="space-y-1">
-              {ageErrors.map((error, idx) => (
-                <li key={idx} className="text-sm text-red-700">
-                  • {error.passengerName}: {error.message}
-                </li>
-              ))}
-            </ul>
-            <p className="text-xs text-red-600 mt-2">
-              Please update the date of birth for the affected passenger(s) to continue.
-            </p>
-          </div>
+ const renderAgeErrorBox = () => {
+  if (ageErrors.length === 0) return null;
+  
+  return (
+    <div className="bg-red-50 border-l-4 border-red-500 rounded-xl p-4 mb-4">
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0">
+          <FaExclamationTriangle className="text-red-500 text-lg" />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-sm font-semibold text-red-800 mb-2">Age Validation Errors</h3>
+          <ul className="space-y-1">
+            {ageErrors.map((error, idx) => (
+              <li key={idx} className="text-sm text-red-700">
+                • {error.passengerName}: {error.message}
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-red-600 mt-2">
+            Please update the date of birth for the affected passenger(s) to continue.
+          </p>
         </div>
       </div>
-    );
-  };
+      
+      <button
+        onClick={handleProceedToBooking}
+        disabled={!formValid || loading}
+        className={`w-full py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-all mt-4 ${
+          formValid && !loading
+            ? 'bg-[#FD561E] hover:bg-[#e04e1b] text-white shadow-md hover:shadow-lg'
+            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+        }`}
+      >
+        {loading ? (
+          <><FaSpinner className="animate-spin" />Loading...</>
+        ) : (
+          <><FaCreditCard />{formValid ? 'Proceed to Book' : 'Complete All Details'}<FaArrowRight size={14} /></>
+        )}
+      </button>
+      
+      <div className="flex items-center justify-center gap-3 text-xs text-gray-400 pt-2 mt-2">
+        <FaCheckCircle className="text-emerald-500" size={12} /><span>Secure & Encrypted</span>
+        <span className="w-px h-3 bg-gray-200"></span><span>Price Guaranteed</span>
+      </div>
+    </div>
+  );
+};
   
   // ============ RENDER PASSENGER FORM ============
   const renderPassengerForm = () => {

@@ -21,12 +21,12 @@ import {
   FaArrowUp,
   FaArrowDown,
 } from "react-icons/fa";
-import { Bus, Plane, Building2, Palmtree, Car } from "lucide-react";
+import { Bus, Plane, Building2, Palmtree, Car,IndianRupee } from "lucide-react";
 
 const tabs = [
   { id: "flights", label: "Flights", icon: Plane },
   { id: "bus", label: "Bus", icon: Bus },
-  { id: "billpayments", label: "Bill Payments", icon: Bus },
+  { id: "billpayments", label: "Bill Payments", icon: IndianRupee  },
   { id: "hotels", label: "Hotels", icon: Building2 },
   { id: "holidays", label: "Holidays", icon: Palmtree },
   { id: "cabs", label: "Cabs", icon: Car },
@@ -35,8 +35,9 @@ const tabs = [
 const tabRoutes = {
   bus: "/",
   flights: "/flights",
+  billpayments: "/BillHomePage",
   hotels: "/hotels",
-  holidays: "/holidays",
+  holidays: "/Holiday",
   cabs: "/cabs",
 };
 
@@ -1505,7 +1506,7 @@ const FlightHeroSection = () => {
 <button
   key={tab.id}
   onClick={() => handleTabClick(tab)}
-  className={`hidden lg:flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${
+  className={`hidden lg:flex items-center gap-2 px-5 py-2  cursor-pointer rounded-full text-sm font-semibold transition-all duration-300 ${
     active
       ? "bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white shadow-md"
       : "bg-white/80 text-gray-600 hover:text-[#FD561E] border border-gray-200"

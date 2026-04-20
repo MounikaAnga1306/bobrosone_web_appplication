@@ -2,12 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
-  Bus, Plane, Building2, Palmtree, Car, ClipboardList,
+  Bus, Plane, Building2, Palmtree, Car, IndianRupee ,
 } from "lucide-react";
 
 const tabs = [
+  { id: "billpayments", label: "Bill Payments", icon: IndianRupee  },
   { id: "bus",          label: "Bus",          icon: Bus },
-  { id: "billpayments", label: "Bill Payments", icon: ClipboardList },
   { id: "flights",      label: "Flights",       icon: Plane },
   { id: "hotels",       label: "Hotels",        icon: Building2 },
   { id: "holidays",     label: "Holidays",      icon: Palmtree },
@@ -15,9 +15,10 @@ const tabs = [
 ];
 
 const tabRoutes = {
-  bus: "/", billpayments: "/BillHomePage",
+  billpayments: "/BillHomePage",
+  bus: "/", 
   flights: "/flights", hotels: "/hotels",
-  holidays: "/holidays", cabs: "/cabs",
+  holidays: "/Holiday", cabs: "/cabs",
 };
 
 const API = "https://api.bobros.co.in/db/select";
