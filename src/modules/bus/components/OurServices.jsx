@@ -1,6 +1,6 @@
 // src/modules/bus/components/OurServices.jsx
 import { motion } from "framer-motion";
-import { ChevronRight } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 // Images
 import flights from "../../../assets/flights.jpg";
@@ -11,36 +11,25 @@ import cab from "../../../assets/cab.jpg";
 import bill from "../../../assets/bill.png";
 import service from "../../../assets/IT_Services.jpg";
 
-// Image hover animation
 const imageHover = {
   rest: { y: 0, scale: 1, rotate: 0 },
   hover: {
     y: -8,
     scale: 1.1,
     rotate: 2,
-    transition: {
-      type: "spring",
-      stiffness: 300,
-      damping: 14,
-    },
+    transition: { type: "spring", stiffness: 300, damping: 14 },
   },
 };
 
-// Entry animation
 const cardEntry = {
   hidden: { opacity: 0, y: 30 },
   show: (i) => ({
     opacity: 1,
     y: 0,
-    transition: {
-      delay: i * 0.06,
-      duration: 0.5,
-      ease: "easeOut",
-    },
+    transition: { delay: i * 0.06, duration: 0.5, ease: "easeOut" },
   }),
 };
 
-// Card hover animation
 const cardHover = {
   rest: {
     y: 0,
@@ -51,49 +40,68 @@ const cardHover = {
     y: -8,
     boxShadow: "0 25px 40px rgba(253,86,30,0.15)",
     scale: 1,
-    transition: {
-      type: "spring",
-      stiffness: 200,
-      damping: 18,
-    },
+    transition: { type: "spring", stiffness: 200, damping: 18 },
   },
 };
 
-// Service Card Component
-function ServiceCard({ image, title, description, contain }) {
+function ServiceCard({ image, title, description, contain, route }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleClick = () => {
+    if (!route) return;
+    if (location.pathname === route) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      navigate(route);
+    }
+  };
+
   return (
     <motion.div
       initial="rest"
       whileHover="hover"
       animate="rest"
       variants={cardHover}
-      className="group relative bg-white hover:bg-gradient-to-br hover:from-[#fff1ea] hover:via-[#ffe2d6] hover:to-[#ffd2c1] rounded-2xl px-5 sm:px-6 pb-6 pt-20 sm:pt-24 flex flex-col items-center text-center mt-16 transition-colors duration-300 w-full"
-      style={{ minHeight: "280px" }}
+      onClick={handleClick}
+      className={`group relative bg-white hover:bg-gradient-to-br hover:from-[#fff1ea] hover:via-[#ffe2d6] hover:to-[#ffd2c1] rounded-2xl px-5 pb-6 pt-24 flex flex-col items-center text-center transition-colors duration-300 w-full h-full ${
+        route ? "cursor-pointer" : "cursor-default"
+      }`}
     >
-      {/* Image */}
+      {/* Fixed size image box - same for ALL cards */}
       <motion.div
         variants={imageHover}
-        className="absolute -top-14 sm:-top-16 left-1/2 -translate-x-1/2 w-28 h-20 sm:w-36 sm:h-24 md:w-40 md:h-28 rounded-xl overflow-hidden border-[5px] sm:border-[6px] border-white shadow-xl bg-white flex items-center justify-center z-10"
+        className="absolute -top-14 left-1/2 -translate-x-1/2 z-10"
+        style={{
+          width: "120px",
+          height: "90px",
+          minWidth: "120px",
+          minHeight: "90px",
+        }}
       >
-        <img
-          src={image}
-          alt={title}
-          className={`w-full h-full ${
-            contain ? "object-contain p-2" : "object-cover"
-          }`}
-        />
+        <div className="w-full h-full rounded-xl overflow-hidden border-[5px] border-white shadow-xl bg-white flex items-center justify-center">
+          <img
+            src={image}
+            alt={title}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: contain ? "contain" : "cover",
+              padding: contain ? "6px" : "0",
+            }}
+          />
+        </div>
       </motion.div>
 
-      {/* Title */}
+      {/* Title - orange line anni cards ki */}
       <motion.h3
         variants={{
           rest: { y: 0, color: "#111827" },
           hover: { y: -3, color: "#fd561e", scale: 1.02 },
         }}
-        className="text-base sm:text-lg md:text-xl font-bold mb-2 relative"
+        className="text-base sm:text-lg font-bold mb-2 relative"
       >
         {title}
-
         <motion.span
           variants={{
             rest: { width: 0, opacity: 0, left: "50%" },
@@ -104,58 +112,63 @@ function ServiceCard({ image, title, description, contain }) {
       </motion.h3>
 
       {/* Description */}
-      <motion.p className="text-xs sm:text-sm md:text-base text-gray-600 leading-relaxed max-w-xs sm:max-w-sm">
+      <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
         {description}
-      </motion.p>
+      </p>
     </motion.div>
   );
 }
 
-// Main Component
 export default function OurServices() {
   const services = [
     {
       image: bus,
       title: "Bus Ticketing",
       description:
-        "Convenient and affordable bus ticket booking through our website and BOBROS mobile app.",
+        "Convenient and affordable online bus ticket booking through our website and BOBROS mobile App (Get it on Google Play Store)",
+      route: "/",
     },
     {
       image: flights,
       title: "Flights",
       description:
-        "Quick and hassle-free flight bookings for domestic and international travel.",
+        "Quick and hassle-free flight bookings(off-line) for domestic and international travel. For bookings, visit any of our branch or contact us",
+      route: "/flights",
     },
     {
       image: bill,
       title: "Bill Payments",
       description:
-        "Safe, fast, and convenient payments across all services.",
+        "Simplifying your bill payments. Safe, fast, and convenient payments across all services.",
       contain: true,
+      route: "/BillHomePage",
     },
     {
       image: hotels,
       title: "Hotels",
       description:
-        "Book comfortable stays at top hotels with ease and flexibility.",
+        "Book comfortable stays at top hotels with ease and flexibility. Visit any branch or contact us for bookings.",
+      route: "/hotels",
     },
     {
       image: holiday,
       title: "Holiday Package",
       description:
-        "Curated travel packages to explore the best destinations.",
+        "Curated travel packages to explore the best destinations. Visit any branch or contact us for bookings.",
+         route: "/Holiday",
     },
     {
       image: cab,
       title: "Cab Service",
       description:
-        "Affordable cab rentals for personal and business travel.",
+        "Affordable and convenient cab rentals for personal travel or business commute. Visit any branch or contact us for bookings.",
     },
     {
       image: service,
       title: "IT Services",
       description:
-        "Reliable IT services to support your business operations.",
+        "Reliable IT services to support your business and enhance your business operations. Visit any branch or contact our Business Analyst for more info.",
+         route: "/ItService",
     },
   ];
 
@@ -166,7 +179,8 @@ export default function OurServices() {
           Our Services
         </h1>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-10">
+        {/* Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-20 items-stretch">
           {services.map((service, index) => (
             <motion.div
               key={index}
@@ -175,6 +189,7 @@ export default function OurServices() {
               whileInView="show"
               viewport={{ once: true }}
               custom={index}
+              className="mt-14 flex"
             >
               <ServiceCard {...service} />
             </motion.div>
@@ -184,15 +199,12 @@ export default function OurServices() {
         {/* CTA SECTION */}
         <div className="mt-14">
           <div className="relative bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl overflow-hidden">
-            
-            {/* ✅ FIXED BACKGROUND */}
             <div
               className="absolute inset-0 opacity-10"
               style={{
                 backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h40v40H0z' fill='none'/%3E%3Cpath d='M20 0v40M0 20h40' stroke='%23ffffff' stroke-width='0.5'/%3E%3C/svg%3E")`,
               }}
             ></div>
-
             {/* <div className="relative px-8 py-12 text-center">
               <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
                 Ready to Get Started?
@@ -200,10 +212,8 @@ export default function OurServices() {
               <p className="text-gray-300 mb-6">
                 Experience seamless service with our expert support team
               </p>
-
               <button className="inline-flex items-center gap-2 px-8 py-3 bg-white text-gray-900 rounded-full font-semibold">
                 Contact Our Team
-                <ChevronRight className="w-4 h-4" />
               </button>
             </div> */}
           </div>
