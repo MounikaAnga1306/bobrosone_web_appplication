@@ -21,6 +21,7 @@ const tabs = [
 
 const tabRoutes = {
   bus: "/",
+  billpayments: "/BillHomePage",
   flights: "/flights",
   hotels: "/hotels",
   holidays: "/Holiday",
