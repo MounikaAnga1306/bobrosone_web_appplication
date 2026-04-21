@@ -534,10 +534,15 @@ const OneWayFlightCard = ({
             {/* Duration */}
             <div className="flex flex-col items-center">
               <div className="text-xs text-gray-400 mb-1">{formatDuration(flight.duration)}</div>
-              <div className="relative w-20">
-                <div className="border-t border-gray-200"></div>
-                <FaPlane className="absolute -top-2 left-1/2 transform -translate-x-1/2 text-gray-300 text-xs rotate-90 bg-white px-1" />
-              </div>
+             <div className="relative w-20 flex items-center justify-center">
+  {/* Line */}
+  <div className="w-full border-t border-gray-300"></div>
+
+  {/* Plane Icon */}
+  <div className="absolute bg-white px-1">
+    <FaPlane className="text-gray-500 text-xs" />
+  </div>
+</div>
               <div className="text-xs text-gray-500 mt-1">
                 {flight.stops === 0 ? 'Direct' : `${flight.stops} stop${flight.stops > 1 ? 's' : ''}`}
               </div>

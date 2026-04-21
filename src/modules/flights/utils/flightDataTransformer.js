@@ -11,6 +11,17 @@ const parsePrice = (price) => {
 };
 
 /**
+ * Helper function to ensure segments have distance property
+ */
+const ensureSegmentsWithDistance = (flight) => {
+  const segments = flight.segments || [flight];
+  return segments.map(seg => ({
+    ...seg,
+    distance: seg.distance || null
+  }));
+};
+
+/**
  * Transforms any API response into a consistent format
  */
 export const transformFlightData = (data) => {
@@ -209,7 +220,7 @@ const extractFromRoundTrips = (roundTrips) => {
     const outboundPrice = parsePrice(trip.legPricing?.outbound?.totalPrice) || parsePrice(trip.totalPrice) / 2;
     const returnPrice = parsePrice(trip.legPricing?.return?.totalPrice) || parsePrice(trip.totalPrice) / 2;
     
-    // ============ CREATE OUTBOUND FARE OBJECT ============
+    // ============ CREATE OUTBOUND FARE OBJECT WITH DISTANCE ============
     const outboundFare = {
       id: trip.id,
       fareKey: trip.outbound.fareBasis || `fare-${index}`,
@@ -230,11 +241,11 @@ const extractFromRoundTrips = (roundTrips) => {
       seatsAvailable: outboundFlight.seatsAvailable || 9,
       amenities: trip.outbound.amenities || { meals: false, mealType: null, seatSelection: false, changes: false, priority: false },
       hostToken: trip.outbound.hostToken,
-      segments: outboundFlight.segments || [outboundFlight],
+      segments: ensureSegmentsWithDistance(outboundFlight),
       formattedPrice: `₹${Math.round(outboundPrice).toLocaleString('en-IN')}`
     };
     
-    // ============ CREATE RETURN FARE OBJECT ============
+    // ============ CREATE RETURN FARE OBJECT WITH DISTANCE ============
     const returnFare = {
       id: trip.id,
       fareKey: trip.return.fareBasis || `fare-${index}`,
@@ -255,9 +266,15 @@ const extractFromRoundTrips = (roundTrips) => {
       seatsAvailable: returnFlight.seatsAvailable || 9,
       amenities: trip.return.amenities || { meals: false, mealType: null, seatSelection: false, changes: false, priority: false },
       hostToken: trip.return.hostToken,
-      segments: returnFlight.segments || [returnFlight],
+      segments: ensureSegmentsWithDistance(returnFlight),
       formattedPrice: `₹${Math.round(returnPrice).toLocaleString('en-IN')}`
     };
+    
+    // Debug log for distance on first fare
+    if (index === 0) {
+      console.log('🔍 First outbound segment distance:', outboundFare.segments[0]?.distance);
+      console.log('🔍 First return segment distance:', returnFare.segments[0]?.distance);
+    }
     
     // ============ DEBUG: Log fare creation for first few trips ============
     if (index < 5) {
@@ -265,9 +282,11 @@ const extractFromRoundTrips = (roundTrips) => {
         outboundKey,
         outboundBrand: outboundFare.brand?.name,
         outboundPrice: outboundFare.totalPrice,
+        outboundDistance: outboundFare.segments[0]?.distance,
         returnKey,
         returnBrand: returnFare.brand?.name,
-        returnPrice: returnFare.totalPrice
+        returnPrice: returnFare.totalPrice,
+        returnDistance: returnFare.segments[0]?.distance
       });
     }
     
@@ -283,7 +302,7 @@ const extractFromRoundTrips = (roundTrips) => {
         destination: outboundFlight.destination,
         duration: outboundFlight.duration,
         stops: outboundFlight.stops || 0,
-        segments: outboundFlight.segments || [outboundFlight],
+        segments: ensureSegmentsWithDistance(outboundFlight),
         layovers: outboundFlight.layovers || [],
         seatsAvailable: outboundFlight.seatsAvailable || 9,
         originTerminal: outboundFlight.originTerminal,
@@ -328,7 +347,7 @@ const extractFromRoundTrips = (roundTrips) => {
         destination: returnFlight.destination,
         duration: returnFlight.duration,
         stops: returnFlight.stops || 0,
-        segments: returnFlight.segments || [returnFlight],
+        segments: ensureSegmentsWithDistance(returnFlight),
         layovers: returnFlight.layovers || [],
         seatsAvailable: returnFlight.seatsAvailable || 9,
         originTerminal: returnFlight.originTerminal,
@@ -411,13 +430,15 @@ const extractFromRoundTrips = (roundTrips) => {
       flightNumber: outboundFlights[0].flightNumber,
       airline: outboundFlights[0].airline,
       faresCount: outboundFlights[0].fares.length,
-      fareNames: outboundFlights[0].fares.map(f => f.brand?.name)
+      fareNames: outboundFlights[0].fares.map(f => f.brand?.name),
+      sampleDistance: outboundFlights[0].segments[0]?.distance
     } : 'No outbound flights',
     sampleReturnFlight: returnFlights[0] ? {
       flightNumber: returnFlights[0].flightNumber,
       airline: returnFlights[0].airline,
       faresCount: returnFlights[0].fares.length,
-      fareNames: returnFlights[0].fares.map(f => f.brand?.name)
+      fareNames: returnFlights[0].fares.map(f => f.brand?.name),
+      sampleDistance: returnFlights[0].segments[0]?.distance
     } : 'No return flights'
   });
   console.log('='.repeat(80) + '\n');
@@ -452,6 +473,7 @@ const extractFromDisplay = (display, roundTrips) => {
     destination: flight.destination,
     duration: flight.duration,
     stops: flight.stops || 0,
+    segments: ensureSegmentsWithDistance(flight),
     lowestPrice: flight.price || 0,
     price: flight.price || 0,
     fares: flight.fares || []
@@ -469,6 +491,7 @@ const extractFromDisplay = (display, roundTrips) => {
     destination: flight.destination,
     duration: flight.duration,
     stops: flight.stops || 0,
+    segments: ensureSegmentsWithDistance(flight),
     lowestPrice: flight.price || 0,
     price: flight.price || 0,
     fares: flight.fares || []
