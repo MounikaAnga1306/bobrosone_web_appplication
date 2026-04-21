@@ -1,28 +1,102 @@
 // src/modules/bus/pages/PrintTicketModal.jsx
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
+
+// Your Cloudflare Turnstile Site Key
+const TURNSTILE_SITE_KEY = "0x4AAAAAABvRHvXzt4EuTFLs";
 
 const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
   const [tin, setTin] = useState(prefillTin);
-  const [captchaInput, setCaptchaInput] = useState("");
-  const [captchaValue] = useState(() => {
-    const a = Math.floor(Math.random() * 9) + 1;
-    const b = Math.floor(Math.random() * 9) + 1;
-    return { question: `${a} + ${b}`, answer: String(a + b) };
-  });
+  const [turnstileToken, setTurnstileToken] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const turnstileRef = useRef(null);
+  const widgetIdRef = useRef(null);
+  const scriptLoadedRef = useRef(false);
+
+  // Helper to render the Turnstile widget
+  const renderTurnstile = () => {
+    if (!turnstileRef.current || !window.turnstile) return;
+    // Clean up any existing widget in this container
+    if (widgetIdRef.current) {
+      try {
+        window.turnstile.remove(widgetIdRef.current);
+      } catch (e) {}
+      widgetIdRef.current = null;
+    }
+    // Render a fresh widget
+    widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
+      sitekey: TURNSTILE_SITE_KEY,
+      callback: (token) => {
+        setTurnstileToken(token);
+        setError("");
+      },
+      "expired-callback": () => {
+        setTurnstileToken("");
+        setError("CAPTCHA expired. Please verify again.");
+      },
+      "error-callback": () => {
+        setTurnstileToken("");
+        setError("CAPTCHA verification failed. Please try again.");
+      },
+    });
+  };
+
+  // Load Turnstile script and render widget when modal mounts
+  useEffect(() => {
+    const scriptId = "cloudflare-turnstile-script";
+
+    const loadScriptAndRender = () => {
+      if (window.turnstile) {
+        renderTurnstile();
+        return;
+      }
+      const existingScript = document.getElementById(scriptId);
+      if (existingScript) {
+        // Script already in DOM but not yet loaded
+        existingScript.addEventListener("load", renderTurnstile);
+        return;
+      }
+      const script = document.createElement("script");
+      script.id = scriptId;
+      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+      script.async = true;
+      script.defer = true;
+      script.onload = renderTurnstile;
+      document.head.appendChild(script);
+    };
+
+    loadScriptAndRender();
+
+    // Cleanup on unmount
+    return () => {
+      if (widgetIdRef.current && window.turnstile) {
+        try {
+          window.turnstile.remove(widgetIdRef.current);
+        } catch (e) {}
+        widgetIdRef.current = null;
+      }
+      // Reset token when modal closes
+      setTurnstileToken("");
+    };
+  }, []); // Empty deps → runs on mount/unmount only
 
   const handlePrint = async (e) => {
     e.preventDefault();
     setError("");
 
-    if (!tin.trim()) { setError("Please enter Ticket ID."); return; }
-    if (captchaInput.trim() !== captchaValue.answer) { setError("Incorrect captcha. Please try again."); return; }
+    if (!tin.trim()) {
+      setError("Please enter Ticket ID.");
+      return;
+    }
+    if (!turnstileToken) {
+      setError("Please complete the CAPTCHA verification.");
+      return;
+    }
 
     try {
       setLoading(true);
-      const res = await axios.get(`/printTicket?tin=${tin.trim()}`);
+      const res = await axios.get(`/printTicket?tin=${tin.trim()}&cf-turnstile-response=${turnstileToken}`);
 
       if (!res.data?.success) {
         setError("Ticket not found. Please check the Ticket ID.");
@@ -31,7 +105,6 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
 
       const d = res.data?.data || res.data;
       openPrintWindow(d);
-
     } catch (err) {
       setError("Failed to fetch ticket. Please try again.");
     } finally {
@@ -163,15 +236,15 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
     const logoUrl     = `${window.location.origin}/assets/Bobros_logo.png`;
 
     const passengerRows = passengers.map(p => `
-       <tr>
-        <td>${p.name}</td>
-        <td>${p.gender}</td>
-        <td>${p.age}</td>
-        <td class="orange">${p.seatName}</td>
-        <td>${busType}</td>
-        <td class="status">${status}</td>
-        <td class="orange">${pnr}</td>
-       </tr>
+        <tr>
+          <td>${p.name}</td>
+          <td>${p.gender}</td>
+          <td>${p.age}</td>
+          <td class="orange">${p.seatName}</td>
+          <td>${busType}</td>
+          <td class="status">${status}</td>
+          <td class="orange">${pnr}</td>
+        </tr>
     `).join("");
 
     const printContent = `<!DOCTYPE html>
@@ -906,28 +979,14 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
           />
         </div>
 
-        {/* CAPTCHA */}
+        {/* Cloudflare Turnstile CAPTCHA */}
         <div style={{ marginBottom: "20px" }}>
           <label style={{ display: "block", fontSize: "12px", color: "#555", fontWeight: "600", marginBottom: "6px" }}>
-            Captcha: What is {captchaValue.question}?
+            Security Verification
           </label>
-          <input
-            type="text"
-            value={captchaInput}
-            onChange={(e) => setCaptchaInput(e.target.value)}
-            placeholder="Enter answer"
-            required
-            style={{
-              width: "100%", 
-              border: "1.5px solid #e5e7eb", 
-              borderRadius: "8px",
-              padding: "12px 14px", 
-              fontSize: "14px", 
-              outline: "none", 
-              boxSizing: "border-box"
-            }}
-            onFocus={e => e.target.style.borderColor = "#fd561e"}
-            onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+          <div
+            ref={turnstileRef}
+            style={{ display: "flex", justifyContent: "center" }}
           />
         </div>
 

@@ -33,7 +33,7 @@ const SeatLegend = () => {
   ];
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl w-full md:w-[380px] lg:w-[520px] overflow-hidden shadow-sm mx-auto md:mx-0">
+    <div className="bg-white border border-gray-200 rounded-xl w-full max-w-[520px] overflow-hidden shadow-sm mx-auto md:mx-0">
       
       {/* Title */}
       <h3 className="text-center font-semibold text-sm md:text-base lg:text-lg py-2 md:py-3 lg:py-4">
@@ -53,23 +53,23 @@ const SeatLegend = () => {
           key={index}
           className="grid grid-cols-3 items-center border-b border-gray-200 last:border-b-0"
         >
-          <div className="p-3 md:p-4 lg:p-6 text-xs md:text-sm">
+          <div className="p-2 md:p-3 lg:p-6 text-xs md:text-sm leading-snug">
             {row.label}
           </div>
 
-          <div className="flex justify-center">
+          <div className="flex justify-center p-1">
             <img
               src={row.seater}
               alt=""
-              className="w-6 md:w-8 lg:w-10 h-6 md:h-8 lg:h-10 object-contain"
+              className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 lg:w-10 lg:h-10 object-contain"
             />
           </div>
 
-          <div className="flex justify-center">
+          <div className="flex justify-center p-1">
             <img
               src={row.sleeper}
               alt=""
-              className="w-8 md:w-10 lg:w-12 h-10 md:h-12 lg:h-16 object-contain"
+              className="w-7 h-5 sm:w-8 sm:h-6 md:w-10 md:h-8 lg:w-12 lg:h-10 object-contain"
             />
           </div>
         </div>

@@ -1,15 +1,11 @@
 import { useState } from "react";
 import axios from "axios";
+import { Turnstile } from "@marsidev/react-turnstile";
 
 const PrintFlightTicketModal = ({ onClose }) => {
   const [pnr, setPnr] = useState("");
   const [ticketNumber, setTicketNumber] = useState("");
-  const [captchaInput, setCaptchaInput] = useState("");
-  const [captchaValue] = useState(() => {
-    const a = Math.floor(Math.random() * 9) + 1;
-    const b = Math.floor(Math.random() * 9) + 1;
-    return { question: `${a} + ${b}`, answer: String(a + b) };
-  });
+  const [turnstileToken, setTurnstileToken] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -19,8 +15,8 @@ const PrintFlightTicketModal = ({ onClose }) => {
 
     if (!pnr.trim()) { setError("Please enter Airline PNR."); return; }
     if (!ticketNumber.trim()) { setError("Please enter Ticket Number."); return; }
-    if (captchaInput.trim() !== captchaValue.answer) {
-      setError("Incorrect captcha. Please try again.");
+    if (!turnstileToken) {
+      setError("Please complete the security check.");
       return;
     }
 
@@ -31,7 +27,8 @@ const PrintFlightTicketModal = ({ onClose }) => {
         "https://api.bobros.org/flights/retrieve-document/print-ticket",
         {
           providerLocatorCode: pnr.trim().toUpperCase(),
-          ticketNumber: ticketNumber.trim()
+          ticketNumber: ticketNumber.trim(),
+          captchaToken: turnstileToken   // send token to backend if needed
         },
         {
           headers: {
@@ -195,7 +192,7 @@ const PrintFlightTicketModal = ({ onClose }) => {
     const carryOn = carryOnInfo.TextInfo?.Text || "7 KG";
 
     const taxRows = Array.isArray(taxInfoList) ? taxInfoList.map(t =>
-      `<tr><td style="padding:6px 8px;">${t.Category || "—"}</td><td style="text-align:right;padding:6px 8px;">${formatAmount(t.Amount)}</td></tr>`
+      `<table><td style="padding:6px 8px;">${t.Category || "—"}</td><td style="text-align:right;padding:6px 8px;">${formatAmount(t.Amount)}</td></tr>`
     ).join("") : "";
 
     const statusColor = status === "CANCELLED" ? "#dc2626" : "#16a34a";
@@ -531,20 +528,19 @@ const PrintFlightTicketModal = ({ onClose }) => {
           />
         </div>
 
+        {/* Cloudflare Security Verification Heading + Turnstile */}
         <div style={{ marginBottom: "20px" }}>
           <label style={{ display: "block", fontSize: "12px", color: "#555", fontWeight: "600", marginBottom: "6px" }}>
-            Captcha: What is {captchaValue.question}?
+          Security Verification
           </label>
-          <input
-            type="text"
-            value={captchaInput}
-            onChange={(e) => setCaptchaInput(e.target.value)}
-            placeholder="Enter answer"
-            required
-            style={{ ...inputStyle, fontWeight: "400", letterSpacing: "0" }}
-            onFocus={e => e.target.style.borderColor = "#fd561e"}
-            onBlur={e => e.target.style.borderColor = "#e5e7eb"}
-          />
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <Turnstile
+              siteKey="0x4AAAAAABvRHvXzt4EuTFLs"   // 🔁 Replace with your actual Cloudflare Turnstile site key
+              onSuccess={(token) => setTurnstileToken(token)}
+              onError={() => setTurnstileToken(null)}
+              onExpire={() => setTurnstileToken(null)}
+            />
+          </div>
         </div>
 
         <button

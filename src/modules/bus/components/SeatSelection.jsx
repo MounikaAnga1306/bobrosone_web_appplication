@@ -15,33 +15,6 @@ import verticalBookedSleeper    from "../../../assets/seats/bk-slp.png";
 import verticalSelectedSleeper  from "../../../assets/seats/sl-slp.png";
 import steeringIcon           from "../../../assets/seats/steering.png";
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   SEAT TYPE DEFINITIONS (from real API data)
-   ─────────────────────────────────────────────────────────────────────────────
-   Seater        : length=1, width=1  →  small chair icon
-   Horiz sleeper : length=2, width=1  →  wide berth, spans 2 rows × 1 col
-   Vert sleeper  : length=1, width=2  →  tall berth, spans 1 row  × 2 cols
-
-   API FIELD NOTES
-   ─────────────────────────────────────────────────────────────────────────────
-   • Some buses send `fare` instead of `totalFare` — we handle both
-   • `available` comes as string "true"/"false" or boolean
-   • `row`, `column`, `length`, `width`, `zIndex` come as strings → cast to Number
-   • zIndex=0 → lower deck,  zIndex=1 → upper deck
-
-   GRID LAYOUT ALGORITHM
-   ─────────────────────────────────────────────────────────────────────────────
-   Step 1 – Collect every API row that has at least one seat (skip empty gaps).
-   Step 2 – Remap those API rows to CSS grid rows 1,2,3,… (no blank rows).
-   Step 3 – Decide the CSS row height for each mapped row:
-              • Any vert-sleeper  on that row  → 75 px
-              • Any seater        on that row  → 45 px   (wins over horiz-half)
-              • Only horiz-sleeper spans row   → 39 px   (half of 70px image)
-                 two rows × 39 + 8px gap = 86 px ≈ image height ✓
-   Step 4 – Place every seat using remapped gridRow + correct span.
-   Step 5 – columnGap = rowGap = 8 px, columns are max-content.
-   ───────────────────────────────────────────────────────────────────────────── */
-
 const SeatSelection = ({
   tripDetails,
   selectedSeats,
@@ -60,9 +33,9 @@ const SeatSelection = ({
     zIndex:    Number(s.zIndex  ?? 0),
     row:       Number(s.row     ?? 0),
     column:    Number(s.column  ?? 0),
-    length:    Number(s.length  ?? 1),   // vertical span (rows)
-    width:     Number(s.width   ?? 1),   // horizontal span (cols)
-    totalFare: Number(s.totalFare ?? s.fare ?? 0), // some APIs send `fare`
+    length:    Number(s.length  ?? 1),
+    width:     Number(s.width   ?? 1),
+    totalFare: Number(s.totalFare ?? s.fare ?? 0),
   }));
 
   // ── 2. Split decks ────────────────────────────────────────────────────────
@@ -114,7 +87,7 @@ const SeatSelection = ({
     return availableSeat;
   };
 
-  // ── 6. Seat cell renderer ─────────────────────────────────────────────────
+  // ── 6. Seat cell renderer (responsive image sizes) ───────────────────────
   const renderSeatCell = (seat) => (
     <div
       key={seat.id}
@@ -126,13 +99,13 @@ const SeatSelection = ({
         alt={seat.name}
         className={`object-contain ${
           isVertSlp(seat)
-            ? "h-[55px] md:h-[65px] lg:h-[75px] w-[35px] md:w-[40px] lg:w-[45px]"
+            ? "h-[45px] w-[28px] sm:h-[50px] sm:w-[32px] md:h-[65px] md:w-[42px] lg:h-[75px] lg:w-[45px]"
             : isHorizSlp(seat)
-            ? "h-[50px] md:h-[60px] lg:h-[70px] w-[70px] md:w-[80px] lg:w-[85px]"
-            : "h-[32px] md:h-[38px] lg:h-[45px] w-[28px] md:w-[34px] lg:w-[40px]"
+            ? "h-[45px] w-[60px] sm:h-[50px] sm:w-[70px] md:h-[60px] md:w-[80px] lg:h-[70px] lg:w-[85px]"
+            : "h-[28px] w-[24px] sm:h-[32px] sm:w-[28px] md:h-[38px] md:w-[34px] lg:h-[45px] lg:w-[40px]"
         }`}
       />
-      <span className="absolute text-[8px] md:text-[9px] lg:text-[10px] font-semibold text-gray-800">
+      <span className="absolute text-[7px] sm:text-[8px] md:text-[9px] lg:text-[10px] font-semibold text-gray-800">
         {seat.name}
       </span>
       {/* Fare tooltip on hover */}
@@ -145,36 +118,30 @@ const SeatSelection = ({
     </div>
   );
 
-  // ── 7. UNIFIED GRID ───────────────────────────────────────────────────────
+  // ── 7. UNIFIED GRID (unchanged logic, inline styles remain) ──────────────
   const renderUnifiedGrid = (deckSeats) => {
     if (!deckSeats.length) return null;
 
     const GAP         = 8;   // px — rowGap & columnGap
     const SEATER_H    = 45;  // px — seater row height
     const VERT_H      = 75;  // px — vert-sleeper row height
-    const HORIZ_HALF  = Math.floor((70 + GAP) / 2); // 39px — half of horiz sleeper
+    const HORIZ_HALF  = Math.floor((70 + GAP) / 2); // 39px
 
-    // Column bounds
     const minCol = Math.min(...deckSeats.map((s) => s.column));
     const maxCol = Math.max(...deckSeats.map((s) => s.column + s.width - 1));
 
-    // Step A: collect occupied API rows (ignore empty gap rows)
     const occupiedSet = new Set();
     deckSeats.forEach((s) => {
       for (let r = s.row; r < s.row + s.length; r++) occupiedSet.add(r);
     });
     const sortedRows = [...occupiedSet].sort((a, b) => a - b);
 
-    // Step B: API row → CSS grid row (1-based, contiguous)
     const rowToGrid = {};
     sortedRows.forEach((apiRow, idx) => { rowToGrid[apiRow] = idx + 1; });
 
-    // Step C: height per CSS grid row
-    // For each occupied API row, find the tallest seat that sits on it
     const gridRowHeights = sortedRows.map((apiRow) => {
       let h = 0;
       deckSeats.forEach((s) => {
-        // Does seat s occupy this apiRow?
         if (s.row > apiRow || (s.row + s.length - 1) < apiRow) return;
         if (isVertSlp(s))  { h = Math.max(h, VERT_H);     return; }
         if (isSeater(s))   { h = Math.max(h, SEATER_H);   return; }
@@ -183,18 +150,18 @@ const SeatSelection = ({
       return `${h || SEATER_H}px`;
     });
 
-    // Step D: render
     return (
       <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: `repeat(${maxCol - minCol + 1}, max-content)`,
-          gridTemplateRows: gridRowHeights.join(" "),
-          columnGap: `${GAP}px`,
-          rowGap:    `${GAP}px`,
-          justifyContent: "start",
-        }}
-      >
+  style={{
+    display: "grid",
+    gridTemplateColumns: `repeat(${maxCol - minCol + 1}, max-content)`,
+    gridTemplateRows: gridRowHeights.join(" "),
+    columnGap: `${GAP}px`,
+    rowGap:    `${GAP}px`,
+    justifyContent: "start",
+    width: "fit-content",
+  }}
+>
         {deckSeats.map((seat) => {
           const gridStart = rowToGrid[seat.row];
           const gridEnd   = rowToGrid[seat.row + seat.length - 1];
@@ -219,31 +186,31 @@ const SeatSelection = ({
     );
   };
 
-  // ── 8. Deck wrapper ───────────────────────────────────────────────────────
+  // ── 8. Deck wrapper (responsive side label, padding, steering) ──────────
   const renderDeck = (deckSeats, title, showSteering) => {
     if (!deckSeats.length) return null;
     return (
-      <div className="mb-4 md:mb-6 lg:mb-8 flex border border-gray-200 rounded-xl overflow-hidden">
-        {/* Rotated side label */}
-        <div className="w-10 md:w-12 lg:w-14 bg-gray-200 flex items-center justify-center relative border-r border-gray-300 flex-shrink-0">
-          <span className="rotate-[-90deg] font-semibold text-[10px] md:text-xs lg:text-sm text-gray-600 tracking-wide whitespace-nowrap">
+     <div className="mb-4 md:mb-6 lg:mb-8 flex border border-gray-200 rounded-xl overflow-hidden w-fit max-w-full">
+        {/* Rotated side label – responsive width and text size */}
+        <div className="w-8 sm:w-10 md:w-12 lg:w-14 bg-gray-200 flex items-center justify-center relative border-r border-gray-300 flex-shrink-0">
+          <span className="rotate-[-90deg] font-semibold text-[8px] sm:text-[10px] md:text-xs lg:text-sm text-gray-600 tracking-wide whitespace-nowrap">
             {title}
           </span>
           {showSteering && (
             <img
               src={steeringIcon}
               alt="Steering"
-              className="absolute top-1 md:top-2 lg:top-4 left-1 md:left-2 lg:left-4 w-4 md:w-5 lg:w-7 h-4 md:h-5 lg:h-7"
+              className="absolute top-0.5 sm:top-1 md:top-2 lg:top-4 left-0.5 sm:left-1 md:left-2 lg:left-4 w-3 sm:w-4 md:w-5 lg:w-7 h-3 sm:h-4 md:h-5 lg:h-7"
             />
           )}
         </div>
 
-        {/* Seat grid — horizontal scroll on small screens */}
+        {/* Seat grid container – responsive padding and horizontal scroll */}
         <div
           className={`flex-1 bg-white overflow-x-auto ${
             showSteering
-              ? "pt-4 md:pt-6 lg:pt-8 pb-2 md:pb-3 lg:pb-4 px-2 md:px-3 lg:px-4"
-              : "px-2 md:px-3 lg:px-4 pb-2 md:pb-3 lg:pb-4"
+              ? "pt-2 sm:pt-3 md:pt-4 lg:pt-6 pb-1 sm:pb-2 md:pb-3 lg:pb-4 px-1 sm:px-2 md:px-3 lg:px-4"
+              : "px-1 sm:px-2 md:px-3 lg:px-4 pb-1 sm:pb-2 md:pb-3 lg:pb-4"
           }`}
         >
           {renderUnifiedGrid(deckSeats)}
@@ -254,21 +221,21 @@ const SeatSelection = ({
 
   // ── 9. Main render ────────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col lg:flex-row gap-4 md:gap-6 lg:gap-10 p-3 md:p-4 lg:p-0">
+    <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 md:gap-6 lg:gap-10 p-2 sm:p-3 md:p-4 lg:p-0 w-full min-w-0">
 
-      {/* Max-seats popup */}
+      {/* Max-seats popup – responsive sizing */}
       {showPopup && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[999] animate-bounce-in">
-          <div className="flex items-center gap-3 bg-[#fd561e] text-white px-4 md:px-6 py-2 md:py-3 rounded-xl shadow-2xl">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 md:h-6 w-5 md:w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <div className="flex items-center gap-2 sm:gap-3 bg-[#fd561e] text-white px-3 sm:px-4 md:px-6 py-2 sm:py-3 rounded-xl shadow-2xl">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
             </svg>
-            <span className="font-semibold text-xs md:text-sm">
+            <span className="font-semibold text-xs sm:text-sm">
               You cannot select more than 6 seats!
             </span>
             <button
               onClick={() => setShowPopup(false)}
-              className="ml-2 text-white cursor-pointer hover:text-red-200 font-bold text-base md:text-lg leading-none"
+              className="ml-1 sm:ml-2 text-white cursor-pointer hover:text-red-200 font-bold text-base sm:text-lg leading-none"
             >
               ✕
             </button>
@@ -276,32 +243,19 @@ const SeatSelection = ({
         </div>
       )}
 
-      {/* Seat layout panel */}
-      <div className="w-full lg:w-fit bg-white rounded-lg p-3 md:p-4 lg:p-6 lg:ml-20 overflow-x-auto">
-        <h3 className="font-semibold mb-3 md:mb-4 lg:mb-6 text-base md:text-lg">
+      {/* Seat layout panel – responsive padding and width */}
+      <div className="w-full lg:w-fit bg-white rounded-lg p-2 sm:p-3 md:p-4  lg:p-6 lg:ml-20 overflow-x-auto max-w-full">
+        <h3 className="font-semibold mb-2 sm:mb-3 md:mb-4 lg:mb-6 text-sm sm:text-base md:text-lg">
           Select Seats
         </h3>
 
-        {/*
-          Render order:
-          • Upper deck first (no steering)
-          • Lower deck below (with steering icon)
-          This matches the real physical bus — driver is at the front of lower deck.
-        */}
         {hasUpper && renderDeck(upperDeck, "UPPER", false)}
         {hasLower && renderDeck(lowerDeck, "LOWER", true)}
-        {/* Single-deck buses (no zIndex split) */}
         {!hasUpper && !hasLower && renderUnifiedGrid(seats)}
       </div>
 
-      {/*
-        Legend + Summary
-        ─────────────────────────────────────────────────────
-        mobile  (< sm)  : stacked vertically below seat panel
-        tablet  (sm–lg) : side-by-side below seat panel
-        desktop (lg+)   : alongside seat panel (parent flex-row)
-      */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-center lg:flex-col lg:items-stretch gap-4 md:gap-6 w-full lg:w-auto">
+      {/* Legend + Summary – responsive layout */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-center lg:flex-col lg:items-stretch gap-3 sm:gap-4 md:gap-6 w-full lg:w-auto">
         <SeatLegend />
         <SelectedSeatSummary
           selectedSeats={selectedSeats}
