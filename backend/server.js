@@ -359,47 +359,38 @@ app.post("/razorpayment/order", async (req, res) => {
 });
 
 // =========================
-// BILLDESK ORDER ENDPOINT
+// BILLDESK ORDER ENDPOINT (UPDATED with redirect_url)
 // =========================
 app.post("/billdesk/order", async (req, res) => {
+  console.log(`[${new Date().toISOString()}] 🟢 BILLDESK ORDER HIT`);
+  console.log("  Body:", JSON.stringify(req.body));
   try {
-    const { fare, uid, pname, tickid } = req.body;
- 
+    const { fare, uid, pname, tickid, redirect_url } = req.body;
     if (!fare || !tickid) {
-      return res.status(400).json({
-        success: false,
-        message: "fare and ticketId required"
-      });
+      return res.status(400).json({ success: false, message: "fare and ticketId required" });
     }
- 
     const billdeskBody = new URLSearchParams({
       fare: fare,
       uid: uid || "Not Applicable",
       pname: pname || "Guest",
-      tickid: tickid
+      tickid: tickid,
+      // ✅ Add redirect_url if provided, otherwise use default bus success page
+      return_url: redirect_url || "https://your-domain.com/payment-status"
     });
-
+    console.log("  ➡️ Calling https://uat.bobros.co.in/billdesktest.php");
+    console.log("  Form data:", billdeskBody.toString());
 
     const response = await axios.post(
       "https://uat.bobros.co.in/billdesktest.php",
       billdeskBody,
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded"
-        }
-      }
+      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
     );
-     console.log("billdesktest.php RAW response:", JSON.stringify(response.data));
-
-
+    console.log("  ✅ BillDesk response:", JSON.stringify(response.data));
     res.json(response.data);
- 
   } catch (error) {
-    console.error("BillDesk Order Error:", error.response?.data || error.message);
-    res.status(500).json({
-      success: false,
-      message: "BillDesk order creation failed"
-    });
+    console.error("  ❌ BillDesk error:", error.message);
+    console.error("  Response data:", error.response?.data);
+    res.status(500).json({ success: false, message: "BillDesk order creation failed" });
   }
 });
 
@@ -582,7 +573,7 @@ app.post("/bookticket/rp", async (req, res) => {
     res.json(response.data);
  
   } catch (error) {
-    console.error("Book Ticket RP Error:", error.response?.data || error.message);
+   // console.error("Book Ticket RP Error:", error.response?.data || error.message);
     res.status(500).json({
       success: false,
       message: error.response?.data?.message || "Failed to book ticket with reward points"

@@ -9,6 +9,7 @@ import { createPortal } from "react-dom";
 
 // ─────────────────────────────────────────────────────────────
 // SUCCESS TOAST — renders via portal outside modal stack
+// Progress bar now expands left → right
 // ─────────────────────────────────────────────────────────────
 const SuccessToast = ({ message, subtitle, onDone }) => {
   React.useEffect(() => {
@@ -67,13 +68,14 @@ const SuccessToast = ({ message, subtitle, onDone }) => {
           <p style={{ fontWeight: 700, fontSize: "18px", color: "#111827", margin: 0 }}>{message}</p>
           <p style={{ fontSize: "13px", color: "#6b7280", margin: "6px 0 0 0" }}>{subtitle}</p>
         </div>
-        {/* Progress bar */}
+        {/* Progress bar — now expands left to right */}
         <div style={{ width: "100%", height: "3px", background: "#f3f4f6", borderRadius: "999px", overflow: "hidden" }}>
           <div style={{
             height: "100%",
+            width: "0%",
             background: "linear-gradient(90deg, #FD561E, #ff8a5b)",
             borderRadius: "999px",
-            animation: "shrink 2.8s linear forwards",
+            animation: "expand 2.8s linear forwards",
           }} />
         </div>
       </div>
@@ -86,9 +88,9 @@ const SuccessToast = ({ message, subtitle, onDone }) => {
           0% { transform: scale(0); opacity: 0; }
           100% { transform: scale(1); opacity: 1; }
         }
-        @keyframes shrink {
-          from { width: 100%; }
-          to { width: 0%; }
+        @keyframes expand {
+          from { width: 0%; }
+          to { width: 100%; }
         }
       `}</style>
     </div>,
@@ -99,8 +101,8 @@ const SuccessToast = ({ message, subtitle, onDone }) => {
 const API_URL = "https://api.bobros.co.in";
 
 // ─────────────────────────────────────────────────────────────
-// SUCCESS TOAST POPUP
-
+// LEFT PANEL (unchanged)
+// ─────────────────────────────────────────────────────────────
 const LeftImagePanel = () => (
   <div
     className="hidden md:flex flex-col items-center justify-center rounded-l-2xl overflow-hidden flex-shrink-0"
@@ -129,7 +131,6 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
   const [captchaToken, setCaptchaToken] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  // ── NEW: success toast state ──
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [successMsg, setSuccessMsg] = useState("Successfully Logged In!");
 
@@ -150,7 +151,6 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
         localStorage.setItem("user", JSON.stringify(verify.data));
         localStorage.setItem("isLoggedIn", "true");
         window.dispatchEvent(new Event("storage"));
-        // ── Show toast first, close + navigate in onDone ──
         setSuccessMsg("Successfully Logged In!");
         setShowSuccessToast(true);
       } catch (error) {
@@ -176,7 +176,6 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
       localStorage.setItem("user", JSON.stringify(response.data));
       localStorage.setItem("isLoggedIn", "true");
       window.dispatchEvent(new Event("storage"));
-      // ── Show toast first, close + navigate in onDone ──
       setSuccessMsg("Successfully Logged In!");
       setShowSuccessToast(true);
     } catch (error) { setError("Invalid mobile or password"); }
@@ -191,7 +190,6 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
 
   return (
     <>
-      {/* ── Success Toast ── */}
       {showSuccessToast && (
         <SuccessToast
           message={successMsg}
@@ -267,22 +265,27 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
                 </span>
               </div>
              
-              <div className="mb-3 sm:mb-4 flex justify-center overflow-x-auto">
-                <div className="transform scale-90 sm:scale-100 origin-center">
-                  <Turnstile
-                    siteKey="0x4AAAAAABvRHvXzt4EuTFLs"
-                    onSuccess={(token) => setCaptchaToken(token)}
-                    options={{
-                      theme: "light",
-                      size: "flexible",
-                    }}
-                  />
+              <div className="mb-3 sm:mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Security Verification
+                </label>
+                <div className="flex justify-center overflow-x-auto">
+                  <div className="transform scale-90 sm:scale-100 origin-center">
+                    <Turnstile
+                      siteKey="0x4AAAAAABvRHvXzt4EuTFLs"
+                      onSuccess={(token) => setCaptchaToken(token)}
+                      options={{
+                        theme: "light",
+                        size: "flexible",
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
 
               <button
                 type="submit"
-                className="w-full bg-[#FD561E] text-white py-2.5 sm:py-3 rounded-xl font-bold hover:bg-[#e64d19] shadow-lg transition-all text-sm sm:text-base"
+                className="w-full bg-[#FD561E] text-white py-2.5 sm:py-3 rounded-xl cursor-pointer font-bold hover:bg-[#e64d19] shadow-lg transition-all text-sm sm:text-base"
               >
                 Login
               </button>

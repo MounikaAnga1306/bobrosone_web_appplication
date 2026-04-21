@@ -65,6 +65,16 @@ const TicketConfirmationScreen = () => {
   }, []);
 
   useEffect(() => {
+    const isBusBooking = 
+    localStorage.getItem("lastBookingPassengers") !== null ||   // bus flow నుండి set చేస్తారు
+    (searchParams.get("bdorderid") === "" && !searchParams.get("pnr")); // fallback
+
+  if (isBusBooking && window.location.pathname === "/flights/ticket-confirmation") {
+    console.log("🚌 Bus booking detected. Redirecting to /payment-status");
+    const queryString = window.location.search; // success, bdorderid, transactionid, amount...
+    navigate(`/payment-status${queryString}`, { replace: true });
+    return; // ✅ ఇక్కడే ఆపేయాలి – flight API call కాకుండా
+  }
     console.log('='.repeat(80));
     console.log('🎫 TICKET CONFIRMATION SCREEN');
     console.log('='.repeat(80));
@@ -106,7 +116,7 @@ const TicketConfirmationScreen = () => {
       setVerifyingPayment(false);
       if (!success) toast.error("Payment Failed. Please try again.");
     }
-  }, [searchParams]);
+  }, [searchParams,navigate]);
 
   const callPaymentConfirmationAPI = async () => {
     if (apiCalledRef.current) return;

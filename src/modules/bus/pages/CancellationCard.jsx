@@ -13,7 +13,7 @@ const CancellationCard = ({ onClose }) => {
   const [message, setMessage]             = useState("");
   const [otp, setOtp]                     = useState("");
   const [showSuccess, setShowSuccess]     = useState(false);
-  const [showAlreadyCancelled, setShowAlreadyCancelled] = useState(false); // ✅ new
+  const [showAlreadyCancelled, setShowAlreadyCancelled] = useState(false);
   const [pendingNav, setPendingNav]       = useState(null);
 
   const [form, setForm] = useState({ ticket: "", mobile: "", email: "" });
@@ -94,7 +94,6 @@ const CancellationCard = ({ onClose }) => {
         otp: otpValue,
       });
 
-
       setPendingNav({
         state: {
           ticket: form.ticket,
@@ -106,7 +105,6 @@ const CancellationCard = ({ onClose }) => {
       setShowSuccess(true);
 
     } catch (err) {
-      // ✅ err.response.data.message can be string OR object — safely convert
       const rawMsg = err.response?.data?.message;
       const errMsg = typeof rawMsg === "string"
         ? rawMsg
@@ -114,13 +112,12 @@ const CancellationCard = ({ onClose }) => {
         ? JSON.stringify(rawMsg)
         : err.response?.data?.error || "Invalid OTP. Please try again.";
 
-      // ✅ Check if ticket is already cancelled
       const isAlreadyCancelled =
         errMsg.toLowerCase().includes("already cancelled") ||
         errMsg.toLowerCase().includes("already cancel");
 
       if (isAlreadyCancelled) {
-        setShowAlreadyCancelled(true); // show special popup
+        setShowAlreadyCancelled(true);
       } else {
         setMessage(errMsg);
         setOtp("");
@@ -130,7 +127,8 @@ const CancellationCard = ({ onClose }) => {
     }
   };
 
-  const maskedMobile = form.mobile ? `+91 XXXXXX${form.mobile.slice(-4)}` : "";
+  // ✅ FIXED: show full mobile number (no masking)
+  const fullMobileDisplay = form.mobile ? `+91 ${form.mobile}` : "";
 
   return (
     <div
@@ -150,7 +148,6 @@ const CancellationCard = ({ onClose }) => {
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Orange warning icon */}
             <div
               className="w-20 h-20 rounded-full flex items-center justify-center"
               style={{
@@ -175,10 +172,8 @@ const CancellationCard = ({ onClose }) => {
               </p>
             </div>
 
-            {/* Divider */}
             <div className="w-full h-px bg-gray-100" />
 
-            {/* Action buttons */}
             <div className="w-full space-y-2">
               <button
                 onClick={onClose}
@@ -251,7 +246,6 @@ const CancellationCard = ({ onClose }) => {
         }`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Top gradient bar */}
         <div className="h-1.5 w-full" style={{ background: "linear-gradient(90deg, #f43f5e, #fb923c)" }} />
 
         <button
@@ -262,7 +256,6 @@ const CancellationCard = ({ onClose }) => {
         </button>
 
         <div className="px-7 pt-7 pb-7">
-          {/* Icon */}
           <div className="flex justify-center mb-4">
             <div
               className="w-14 h-14 rounded-2xl flex items-center justify-center"
@@ -279,7 +272,6 @@ const CancellationCard = ({ onClose }) => {
             {step === 1 ? "Enter your booking details below" : "OTP sent to your mobile & email"}
           </p>
 
-          {/* Step indicator */}
           <div className="flex items-center mb-6">
             <div className="flex items-center gap-2">
               <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
@@ -301,14 +293,13 @@ const CancellationCard = ({ onClose }) => {
             </div>
           </div>
 
-          {/* Error */}
           {message && (
             <div className="flex items-start gap-2 bg-red-50 border border-red-100 text-red-600 px-3 py-2.5 rounded-xl mb-4 text-xs">
               <span>⚠️</span><span>{message}</span>
             </div>
           )}
 
-          {/* ════ STEP 1 ════ */}
+          {/* STEP 1 */}
           {step === 1 && (
             <div className="space-y-3.5">
               <div>
@@ -350,7 +341,7 @@ const CancellationCard = ({ onClose }) => {
             </div>
           )}
 
-          {/* ════ STEP 2 ════ */}
+          {/* STEP 2 */}
           {step === 2 && (
             <div className="space-y-4">
               <div className="bg-gray-50 rounded-xl p-3.5 text-xs space-y-2 border border-gray-100">
@@ -360,7 +351,8 @@ const CancellationCard = ({ onClose }) => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Mobile</span>
-                  <span className="font-semibold text-gray-700">{maskedMobile}</span>
+                  {/* ✅ FIXED: full mobile number shown here */}
+                  <span className="font-semibold text-gray-700">{fullMobileDisplay}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-400">Email</span>

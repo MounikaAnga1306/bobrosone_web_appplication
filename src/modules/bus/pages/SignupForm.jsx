@@ -3,12 +3,12 @@ import { useLocation } from "react-router-dom";
 import axios from "axios";
 import { User, Mail, Phone, Lock, Eye, EyeOff, X, ArrowLeft } from "lucide-react";
 import { createPortal } from "react-dom";
-import { Turnstile } from "@marsidev/react-turnstile";   // <-- added
+import { Turnstile } from "@marsidev/react-turnstile";
 
 const API = "https://api.bobros.co.in";
 
 // ─────────────────────────────────────────────────────────────
-// SUCCESS TOAST (unchanged)
+// SUCCESS TOAST (progress bar now fills left → right)
 // ─────────────────────────────────────────────────────────────
 const SuccessToast = ({ message, subtitle, onDone }) => {
   useEffect(() => {
@@ -77,9 +77,10 @@ const SuccessToast = ({ message, subtitle, onDone }) => {
           <div
             style={{
               height: "100%",
+              width: "0%",
               background: "linear-gradient(90deg, #FD561E, #ff8a5b)",
               borderRadius: "999px",
-              animation: "shrink 2.8s linear forwards",
+              animation: "expand 2.8s linear forwards",
             }}
           />
         </div>
@@ -87,7 +88,7 @@ const SuccessToast = ({ message, subtitle, onDone }) => {
       <style>{`
         @keyframes toastPop { 0%{opacity:0;transform:scale(0.6) translateY(30px)} 100%{opacity:1;transform:scale(1) translateY(0)} }
         @keyframes checkBounce { 0%{transform:scale(0);opacity:0} 100%{transform:scale(1);opacity:1} }
-        @keyframes shrink { from{width:100%} to{width:0%} }
+        @keyframes expand { from { width: 0%; } to { width: 100%; } }
       `}</style>
     </div>,
     document.body
@@ -95,7 +96,7 @@ const SuccessToast = ({ message, subtitle, onDone }) => {
 };
 
 // ─────────────────────────────────────────────────────────────
-// LEFT PANEL
+// LEFT PANEL (unchanged)
 // ─────────────────────────────────────────────────────────────
 const LeftImagePanel = () => (
   <div
@@ -111,7 +112,7 @@ const LeftImagePanel = () => (
 );
 
 // ─────────────────────────────────────────────────────────────
-// 4-BOX OTP INPUT
+// 4-BOX OTP INPUT (unchanged)
 // ─────────────────────────────────────────────────────────────
 const OtpBoxes = ({ value, onChange }) => {
   const inputs = useRef([]);
@@ -165,9 +166,9 @@ const OtpBoxes = ({ value, onChange }) => {
 };
 
 // ─────────────────────────────────────────────────────────────
-// OTP VERIFY CARD
+// OTP VERIFY CARD (unchanged logic, uses /signup/register)
 // ─────────────────────────────────────────────────────────────
-const OtpVerifyCard = ({ formData, onVerified, onBack }) => {
+const OtpVerifyCard = ({ formData, onVerified, onBack, onResendOtp }) => {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -192,7 +193,7 @@ const OtpVerifyCard = ({ formData, onVerified, onBack }) => {
     try {
       setLoading(true);
       setMessage("");
-      await axios.post(`${API}/signup/form`, {
+      await axios.post(`${API}/signup/register`, {
         user: formData.user,
         email: formData.email,
         mobile: Number(formData.mobile),
@@ -215,12 +216,7 @@ const OtpVerifyCard = ({ formData, onVerified, onBack }) => {
       setIsSuccess(false);
       setMessage("");
       setOtp("");
-      await axios.post(`${API}/signup/form`, {
-        user: formData.user,
-        email: formData.email,
-        mobile: Number(formData.mobile),
-        password: formData.password,
-      });
+      await onResendOtp();
       setTimer(30);
       setIsSuccess(true);
       setMessage("OTP resent to your mobile.");
@@ -291,7 +287,7 @@ const OtpVerifyCard = ({ formData, onVerified, onBack }) => {
 };
 
 // ─────────────────────────────────────────────────────────────
-// Account Deletion Card
+// Account Deletion Card (unchanged)
 // ─────────────────────────────────────────────────────────────
 const AccountDeletionCard = ({ onBack, onClose }) => {
   const [step, setStep] = useState(1);
@@ -407,7 +403,7 @@ const AccountDeletionCard = ({ onBack, onClose }) => {
 };
 
 // ─────────────────────────────────────────────────────────────
-// InputField
+// InputField (unchanged)
 // ─────────────────────────────────────────────────────────────
 const InputField = ({ icon: Icon, ...props }) => (
   <div className="flex items-center border border-gray-300 rounded-xl px-3 sm:px-4 py-2 sm:py-3 mb-3 sm:mb-4 focus-within:border-[#FD561E] focus-within:ring-1 focus-within:ring-[#FD561E] transition-all">
@@ -417,7 +413,7 @@ const InputField = ({ icon: Icon, ...props }) => (
 );
 
 // ─────────────────────────────────────────────────────────────
-// MAIN SIGNUP FORM WITH TURNSTILE CAPTCHA
+// MAIN SIGNUP FORM (unchanged except the toast animation)
 // ─────────────────────────────────────────────────────────────
 const SignUpForm = ({ closeModal, openSignin }) => {
   const location = useLocation();
@@ -450,7 +446,6 @@ const SignUpForm = ({ closeModal, openSignin }) => {
     e.preventDefault();
     setError("");
 
-    // Mobile number validation: exactly 10 digits
     const mobileDigits = formData.mobile.replace(/\D/g, "");
     if (mobileDigits.length !== 10) {
       setError("Mobile number must be exactly 10 digits.");
@@ -476,13 +471,12 @@ const SignUpForm = ({ closeModal, openSignin }) => {
         email: formData.email,
         mobile: Number(mobileDigits),
         password: formData.password,
-        captchaToken,   // send Turnstile token to backend
+        captchaToken,
       });
       setView("otp");
     } catch (err) {
       const msg = err.response?.data?.message || err.response?.data?.error || "";
       const status = err.response?.status;
-      // Improved duplicate detection
       const isDuplicate = status === 409 ||
         msg.toLowerCase().includes("already") ||
         msg.toLowerCase().includes("exists") ||
@@ -494,7 +488,6 @@ const SignUpForm = ({ closeModal, openSignin }) => {
         setError("An account with this email or mobile already exists. Please sign in.");
       } else if (msg.toLowerCase().includes("captcha") || msg.toLowerCase().includes("turnstile")) {
         setError("Captcha verification failed. Please try again.");
-        // reset Turnstile widget
         if (turnstileRef.current) turnstileRef.current.reset();
         setCaptchaToken("");
       } else {
@@ -503,6 +496,16 @@ const SignUpForm = ({ closeModal, openSignin }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleResendOtp = async () => {
+    const mobileDigits = formData.mobile.replace(/\D/g, "");
+    await axios.post(`${API}/signup/form`, {
+      user: formData.user,
+      email: formData.email,
+      mobile: Number(mobileDigits),
+      password: formData.password,
+    });
   };
 
   const handleOtpVerified = () => setShowSuccessToast(true);
@@ -549,6 +552,7 @@ const SignUpForm = ({ closeModal, openSignin }) => {
                   setView("signup");
                   setError("");
                 }}
+                onResendOtp={handleResendOtp}
               />
             ) : (
               <div className="flex flex-col h-full justify-center">
@@ -649,17 +653,22 @@ const SignUpForm = ({ closeModal, openSignin }) => {
                   </div>
 
                   {/* Cloudflare Turnstile Captcha */}
-                  <div className="flex justify-center my-4 overflow-x-auto">
-                    <div className="transform scale-90 sm:scale-100 origin-center">
-                      <Turnstile
-                        ref={turnstileRef}
-                        siteKey="0x4AAAAAABvRHvXzt4EuTFLs"   // ← Replace with your site key if needed
-                        onSuccess={(token) => setCaptchaToken(token)}
-                        options={{
-                          theme: "light",
-                          size: "flexible",
-                        }}
-                      />
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Security Verification
+                    </label>
+                    <div className="flex justify-center my-4 overflow-x-auto">
+                      <div className="transform scale-90 sm:scale-100 origin-center">
+                        <Turnstile
+                          ref={turnstileRef}
+                          siteKey="0x4AAAAAABvRHvXzt4EuTFLs"
+                          onSuccess={(token) => setCaptchaToken(token)}
+                          options={{
+                            theme: "light",
+                            size: "flexible",
+                          }}
+                        />
+                      </div>
                     </div>
                   </div>
 

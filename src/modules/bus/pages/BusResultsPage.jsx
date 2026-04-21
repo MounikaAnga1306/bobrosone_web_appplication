@@ -189,7 +189,7 @@ export default function BusResultsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f1f5f9]">
+    <div className="min-h-screen bg-[#f1f5f9] overflow-x-hidden">
       <SearchBar
         key={`${fromName}-${toName}-${date}`}
         defaultFrom={fromName}

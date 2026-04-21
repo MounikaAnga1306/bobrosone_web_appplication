@@ -36,8 +36,7 @@ const SelectedSeatSummary = ({ selectedSeats, onProceed }) => {
   return (
     <>
       {/* Bottom Bar */}
-      <div className="fixed bottom-0 left-0 w-full bg-white shadow-xl border-t border-gray-400 z-50">
-
+      <div className="fixed bottom-0 left-0 right-0 w-full bg-white shadow-xl border-t border-gray-400 z-[60]">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-center gap-8">
 
           {/* Seat Count */}
