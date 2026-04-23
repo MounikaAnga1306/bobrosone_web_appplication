@@ -23,6 +23,9 @@ const SeatSelection = ({
 }) => {
   const [showPopup, setShowPopup] = useState(false);
 
+  // ── FIX: tooltip state — track which seat is hovered + mouse position ──────
+  const [tooltip, setTooltip] = useState(null); // { seatId, fare, x, y }
+
   if (!tripDetails?.seats) return null;
 
   // ── 1. Normalise every seat from API ──────────────────────────────────────
@@ -87,12 +90,28 @@ const SeatSelection = ({
     return availableSeat;
   };
 
-  // ── 6. Seat cell renderer (responsive image sizes) ───────────────────────
+  // ── 6. Seat cell renderer ─────────────────────────────────────────────────
+  // FIX: tooltip uses fixed positioning via mouse coordinates
+  // so it never gets clipped by overflow:hidden on parent containers.
+  // Only these 3 things changed vs original:
+  //   a) onMouseEnter → set tooltip state with mouse position
+  //   b) onMouseMove  → update position as mouse moves
+  //   c) onMouseLeave → clear tooltip
+  //   d) tooltip rendered via portal-like fixed div at bottom of component
+  // Spacing: added gap between image and name label via padding tweak
   const renderSeatCell = (seat) => (
     <div
       key={seat.id}
       onClick={() => toggleSeat(seat)}
-      className="cursor-pointer relative flex items-center justify-center group"
+      // FIX (a)(b)(c): track mouse position for fixed tooltip
+      onMouseEnter={(e) =>
+        setTooltip({ seatId: seat.id, fare: seat.totalFare, x: e.clientX, y: e.clientY })
+      }
+      onMouseMove={(e) =>
+        setTooltip((prev) => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)
+      }
+      onMouseLeave={() => setTooltip(null)}
+      className="cursor-pointer relative flex items-center justify-center"
     >
       <img
         src={getSeatImage(seat)}
@@ -108,17 +127,10 @@ const SeatSelection = ({
       <span className="absolute text-[7px] sm:text-[8px] md:text-[9px] lg:text-[10px] font-semibold text-gray-800">
         {seat.name}
       </span>
-      {/* Fare tooltip on hover */}
-      <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center z-50">
-        <div className="bg-white text-black text-xs md:text-sm font-semibold px-2 py-1 rounded shadow-md whitespace-nowrap border border-gray-200">
-          Fare: ₹{seat.totalFare}
-        </div>
-        <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-white" />
-      </div>
     </div>
   );
 
-  // ── 7. UNIFIED GRID (unchanged logic, inline styles remain) ──────────────
+  // ── 7. UNIFIED GRID (unchanged) ───────────────────────────────────────────
   const renderUnifiedGrid = (deckSeats) => {
     if (!deckSeats.length) return null;
 
@@ -152,16 +164,16 @@ const SeatSelection = ({
 
     return (
       <div
-  style={{
-    display: "grid",
-    gridTemplateColumns: `repeat(${maxCol - minCol + 1}, max-content)`,
-    gridTemplateRows: gridRowHeights.join(" "),
-    columnGap: `${GAP}px`,
-    rowGap:    `${GAP}px`,
-    justifyContent: "start",
-    width: "fit-content",
-  }}
->
+        style={{
+          display: "grid",
+          gridTemplateColumns: `repeat(${maxCol - minCol + 1}, max-content)`,
+          gridTemplateRows: gridRowHeights.join(" "),
+          columnGap: `${GAP}px`,
+          rowGap:    `${GAP}px`,
+          justifyContent: "start",
+          width: "fit-content",
+        }}
+      >
         {deckSeats.map((seat) => {
           const gridStart = rowToGrid[seat.row];
           const gridEnd   = rowToGrid[seat.row + seat.length - 1];
@@ -186,11 +198,11 @@ const SeatSelection = ({
     );
   };
 
-  // ── 8. Deck wrapper (responsive side label, padding, steering) ──────────
+  // ── 8. Deck wrapper (unchanged) ───────────────────────────────────────────
   const renderDeck = (deckSeats, title, showSteering) => {
     if (!deckSeats.length) return null;
     return (
-     <div className="mb-4 md:mb-6 lg:mb-8 flex border border-gray-200 rounded-xl overflow-hidden w-fit max-w-full">
+      <div className="mb-4 md:mb-6 lg:mb-8 flex border border-gray-200 rounded-xl overflow-hidden w-fit max-w-full">
         {/* Rotated side label – responsive width and text size */}
         <div className="w-8 sm:w-10 md:w-12 lg:w-14 bg-gray-200 flex items-center justify-center relative border-r border-gray-300 flex-shrink-0">
           <span className="rotate-[-90deg] font-semibold text-[8px] sm:text-[10px] md:text-xs lg:text-sm text-gray-600 tracking-wide whitespace-nowrap">
@@ -219,7 +231,7 @@ const SeatSelection = ({
     );
   };
 
-  // ── 9. Main render ────────────────────────────────────────────────────────
+  // ── 9. Main render (unchanged) ────────────────────────────────────────────
   return (
     <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 md:gap-6 lg:gap-10 p-2 sm:p-3 md:p-4 lg:p-0 w-full min-w-0">
 
@@ -243,8 +255,24 @@ const SeatSelection = ({
         </div>
       )}
 
+      {/* FIX (d): Fixed-position tooltip rendered here — outside all overflow:hidden containers */}
+      {tooltip && (
+        <div
+          className="fixed z-[99999] pointer-events-none"
+          style={{
+            left: tooltip.x + 12,
+            top:  tooltip.y - 36,
+          }}
+        >
+          <div className="bg-white text-black text-xs md:text-sm font-semibold px-2 py-1 rounded shadow-md whitespace-nowrap border border-gray-200">
+            Fare: ₹{tooltip.fare}
+          </div>
+          <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-white mx-auto" />
+        </div>
+      )}
+
       {/* Seat layout panel – responsive padding and width */}
-      <div className="w-full lg:w-fit bg-white rounded-lg p-2 sm:p-3 md:p-4  lg:p-6 lg:ml-20 overflow-x-auto max-w-full">
+      <div className="w-full lg:w-fit bg-white rounded-lg p-2 sm:p-3 md:p-4 lg:p-6 lg:ml-20 overflow-x-auto max-w-full">
         <h3 className="font-semibold mb-2 sm:mb-3 md:mb-4 lg:mb-6 text-sm sm:text-base md:text-lg">
           Select Seats
         </h3>

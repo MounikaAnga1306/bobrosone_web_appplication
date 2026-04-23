@@ -406,6 +406,7 @@ app.post("/verifyPayment", async (req, res) => {
     headers["Content-Type"] = "application/json";
 
     const response = await axios.post(url, req.body, { headers });
+    console.log("razorpay request body:",req.body);
     res.json(response.data);
  
   } catch (error) {
@@ -470,8 +471,10 @@ app.post("/myBookings", async (req, res) => {
           { uid: String(mobile) }
         ]
       }
+      
     }, {
       headers: { "Content-Type": "application/json" }
+      
     });
  
     const allRows = response.data?.rows || [];
