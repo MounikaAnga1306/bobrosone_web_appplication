@@ -98,6 +98,8 @@ export default function BusResultsPage() {
 
       try {
         const data = await searchTrips(fromId, toId, date);
+        
+    
 
         if (!data || !data.length) {
           setError("No trips found for this route.");

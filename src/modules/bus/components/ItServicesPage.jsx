@@ -20,6 +20,9 @@ import { motion } from "framer-motion";
 
 const BRAND = "#fd561e";
 
+// ─────────────────────────────────────────────
+// Helper: Scroll to section
+// ─────────────────────────────────────────────
 const scrollToSection = (id) => {
   const el = document.getElementById(id);
   if (el) el.scrollIntoView({ behavior: "smooth" });
@@ -28,7 +31,7 @@ const scrollToSection = (id) => {
 const Header = () => null;
 
 // ─────────────────────────────────────────────
-// Hero
+// Hero Section
 // ─────────────────────────────────────────────
 const Hero = () => (
   <motion.section
@@ -185,7 +188,6 @@ const Postcards = () => (
               className="flex bg-white rounded-xl shadow-md overflow-hidden transition cursor-pointer"
               style={{ flexDirection: imgLeft ? "row" : "row-reverse", height: "260px" }}
             >
-              {/* Image — fixed width + height, overflow hidden so image never stretches card */}
               <div className="relative flex-shrink-0" style={{ width: "320px", height: "260px", overflow: "hidden" }}>
                 <motion.img
                   src={card.img}
@@ -204,8 +206,6 @@ const Postcards = () => (
                   </div>
                 )}
               </div>
-
-              {/* Text content */}
               <div className="flex-1 px-6 py-4 flex flex-col justify-center">
                 <h3 className="text-lg font-bold mb-1">{card.title}</h3>
                 <div className="w-10 h-1 mb-3 rounded-full" style={{ backgroundColor: BRAND }} />
@@ -447,11 +447,14 @@ const WhatWeDo = () => {
 };
 
 // ─────────────────────────────────────────────
-// Our Partners
+// Our Partners (Fixed - Cleaner Version)
 // ─────────────────────────────────────────────
 const partnerLogos = [
-  "/images/sectigo.png", "/images/openprovider_logo.webp", "/images/Godaddy-logo.png",
-  "/images/aws5.png",    "/images/razorpay_icon.webp",      "/images/Google-Partner.png",
+  { src: "/assets/sectigo.png", name: "sectigo", maxWidth: "130px" },
+  { src: "/assets/Google-Partner.png", name: "google", maxWidth: "300px" },
+  { src: "/assets/Godaddy-logo.png", name: "godaddy", maxWidth: "150px" },
+  { src: "/assets/aws5.png", name: "aws", maxWidth: "100px" },
+  { src: "/assets/razorpay_icon.webp", name: "razorpay", maxWidth: "150px" },
 ];
 
 const PartnerCarousel = () => {
@@ -484,14 +487,31 @@ const PartnerCarousel = () => {
         }
         .partners-viewport::before { left:  0; background: linear-gradient(to right, #f9fafb, transparent); }
         .partners-viewport::after  { right: 0; background: linear-gradient(to left,  #f9fafb, transparent); }
+        
+        .partner-logo {
+          height: 130px;
+          width: auto;
+          object-fit: contain;
+          opacity: 0.6;
+          transition: all 0.3s ease;
+          flex-shrink: 0;
+        }
+        
+        .partner-logo:hover {
+          opacity: 1;
+          transform: scale(1.05);
+        }
       `}</style>
       <h3 className="text-center text-2xl font-bold mb-8">Our Partners</h3>
       <div className="partners-viewport">
         <div className="partners-belt">
-          {all.map((src, i) => (
+          {all.map((logo, i) => (
             <img
-              key={i} src={src} alt="partner"
-              className="h-12 w-auto object-contain opacity-60 hover:opacity-100 grayscale hover:grayscale-0 transition-all duration-300 flex-shrink-0 cursor-pointer"
+              key={i}
+              src={logo.src}
+              alt={logo.name}
+              className="partner-logo"
+              style={{ maxWidth: logo.maxWidth }}
             />
           ))}
         </div>
@@ -536,7 +556,7 @@ const WhyChoose = () => (
 );
 
 // ─────────────────────────────────────────────
-// Contact Form (Updated with Cloudflare Turnstile and strict email filtering)
+// Contact Form (FIXED)
 // ─────────────────────────────────────────────
 const staticPkgOptions = [
   "Go Digital - Standard (₹599/mo)",
@@ -568,22 +588,28 @@ const ContactForm = () => {
     setForm((p) => ({ ...p, selectedPackage: "" }));
   }, [form.serviceType]);
 
+  // ✅ Fixed email validation – allows +, ., %, etc.
+  const validateEmail = (email) => {
+    const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    return re.test(email);
+  };
+
   const validate = () => {
     const e = {};
     if (!form.name || !/^[A-Za-z\s]+$/.test(form.name) || form.name.length > 40)
       e.name = "Valid name required (letters only, max 40)";
-    
-    // New strict email validation: only letters, numbers, @, ., _, -
-    const emailRegex = /^[a-zA-Z0-9@._-]+$/;
-    if (!form.email || !emailRegex.test(form.email) || !form.email.includes("@") || form.email.length > 100)
-      e.email = "Email can only contain letters, numbers, @, ., _, -";
-    
+
+    if (!form.email || !validateEmail(form.email) || form.email.length > 100)
+      e.email = "Enter a valid email address (e.g., name@example.com)";
+
     if (!form.phone || !/^[6-9]\d{9}$/.test(form.phone))
       e.phone = "Valid 10-digit mobile number required";
+
     if (!form.serviceType) e.serviceType = "Please select a service type";
     if (!form.selectedPackage) e.selectedPackage = "Please select a package";
     if (!form.billingCycle) e.billingCycle = "Please select billing preference";
     if (!turnstileToken) e.turnstile = "Please complete the security check";
+
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -593,10 +619,7 @@ const ContactForm = () => {
     let v = value;
     if (name === "name") v = value.replace(/[^A-Za-z\s]/g, "");
     if (name === "phone") v = value.replace(/\D/g, "").slice(0, 10);
-    if (name === "email") {
-      // Allow only letters, numbers, @, ., _, - (case insensitive)
-      v = value.replace(/[^a-zA-Z0-9@._-]/g, "");
-    }
+    if (name === "email") v = value.trim(); // Do not strip valid characters
     setForm((p) => ({ ...p, [name]: v }));
     if (errors[name]) setErrors((p) => ({ ...p, [name]: undefined }));
   };
@@ -610,6 +633,7 @@ const ContactForm = () => {
       userEmail: form.email.trim(),
       userMobile: form.phone.trim(),
       packageName: form.selectedPackage,
+      serviceType: form.serviceType,        // ✅ ADDED – fixes 400 error
       additionalInfo: "No additional notes",
       paymentPlan: form.billingCycle === "monthly" ? "Monthly" : "Annual",
       captchaToken: turnstileToken,
@@ -636,8 +660,10 @@ const ContactForm = () => {
         setTimeout(() => setStatus(null), 5000);
       } else {
         setStatus("error");
+        console.error("API responded with status:", res.status, res.data);
       }
-    } catch {
+    } catch (err) {
+      console.error("API call failed:", err.response?.data || err.message);
       setStatus("error");
     }
   };
@@ -687,7 +713,6 @@ const ContactForm = () => {
           {/* Form panel */}
           <div className="lg:w-1/2 bg-white rounded-2xl p-6 shadow-md">
             <form onSubmit={handleSubmit} noValidate>
-              {/* 1. Service Type */}
               <div className="mb-4">
                 <label className="block text-sm font-semibold mb-2 text-gray-700">
                   Service Type
@@ -703,7 +728,6 @@ const ContactForm = () => {
                 {errors.serviceType && <p className="text-red-500 text-xs mt-1">{errors.serviceType}</p>}
               </div>
 
-              {/* 2. Package */}
               {form.serviceType && (
                 <motion.div
                   key={form.serviceType}
@@ -732,7 +756,6 @@ const ContactForm = () => {
                 </motion.div>
               )}
 
-              {/* 3. Name */}
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-1 text-gray-700">
                   Name <span className="text-red-500">*</span>
@@ -748,7 +771,6 @@ const ContactForm = () => {
                 {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
               </div>
 
-              {/* 4. Email — updated with strict filtering */}
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-1 text-gray-700">
                   Email <span className="text-red-500">*</span>
@@ -764,7 +786,6 @@ const ContactForm = () => {
                 {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
               </div>
 
-              {/* 5. Phone */}
               <div className="mb-5">
                 <label className="block text-sm font-medium mb-1 text-gray-700">
                   Mobile No <span className="text-red-500">*</span>
@@ -780,7 +801,6 @@ const ContactForm = () => {
                 {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
               </div>
 
-              {/* 6. Billing Cycle */}
               <div className="mb-5">
                 <label className="block text-sm font-semibold mb-2 text-gray-700">
                   Billing Preference
@@ -796,11 +816,10 @@ const ContactForm = () => {
                 {errors.billingCycle && <p className="text-red-500 text-xs mt-1">{errors.billingCycle}</p>}
               </div>
 
-              {/* 7. Cloudflare Turnstile */}
               <div className="mb-4 flex justify-center">
                 <Turnstile
                   ref={turnstileRef}
-                  siteKey="0x4AAAAAABvRHvXzt4EuTFLs" // Replace with your own site key
+                  siteKey="0x4AAAAAABvRHvXzt4EuTFLs"  // 🔁 Replace with your actual UAT/production key
                   onSuccess={(token) => setTurnstileToken(token)}
                   onError={() => setTurnstileToken(null)}
                   onExpire={() => setTurnstileToken(null)}
@@ -808,7 +827,6 @@ const ContactForm = () => {
               </div>
               {errors.turnstile && <p className="text-red-500 text-xs text-center mb-2">{errors.turnstile}</p>}
 
-              {/* Status messages */}
               {status === "success" && (
                 <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-center">
                   ✅ Enquiry received! Our team will contact you within 24 hours.
@@ -866,7 +884,7 @@ const ContactForm = () => {
 };
 
 // ─────────────────────────────────────────────
-// Main Page
+// Main Page Export
 // ─────────────────────────────────────────────
 const ItServicesPage = () => (
   <div className="overflow-x-hidden">

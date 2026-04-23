@@ -200,6 +200,8 @@ const OtpVerifyCard = ({ formData, onVerified, onBack, onResendOtp }) => {
         password: formData.password,
         otp: otp.trim(),
       });
+
+       
       onVerified();
     } catch (err) {
       const msg = err.response?.data?.message || err.response?.data?.error || "";

@@ -42,8 +42,8 @@ import BusResultsPage from "./modules/bus/pages/BusResultsPage";
 import BookingSuccess from "./modules/bus/pages/BookingSuccess";
 import PaymentStatus from "./modules/bus/pages/PaymentStatus";
  
-import SignIn from "./modules/bus/pages/SignIn";
-import SignupForm from "./modules/bus/pages/SignUpForm";
+import SignIn from "./globalfiles/SignIn";
+import SignupForm from "./globalfiles/SignupForm";
 import VerifyOTP from "./modules/bus/pages/VerifyOTP";
 import ForgotPassword from "./modules/bus/pages/ForgotPassword";
 import ResetPassword from "./modules/bus/pages/ResetPassword";

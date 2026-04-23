@@ -98,7 +98,7 @@ const SuccessToast = ({ message, subtitle, onDone }) => {
   );
 };
 
-const API_URL = "https://api.bobros.co.in";
+const API_URL = "https://api.bobros.in";
 
 // ─────────────────────────────────────────────────────────────
 // LEFT PANEL (unchanged)
@@ -137,49 +137,70 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
   const navigate = useNavigate();
 
   const googleLogin = useGoogleLogin({
-    scope: "email profile",
-    onSuccess: async (tokenResponse) => {
-      console.log("✅ Google OAuth Success - token received");
-      try {
-        const res = await axios.get("https://www.googleapis.com/oauth2/v2/userinfo", {
-          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-        });
-        console.log("✅ Userinfo received:", res.data.email);
-        const email = res.data.email;
-        const verify = await axios.get(`${API_URL}/gmailverify`, { params: { email } });
-        console.log("✅ Gmail verify response:", verify.data);
-        localStorage.setItem("user", JSON.stringify(verify.data));
-        localStorage.setItem("isLoggedIn", "true");
-        window.dispatchEvent(new Event("storage"));
-        setSuccessMsg("Successfully Logged In!");
-        setShowSuccessToast(true);
-      } catch (error) {
-        console.error("❌ Google Login API Error:", error?.response?.data || error.message);
-        alert("Google account not registered or server error.");
-      }
-    },
-    onError: (error) => {
-      console.error("❌ Google OAuth Error:", error);
-      alert("Google sign-in failed. Please try again.");
-    },
-  });
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    if (!captchaToken) { setError("Please verify captcha"); return; }
+  scope: "email profile",
+  onSuccess: async (tokenResponse) => {
+    console.log("✅ Google OAuth Success - token received");
     try {
-      const response = await axios.post(`${API_URL}/signin`, {
-        mobile: Number(mobile),
-        password: password,
-        captchaToken: captchaToken,
+      const res = await axios.get("https://www.googleapis.com/oauth2/v2/userinfo", {
+        headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
       });
-      localStorage.setItem("user", JSON.stringify(response.data));
+      console.log("✅ Userinfo received:", res.data.email);
+      const email = res.data.email;
+      const verify = await axios.get(`${API_URL}/gmailverify`, { params: { email } });
+      console.log("✅ Gmail verify response:", verify.data);
+
+      // ✅ FIXED: uname/umob/umail → name/mobile/email గా normalize చేస్తున్నాం
+      const raw = verify.data?.user || verify.data;
+      const normalized = {
+        ...raw,
+        name: raw.uname || raw.name || raw.full_name || "",
+        email: raw.umail || raw.email || email,
+        mobile: String(raw.umob || raw.mobile || ""),
+      };
+      localStorage.setItem("user", JSON.stringify(normalized));
       localStorage.setItem("isLoggedIn", "true");
       window.dispatchEvent(new Event("storage"));
       setSuccessMsg("Successfully Logged In!");
       setShowSuccessToast(true);
-    } catch (error) { setError("Invalid mobile or password"); }
-  };
+    } catch (error) {
+      console.error("❌ Google Login API Error:", error?.response?.data || error.message);
+      alert("Google account not registered or server error.");
+    }
+  },
+  onError: (error) => {
+    console.error("❌ Google OAuth Error:", error);
+    alert("Google sign-in failed. Please try again.");
+  },
+});
+
+ const handleLogin = async (e) => {
+  e.preventDefault();
+  if (!captchaToken) { setError("Please verify captcha"); return; }
+  try {
+    const response = await axios.post(`${API_URL}/signin`, {
+      mobile: Number(mobile),
+      password: password,
+      captchaToken: captchaToken,
+    });
+    console.log("LOGIN RESPONSE:", JSON.stringify(response.data, null, 2));
+
+    // ✅ FIXED: same normalization for regular login
+    const raw = response.data?.user || response.data;
+    const normalized = {
+      ...raw,
+      name: raw.uname || raw.name || raw.full_name || "",
+      email: raw.umail || raw.email || "",
+      mobile: String(raw.umob || raw.mobile || ""),
+    };
+    localStorage.setItem("user", JSON.stringify(normalized));
+    localStorage.setItem("isLoggedIn", "true");
+    window.dispatchEvent(new Event("storage"));
+    setSuccessMsg("Successfully Logged In!");
+    setShowSuccessToast(true);
+  } catch (error) {
+    setError("Invalid mobile or password");
+  }
+};
 
   const InputField = ({ icon: Icon, ...props }) => (
     <div className="flex items-center border border-gray-300 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 mb-3 focus-within:border-[#FD561E] focus-within:ring-1 focus-within:ring-[#FD561E] transition-all">

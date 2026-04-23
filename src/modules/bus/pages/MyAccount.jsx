@@ -9,8 +9,8 @@ import PrintTicketModal from "./PrintTicketModal";
 import ForgotPassword from "./ForgotPassword";
 import ResetPassword from "./ResetPassword";
 import AuthModal from "./AuthModal";
-import SignIn from "./SignIn";
-import SignupForm from "./SignUpForm";
+import SignIn from "../../../globalfiles/SignIn";
+import SignupForm from "../../../globalfiles/SignupForm";
 
 const MyAccount = () => {
   const navigate = useNavigate();
