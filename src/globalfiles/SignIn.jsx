@@ -3,13 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { Turnstile } from "@marsidev/react-turnstile";
 import axios from "axios";
 import { useGoogleLogin } from "@react-oauth/google";
-import { Phone, Lock, Eye, EyeOff, X, CheckCircle } from "lucide-react";
-
+import { Phone, Lock, Eye, EyeOff, X } from "lucide-react";
 import { createPortal } from "react-dom";
 
 // ─────────────────────────────────────────────────────────────
-// SUCCESS TOAST — renders via portal outside modal stack
-// Progress bar now expands left → right
+// SUCCESS TOAST
 // ─────────────────────────────────────────────────────────────
 const SuccessToast = ({ message, subtitle, onDone }) => {
   React.useEffect(() => {
@@ -46,7 +44,6 @@ const SuccessToast = ({ message, subtitle, onDone }) => {
           animation: "toastPop 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards",
         }}
       >
-        {/* Green circle with checkmark */}
         <div
           style={{
             width: "72px",
@@ -68,7 +65,6 @@ const SuccessToast = ({ message, subtitle, onDone }) => {
           <p style={{ fontWeight: 700, fontSize: "18px", color: "#111827", margin: 0 }}>{message}</p>
           <p style={{ fontSize: "13px", color: "#6b7280", margin: "6px 0 0 0" }}>{subtitle}</p>
         </div>
-        {/* Progress bar — now expands left to right */}
         <div style={{ width: "100%", height: "3px", background: "#f3f4f6", borderRadius: "999px", overflow: "hidden" }}>
           <div style={{
             height: "100%",
@@ -101,7 +97,17 @@ const SuccessToast = ({ message, subtitle, onDone }) => {
 const API_URL = "https://api.bobros.in";
 
 // ─────────────────────────────────────────────────────────────
-// LEFT PANEL (unchanged)
+// INPUT FIELD — SignIn బయట define చేశాం (re-render fix)
+// ─────────────────────────────────────────────────────────────
+const InputField = ({ icon: Icon, ...props }) => (
+  <div className="flex items-center border border-gray-300 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 mb-3 focus-within:border-[#FD561E] focus-within:ring-1 focus-within:ring-[#FD561E] transition-all">
+    <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 mr-2 sm:mr-3 flex-shrink-0" />
+    <input {...props} className="w-full outline-none text-xs sm:text-sm bg-transparent" />
+  </div>
+);
+
+// ─────────────────────────────────────────────────────────────
+// LEFT PANEL
 // ─────────────────────────────────────────────────────────────
 const LeftImagePanel = () => (
   <div
@@ -125,6 +131,9 @@ const LeftImagePanel = () => (
   </div>
 );
 
+// ─────────────────────────────────────────────────────────────
+// SIGN IN
+// ─────────────────────────────────────────────────────────────
 const SignIn = ({ closeModal, openSignup, openForgot }) => {
   const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
@@ -137,24 +146,57 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
   const navigate = useNavigate();
 
   const googleLogin = useGoogleLogin({
-  scope: "email profile",
-  onSuccess: async (tokenResponse) => {
-    console.log("✅ Google OAuth Success - token received");
-    try {
-      const res = await axios.get("https://www.googleapis.com/oauth2/v2/userinfo", {
-        headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-      });
-      console.log("✅ Userinfo received:", res.data.email);
-      const email = res.data.email;
-      const verify = await axios.get(`${API_URL}/gmailverify`, { params: { email } });
-      console.log("✅ Gmail verify response:", verify.data);
+    scope: "email profile",
+    onSuccess: async (tokenResponse) => {
+      console.log("✅ Google OAuth Success - token received");
+      try {
+        const res = await axios.get("https://www.googleapis.com/oauth2/v2/userinfo", {
+          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+        });
+        console.log("✅ Userinfo received:", res.data.email);
+        const email = res.data.email;
+        const verify = await axios.get(`${API_URL}/gmailverify`, { params: { email } });
+        console.log("✅ Gmail verify response:", verify.data);
 
-      // ✅ FIXED: uname/umob/umail → name/mobile/email గా normalize చేస్తున్నాం
-      const raw = verify.data?.user || verify.data;
+        const raw = verify.data?.user || verify.data;
+        const normalized = {
+          ...raw,
+          name: raw.uname || raw.name || raw.full_name || "",
+          email: raw.umail || raw.email || email,
+          mobile: String(raw.umob || raw.mobile || ""),
+        };
+        localStorage.setItem("user", JSON.stringify(normalized));
+        localStorage.setItem("isLoggedIn", "true");
+        window.dispatchEvent(new Event("storage"));
+        setSuccessMsg("Successfully Logged In!");
+        setShowSuccessToast(true);
+      } catch (error) {
+        console.error("❌ Google Login API Error:", error?.response?.data || error.message);
+        alert("Google account not registered or server error.");
+      }
+    },
+    onError: (error) => {
+      console.error("❌ Google OAuth Error:", error);
+      alert("Google sign-in failed. Please try again.");
+    },
+  });
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    if (!captchaToken) { setError("Please verify captcha"); return; }
+    try {
+      const response = await axios.post(`${API_URL}/signin`, {
+        mobile: Number(mobile),
+        password: password,
+        captchaToken: captchaToken,
+      });
+      console.log("LOGIN RESPONSE:", JSON.stringify(response.data, null, 2));
+
+      const raw = response.data?.user || response.data;
       const normalized = {
         ...raw,
         name: raw.uname || raw.name || raw.full_name || "",
-        email: raw.umail || raw.email || email,
+        email: raw.umail || raw.email || "",
         mobile: String(raw.umob || raw.mobile || ""),
       };
       localStorage.setItem("user", JSON.stringify(normalized));
@@ -163,51 +205,9 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
       setSuccessMsg("Successfully Logged In!");
       setShowSuccessToast(true);
     } catch (error) {
-      console.error("❌ Google Login API Error:", error?.response?.data || error.message);
-      alert("Google account not registered or server error.");
+      setError("Invalid mobile or password");
     }
-  },
-  onError: (error) => {
-    console.error("❌ Google OAuth Error:", error);
-    alert("Google sign-in failed. Please try again.");
-  },
-});
-
- const handleLogin = async (e) => {
-  e.preventDefault();
-  if (!captchaToken) { setError("Please verify captcha"); return; }
-  try {
-    const response = await axios.post(`${API_URL}/signin`, {
-      mobile: Number(mobile),
-      password: password,
-      captchaToken: captchaToken,
-    });
-    console.log("LOGIN RESPONSE:", JSON.stringify(response.data, null, 2));
-
-    // ✅ FIXED: same normalization for regular login
-    const raw = response.data?.user || response.data;
-    const normalized = {
-      ...raw,
-      name: raw.uname || raw.name || raw.full_name || "",
-      email: raw.umail || raw.email || "",
-      mobile: String(raw.umob || raw.mobile || ""),
-    };
-    localStorage.setItem("user", JSON.stringify(normalized));
-    localStorage.setItem("isLoggedIn", "true");
-    window.dispatchEvent(new Event("storage"));
-    setSuccessMsg("Successfully Logged In!");
-    setShowSuccessToast(true);
-  } catch (error) {
-    setError("Invalid mobile or password");
-  }
-};
-
-  const InputField = ({ icon: Icon, ...props }) => (
-    <div className="flex items-center border border-gray-300 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 mb-3 focus-within:border-[#FD561E] focus-within:ring-1 focus-within:ring-[#FD561E] transition-all">
-      <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 mr-2 sm:mr-3 flex-shrink-0" />
-      <input {...props} className="w-full outline-none text-xs sm:text-sm bg-transparent" />
-    </div>
-  );
+  };
 
   return (
     <>
@@ -225,9 +225,9 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
 
       <div className="flex items-center justify-center p-3 sm:p-4 min-h-screen md:min-h-0">
         <div className="relative bg-white rounded-2xl shadow-2xl flex flex-col md:flex-row items-stretch overflow-hidden w-full max-w-[95%] sm:max-w-[500px] md:max-w-[900px] mx-auto" style={{ maxHeight: "90vh", minHeight: "auto" }}>
-         
+
           <LeftImagePanel />
-         
+
           <div className="flex-1 p-5 sm:p-6 md:p-8 lg:p-10 bg-white flex flex-col justify-center overflow-y-auto" style={{ maxHeight: "90vh" }}>
             <button
               onClick={closeModal}
@@ -235,7 +235,7 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
             >
               <X size={20} className="sm:w-6 sm:h-6" />
             </button>
-           
+
             <div className="mb-4 sm:mb-6 text-center">
               <h2 className="text-xl sm:text-2xl font-bold text-gray-800">
                 Login in with <span className="text-[#fd561e]">BOBROS</span>
@@ -248,7 +248,7 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
                 {error}
               </p>
             )}
-           
+
             <form onSubmit={handleLogin} className="flex-1">
               <InputField
                 icon={Phone}
@@ -258,7 +258,7 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
                 onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))}
                 required
               />
-             
+
               <div className="relative">
                 <InputField
                   icon={Lock}
@@ -285,7 +285,7 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
                   Forgot Password?
                 </span>
               </div>
-             
+
               <div className="mb-3 sm:mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Security Verification
@@ -318,11 +318,11 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
               <div className="flex-grow border-t border-gray-100"></div>
             </div>
 
-            <button 
-              onClick={() => googleLogin()} 
+            <button
+              onClick={() => googleLogin()}
               className="w-full border border-gray-200 flex items-center justify-center cursor-pointer gap-2 py-2 sm:py-2.5 rounded-xl hover:bg-gray-50 text-xs sm:text-sm font-medium transition-all"
             >
-              <img src="/assets/google-Icon.png" alt="G" className="w-4 h-4 sm:w-5 sm:h-5 cursor-pointer" /> 
+              <img src="/assets/google-Icon.png" alt="G" className="w-4 h-4 sm:w-5 sm:h-5 cursor-pointer" />
               Sign in with Google
             </button>
 
