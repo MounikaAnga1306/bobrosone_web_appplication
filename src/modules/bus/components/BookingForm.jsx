@@ -288,7 +288,7 @@ const BookingForm = () => {
   };
 
   return (
-    <section className="relative min-h-[550px] md:min-h-[590px] flex items-center justify-center py-8 md:py-0 overflow-hidden">
+    <section className="relative min-h-[550px] md:min-h-[480px] lg:min-h-[590px] flex items-center justify-center py-8 md:py-0 overflow-hidden">
       {/* Background Carousel with Zoom Effect */}
       <div className="absolute inset-0 w-full h-full">
         {/* Current Image */}
@@ -316,7 +316,7 @@ const BookingForm = () => {
       </div>
 
       {/* Very subtle dark overlay for text readability (removed heavy gradients) */}
-      <div className="absolute inset-0 bg-black/30" />
+      <div className="absolute inset-0" />
 
       {/* Carousel Navigation Arrows */}
       <button
@@ -338,10 +338,10 @@ const BookingForm = () => {
         {/* Hero Text */}
         <div className="text-center mb-4 sm:mb-6 md:mb-8 text-white">
           <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-bold mt-6 md:-mt-6">
-            Your Journey, Our Priority
+            Travel Smart, Travel Comfortable
           </h1>
           <p className="text-xs sm:text-sm md:text-lg opacity-90 mt-1 sm:mt-2">
-            Book buses, flights, hotels & more at the best prices
+           Travel across hundreds of routes at the best prices with BOBROS
           </p>
         </div>
 

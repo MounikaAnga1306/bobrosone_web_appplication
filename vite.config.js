@@ -13,6 +13,7 @@ export default defineConfig({
    server: {
     proxy: {
       '/bill': 'http://localhost:5000',
+      '/bbps': 'http://localhost:5000',
       '/offer': 'http://localhost:5000',
       '/cancel': 'http://localhost:5000',
       '/myAccount': 'http://localhost:5000',
