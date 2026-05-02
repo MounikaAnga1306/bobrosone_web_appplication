@@ -28,7 +28,6 @@ const Navbar = () => {
   const [showFlightPrintTicket, setShowFlightPrintTicket] = useState(false);
   const [mobileDropdownOpen, setMobileDropdownOpen] = useState(false);
   
-
   const navigate = useNavigate();
   const location = useLocation();
   const dropdownRef = useRef(null);
@@ -110,8 +109,9 @@ const Navbar = () => {
   const dynamicPages = ["/", "/HomePage", "/flights", "/BillHomePage", "/hotels", "/cabs", "/Holiday"];
   const isDynamicPage = dynamicPages.includes(location.pathname);
   const isSolid = !isDynamicPage || scrolled;
-  const noFixedNavbarPages = ["/results"];
-  const isNoFixedPage = noFixedNavbarPages.includes(location.pathname);
+  const isNoFixedPage =
+  location.pathname === "/results" ||
+  location.pathname.startsWith("/hotels/");
 
   useEffect(() => {
     if (!isDynamicPage) return;

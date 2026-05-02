@@ -4,8 +4,9 @@ import AppDownload from "../../bus/components/AppDownload";
 import PopularBusRoutes from "../../bus/components/PopularBusRoutes";
 import Quick_Links from "../../bus/components/Quick_Links";
 import BusFAQ from "../../bus/components/BusFAQ";
-import BillBookingForm from "../../Bill Payments/components/Billbookingform";       // ← new form
-import Advertisement from "../../bus/components/Advertisement";
+import BillBookingForm from "../../Bill Payments/components/Billbookingform"; 
+import PopularBillers from "../components/PopularBillers";    
+import RechargeAndBillsIcons from "../components/Rechargeandbillsicons"; 
 
 function BillHomeScreen() {
   return (
@@ -13,14 +14,14 @@ function BillHomeScreen() {
       <main className="flex-grow">
         {/* Bill Payments Hero Section - NO CONTAINER, FULL WIDTH */}
         <BillBookingForm />
-      {/* <Advertisement /> */}
+     
 
         <Services />
         <AppDownload />
-        <PopularBusRoutes />
+        <RechargeAndBillsIcons />
         <WhyBobros />
-        <Quick_Links />
-        <BusFAQ />
+         <PopularBillers />
+  
       </main>
     </div>
   );

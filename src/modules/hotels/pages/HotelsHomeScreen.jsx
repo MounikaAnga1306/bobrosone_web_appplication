@@ -6,7 +6,7 @@ import Services from "../../bus/components/OurServices";
 import WhyBobros from "../../bus/components/WhyBobros";
 import AppDownload from "../../bus/components/AppDownload";
 import Quick_Links from "../../bus/components/Quick_Links";
-import Advertisement from "../../bus/components/Advertisement";
+// import Advertisement from "../../bus/components/Advertisement";
 
 const HotelsHomeScreen = () => {
   return (
@@ -16,14 +16,16 @@ const HotelsHomeScreen = () => {
         <HotelHeroSection />
 
         {/* Content Sections with consistent spacing */}
-        <div className="mt-16 md:mt-20 lg:mt-24">
+        <div className=" md:mt-10 lg:mt-10">
           {/* Advertisement */}
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-            <Advertisement />
+            {/* <Advertisement /> */}
           </div>
 
           {/* Services */}
+          <div className="sm:-mt-10">
           <Services />
+          </div>
 
           {/* App Download */}
           <AppDownload />

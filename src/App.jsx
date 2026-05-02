@@ -63,16 +63,15 @@ import DisclaimerPolicy from "./modules/bus/pages/DisclaimerPolicy";
 import ItServicesPage from "./modules/bus/components/ItServicesPage";
 // ✅ ADDED: Bill Payment imports
 import BillHomeScreen from "./modules/Bill Payments/pages/BillHomeScreen";
+import BillersList from "./modules/Bill Payments/pages/Billerslist";
 import BillDetails from './modules/Bill Payments/pages/BillDetails';
+import BillPaymentStatus from "./modules/Bill Payments/pages/BillPaymentStatus";
  
 import { GoogleOAuthProvider } from "@react-oauth/google";
  
 // ============================================
 // MAIN CONTENT COMPONENT WITH PADDING LOGIC
 // ============================================
-// Padding is applied ONLY to flight routes
-// Bus routes, hotel routes, and special flight routes have NO padding
- 
 const MainContent = ({ children }) => {
   const location = useLocation();
   const pathname = location.pathname;
@@ -118,17 +117,14 @@ const MainContent = ({ children }) => {
     pathname === "/flights/pnr-search";
  
   // ========== PADDING DECISION LOGIC ==========
-  // Apply padding ONLY for:
-  // 1. Flight routes
-  // 2. NOT special exception routes
-  // 3. NOT bus routes
-  // 4. NOT hotel routes
   const shouldHavePadding =
     isFlightRoute &&
     !isSpecialNoPaddingFlightRoute &&
     !isBusRoute &&
     !isHotelRoute;
  
+  // ✅ FIXED: flex-1 add చేశాను — footer gap పోతుంది అన్ని screens లో
+  // flex-col parent (App div) + flex-1 (MainContent) = footer అంటుకుంటుంది
   return (
     <div className={`flex-1 ${shouldHavePadding ? "pt-20" : ""}`}>
       {children}
@@ -201,11 +197,11 @@ function App() {
           <HotelSearchProvider>
             <Router>
               <ScrollToTop/>
-              {/* ✅ FIXED: removed overflow-x-hidden — it was breaking position: sticky on all descendant pages */}
+              {/* flex flex-col + min-h-screen → MainContent flex-1 తో footer అంటుకుంటుంది */}
               <div className="min-h-screen bg-gray-100 flex flex-col w-full">
                 <Navbar />
                
-                {/* MainContent wraps all routes and applies padding conditionally */}
+                {/* ✅ ONLY CHANGE: flex-1 already was there — confirmed it's correct */}
                 <MainContent>
                   <Routes>
                     {/* Bus Routes - Home */}
@@ -213,7 +209,7 @@ function App() {
                     <Route path="/HomePage" element={<Home />} />
                     <Route path="/holiday" element={<Holiday/>} />
                     <Route path="/ItService" element={<ItServicesPage/>} />
- 
+
                     {/* Bus Routes - Static Pages */}
                     <Route path="/about" element={<AboutUs />} />
                     <Route path="/contact" element={<ContactUs />} />
@@ -229,9 +225,11 @@ function App() {
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
 
-                    {/* ✅ ADDED: Bill Payment Routes */}
+                    {/* ✅ Bill Payment Routes */}
                     <Route path="/BillHomePage" element={<BillHomeScreen />} />
+                    <Route path="/billers" element={<BillersList />} />
                     <Route path="/bill-details" element={<BillDetails />} />
+                    <Route path="/payment-status" element={<BillPaymentStatus />} />
  
                     {/* Bus Routes - User Account */}
                     <Route path="/my-bookings" element={<MyBookings />} />
@@ -245,10 +243,9 @@ function App() {
                     <Route path="/booking-success" element={<BookingSuccess />} />
                     <Route path="/payment-status" element={<PaymentStatus />} />
  
-                    {/* Flight Routes - Search (No padding needed for search page) */}
+                    {/* Flight Routes */}
                     <Route path="/flights" element={<SearchPage />} />
                    
-                    {/* Flight Routes - These routes WILL have padding (pt-20) */}
                     <Route element={<BothProvidersLayout />}>
                       <Route path="/flights/results" element={<OneWayPage />} />
                       <Route path="/flights/round-trip" element={<RoundTripPage />} />
@@ -259,15 +256,14 @@ function App() {
                       <Route path="/flights/ticket-confirmation" element={<TicketConfirmationScreen />} />
                     </Route>
  
-                    {/* Flight Routes - Special routes with NO padding (exceptions) */}
                     <Route path="/flights/tracker" element={<FlightTracker />} />
                     <Route path="/flights/pnr-search" element={<PNRSearch />} />
  
-                    {/* Hotel Routes - NO padding */}
+                    {/* Hotel Routes */}
                     <Route path="/hotels" element={<HotelsHomeScreen />} />
                     <Route path="/hotels/results" element={<HotelSearchResults />} />
  
-                    {/* Catch all - 404 redirect */}
+                    {/* Catch all */}
                     <Route path="*" element={<Navigate to="/" />} />
                   </Routes>
                 </MainContent>

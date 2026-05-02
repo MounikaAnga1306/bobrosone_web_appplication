@@ -387,8 +387,8 @@ const FlightHeroSection = () => {
   const handleTabClick = (tab) => { setActiveTab(tab.id); navigate(tabRoutes[tab.id]); };
 
   const getSectionHeight = () => {
-    if (isMobile) return tripType === 'multi-city' ? 'min-h-[950px]' : 'min-h-[750px]';
-    if (isTablet) return tripType === 'multi-city' ? 'min-h-[800px]' : 'min-h-[620px]';
+    if (isMobile) return tripType === 'multi-city' ? 'min-h-[820px]' : 'min-h-[700px]';
+    if (isTablet) return tripType === 'multi-city' ? 'min-h-[680px]' : 'min-h-[530px]';
     return tripType === 'multi-city' ? 'min-h-[750px]' : 'h-[590px]';
   };
 
@@ -772,9 +772,9 @@ const FlightHeroSection = () => {
 
       {/* Content */}
       <div className="relative z-10 w-full max-w-6xl px-3 sm:px-6">
-        <div className={`text-center text-white ${isMobile?'mb-4 -mt-6':'mb-6'}`}>
+        <div className={`text-center text-white ${isMobile?'mb-4 -mt-2':'mb-6'}`}>
           <h1 className={`${getHeadingSize()} font-bold mb-2`}>Your Journey, Our Priority</h1>
-          <p className="text-xs sm:text-base opacity-90">Book flights at the best prices with exclusive deals</p>
+          <p className="text-xs  sm:text-base opacity-90">Fly with BOBROS for the best flight deals</p>
         </div>
 
         {/* ── BOOKING CARD ── */}

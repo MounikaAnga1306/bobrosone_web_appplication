@@ -322,6 +322,7 @@ const BillBookingForm = () => {
         partial_pay: d.partial_pay,
         partial_pay_amount: d.partial_pay_amount,
         pay_after_duedate: d.pay_after_duedate,
+        pay_multiple_bills: d.pay_multiple_bills || "N", 
         paymentamount_validation: d.paymentamount_validation,
         plan_available: d.plan_available,
         biller_type: d.biller_type,
@@ -360,7 +361,7 @@ const BillBookingForm = () => {
   };
 
   return (
-    <section className="relative min-h-[520px] md:min-h-[540px] flex items-center justify-center py-8 md:py-0">
+    <section className="relative min-h-[520px] md:min-h-[400px]  lg:min-h-[540px] flex items-center justify-center py-8 md:py-0">
       <img
         src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-4.0.3&auto=format&fit=crop&w=2071&q=80"
         alt="Bill payments background"
@@ -402,10 +403,26 @@ const BillBookingForm = () => {
                 </button>
               );
             })}
+             {/* Bharat Connect logo — pushed to right */}
+  <div className="ml-auto -mr-4 -mt-3 flex-shrink-0">
+    <img
+      src="/assets/Bharat_connect_logo.png"
+      alt="Bharat Connect"
+      className="h-[50px] w-auto object-contain "
+    />
+  </div>
           </div>
 
           {/* ── Mobile View ── */}
           <div className="md:hidden space-y-3">
+             {/* ADD THIS — logo row inside white card */}
+  <div className="flex justify-end mb-1 -mt-4">
+    <img
+      src="/assets/Bharat_connect_logo.png"
+      alt="Bharat Connect"
+      className="h-[50px] w-auto object-contain"
+    />
+  </div>
             <div className="border border-gray-200 rounded-xl px-3 pt-2 pb-2">
               <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-1">
                 <i className="fa-solid fa-table-cells-large" /> Category
@@ -593,7 +610,16 @@ const BillBookingForm = () => {
           </div>
 
           {/* ── Desktop View ── */}
+          
           <div className="hidden md:block">
+              {/* ADD THIS — logo above the grid, right aligned */}
+  <div className="hidden md:flex lg:hidden justify-end -mb-3 -mt-8 ">
+    <img
+      src="/assets/Bharat_connect_logo.png"
+      alt="Bharat Connect"
+      className="h-[50px] w-auto object-contain"
+    />
+  </div>
             <div className="grid grid-cols-2 gap-0">
               <div className="group pr-6">
                 <p className="text-[11px] text-gray-400 uppercase tracking-wide mb-1 group-hover:text-[#FD561E] transition-colors duration-300 flex items-center gap-1">
