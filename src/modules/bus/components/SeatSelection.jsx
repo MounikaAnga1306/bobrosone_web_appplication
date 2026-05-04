@@ -22,13 +22,10 @@ const SeatSelection = ({
   onNext,
 }) => {
   const [showPopup, setShowPopup] = useState(false);
-
-  // ── FIX: tooltip state — track which seat is hovered + mouse position ──────
-  const [tooltip, setTooltip] = useState(null); // { seatId, fare, x, y }
+  const [tooltip, setTooltip] = useState(null);
 
   if (!tripDetails?.seats) return null;
 
-  // ── 1. Normalise every seat from API ──────────────────────────────────────
   const seats = tripDetails.seats.map((s) => ({
     ...s,
     available:  s.available  === true || s.available  === "true",
@@ -41,18 +38,15 @@ const SeatSelection = ({
     totalFare: Number(s.totalFare ?? s.fare ?? 0),
   }));
 
-  // ── 2. Split decks ────────────────────────────────────────────────────────
   const upperDeck = seats.filter((s) => s.zIndex === 1);
   const lowerDeck = seats.filter((s) => s.zIndex === 0);
   const hasUpper  = upperDeck.length > 0;
   const hasLower  = lowerDeck.length > 0;
 
-  // ── 3. Seat type predicates ───────────────────────────────────────────────
   const isSeater   = (s) => s.length === 1 && s.width === 1;
   const isHorizSlp = (s) => s.length === 2 && s.width === 1;
   const isVertSlp  = (s) => s.length === 1 && s.width === 2;
 
-  // ── 4. Toggle selection (max 6) ───────────────────────────────────────────
   const toggleSeat = (seat) => {
     if (!seat.available) return;
     const exists = selectedSeats.some((s) => s.id === seat.id);
@@ -68,7 +62,6 @@ const SeatSelection = ({
     }
   };
 
-  // ── 5. Seat image selector ────────────────────────────────────────────────
   const getSeatImage = (seat) => {
     const sel = selectedSeats.some((s) => s.id === seat.id);
 
@@ -83,27 +76,16 @@ const SeatSelection = ({
       if (seat.ladiesSeat) return ladiesSleeper;
       return availableSleeper;
     }
-    // seater
     if (!seat.available) return bookedSeat;
     if (sel)             return selectedSeat;
     if (seat.ladiesSeat) return ladiesSeat;
     return availableSeat;
   };
 
-  // ── 6. Seat cell renderer ─────────────────────────────────────────────────
-  // FIX: tooltip uses fixed positioning via mouse coordinates
-  // so it never gets clipped by overflow:hidden on parent containers.
-  // Only these 3 things changed vs original:
-  //   a) onMouseEnter → set tooltip state with mouse position
-  //   b) onMouseMove  → update position as mouse moves
-  //   c) onMouseLeave → clear tooltip
-  //   d) tooltip rendered via portal-like fixed div at bottom of component
-  // Spacing: added gap between image and name label via padding tweak
   const renderSeatCell = (seat) => (
     <div
       key={seat.id}
       onClick={() => toggleSeat(seat)}
-      // FIX (a)(b)(c): track mouse position for fixed tooltip
       onMouseEnter={(e) =>
         setTooltip({ seatId: seat.id, fare: seat.totalFare, x: e.clientX, y: e.clientY })
       }
@@ -112,35 +94,48 @@ const SeatSelection = ({
       }
       onMouseLeave={() => setTooltip(null)}
       className="cursor-pointer relative flex items-center justify-center"
+      style={{ width: "100%", height: "100%" }}
     >
       <img
         src={getSeatImage(seat)}
         alt={seat.name}
-        className={`object-contain ${
+        className="object-contain"
+        style={
           isVertSlp(seat)
-            ? "h-[45px] w-[28px] sm:h-[50px] sm:w-[32px] md:h-[65px] md:w-[42px] lg:h-[75px] lg:w-[45px]"
+            ? { height: 75, width: 45 }
             : isHorizSlp(seat)
-            ? "h-[45px] w-[60px] sm:h-[50px] sm:w-[70px] md:h-[60px] md:w-[80px] lg:h-[70px] lg:w-[85px]"
-            : "h-[28px] w-[24px] sm:h-[32px] sm:w-[28px] md:h-[38px] md:w-[34px] lg:h-[45px] lg:w-[40px]"
-        }`}
+            ? { height: 70, width: 85 }
+            : { height: 45, width: 40 }
+        }
       />
-      <span className="absolute text-[7px] sm:text-[8px] md:text-[9px] lg:text-[10px] font-semibold text-gray-800">
+      <span
+        className="absolute font-semibold text-gray-800"
+        style={{
+          fontSize: 10,
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+        }}
+      >
         {seat.name}
       </span>
     </div>
   );
 
-  // ── 7. UNIFIED GRID (unchanged) ───────────────────────────────────────────
   const renderUnifiedGrid = (deckSeats) => {
     if (!deckSeats.length) return null;
 
-    const GAP         = 8;   // px — rowGap & columnGap
-    const SEATER_H    = 45;  // px — seater row height
-    const VERT_H      = 75;  // px — vert-sleeper row height
-    const HORIZ_HALF  = Math.floor((70 + GAP) / 2); // 39px
+    const GAP          = 6;
+    const SEATER_H     = 48;
+    const SEATER_W     = 44;
+    const VERT_H       = 80;
+    const VERT_W       = 50;
+    const HORIZ_HALF_H = 44;
+    const HORIZ_W      = 90;
 
     const minCol = Math.min(...deckSeats.map((s) => s.column));
     const maxCol = Math.max(...deckSeats.map((s) => s.column + s.width - 1));
+    const totalCols = maxCol - minCol + 1;
 
     const occupiedSet = new Set();
     deckSeats.forEach((s) => {
@@ -151,22 +146,56 @@ const SeatSelection = ({
     const rowToGrid = {};
     sortedRows.forEach((apiRow, idx) => { rowToGrid[apiRow] = idx + 1; });
 
+    // Row heights: only seats STARTING at this row define its height
     const gridRowHeights = sortedRows.map((apiRow) => {
       let h = 0;
       deckSeats.forEach((s) => {
-        if (s.row > apiRow || (s.row + s.length - 1) < apiRow) return;
-        if (isVertSlp(s))  { h = Math.max(h, VERT_H);     return; }
-        if (isSeater(s))   { h = Math.max(h, SEATER_H);   return; }
-        if (isHorizSlp(s)) { h = Math.max(h, HORIZ_HALF);        }
+        if (s.row !== apiRow) return;
+        if (isVertSlp(s))  { h = Math.max(h, VERT_H);       return; }
+        if (isHorizSlp(s)) { h = Math.max(h, HORIZ_HALF_H); return; }
+        h = Math.max(h, SEATER_H);
       });
       return `${h || SEATER_H}px`;
+    });
+
+    // KEY FIX: per-column widths
+    // Single-width seats set their column's width directly.
+    // Multi-width (spanning) seats share width proportionally as fallback.
+    // This prevents sleeper columns from inflating seater column widths.
+    const colWidths = Array.from({ length: totalCols }, (_, ci) => {
+      const gridCol = ci + 1;
+      let w = 0;
+
+      // Pass 1: single-width seats get priority
+      deckSeats.forEach((s) => {
+        if (s.width !== 1) return;
+        const colStart = s.column - minCol + 1;
+        if (colStart !== gridCol) return;
+        if (isVertSlp(s))  { w = Math.max(w, VERT_W);  return; }
+        if (isHorizSlp(s)) { w = Math.max(w, HORIZ_W); return; }
+        w = Math.max(w, SEATER_W);
+      });
+
+      // Pass 2: if no single-width seat occupies this col, share from spanning seat
+      if (w === 0) {
+        deckSeats.forEach((s) => {
+          if (s.width <= 1) return;
+          const colStart = s.column - minCol + 1;
+          const colEnd   = colStart + s.width - 1;
+          if (gridCol < colStart || gridCol > colEnd) return;
+          if (isVertSlp(s))  w = Math.max(w, Math.floor(VERT_W  / s.width));
+          if (isHorizSlp(s)) w = Math.max(w, Math.floor(HORIZ_W / s.width));
+        });
+      }
+
+      return `${w || SEATER_W}px`;
     });
 
     return (
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: `repeat(${maxCol - minCol + 1}, max-content)`,
+          gridTemplateColumns: colWidths.join(" "),
           gridTemplateRows: gridRowHeights.join(" "),
           columnGap: `${GAP}px`,
           rowGap:    `${GAP}px`,
@@ -198,12 +227,10 @@ const SeatSelection = ({
     );
   };
 
-  // ── 8. Deck wrapper (unchanged) ───────────────────────────────────────────
   const renderDeck = (deckSeats, title, showSteering) => {
     if (!deckSeats.length) return null;
     return (
       <div className="mb-4 md:mb-6 lg:mb-8 flex border border-gray-200 rounded-xl overflow-hidden w-fit max-w-full">
-        {/* Rotated side label – responsive width and text size */}
         <div className="w-8 sm:w-10 md:w-12 lg:w-14 bg-gray-200 flex items-center justify-center relative border-r border-gray-300 flex-shrink-0">
           <span className="rotate-[-90deg] font-semibold text-[8px] sm:text-[10px] md:text-xs lg:text-sm text-gray-600 tracking-wide whitespace-nowrap">
             {title}
@@ -217,7 +244,6 @@ const SeatSelection = ({
           )}
         </div>
 
-        {/* Seat grid container – responsive padding and horizontal scroll */}
         <div
           className={`flex-1 bg-white overflow-x-auto ${
             showSteering
@@ -231,11 +257,9 @@ const SeatSelection = ({
     );
   };
 
-  // ── 9. Main render (unchanged) ────────────────────────────────────────────
   return (
     <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 md:gap-6 lg:gap-10 p-2 sm:p-3 md:p-4 lg:p-0 w-full min-w-0">
 
-      {/* Max-seats popup – responsive sizing */}
       {showPopup && (
         <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[999] animate-bounce-in">
           <div className="flex items-center gap-2 sm:gap-3 bg-[#fd561e] text-white px-3 sm:px-4 md:px-6 py-2 sm:py-3 rounded-xl shadow-2xl">
@@ -255,14 +279,10 @@ const SeatSelection = ({
         </div>
       )}
 
-      {/* FIX (d): Fixed-position tooltip rendered here — outside all overflow:hidden containers */}
       {tooltip && (
         <div
           className="fixed z-[99999] pointer-events-none"
-          style={{
-            left: tooltip.x + 12,
-            top:  tooltip.y - 36,
-          }}
+          style={{ left: tooltip.x + 12, top: tooltip.y - 36 }}
         >
           <div className="bg-white text-black text-xs md:text-sm font-semibold px-2 py-1 rounded shadow-md whitespace-nowrap border border-gray-200">
             Fare: ₹{tooltip.fare}
@@ -271,7 +291,6 @@ const SeatSelection = ({
         </div>
       )}
 
-      {/* Seat layout panel – responsive padding and width */}
       <div className="w-full lg:w-fit bg-white rounded-lg p-2 sm:p-3 md:p-4 lg:p-6 lg:ml-20 overflow-x-auto max-w-full">
         <h3 className="font-semibold mb-2 sm:mb-3 md:mb-4 lg:mb-6 text-sm sm:text-base md:text-lg">
           Select Seats
@@ -282,7 +301,6 @@ const SeatSelection = ({
         {!hasUpper && !hasLower && renderUnifiedGrid(seats)}
       </div>
 
-      {/* Legend + Summary – responsive layout */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-center lg:flex-col lg:items-stretch gap-3 sm:gap-4 md:gap-6 w-full lg:w-auto">
         <SeatLegend />
         <SelectedSeatSummary
