@@ -127,6 +127,58 @@ const extractDataFromDesc = (description = "") => {
 };
 
 // ─────────────────────────────────────────────────────────────
+// AuthField — component బయట define చేయడం వల్ల parent re-render
+// అయినా ఇది re-create అవ్వదు → input focus పోదు
+// ─────────────────────────────────────────────────────────────
+const AuthField = ({ auth, formData, onInputChange, getGroupInfo }) => {
+  const { parameter_name, optional, regex, list_of_values, error_message } = auth;
+  const isOptional   = optional === "Y";
+  const groupInfo    = getGroupInfo(parameter_name);
+  const isGroupField = !!groupInfo;
+  return (
+    <div>
+      <label className="block text-sm font-semibold text-gray-700 mb-1">
+        {parameter_name}{" "}
+        {!isOptional && !isGroupField && <span className="text-[#fd561e]">*</span>}
+        {isGroupField && (
+          <span className="ml-2 text-[10px] font-normal text-blue-500 border border-blue-300 bg-blue-50 px-2 py-0.5 rounded-full">
+            Any {groupInfo.auth_input} required
+          </span>
+        )}
+      </label>
+      {list_of_values && Array.isArray(list_of_values) && list_of_values.length > 0 ? (
+        <select
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] outline-none bg-gray-50"
+          required={!isOptional && !isGroupField}
+          value={formData[parameter_name] || ""}
+          onChange={(e) => onInputChange(parameter_name, e.target.value)}>
+          <option value="">Select {parameter_name}</option>
+          {list_of_values.map((item, i) => (
+            <option key={i} value={item.value || item}>{item.name || item.value || item}</option>
+          ))}
+        </select>
+      ) : (
+        <input
+          type="text"
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] outline-none bg-gray-50"
+          placeholder={`Enter ${parameter_name.toLowerCase()}`}
+          required={!isOptional && !isGroupField}
+          pattern={regex || undefined}
+          title={error_message || undefined}
+          value={formData[parameter_name] || ""}
+          onChange={(e) => onInputChange(parameter_name, e.target.value)}
+        />
+      )}
+      {error_message && (
+        <p className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
+          <i className="fa-solid fa-circle-info text-[#fd561e]" /> {error_message}
+        </p>
+      )}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────
 // MAIN COMPONENT
 // ─────────────────────────────────────────────────────────────
 const BillDetails = () => {
@@ -144,9 +196,10 @@ const BillDetails = () => {
   const [validationError, setValidationError] = useState(false);
   const [validationMsg,   setValidationMsg]   = useState("");
 
-  const [billAmount,   setBillAmount]   = useState("");
-  const [totalPayable, setTotalPayable] = useState("");
-  const [billSummary,  setBillSummary]  = useState(null);
+  const [billAmount,    setBillAmount]    = useState("");
+  const [totalPayable,  setTotalPayable]  = useState("");
+  const [billSummary,   setBillSummary]   = useState(null);
+  const [additionalInfo, setAdditionalInfo] = useState([]);  // validation additional_info
 
   const [billList,     setBillList]     = useState([]);
   const [selectedBill, setSelectedBill] = useState(null);
@@ -325,7 +378,7 @@ const BillDetails = () => {
       setSelectedBillIds([]); setBillPayAmounts({});
       setStep(2); return;
     }
-    setFetchingBill(true); setValidationError(false); setValidationMsg("");
+    setFetchingBill(true); setValidationError(false); setValidationMsg(""); setAdditionalInfo([]);
     try {
       const authenticatorValues = {};
       for (const auth of authenticators) {
@@ -344,7 +397,29 @@ const BillDetails = () => {
         const bills        = nested.billlist || [];
         const pmb          = (bd.pay_multiple_bills || "N").toUpperCase();
 
+        // additional_info check — NCMC/PAYEE type billers billlist ఇవ్వరు, additional_info ఇస్తారు
+        const additionalInfoArr = nested.additional_info || [];
+        setAdditionalInfo(additionalInfoArr);
+
         if (bills.length === 0) {
+          if (additionalInfoArr.length > 0) {
+            // additional_info ఉంది — billlist లేకపోయినా ok, step 2 కి వెళ్ళు
+            setBillSummary({ validationId });
+            setBillList([]);
+            setSelectedBillIds([]);
+
+            // Min/Max amounts additional_info నుండి తీసుకో
+            const getInfo = (name) =>
+              additionalInfoArr.find((x) => x.parameter_name === name)?.value || "";
+            const minAmt = parseFloat(getInfo("Minimum Permissible Recharge Amount")) || 0;
+            const maxAmt = parseFloat(getInfo("Maximum Permissible Recharge Amount")) || 0;
+            if (minAmt > 0) setTotalPayable(minAmt.toFixed(2));
+            else setTotalPayable("");
+            setBillAmount("");
+            setPayMultipleBills(pmb);
+            setStep(2);
+            return;
+          }
           setValidationError(true);
           setValidationMsg("Bill amount not found. Please try again.");
           return;
@@ -402,12 +477,37 @@ const BillDetails = () => {
     } finally { setFetchingBill(false); }
   };
 
-  const toggleBillSelection = (stableId) => {
+  // ══════════════════════════════════════════════════
+  // NEW HELPER: Expanded bill ki min amount validate cheyyadam
+  // ══════════════════════════════════════════════════
+  const validateExpandedBillAmount = (currentAmounts, currentExpandedId, allBills) => {
+    if (!currentExpandedId) return true; // expand అవ్వలేదు — ok
+    const bill = allBills.find((b) => b._stableId === currentExpandedId);
+    if (!bill) return true;
+    const minPay = parseFloat(bill.min_pay_amount || 0);
+    if (minPay <= 0) return true; // min లేదు — ok
+    const enteredAmt = parseFloat(currentAmounts[currentExpandedId] || 0);
+    if (enteredAmt < minPay) {
+      setPopupMessage(
+        `Minimum payment amount for bill "${bill.billnumber || currentExpandedId}" is ₹${minPay.toFixed(2)}. Please enter a valid amount.`
+      );
+      setShowPopup(true);
+      return false;
+    }
+    return true;
+  };
+
+  // ── MODIFIED: toggleBillSelection — switch చేసే ముందు validate ──
+  const toggleBillSelection = (stableId, currentAmounts, currentExpandedId, allBills) => {
+    // expand అయిన bill validate చేయి (తాను కాని వేరే bill click చేసినప్పుడు)
+    if (currentExpandedId && currentExpandedId !== stableId) {
+      if (!validateExpandedBillAmount(currentAmounts, currentExpandedId, allBills)) return;
+    }
     setSelectedBillIds((prev) => {
       const next = prev.includes(stableId)
         ? prev.filter((id) => id !== stableId)
         : [...prev, stableId];
-      setTotalPayable(computeMultiTotal(next, billPayAmounts));
+      setTotalPayable(computeMultiTotal(next, currentAmounts));
       return next;
     });
   };
@@ -448,6 +548,40 @@ const BillDetails = () => {
     if (!totalPayable || parseFloat(totalPayable) <= 0) {
       setPopupMessage("Please enter a valid amount."); setShowPopup(true); return;
     }
+
+    // additional_info mode (NCMC/PAYEE) — min/max validate చేయి
+    if (additionalInfo.length > 0 && billList.length === 0) {
+      const getInfo = (name) => additionalInfo.find((x) => x.parameter_name === name)?.value || "";
+      const minAmt = parseFloat(getInfo("Minimum Permissible Recharge Amount")) || 0;
+      const maxAmt = parseFloat(getInfo("Maximum Permissible Recharge Amount")) || 0;
+      const entered = parseFloat(totalPayable) || 0;
+      if (minAmt > 0 && entered < minAmt) {
+        setPopupMessage(`Minimum recharge amount is ₹${minAmt}. Please enter a valid amount.`);
+        setShowPopup(true); return;
+      }
+      if (maxAmt > 0 && entered > maxAmt) {
+        setPopupMessage(`Maximum recharge amount is ₹${maxAmt}. Please enter a valid amount.`);
+        setShowPopup(true); return;
+      }
+    }
+
+    // ── Proceed చేసే ముందు కూడా అన్ని selected bills validate చేయి ──
+    for (const sid of selectedBillIds) {
+      const bill = billList.find((b) => b._stableId === sid);
+      if (!bill) continue;
+      const minPay = parseFloat(bill.min_pay_amount || 0);
+      if (minPay > 0) {
+        const enteredAmt = parseFloat(billPayAmounts[sid] || 0);
+        if (enteredAmt < minPay) {
+          setPopupMessage(
+            `Minimum payment amount for bill "${bill.billnumber || sid}" is ₹${minPay.toFixed(2)}. Please enter a valid amount before proceeding.`
+          );
+          setShowPopup(true);
+          return;
+        }
+      }
+    }
+
     setPlanRequiredError(false);
     setSelectedMethod(""); setUpiId(""); setUpiError(""); setAmountMethodErr("");
     setConvFeeInfo({ fee: 0, gst: 0, total: 0 });
@@ -815,51 +949,6 @@ const BillDetails = () => {
     </div>
   );
 
-  const AuthField = ({ auth }) => {
-    const { parameter_name, optional, regex, list_of_values, error_message } = auth;
-    const isOptional  = optional === "Y";
-    const groupInfo   = getGroupInfo(parameter_name);
-    const isGroupField= !!groupInfo;
-    return (
-      <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-1">
-          {parameter_name}{" "}
-          {!isOptional && !isGroupField && <span className="text-[#fd561e]">*</span>}
-          {isGroupField && (
-            <span className="ml-2 text-[10px] font-normal text-blue-500 border border-blue-300 bg-blue-50 px-2 py-0.5 rounded-full">
-              Any {groupInfo.auth_input} required
-            </span>
-          )}
-        </label>
-        {list_of_values && Array.isArray(list_of_values) && list_of_values.length > 0 ? (
-          <select className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] outline-none bg-gray-50"
-            required={!isOptional && !isGroupField}
-            value={formData[parameter_name] || ""}
-            onChange={(e) => handleInputChange(parameter_name, e.target.value)}>
-            <option value="">Select {parameter_name}</option>
-            {list_of_values.map((item, i) => (
-              <option key={i} value={item.value || item}>{item.name || item.value || item}</option>
-            ))}
-          </select>
-        ) : (
-          <input type="text"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] outline-none bg-gray-50"
-            placeholder={`Enter ${parameter_name.toLowerCase()}`}
-            required={!isOptional && !isGroupField}
-            pattern={regex || undefined}
-            title={error_message || undefined}
-            value={formData[parameter_name] || ""}
-            onChange={(e) => handleInputChange(parameter_name, e.target.value)} />
-        )}
-        {error_message && (
-          <p className="text-[10px] text-gray-400 mt-0.5 flex items-center gap-1">
-            <i className="fa-solid fa-circle-info text-[#fd561e]" /> {error_message}
-          </p>
-        )}
-      </div>
-    );
-  };
-
   const PlanSelector = () => {
     const getCat      = (p) => p.plan_category_name || p.planCategoryName || p.plan_category || p.category || "Others";
     const getAmount   = (p) => p.amount || p.plan_amount || p.price || p.planAmount || "0";
@@ -1021,7 +1110,7 @@ const BillDetails = () => {
           </div>
 
           <div className="px-6 py-4 space-y-3 max-h-[70vh] overflow-y-auto">
-            {isMultiMode && selectedBillsArr.length > 1 && (
+            {/* {isMultiMode && selectedBillsArr.length > 1 && (
               <div className="bg-orange-50 border border-orange-100 rounded-xl p-3 mb-1">
                 <p className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">
                   {selectedBillsArr.length} Bills Selected
@@ -1033,7 +1122,7 @@ const BillDetails = () => {
                   </div>
                 ))}
               </div>
-            )}
+            )} */}
 
             {Object.entries(METHOD_META)
               .filter(([id]) => availableMethods.includes(id))
@@ -1186,7 +1275,15 @@ const BillDetails = () => {
                     </div>
                   )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {authenticators.map((auth, i) => <AuthField key={i} auth={auth} />)}
+                    {authenticators.map((auth, i) => (
+                      <AuthField
+                        key={auth.parameter_name}
+                        auth={auth}
+                        formData={formData}
+                        onInputChange={handleInputChange}
+                        getGroupInfo={getGroupInfo}
+                      />
+                    ))}
                   </div>
                 </div>
 
@@ -1296,13 +1393,21 @@ const BillDetails = () => {
                             const payAmt      = billPayAmounts[sid] ?? faceBillAmt.toFixed(2);
                             const isEdited    = Math.abs(parseFloat(payAmt) - faceBillAmt) > 0.001;
 
+                            // ══════════════════════════════════════════════════
+                            // MODIFIED handleRowClick — validate before switching
+                            // ══════════════════════════════════════════════════
                             const handleRowClick = () => {
                               if (pmb === "M") {
+                                // M mode: వేరే bill click చేసే ముందు current expanded bill validate
+                                if (expandedBillId && expandedBillId !== sid) {
+                                  if (!validateExpandedBillAmount(billPayAmounts, expandedBillId, billList)) return;
+                                }
                                 setExpandedBillId(isExpanded ? null : sid);
                               } else if (pmb === "N") {
                                 applyBillData(bill, billSummary?.validationId || "", bd);
                               } else {
-                                toggleBillSelection(sid);
+                                // Y mode: వేరే bill click చేసే ముందు current expanded bill validate
+                                toggleBillSelection(sid, billPayAmounts, expandedBillId, billList);
                                 setExpandedBillId(!isChecked ? sid : null);
                               }
                             };
@@ -1523,8 +1628,201 @@ const BillDetails = () => {
                     );
                   })()}
 
-                  {/* ── Single-bill summary: N mode only ── */}
-                  {!isMultiMode && (
+                  {/* ── NCMC / PAYEE type: additional_info బిల్లర్లు — billlist ఇవ్వరు ── */}
+                  {!isMultiMode && billList.length === 0 && additionalInfo.length > 0 && (() => {
+                    const getInfo = (name) =>
+                      additionalInfo.find((x) => x.parameter_name === name)?.value || "";
+                    const metro       = getInfo("Metro Name");
+                    const balance     = getInfo("Current Card Balance");
+                    const minRecharge = getInfo("Minimum Permissible Recharge Amount");
+                    const maxRecharge = getInfo("Maximum Permissible Recharge Amount");
+                    const platFeeStr  = getInfo("Biller Platform Fee (Rs.) + GST");
+                    const note        = getInfo("Consumer Note");
+                    const platFeeAmt  = parseFloat(platFeeStr) || 0;
+                    const enteredAmt  = parseFloat(totalPayable) || 0;
+                    const grandTotal  = (enteredAmt + platFeeAmt).toFixed(2);
+
+                    const knownKeys   = ["Metro Name","Current Card Balance","Minimum Permissible Recharge Amount","Maximum Permissible Recharge Amount","Biller Platform Fee (Rs.) + GST","Consumer Note"];
+                    const extraInfos  = additionalInfo.filter((x) => !knownKeys.includes(x.parameter_name));
+
+                    return (
+                      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-4">
+                        {/* Header */}
+                        <div className="flex items-center gap-3 mb-5 pb-3 border-b border-gray-100">
+                          <div className="w-8 h-8 rounded-full bg-[#fd561e] text-white flex items-center justify-center text-sm font-bold">1</div>
+                          <span className="text-sm font-bold uppercase text-gray-700 tracking-wide">Recharge Summary</span>
+                        </div>
+
+                        {/* Info grid — Metro, Balance, Min, Max, PlatformFee */}
+                        <div className="grid grid-cols-2 gap-3 mb-5">
+                          {metro && (
+                            <div className="col-span-2 sm:col-span-1 bg-gray-50 rounded-xl border border-gray-200 px-4 py-3">
+                              <p className="text-[10px] font-bold uppercase text-gray-400 tracking-wide mb-1">Metro</p>
+                              <p className="text-sm font-bold text-gray-800">{metro}</p>
+                            </div>
+                          )}
+                          {balance && (
+                            <div className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-3">
+                              <p className="text-[10px] font-bold uppercase text-gray-400 tracking-wide mb-1">Current Balance</p>
+                              <p className="text-sm font-bold text-gray-800">₹{balance}</p>
+                            </div>
+                          )}
+                          {minRecharge && (
+                            <div className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-3">
+                              <p className="text-[10px] font-bold uppercase text-gray-400 tracking-wide mb-1">Min Recharge</p>
+                              <p className="text-sm font-bold text-gray-800">₹{minRecharge}</p>
+                            </div>
+                          )}
+                          {maxRecharge && (
+                            <div className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-3">
+                              <p className="text-[10px] font-bold uppercase text-gray-400 tracking-wide mb-1">Max Recharge</p>
+                              <p className="text-sm font-bold text-gray-800">₹{maxRecharge}</p>
+                            </div>
+                          )}
+                          {platFeeStr && (
+                            <div className="col-span-2 sm:col-span-1 bg-gray-50 rounded-xl border border-gray-200 px-4 py-3">
+                              <p className="text-[10px] font-bold uppercase text-gray-400 tracking-wide mb-1">Platform Fee</p>
+                              <p className="text-sm font-bold text-gray-800">₹{platFeeStr}</p>
+                            </div>
+                          )}
+                          {extraInfos.map((inf) => (
+                            <div key={inf.parameter_name} className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-3">
+                              <p className="text-[10px] font-bold uppercase text-gray-400 tracking-wide mb-1">{inf.parameter_name}</p>
+                              <p className="text-sm font-bold text-gray-800">{inf.value}</p>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Amount input */}
+                        <div className="mb-3">
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Recharge Amount (₹) <span className="text-[#fd561e]">*</span>
+                          </label>
+                          <input
+                            type="number"
+                            step={minRecharge ? parseFloat(minRecharge) : 1}
+                            min={minRecharge ? parseFloat(minRecharge) : 1}
+                            max={maxRecharge ? parseFloat(maxRecharge) : undefined}
+                            placeholder={
+                              minRecharge && maxRecharge
+                                ? `Enter amount between ₹${minRecharge} – ₹${maxRecharge}`
+                                : "Enter recharge amount"
+                            }
+                            value={totalPayable}
+                            onChange={(e) => setTotalPayable(e.target.value)}
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm font-semibold focus:border-[#fd561e] outline-none transition-colors"
+                          />
+                        </div>
+
+                        {/* Total Payable breakdown strip */}
+                        <div className="rounded-xl border border-orange-200 bg-orange-50 overflow-hidden mb-4">
+                          {enteredAmt > 0 && platFeeAmt > 0 && (
+                            <div className="divide-y divide-orange-100">
+                              <div className="flex justify-between text-xs text-gray-600 px-5 py-2.5">
+                                <span>Recharge Amount</span>
+                                <span className="font-semibold">₹{enteredAmt.toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between text-xs text-gray-600 px-5 py-2.5">
+                                <span>Platform Fee</span>
+                                <span className="font-semibold">₹{platFeeAmt.toFixed(2)}</span>
+                              </div>
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between px-5 py-3 bg-orange-100/60 border-t border-orange-200">
+                            <span className="font-bold text-gray-800 text-sm">Total Payable</span>
+                            <span className="text-xl font-bold text-[#fd561e]">
+                              ₹{enteredAmt > 0 ? grandTotal : "0.00"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Consumer Note */}
+                        {note && (
+                          <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 leading-relaxed mb-5">
+                            <i className="fa-solid fa-circle-info text-amber-500 mt-0.5 shrink-0" />
+                            <p>{note}</p>
+                          </div>
+                        )}
+
+                        {/* ── Customer Details merged here — no separate card ── */}
+                        <div className="border-t border-gray-100 pt-5 mt-2">
+                          <div className="flex items-center justify-between gap-3 mb-4">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 rounded-full bg-[#fd561e] text-white flex items-center justify-center text-xs font-bold">2</div>
+                              <span className="text-sm font-bold uppercase text-gray-700 tracking-wide">Customer Details</span>
+                            </div>
+                            <button type="button" onClick={() => setIsEditingUser(!isEditingUser)}
+                              className="text-xs text-[#fd561e] cursor-pointer font-semibold hover:underline">
+                              {isEditingUser ? "Save" : "Edit"}
+                            </button>
+                          </div>
+                          {isEditingUser ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+                              <div className="sm:col-span-3">
+                                <label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Full Name</label>
+                                <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] outline-none bg-gray-50 text-sm"
+                                  value={userDetails.name} onChange={(e) => setUserDetails((p) => ({ ...p, name: e.target.value }))} />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Mobile</label>
+                                <input type="tel" maxLength="10" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] outline-none bg-gray-50 text-sm"
+                                  value={userDetails.mobile} onChange={(e) => setUserDetails((p) => ({ ...p, mobile: e.target.value }))} />
+                              </div>
+                              <div className="sm:col-span-2">
+                                <label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Email</label>
+                                <input type="email" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] outline-none bg-gray-50 text-sm"
+                                  value={userDetails.email} onChange={(e) => setUserDetails((p) => ({ ...p, email: e.target.value }))} />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+                              {[
+                                { label: "Name",   value: userDetails.name },
+                                { label: "Mobile", value: userDetails.mobile },
+                                { label: "Email",  value: userDetails.email },
+                              ].map(({ label, value }) => (
+                                <div key={label} className="flex sm:block items-center justify-between border-b sm:border-b-0 border-gray-100 pb-3 sm:pb-0">
+                                  <p className="text-xs text-gray-500 uppercase font-semibold">{label}</p>
+                                  <p className="font-bold text-gray-800 text-sm break-all mt-0 sm:mt-1">{value || "—"}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          <div className="flex justify-between gap-3">
+                            <button type="button" onClick={() => setStep(1)}
+                              className="px-5 py-2 cursor-pointer rounded-xl border border-gray-300 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-all">
+                              ← Edit Details
+                            </button>
+                            <button type="button"
+                              onClick={() => {
+                                // platform fee totalPayable లో add చేసి payment open చేయి
+                                const entered = parseFloat(totalPayable) || 0;
+                                if (entered <= 0) { setPopupMessage("Please enter a valid recharge amount."); setShowPopup(true); return; }
+                                const minA = parseFloat(minRecharge) || 0;
+                                const maxA = parseFloat(maxRecharge) || 0;
+                                if (minA > 0 && entered < minA) { setPopupMessage(`Minimum recharge amount is ₹${minA}.`); setShowPopup(true); return; }
+                                if (maxA > 0 && entered > maxA) { setPopupMessage(`Maximum recharge amount is ₹${maxA}.`); setShowPopup(true); return; }
+                                // grandTotal (recharge + platformFee) ని totalPayable లో set చేసి modal open
+                                const gt = (entered + platFeeAmt).toFixed(2);
+                                setTotalPayable(gt);
+                                setSelectedMethod(""); setUpiId(""); setUpiError(""); setAmountMethodErr("");
+                                setConvFeeInfo({ fee: 0, gst: 0, total: 0 });
+                                const apf = {};
+                                (billDataRef.current?.additional_payment_details || []).forEach((f) => { apf[f.parameter_name] = ""; });
+                                setAdditionalPayFields(apf);
+                                setShowPayment(true);
+                              }}
+                              className="bg-[#fd561e] text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer inline-flex items-center gap-2">
+                              Proceed to Payment →
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* ── Single-bill summary: N mode only — additionalInfo mode లో skip ── */}
+                  {!isMultiMode && additionalInfo.length === 0 && (
                     (pmbNow === "N" && (selectedBill || billList.length === 0)) ||
                     billList.length === 0
                   ) && (
@@ -1644,7 +1942,6 @@ const BillDetails = () => {
                       </div>
                     </>
                   )}
-                  {/* ── NOTE: Payment Summary card removed — grand total strip inside IIFE is sufficient ── */}
                 </>
               )}
 
@@ -1663,7 +1960,8 @@ const BillDetails = () => {
                 </div>
               )}
 
-              {/* Customer details */}
+              {/* Customer details — additionalInfo mode లో ఈ card వద్దు (above లో merged) */}
+              {additionalInfo.length === 0 && (
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-4">
                 <div className="flex items-center justify-between gap-3 mb-5">
                   <div className="flex items-center gap-3">
@@ -1720,6 +2018,7 @@ const BillDetails = () => {
                   </button>
                 </div>
               </div>
+              )}
             </div>
           )}
         </div>
