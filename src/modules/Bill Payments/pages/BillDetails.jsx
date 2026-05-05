@@ -126,10 +126,6 @@ const extractDataFromDesc = (description = "") => {
   return "";
 };
 
-// ─────────────────────────────────────────────────────────────
-// AuthField — component బయట define చేయడం వల్ల parent re-render
-// అయినా ఇది re-create అవ్వదు → input focus పోదు
-// ─────────────────────────────────────────────────────────────
 const AuthField = ({ auth, formData, onInputChange, getGroupInfo }) => {
   const { parameter_name, optional, regex, list_of_values, error_message } = auth;
   const isOptional   = optional === "Y";
@@ -178,9 +174,6 @@ const AuthField = ({ auth, formData, onInputChange, getGroupInfo }) => {
   );
 };
 
-// ─────────────────────────────────────────────────────────────
-// MAIN COMPONENT
-// ─────────────────────────────────────────────────────────────
 const BillDetails = () => {
   const navigate = useNavigate();
 
@@ -199,7 +192,7 @@ const BillDetails = () => {
   const [billAmount,    setBillAmount]    = useState("");
   const [totalPayable,  setTotalPayable]  = useState("");
   const [billSummary,   setBillSummary]   = useState(null);
-  const [additionalInfo, setAdditionalInfo] = useState([]);  // validation additional_info
+  const [additionalInfo, setAdditionalInfo] = useState([]);
 
   const [billList,     setBillList]     = useState([]);
   const [selectedBill, setSelectedBill] = useState(null);
@@ -230,7 +223,6 @@ const BillDetails = () => {
   const [showPopup,    setShowPopup]    = useState(false);
   const [popupMessage, setPopupMessage] = useState("");
 
-  // ── Load billData ──
   useEffect(() => {
     const raw = localStorage.getItem("billData");
     if (!raw) { navigate("/BillHomePage"); return; }
@@ -366,18 +358,38 @@ const BillDetails = () => {
         if (auth.optional !== "Y" && !formData[auth.parameter_name]?.trim()) { alert(`Please fill ${auth.parameter_name}`); return; }
       }
     }
+
+    // ── Mobile Prepaid: skip validation, fetch plans ──────────────────────
     if (shouldSkipValidation(bd)) {
       setBillAmount(""); setTotalPayable(""); setBillSummary(null);
       setBillList([]); setSelectedBill(null);
       setSelectedBillIds([]); setBillPayAmounts({});
       setStep(2); await fetchRechargePlans(subscriberId, bd); return;
     }
+
+    // ── No online validation (CC Corp / manual pay billers) ───────────────
+    // FIX: setBillSummary with a placeholder so step 2 shows the amount
+    // input card with a clear "Enter amount" prompt instead of empty screen.
     if (bd?.online_validation !== "Y") {
-      setBillAmount(""); setTotalPayable(""); setBillSummary(null);
+      setBillAmount("");
+      setTotalPayable("");
+      setBillSummary({
+        billNumber:  null,   // null → "No bill returned" section renders
+        validationId: "",
+        editable:    true,
+        dueWarning:  bd?.pay_after_duedate === "N",
+        minPay:      "",
+        maxPay:      "",
+        // flag so we know this is manual-entry mode
+        manualEntry: true,
+      });
       setBillList([]); setSelectedBill(null);
       setSelectedBillIds([]); setBillPayAmounts({});
+      setPayMultipleBills((bd?.pay_multiple_bills || "N").toUpperCase());
       setStep(2); return;
     }
+
+    // ── Full online validation ────────────────────────────────────────────
     setFetchingBill(true); setValidationError(false); setValidationMsg(""); setAdditionalInfo([]);
     try {
       const authenticatorValues = {};
@@ -396,23 +408,17 @@ const BillDetails = () => {
         const validationId = nested.validationid || nested.validationId || "";
         const bills        = nested.billlist || [];
         const pmb          = (bd.pay_multiple_bills || "N").toUpperCase();
-
-        // additional_info check — NCMC/PAYEE type billers billlist ఇవ్వరు, additional_info ఇస్తారు
         const additionalInfoArr = nested.additional_info || [];
         setAdditionalInfo(additionalInfoArr);
 
         if (bills.length === 0) {
           if (additionalInfoArr.length > 0) {
-            // additional_info ఉంది — billlist లేకపోయినా ok, step 2 కి వెళ్ళు
             setBillSummary({ validationId });
             setBillList([]);
             setSelectedBillIds([]);
-
-            // Min/Max amounts additional_info నుండి తీసుకో
             const getInfo = (name) =>
               additionalInfoArr.find((x) => x.parameter_name === name)?.value || "";
             const minAmt = parseFloat(getInfo("Minimum Permissible Recharge Amount")) || 0;
-            const maxAmt = parseFloat(getInfo("Maximum Permissible Recharge Amount")) || 0;
             if (minAmt > 0) setTotalPayable(minAmt.toFixed(2));
             else setTotalPayable("");
             setBillAmount("");
@@ -477,15 +483,12 @@ const BillDetails = () => {
     } finally { setFetchingBill(false); }
   };
 
-  // ══════════════════════════════════════════════════
-  // NEW HELPER: Expanded bill ki min amount validate cheyyadam
-  // ══════════════════════════════════════════════════
   const validateExpandedBillAmount = (currentAmounts, currentExpandedId, allBills) => {
-    if (!currentExpandedId) return true; // expand అవ్వలేదు — ok
+    if (!currentExpandedId) return true;
     const bill = allBills.find((b) => b._stableId === currentExpandedId);
     if (!bill) return true;
     const minPay = parseFloat(bill.min_pay_amount || 0);
-    if (minPay <= 0) return true; // min లేదు — ok
+    if (minPay <= 0) return true;
     const enteredAmt = parseFloat(currentAmounts[currentExpandedId] || 0);
     if (enteredAmt < minPay) {
       setPopupMessage(
@@ -497,9 +500,7 @@ const BillDetails = () => {
     return true;
   };
 
-  // ── MODIFIED: toggleBillSelection — switch చేసే ముందు validate ──
   const toggleBillSelection = (stableId, currentAmounts, currentExpandedId, allBills) => {
-    // expand అయిన bill validate చేయి (తాను కాని వేరే bill click చేసినప్పుడు)
     if (currentExpandedId && currentExpandedId !== stableId) {
       if (!validateExpandedBillAmount(currentAmounts, currentExpandedId, allBills)) return;
     }
@@ -520,7 +521,6 @@ const BillDetails = () => {
     });
   };
 
-  // ── isMultiMode: always read from ref, never stale state ──
   const isMultiMode = (billDataRef.current?.pay_multiple_bills || "N").toUpperCase() === "Y"
                    || (billDataRef.current?.pay_multiple_bills || "N").toUpperCase() === "M";
 
@@ -549,7 +549,6 @@ const BillDetails = () => {
       setPopupMessage("Please enter a valid amount."); setShowPopup(true); return;
     }
 
-    // additional_info mode (NCMC/PAYEE) — min/max validate చేయి
     if (additionalInfo.length > 0 && billList.length === 0) {
       const getInfo = (name) => additionalInfo.find((x) => x.parameter_name === name)?.value || "";
       const minAmt = parseFloat(getInfo("Minimum Permissible Recharge Amount")) || 0;
@@ -565,7 +564,6 @@ const BillDetails = () => {
       }
     }
 
-    // ── Proceed చేసే ముందు కూడా అన్ని selected bills validate చేయి ──
     for (const sid of selectedBillIds) {
       const bill = billList.find((b) => b._stableId === sid);
       if (!bill) continue;
@@ -732,9 +730,6 @@ const BillDetails = () => {
     );
   }
 
-  // ─────────────────────────────────────────────────────────────
-  // SUB-COMPONENTS
-  // ─────────────────────────────────────────────────────────────
   const Popup = () => {
     if (!showPopup) return null;
     return (
@@ -1106,24 +1101,10 @@ const BillDetails = () => {
               </div>
               <h3 className="text-lg font-bold text-gray-800">Select Payment Method</h3>
             </div>
-            <button onClick={() => setShowPayment(false)} className="text-gray-400  cursor-pointer hover:text-gray-600">✕</button>
+            <button onClick={() => setShowPayment(false)} className="text-gray-400 cursor-pointer hover:text-gray-600">✕</button>
           </div>
 
           <div className="px-6 py-4 space-y-3 max-h-[70vh] overflow-y-auto">
-            {/* {isMultiMode && selectedBillsArr.length > 1 && (
-              <div className="bg-orange-50 border border-orange-100 rounded-xl p-3 mb-1">
-                <p className="text-xs font-bold text-gray-600 uppercase tracking-wide mb-2">
-                  {selectedBillsArr.length} Bills Selected
-                </p>
-                {selectedBillsArr.map((b) => (
-                  <div key={b._stableId} className="flex justify-between text-xs text-gray-600 py-0.5">
-                    <span className="truncate mr-2">{b.billnumber || b._stableId}</span>
-                    <span className="font-semibold shrink-0">₹{parseFloat(billPayAmounts[b._stableId] || 0).toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-            )} */}
-
             {Object.entries(METHOD_META)
               .filter(([id]) => availableMethods.includes(id))
               .map(([id, meta]) => {
@@ -1234,8 +1215,6 @@ const BillDetails = () => {
 
   const amountConstraints = getAmountConstraints();
   const billSummaryStepNum = (isMultiMode && billList.length > 0) || billList.length > 1 ? 2 : 1;
-
-  // ── Derive pmb from ref for render-time decisions ──
   const pmbNow = (billDataRef.current?.pay_multiple_bills || "N").toUpperCase();
 
   return (
@@ -1275,7 +1254,7 @@ const BillDetails = () => {
                     </div>
                   )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {authenticators.map((auth, i) => (
+                    {authenticators.map((auth) => (
                       <AuthField
                         key={auth.parameter_name}
                         auth={auth}
@@ -1340,16 +1319,13 @@ const BillDetails = () => {
 
               {!isMobilePrepaid(billData) && (
                 <>
-                  {/* ── Multi-bill selector (N/Y/M) ── */}
+                  {/* Multi-bill selector */}
                   {billList.length > 0 && (() => {
                     const bd  = billDataRef.current;
                     const pmb = (billDataRef.current?.pay_multiple_bills || "N").toUpperCase();
-
                     if (pmb === "N" && billList.length === 1) return null;
-
                     return (
                       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-4">
-                        {/* Header */}
                         <div className="flex items-center gap-3 mb-2 pb-3 border-b border-gray-100">
                           <div className="w-8 h-8 rounded-full bg-[#fd561e] text-white flex items-center justify-center text-sm font-bold">1</div>
                           <span className="text-sm font-bold uppercase text-gray-700 tracking-wide">
@@ -1359,8 +1335,6 @@ const BillDetails = () => {
                             {billList.length} bill{billList.length > 1 ? "s" : ""} found
                           </span>
                         </div>
-
-                        {/* Info badge */}
                         <div className={`flex items-center gap-2 mb-4 px-3 py-2 rounded-xl text-xs font-semibold border ${
                           pmb === "M" ? "bg-blue-50 border-blue-200 text-blue-700"
                           : pmb === "Y" ? "bg-green-50 border-green-200 text-green-700"
@@ -1377,8 +1351,6 @@ const BillDetails = () => {
                             ? "Select the bills you want to pay"
                             : "Select one bill to proceed"}
                         </div>
-
-                        {/* Bill list */}
                         <div className="space-y-3">
                           {billList.map((bill) => {
                             const sid         = bill._stableId;
@@ -1393,12 +1365,8 @@ const BillDetails = () => {
                             const payAmt      = billPayAmounts[sid] ?? faceBillAmt.toFixed(2);
                             const isEdited    = Math.abs(parseFloat(payAmt) - faceBillAmt) > 0.001;
 
-                            // ══════════════════════════════════════════════════
-                            // MODIFIED handleRowClick — validate before switching
-                            // ══════════════════════════════════════════════════
                             const handleRowClick = () => {
                               if (pmb === "M") {
-                                // M mode: వేరే bill click చేసే ముందు current expanded bill validate
                                 if (expandedBillId && expandedBillId !== sid) {
                                   if (!validateExpandedBillAmount(billPayAmounts, expandedBillId, billList)) return;
                                 }
@@ -1406,7 +1374,6 @@ const BillDetails = () => {
                               } else if (pmb === "N") {
                                 applyBillData(bill, billSummary?.validationId || "", bd);
                               } else {
-                                // Y mode: వేరే bill click చేసే ముందు current expanded bill validate
                                 toggleBillSelection(sid, billPayAmounts, expandedBillId, billList);
                                 setExpandedBillId(!isChecked ? sid : null);
                               }
@@ -1417,10 +1384,8 @@ const BillDetails = () => {
                                 className={`rounded-xl border-2 overflow-hidden transition-all duration-200 ${
                                   isChecked ? "border-[#fd561e] shadow-sm" : "border-gray-200 hover:border-orange-300"
                                 }`}>
-                                {/* Bill row */}
                                 <button type="button" onClick={handleRowClick}
                                   className={`relative w-full text-left ${isChecked ? "bg-orange-50" : "bg-white"} cursor-pointer`}>
-                                  {/* Top-right indicators */}
                                   <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
                                     {((pmb === "M" && canPartial) || (pmb === "Y" && isChecked)) && (
                                       <svg className={`w-4 h-4 text-[#fd561e] transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
@@ -1452,23 +1417,16 @@ const BillDetails = () => {
                                       </div>
                                     )}
                                   </div>
-
                                   <div className="flex">
-                                    {/* Left: amount + status */}
                                     <div className="min-w-[110px] border-r border-gray-100 p-4 flex flex-col items-center justify-center bg-orange-50/50 shrink-0">
-                                      <p className="font-bold text-[#fd561e] text-xl leading-none">
-                                        ₹{faceBillAmt.toFixed(0)}
-                                      </p>
+                                      <p className="font-bold text-[#fd561e] text-xl leading-none">₹{faceBillAmt.toFixed(0)}</p>
                                       <span className={`text-[10px] font-bold mt-1.5 px-2 py-0.5 rounded-full ${
                                         (bill.billstatus || "").toUpperCase() === "UNPAID"
-                                          ? "bg-red-100 text-red-600"
-                                          : "bg-green-100 text-green-600"
+                                          ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"
                                       }`}>
                                         {(bill.billstatus || "UNPAID").toUpperCase()}
                                       </span>
                                     </div>
-
-                                    {/* Right: details */}
                                     <div className="flex-1 p-4 min-w-0 pr-16">
                                       <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-700 mb-1">
                                         {bill.billnumber && <span><strong>Bill No:</strong> {bill.billnumber}</span>}
@@ -1483,70 +1441,41 @@ const BillDetails = () => {
                                           Pay range: ₹{minPay.toFixed(0)} – ₹{maxPay.toFixed(0)}
                                         </p>
                                       )}
-                                      {/* Always-visible paying amount */}
                                       {(pmb === "M" || (pmb === "Y" && isChecked)) && (
                                         <div className="flex items-center gap-2 mt-1">
                                           <span className="text-[11px] text-gray-500">Paying:</span>
-                                          <span className="text-xs font-bold text-[#fd561e]">
-                                            ₹{parseFloat(payAmt).toFixed(2)}
-                                          </span>
+                                          <span className="text-xs font-bold text-[#fd561e]">₹{parseFloat(payAmt).toFixed(2)}</span>
                                           {isEdited && (
-                                            <span className="text-[10px] text-gray-400 line-through">
-                                              ₹{faceBillAmt.toFixed(2)}
-                                            </span>
+                                            <span className="text-[10px] text-gray-400 line-through">₹{faceBillAmt.toFixed(2)}</span>
                                           )}
                                           {canPartial && (
-                                            <span className="text-[10px] text-blue-500">
-                                              {isExpanded ? "▲" : "▼ edit"}
-                                            </span>
+                                            <span className="text-[10px] text-blue-500">{isExpanded ? "▲" : "▼ edit"}</span>
                                           )}
                                         </div>
                                       )}
                                     </div>
                                   </div>
                                 </button>
-
-                                {/* Amount editor accordion */}
                                 {isExpanded && (pmb === "M" || pmb === "Y") && (
                                   <div className="border-t border-orange-200 bg-white px-5 py-4">
                                     <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">
                                       Payment Amount
-                                      {!canPartial && (
-                                        <span className="ml-2 font-normal text-gray-400 normal-case">
-                                          (partial pay not allowed)
-                                        </span>
-                                      )}
+                                      {!canPartial && <span className="ml-2 font-normal text-gray-400 normal-case">(partial pay not allowed)</span>}
                                     </p>
                                     <div className="flex items-center gap-3">
                                       <div className={`flex-1 flex items-center gap-2 border-2 rounded-xl px-4 py-3 ${
-                                        canPartial
-                                          ? "border-orange-300 bg-white focus-within:border-[#fd561e]"
-                                          : "border-gray-200 bg-gray-50"
+                                        canPartial ? "border-orange-300 bg-white focus-within:border-[#fd561e]" : "border-gray-200 bg-gray-50"
                                       }`}>
                                         <span className="text-[#fd561e] font-bold text-lg shrink-0">₹</span>
-                                        <input
-                                          type="number"
-                                          min={minPay > 0 ? minPay : 1}
-                                          max={maxPay > 0 ? maxPay : faceBillAmt}
-                                          step="0.01"
-                                          readOnly={!canPartial}
-                                          value={payAmt}
-                                          onChange={(e) => {
-                                            if (!canPartial) return;
-                                            updateBillPayAmount(sid, e.target.value);
-                                          }}
+                                        <input type="number" min={minPay > 0 ? minPay : 1} max={maxPay > 0 ? maxPay : faceBillAmt}
+                                          step="0.01" readOnly={!canPartial} value={payAmt}
+                                          onChange={(e) => { if (!canPartial) return; updateBillPayAmount(sid, e.target.value); }}
                                           onClick={(e) => e.stopPropagation()}
-                                          className={`flex-1 bg-transparent text-base font-bold text-[#fd561e] text-right outline-none ${
-                                            canPartial ? "cursor-text" : "cursor-not-allowed"
-                                          }`}
-                                        />
+                                          className={`flex-1 bg-transparent text-base font-bold text-[#fd561e] text-right outline-none ${canPartial ? "cursor-text" : "cursor-not-allowed"}`} />
                                       </div>
                                       {canPartial && isEdited && (
                                         <button type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            updateBillPayAmount(sid, faceBillAmt.toFixed(2));
-                                          }}
+                                          onClick={(e) => { e.stopPropagation(); updateBillPayAmount(sid, faceBillAmt.toFixed(2)); }}
                                           className="shrink-0 text-xs text-gray-500 border border-gray-200 rounded-xl px-3 py-2 hover:border-[#fd561e] hover:text-[#fd561e] transition-colors whitespace-nowrap">
                                           Reset ₹{faceBillAmt.toFixed(0)}
                                         </button>
@@ -1559,68 +1488,46 @@ const BillDetails = () => {
                                     )}
                                   </div>
                                 )}
-
-                                {/* N mode pay strip */}
                                 {isChecked && pmb === "N" && (
                                   <div className="border-t border-orange-100 px-4 py-3 bg-orange-50/40 flex items-center gap-3">
                                     <span className="text-xs text-gray-500 font-semibold shrink-0">Pay Amount:</span>
                                     <span className="text-[#fd561e] font-bold">₹</span>
-                                    <input
-                                      type="number"
-                                      step="0.01"
-                                      min={minPay > 0 ? minPay : 1}
-                                      max={maxPay > 0 ? maxPay : faceBillAmt}
-                                      readOnly={!canPartial}
-                                      value={totalPayable}
-                                      onChange={(e) => setTotalPayable(e.target.value)}
+                                    <input type="number" step="0.01" min={minPay > 0 ? minPay : 1} max={maxPay > 0 ? maxPay : faceBillAmt}
+                                      readOnly={!bd?.partial_pay || bd.partial_pay !== "Y"}
+                                      value={totalPayable} onChange={(e) => setTotalPayable(e.target.value)}
                                       className={`flex-1 border rounded-lg px-3 py-1.5 text-sm font-bold text-[#fd561e] text-right outline-none focus:ring-2 focus:ring-[#fd561e] ${
-                                        canPartial
-                                          ? "border-orange-300 bg-white"
-                                          : "border-gray-200 bg-gray-50 cursor-not-allowed"
-                                      }`}
-                                    />
+                                        bd?.partial_pay === "Y" ? "border-orange-300 bg-white" : "border-gray-200 bg-gray-50 cursor-not-allowed"
+                                      }`} />
                                   </div>
                                 )}
                               </div>
                             );
                           })}
                         </div>
-
-                        {/* Grand total strip — M and Y modes */}
                         {isMultiMode && selectedBillIds.length > 0 && (
                           <div className="mt-4 rounded-xl border border-orange-200 bg-orange-50 overflow-hidden">
                             <div className="divide-y divide-orange-100">
-                              {billList
-                                .filter((b) => selectedBillIds.includes(b._stableId))
-                                .map((b) => {
-                                  const amt     = parseFloat(billPayAmounts[b._stableId] || 0);
-                                  const faceAmt = parseFloat(b.billamount || b.net_billamount || 0);
-                                  const edited  = Math.abs(amt - faceAmt) > 0.001;
-                                  return (
-                                    <div key={b._stableId} className="flex items-center justify-between px-4 py-2.5">
-                                      <span className="text-xs text-gray-600 font-medium">
-                                        {b.billnumber || b._stableId}
-                                      </span>
-                                      <div className="flex items-center gap-2">
-                                        {edited && (
-                                          <span className="text-[10px] text-gray-400 line-through">₹{faceAmt.toFixed(2)}</span>
-                                        )}
-                                        <span className="text-xs font-bold text-[#fd561e]">₹{amt.toFixed(2)}</span>
-                                      </div>
+                              {billList.filter((b) => selectedBillIds.includes(b._stableId)).map((b) => {
+                                const amt = parseFloat(billPayAmounts[b._stableId] || 0);
+                                const faceAmt = parseFloat(b.billamount || b.net_billamount || 0);
+                                const edited = Math.abs(amt - faceAmt) > 0.001;
+                                return (
+                                  <div key={b._stableId} className="flex items-center justify-between px-4 py-2.5">
+                                    <span className="text-xs text-gray-600 font-medium">{b.billnumber || b._stableId}</span>
+                                    <div className="flex items-center gap-2">
+                                      {edited && <span className="text-[10px] text-gray-400 line-through">₹{faceAmt.toFixed(2)}</span>}
+                                      <span className="text-xs font-bold text-[#fd561e]">₹{amt.toFixed(2)}</span>
                                     </div>
-                                  );
-                                })}
+                                  </div>
+                                );
+                              })}
                             </div>
                             <div className="flex items-center justify-between px-4 py-3 bg-orange-100/70 border-t border-orange-200">
                               <div>
                                 <p className="text-xs font-bold text-gray-700 uppercase tracking-wide">Total Payable</p>
-                                <p className="text-[10px] text-gray-500 mt-0.5">
-                                  {selectedBillIds.length} bill{selectedBillIds.length > 1 ? "s" : ""}
-                                </p>
+                                <p className="text-[10px] text-gray-500 mt-0.5">{selectedBillIds.length} bill{selectedBillIds.length > 1 ? "s" : ""}</p>
                               </div>
-                              <p className="text-2xl font-bold text-[#fd561e]">
-                                ₹{parseFloat(totalPayable || 0).toFixed(2)}
-                              </p>
+                              <p className="text-2xl font-bold text-[#fd561e]">₹{parseFloat(totalPayable || 0).toFixed(2)}</p>
                             </div>
                           </div>
                         )}
@@ -1628,10 +1535,9 @@ const BillDetails = () => {
                     );
                   })()}
 
-                  {/* ── NCMC / PAYEE type: additional_info బిల్లర్లు — billlist ఇవ్వరు ── */}
+                  {/* NCMC / PAYEE additional_info mode */}
                   {!isMultiMode && billList.length === 0 && additionalInfo.length > 0 && (() => {
-                    const getInfo = (name) =>
-                      additionalInfo.find((x) => x.parameter_name === name)?.value || "";
+                    const getInfo = (name) => additionalInfo.find((x) => x.parameter_name === name)?.value || "";
                     const metro       = getInfo("Metro Name");
                     const balance     = getInfo("Current Card Balance");
                     const minRecharge = getInfo("Minimum Permissible Recharge Amount");
@@ -1641,19 +1547,14 @@ const BillDetails = () => {
                     const platFeeAmt  = parseFloat(platFeeStr) || 0;
                     const enteredAmt  = parseFloat(totalPayable) || 0;
                     const grandTotal  = (enteredAmt + platFeeAmt).toFixed(2);
-
                     const knownKeys   = ["Metro Name","Current Card Balance","Minimum Permissible Recharge Amount","Maximum Permissible Recharge Amount","Biller Platform Fee (Rs.) + GST","Consumer Note"];
                     const extraInfos  = additionalInfo.filter((x) => !knownKeys.includes(x.parameter_name));
-
                     return (
                       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-4">
-                        {/* Header */}
                         <div className="flex items-center gap-3 mb-5 pb-3 border-b border-gray-100">
                           <div className="w-8 h-8 rounded-full bg-[#fd561e] text-white flex items-center justify-center text-sm font-bold">1</div>
                           <span className="text-sm font-bold uppercase text-gray-700 tracking-wide">Recharge Summary</span>
                         </div>
-
-                        {/* Info grid — Metro, Balance, Min, Max, PlatformFee */}
                         <div className="grid grid-cols-2 gap-3 mb-5">
                           {metro && (
                             <div className="col-span-2 sm:col-span-1 bg-gray-50 rounded-xl border border-gray-200 px-4 py-3">
@@ -1692,29 +1593,19 @@ const BillDetails = () => {
                             </div>
                           ))}
                         </div>
-
-                        {/* Amount input */}
                         <div className="mb-3">
                           <label className="block text-sm font-semibold text-gray-700 mb-2">
                             Recharge Amount (₹) <span className="text-[#fd561e]">*</span>
                           </label>
-                          <input
-                            type="number"
+                          <input type="number"
                             step={minRecharge ? parseFloat(minRecharge) : 1}
                             min={minRecharge ? parseFloat(minRecharge) : 1}
                             max={maxRecharge ? parseFloat(maxRecharge) : undefined}
-                            placeholder={
-                              minRecharge && maxRecharge
-                                ? `Enter amount between ₹${minRecharge} – ₹${maxRecharge}`
-                                : "Enter recharge amount"
-                            }
+                            placeholder={minRecharge && maxRecharge ? `Enter amount between ₹${minRecharge} – ₹${maxRecharge}` : "Enter recharge amount"}
                             value={totalPayable}
                             onChange={(e) => setTotalPayable(e.target.value)}
-                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm font-semibold focus:border-[#fd561e] outline-none transition-colors"
-                          />
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm font-semibold focus:border-[#fd561e] outline-none transition-colors" />
                         </div>
-
-                        {/* Total Payable breakdown strip */}
                         <div className="rounded-xl border border-orange-200 bg-orange-50 overflow-hidden mb-4">
                           {enteredAmt > 0 && platFeeAmt > 0 && (
                             <div className="divide-y divide-orange-100">
@@ -1730,21 +1621,15 @@ const BillDetails = () => {
                           )}
                           <div className="flex items-center justify-between px-5 py-3 bg-orange-100/60 border-t border-orange-200">
                             <span className="font-bold text-gray-800 text-sm">Total Payable</span>
-                            <span className="text-xl font-bold text-[#fd561e]">
-                              ₹{enteredAmt > 0 ? grandTotal : "0.00"}
-                            </span>
+                            <span className="text-xl font-bold text-[#fd561e]">₹{enteredAmt > 0 ? grandTotal : "0.00"}</span>
                           </div>
                         </div>
-
-                        {/* Consumer Note */}
                         {note && (
                           <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 leading-relaxed mb-5">
                             <i className="fa-solid fa-circle-info text-amber-500 mt-0.5 shrink-0" />
                             <p>{note}</p>
                           </div>
                         )}
-
-                        {/* ── Customer Details merged here — no separate card ── */}
                         <div className="border-t border-gray-100 pt-5 mt-2">
                           <div className="flex items-center justify-between gap-3 mb-4">
                             <div className="flex items-center gap-2">
@@ -1760,17 +1645,17 @@ const BillDetails = () => {
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
                               <div className="sm:col-span-3">
                                 <label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Full Name</label>
-                                <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] outline-none bg-gray-50 text-sm"
+                                <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] outline-none bg-gray-50 text-sm"
                                   value={userDetails.name} onChange={(e) => setUserDetails((p) => ({ ...p, name: e.target.value }))} />
                               </div>
                               <div>
                                 <label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Mobile</label>
-                                <input type="tel" maxLength="10" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] outline-none bg-gray-50 text-sm"
+                                <input type="tel" maxLength="10" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] outline-none bg-gray-50 text-sm"
                                   value={userDetails.mobile} onChange={(e) => setUserDetails((p) => ({ ...p, mobile: e.target.value }))} />
                               </div>
                               <div className="sm:col-span-2">
                                 <label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Email</label>
-                                <input type="email" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] outline-none bg-gray-50 text-sm"
+                                <input type="email" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] outline-none bg-gray-50 text-sm"
                                   value={userDetails.email} onChange={(e) => setUserDetails((p) => ({ ...p, email: e.target.value }))} />
                               </div>
                             </div>
@@ -1795,18 +1680,16 @@ const BillDetails = () => {
                             </button>
                             <button type="button"
                               onClick={() => {
-                                // platform fee totalPayable లో add చేసి payment open చేయి
                                 const entered = parseFloat(totalPayable) || 0;
                                 if (entered <= 0) { setPopupMessage("Please enter a valid recharge amount."); setShowPopup(true); return; }
                                 const minA = parseFloat(minRecharge) || 0;
                                 const maxA = parseFloat(maxRecharge) || 0;
                                 if (minA > 0 && entered < minA) { setPopupMessage(`Minimum recharge amount is ₹${minA}.`); setShowPopup(true); return; }
                                 if (maxA > 0 && entered > maxA) { setPopupMessage(`Maximum recharge amount is ₹${maxA}.`); setShowPopup(true); return; }
-                                // grandTotal (recharge + platformFee) ని totalPayable లో set చేసి modal open
-                                const gt = (entered + platFeeAmt).toFixed(2);
-                                setTotalPayable(gt);
+                                // FIX: totalPayable = entered amount only (never add platform fee here)
+                                // Platform fee goes into convFeeInfo so PaymentModal adds it once
                                 setSelectedMethod(""); setUpiId(""); setUpiError(""); setAmountMethodErr("");
-                                setConvFeeInfo({ fee: 0, gst: 0, total: 0 });
+                                setConvFeeInfo({ fee: platFeeAmt, gst: 0, total: platFeeAmt });
                                 const apf = {};
                                 (billDataRef.current?.additional_payment_details || []).forEach((f) => { apf[f.parameter_name] = ""; });
                                 setAdditionalPayFields(apf);
@@ -1821,8 +1704,69 @@ const BillDetails = () => {
                     );
                   })()}
 
-                  {/* ── Single-bill summary: N mode only — additionalInfo mode లో skip ── */}
-                  {!isMultiMode && additionalInfo.length === 0 && (
+                  {/* ── Manual entry mode (online_validation !== Y, no billList, no additionalInfo) ─────
+                      FIX: billSummary?.manualEntry === true → show a clear amount input card
+                      Previously this fell through to the generic "No bill returned" section
+                      which had no heading or context. Now it shows a proper card. ── */}
+                  {!isMultiMode && billList.length === 0 && additionalInfo.length === 0 &&
+                   billSummary?.manualEntry === true && (
+                    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-4">
+                      <div className="flex items-center gap-3 mb-5 pb-3 border-b border-gray-100">
+                        <div className="w-8 h-8 rounded-full bg-[#fd561e] text-white flex items-center justify-center text-sm font-bold">1</div>
+                        <span className="text-sm font-bold uppercase text-gray-700 tracking-wide">Enter Payment Amount</span>
+                      </div>
+
+                      {/* Info banner */}
+                      <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700 mb-5">
+                        <svg className="w-4 h-4 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                        </svg>
+                        <p>
+                          This biller does not support automatic bill fetch.
+                          Please enter the amount you wish to pay manually.
+                        </p>
+                      </div>
+
+                      {/* Amount input */}
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-orange-50 rounded-xl border border-orange-100 px-5 py-5">
+                        <div>
+                          <p className="font-bold text-gray-800 text-base">Payment Amount</p>
+                          <p className="text-xs text-gray-500 mt-0.5">Enter the exact amount to pay</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[#fd561e] font-bold text-xl">₹</span>
+                          <input
+                            type="number"
+                            min={1}
+                            step="0.01"
+                            autoFocus
+                            placeholder="0.00"
+                            value={totalPayable}
+                            onChange={(e) => setTotalPayable(e.target.value)}
+                            className="border-2 border-orange-300 rounded-xl px-4 py-3 text-lg font-bold w-40 focus:border-[#fd561e] outline-none bg-white text-[#fd561e] text-right transition-colors"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Account details recap */}
+                      {authenticators.filter((a) => formData[a.parameter_name]?.trim()).length > 0 && (
+                        <div className="mt-4 border border-gray-200 rounded-xl overflow-hidden">
+                          <div className="bg-gray-50 px-5 py-3 border-b border-gray-200">
+                            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Account Details</p>
+                          </div>
+                          {authenticators.filter((a) => formData[a.parameter_name]?.trim()).map((auth, i) => (
+                            <div key={i} className="flex justify-between items-center px-5 py-3 border-b border-gray-100 last:border-b-0">
+                              <span className="text-gray-500 text-sm">{auth.parameter_name}</span>
+                              <span className="font-semibold text-gray-800 text-sm">{formData[auth.parameter_name]}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Single-bill summary — N mode with validated bill */}
+                  {!isMultiMode && additionalInfo.length === 0 && billSummary?.manualEntry !== true && (
                     (pmbNow === "N" && (selectedBill || billList.length === 0)) ||
                     billList.length === 0
                   ) && (
@@ -1836,110 +1780,107 @@ const BillDetails = () => {
                           </div>
                         </div>
                       )}
-                      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-4">
-                        <div className="flex items-center gap-3 mb-5">
-                          <div className="w-8 h-8 rounded-full bg-[#fd561e] text-white flex items-center justify-center text-sm font-bold">
-                            {billSummaryStepNum}
-                          </div>
-                          <span className="text-sm font-bold uppercase text-gray-700 tracking-wide">Bill Summary</span>
-                        </div>
-                        {authenticators.filter((a) => formData[a.parameter_name]?.trim()).length > 0 && (
-                          <div className="border border-gray-200 rounded-xl overflow-hidden mb-4">
-                            <div className="bg-gray-50 px-5 py-3 border-b border-gray-200">
-                              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Account Details</p>
+                      {billSummary && (
+                        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-4">
+                          <div className="flex items-center gap-3 mb-5">
+                            <div className="w-8 h-8 rounded-full bg-[#fd561e] text-white flex items-center justify-center text-sm font-bold">
+                              {billSummaryStepNum}
                             </div>
-                            {authenticators.filter((a) => formData[a.parameter_name]?.trim()).map((auth, i) => (
-                              <div key={i} className="flex justify-between items-center px-5 py-3 border-b border-gray-100 last:border-b-0">
-                                <span className="text-gray-500 text-sm">{auth.parameter_name}</span>
-                                <span className="font-semibold text-gray-800 text-sm">{formData[auth.parameter_name]}</span>
-                              </div>
-                            ))}
+                            <span className="text-sm font-bold uppercase text-gray-700 tracking-wide">Bill Summary</span>
                           </div>
-                        )}
-                        {billSummary && billSummary.billNumber && (
-                          <div className="border border-gray-200 rounded-xl overflow-hidden mb-4">
-                            {billSummary.billNumber && billSummary.billNumber !== "N/A" && (
-                              <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100">
-                                <span className="text-gray-500 text-sm">Bill Number</span>
-                                <span className="font-semibold text-gray-800">{billSummary.billNumber}</span>
+                          {authenticators.filter((a) => formData[a.parameter_name]?.trim()).length > 0 && (
+                            <div className="border border-gray-200 rounded-xl overflow-hidden mb-4">
+                              <div className="bg-gray-50 px-5 py-3 border-b border-gray-200">
+                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Account Details</p>
                               </div>
-                            )}
-                            {billAmount && (
+                              {authenticators.filter((a) => formData[a.parameter_name]?.trim()).map((auth, i) => (
+                                <div key={i} className="flex justify-between items-center px-5 py-3 border-b border-gray-100 last:border-b-0">
+                                  <span className="text-gray-500 text-sm">{auth.parameter_name}</span>
+                                  <span className="font-semibold text-gray-800 text-sm">{formData[auth.parameter_name]}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {billSummary.billNumber && (
+                            <div className="border border-gray-200 rounded-xl overflow-hidden mb-4">
+                              {billSummary.billNumber !== "N/A" && (
+                                <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100">
+                                  <span className="text-gray-500 text-sm">Bill Number</span>
+                                  <span className="font-semibold text-gray-800">{billSummary.billNumber}</span>
+                                </div>
+                              )}
+                              {billAmount && (
+                                <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100">
+                                  <span className="text-gray-500 text-sm">Bill Amount</span>
+                                  <span className="font-bold text-[#fd561e] text-base">₹{parseFloat(billAmount).toFixed(2)}</span>
+                                </div>
+                              )}
+                              {billSummary.dueDate && billSummary.dueDate !== "N/A" && (
+                                <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100">
+                                  <span className="text-gray-500 text-sm">Due Date</span>
+                                  <span className="font-semibold text-gray-800">{billSummary.dueDate}</span>
+                                </div>
+                              )}
+                              {billSummary.billPeriod && (
+                                <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100">
+                                  <span className="text-gray-500 text-sm">Bill Period</span>
+                                  <span className="font-semibold text-gray-800">{billSummary.billPeriod}</span>
+                                </div>
+                              )}
+                              {(billSummary.minPay || billSummary.maxPay) && (
+                                <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100">
+                                  <span className="text-gray-500 text-sm">Pay Range</span>
+                                  <span className="font-semibold text-gray-800">
+                                    ₹{parseFloat(billSummary.minPay || 0).toFixed(0)} – ₹{parseFloat(billSummary.maxPay || 0).toFixed(0)}
+                                  </span>
+                                </div>
+                              )}
                               <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100">
-                                <span className="text-gray-500 text-sm">Bill Amount</span>
-                                <span className="font-bold text-[#fd561e] text-base">₹{parseFloat(billAmount).toFixed(2)}</span>
-                              </div>
-                            )}
-                            {billSummary.dueDate && billSummary.dueDate !== "N/A" && (
-                              <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100">
-                                <span className="text-gray-500 text-sm">Due Date</span>
-                                <span className="font-semibold text-gray-800">{billSummary.dueDate}</span>
-                              </div>
-                            )}
-                            {billSummary.billPeriod && (
-                              <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100">
-                                <span className="text-gray-500 text-sm">Bill Period</span>
-                                <span className="font-semibold text-gray-800">{billSummary.billPeriod}</span>
-                              </div>
-                            )}
-                            {(billSummary.minPay || billSummary.maxPay) && (
-                              <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100">
-                                <span className="text-gray-500 text-sm">Pay Range</span>
-                                <span className="font-semibold text-gray-800">
-                                  ₹{parseFloat(billSummary.minPay || 0).toFixed(0)} – ₹{parseFloat(billSummary.maxPay || 0).toFixed(0)}
+                                <span className="text-gray-500 text-sm">Status</span>
+                                <span className={`text-xs font-bold px-3 py-1 rounded-full ${(billSummary.status || "").toUpperCase() === "UNPAID" ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"}`}>
+                                  {(billSummary.status || "UNPAID").toUpperCase()}
                                 </span>
                               </div>
-                            )}
-                            <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100">
-                              <span className="text-gray-500 text-sm">Status</span>
-                              <span className={`text-xs font-bold px-3 py-1 rounded-full ${(billSummary.status || "").toUpperCase() === "UNPAID" ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"}`}>
-                                {(billSummary.status || "UNPAID").toUpperCase()}
-                              </span>
-                            </div>
-                            {/* ── Pay Amount row — inside bill summary card ── */}
-                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center px-5 py-4 gap-3">
-                              <div>
-                                <span className="text-gray-500 text-sm block">Pay Amount</span>
-                                {billData.partial_pay !== "Y" && billData.bill_presentment === "Y" && billAmount && (
-                                  <span className="text-[11px] text-gray-400 block">Exact amount only</span>
-                                )}
+                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center px-5 py-4 gap-3">
+                                <div>
+                                  <span className="text-gray-500 text-sm block">Pay Amount</span>
+                                  {billData.partial_pay !== "Y" && billData.bill_presentment === "Y" && billAmount && (
+                                    <span className="text-[11px] text-gray-400 block">Exact amount only</span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[#fd561e] font-bold text-lg">₹</span>
+                                  <input type="number"
+                                    min={amountConstraints.min || parseFloat(billSummary?.minPay || 1)}
+                                    step="0.01"
+                                    max={amountConstraints.max || parseFloat(billSummary?.maxPay || undefined) || undefined}
+                                    readOnly={amountConstraints.readOnly && billData.partial_pay !== "Y"}
+                                    className={`border border-orange-300 rounded-lg px-3 py-2 text-base font-bold w-36 focus:ring-2 focus:ring-[#fd561e] outline-none bg-white text-[#fd561e] text-right ${amountConstraints.readOnly && billData.partial_pay !== "Y" ? "cursor-not-allowed bg-gray-50" : ""}`}
+                                    placeholder="Enter amount"
+                                    value={totalPayable}
+                                    onChange={(e) => setTotalPayable(e.target.value)} />
+                                </div>
                               </div>
-                              <div className="flex items-center gap-2">
+                            </div>
+                          )}
+                          {(!billSummary || !billSummary.billNumber) && (
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center px-4 sm:px-5 py-4 bg-orange-50 rounded-xl border border-orange-100 gap-3">
+                              <div>
+                                <span className="font-bold text-gray-800 text-base block">Total Amount</span>
+                              </div>
+                              <div className="flex items-center gap-2 w-full sm:w-auto">
                                 <span className="text-[#fd561e] font-bold text-lg">₹</span>
-                                <input type="number"
-                                  min={amountConstraints.min || parseFloat(billSummary?.minPay || 1)}
-                                  step="0.01"
-                                  max={amountConstraints.max || parseFloat(billSummary?.maxPay || undefined) || undefined}
+                                <input type="number" min={amountConstraints.min || 1} step="0.01"
+                                  max={amountConstraints.max || undefined}
                                   readOnly={amountConstraints.readOnly && billData.partial_pay !== "Y"}
-                                  className={`border border-orange-300 rounded-lg px-3 py-2 text-base font-bold w-36 focus:ring-2 focus:ring-[#fd561e] outline-none bg-white text-[#fd561e] text-right ${amountConstraints.readOnly && billData.partial_pay !== "Y" ? "cursor-not-allowed bg-gray-50" : ""}`}
-                                  placeholder="Enter amount"
-                                  value={totalPayable}
+                                  className="border border-orange-300 rounded-lg px-3 py-2 text-base font-bold w-full sm:w-36 focus:ring-2 focus:ring-[#fd561e] outline-none bg-white text-[#fd561e] text-right"
+                                  placeholder="Enter amount" value={totalPayable}
                                   onChange={(e) => setTotalPayable(e.target.value)} />
                               </div>
                             </div>
-                          </div>
-                        )}
-
-                        {/* No bill returned (online_validation=N) — just amount input */}
-                        {(!billSummary || !billSummary.billNumber) && (
-                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center px-4 sm:px-5 py-4 bg-orange-50 rounded-xl border border-orange-100 gap-3">
-                            <div>
-                              <span className="font-bold text-gray-800 text-base block">Total Amount</span>
-                            </div>
-                            <div className="flex items-center gap-2 w-full sm:w-auto">
-                              <span className="text-[#fd561e] font-bold text-lg">₹</span>
-                              <input type="number"
-                                min={amountConstraints.min || 1}
-                                step="0.01"
-                                max={amountConstraints.max || undefined}
-                                readOnly={amountConstraints.readOnly && billData.partial_pay !== "Y"}
-                                className={`border border-orange-300 rounded-lg px-3 py-2 text-base font-bold w-full sm:w-36 focus:ring-2 focus:ring-[#fd561e] outline-none bg-white text-[#fd561e] text-right`}
-                                placeholder="Enter amount" value={totalPayable}
-                                onChange={(e) => setTotalPayable(e.target.value)} />
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                          )}
+                        </div>
+                      )}
                     </>
                   )}
                 </>
@@ -1960,64 +1901,64 @@ const BillDetails = () => {
                 </div>
               )}
 
-              {/* Customer details — additionalInfo mode లో ఈ card వద్దు (above లో merged) */}
+              {/* Customer details card — not shown in NCMC/additionalInfo mode (merged above) */}
               {additionalInfo.length === 0 && (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-4">
-                <div className="flex items-center justify-between gap-3 mb-5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#fd561e] text-white flex items-center justify-center text-sm font-bold">
-                      {isMultiMode && billList.length > 0 ? 3 : billList.length > 1 ? 3 : 2}
-                    </div>
-                    <span className="text-sm font-bold uppercase text-gray-700 tracking-wide">Customer Details</span>
-                  </div>
-                  <button type="button" onClick={() => setIsEditingUser(!isEditingUser)}
-                    className="text-xs text-[#fd561e] cursor-pointer font-semibold hover:underline">
-                    {isEditingUser ? "Save" : "Edit"}
-                  </button>
-                </div>
-                {isEditingUser ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="sm:col-span-3">
-                      <label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Full Name</label>
-                      <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] outline-none bg-gray-50 text-sm"
-                        value={userDetails.name} onChange={(e) => setUserDetails((p) => ({ ...p, name: e.target.value }))} />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Mobile</label>
-                      <input type="tel" maxLength="10" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] outline-none bg-gray-50 text-sm"
-                        value={userDetails.mobile} onChange={(e) => setUserDetails((p) => ({ ...p, mobile: e.target.value }))} />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Email</label>
-                      <input type="email" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] outline-none bg-gray-50 text-sm"
-                        value={userDetails.email} onChange={(e) => setUserDetails((p) => ({ ...p, email: e.target.value }))} />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {[
-                      { label: "Name",   value: userDetails.name },
-                      { label: "Mobile", value: userDetails.mobile },
-                      { label: "Email",  value: userDetails.email },
-                    ].map(({ label, value }) => (
-                      <div key={label} className="flex sm:block items-center justify-between border-b sm:border-b-0 border-gray-100 pb-3 sm:pb-0">
-                        <p className="text-xs text-gray-500 uppercase font-semibold">{label}</p>
-                        <p className="font-bold text-gray-800 text-sm break-all mt-0 sm:mt-1">{value || "—"}</p>
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-4">
+                  <div className="flex items-center justify-between gap-3 mb-5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-[#fd561e] text-white flex items-center justify-center text-sm font-bold">
+                        {isMultiMode && billList.length > 0 ? 3 : billList.length > 1 ? 3 : 2}
                       </div>
-                    ))}
+                      <span className="text-sm font-bold uppercase text-gray-700 tracking-wide">Customer Details</span>
+                    </div>
+                    <button type="button" onClick={() => setIsEditingUser(!isEditingUser)}
+                      className="text-xs text-[#fd561e] cursor-pointer font-semibold hover:underline">
+                      {isEditingUser ? "Save" : "Edit"}
+                    </button>
                   </div>
-                )}
-                <div className="flex justify-between mt-6 gap-3">
-                  <button type="button" onClick={() => setStep(1)}
-                    className="px-5 py-2 cursor-pointer rounded-xl border border-gray-300 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-all">
-                    ← Edit Details
-                  </button>
-                  <button type="button" onClick={handleProceedToPayment}
-                    className="bg-[#fd561e] text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer inline-flex items-center gap-2">
-                    Proceed to Payment →
-                  </button>
+                  {isEditingUser ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="sm:col-span-3">
+                        <label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Full Name</label>
+                        <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] outline-none bg-gray-50 text-sm"
+                          value={userDetails.name} onChange={(e) => setUserDetails((p) => ({ ...p, name: e.target.value }))} />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Mobile</label>
+                        <input type="tel" maxLength="10" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] outline-none bg-gray-50 text-sm"
+                          value={userDetails.mobile} onChange={(e) => setUserDetails((p) => ({ ...p, mobile: e.target.value }))} />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Email</label>
+                        <input type="email" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] outline-none bg-gray-50 text-sm"
+                          value={userDetails.email} onChange={(e) => setUserDetails((p) => ({ ...p, email: e.target.value }))} />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      {[
+                        { label: "Name",   value: userDetails.name },
+                        { label: "Mobile", value: userDetails.mobile },
+                        { label: "Email",  value: userDetails.email },
+                      ].map(({ label, value }) => (
+                        <div key={label} className="flex sm:block items-center justify-between border-b sm:border-b-0 border-gray-100 pb-3 sm:pb-0">
+                          <p className="text-xs text-gray-500 uppercase font-semibold">{label}</p>
+                          <p className="font-bold text-gray-800 text-sm break-all mt-0 sm:mt-1">{value || "—"}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex justify-between mt-6 gap-3">
+                    <button type="button" onClick={() => setStep(1)}
+                      className="px-5 py-2 cursor-pointer rounded-xl border border-gray-300 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-all">
+                      ← Edit Details
+                    </button>
+                    <button type="button" onClick={handleProceedToPayment}
+                      className="bg-[#fd561e] text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer inline-flex items-center gap-2">
+                      Proceed to Payment →
+                    </button>
+                  </div>
                 </div>
-              </div>
               )}
             </div>
           )}
