@@ -1,9 +1,32 @@
 // utils/filterBuses.js
+
+// ── Time slot ranges (minutes from midnight) ───────────────────────────────
+// "12 AM - 6 AM"  →   0 to 359
+// "6 AM - 12 PM"  → 360 to 719
+// "12 PM - 6 PM"  → 720 to 1079
+// "6 PM - 12 AM"  → 1080 to 1439  (and wraps: 0 to 359 next day for arrivals)
+//
+// API stores times as total minutes from midnight.
+// Arrival can exceed 1440 (next day) — so we mod 1440 for arrival checks.
+
+const DEP_SLOTS = {
+  "12 AM - 6 AM": (m) => m >= 0    && m < 360,
+  "6 AM - 12 PM": (m) => m >= 360  && m < 720,
+  "12 PM - 6 PM": (m) => m >= 720  && m < 1080,
+  "6 PM - 12 AM": (m) => m >= 1080 && m < 1440,
+};
+
+const ARR_SLOTS = {
+  "12 AM - 6 AM": (m) => (m % 1440) >= 0    && (m % 1440) < 360,
+  "6 AM - 12 PM": (m) => (m % 1440) >= 360  && (m % 1440) < 720,
+  "12 PM - 6 PM": (m) => (m % 1440) >= 720  && (m % 1440) < 1080,
+  "6 PM - 12 AM": (m) => (m % 1440) >= 1080 && (m % 1440) < 1440,
+};
+
 export const filterBuses = (buses, filters) => {
   return buses.filter((bus) => {
 
-    // ── Bus Type (AC / Non-AC / Seater / Sleeper / Primo) ──────────────────
-    // OR logic inside the group — at least one selected type must match.
+    // ── Bus Type (OR within group) ─────────────────────────────────────────
     const isAC           = bus.AC           === true || bus.AC           === "true";
     const isNonAC        = bus.nonAC        === true || bus.nonAC        === "true";
     const isSeater       = bus.seater       === true || bus.seater       === "true";
@@ -18,49 +41,33 @@ export const filterBuses = (buses, filters) => {
       filters.primo || filters.singleSeater || filters.singleSleeper;
 
     if (anyBusTypeSelected) {
-      let busTypeMatch = false;
-      if (filters.ac            && isAC)           busTypeMatch = true;
-      if (filters.nonAc         && isNonAC)        busTypeMatch = true;
-      if (filters.seater        && isSeater)       busTypeMatch = true;
-      if (filters.sleeper       && isSleeper)      busTypeMatch = true;
-      if (filters.primo         && isPrimo)        busTypeMatch = true;
-      if (filters.singleSeater  && isSingleSeater) busTypeMatch = true;
-      if (filters.singleSleeper && isSingleSleeper)busTypeMatch = true;
-      if (!busTypeMatch) return false;
+      const match =
+        (filters.ac            && isAC)           ||
+        (filters.nonAc         && isNonAC)        ||
+        (filters.seater        && isSeater)       ||
+        (filters.sleeper       && isSleeper)      ||
+        (filters.primo         && isPrimo)        ||
+        (filters.singleSeater  && isSingleSeater) ||
+        (filters.singleSleeper && isSingleSleeper);
+      if (!match) return false;
     }
 
-    // ── Popular "6PM-12AM" evening departure ───────────────────────────────
-    if (filters.evening) {
-      const dep = Number(bus.departureTime);
-      if (!(dep >= 1080 && dep < 1440)) return false;
-    }
+    // ── Popular "6PM-12AM" evening departure ──────────────────────────────
+    // This is handled via depTime slot sync — no separate check needed
+    // (Popular__6PM-12AM adds "6 PM - 12 AM" to depTime automatically)
 
-    // ── Departure Time Slots ───────────────────────────────────────────────
-    // Labels MUST match exactly what FiltersSidebar timeSlots uses:
-    // "12 AM - 6 AM" | "6 AM - 12 PM" | "12 PM - 6 PM" | "6 PM - 12 AM"
+    // ── Departure Time (OR across selected slots) ──────────────────────────
     if (filters.depTime?.size) {
       const dep = Number(bus.departureTime);
-      const depMatch = [...filters.depTime].some((slot) => {
-        if (slot === "12 AM - 6 AM")  return dep >= 0    && dep < 360;
-        if (slot === "6 AM - 12 PM")  return dep >= 360  && dep < 720;
-        if (slot === "12 PM - 6 PM")  return dep >= 720  && dep < 1080;
-        if (slot === "6 PM - 12 AM")  return dep >= 1080 && dep < 1440;
-        return false;
-      });
-      if (!depMatch) return false;
+      const match = [...filters.depTime].some((slot) => DEP_SLOTS[slot]?.(dep));
+      if (!match) return false;
     }
 
-    // ── Arrival Time Slots ─────────────────────────────────────────────────
+    // ── Arrival Time (OR across selected slots) ────────────────────────────
     if (filters.arrTime?.size) {
       const arr = Number(bus.arrivalTime);
-      const arrMatch = [...filters.arrTime].some((slot) => {
-        if (slot === "12 AM - 6 AM")  return arr >= 0    && arr < 360;
-        if (slot === "6 AM - 12 PM")  return arr >= 360  && arr < 720;
-        if (slot === "12 PM - 6 PM")  return arr >= 720  && arr < 1080;
-        if (slot === "6 PM - 12 AM")  return arr >= 1080 && arr < 1440;
-        return false;
-      });
-      if (!arrMatch) return false;
+      const match = [...filters.arrTime].some((slot) => ARR_SLOTS[slot]?.(arr));
+      if (!match) return false;
     }
 
     // ── Boarding Points (OR) ───────────────────────────────────────────────
@@ -77,7 +84,7 @@ export const filterBuses = (buses, filters) => {
       if (!names.some((n) => filters.dropping.has(n))) return false;
     }
 
-    // ── Operator ───────────────────────────────────────────────────────────
+    // ── Operator (OR) ─────────────────────────────────────────────────────
     if (filters.ops?.size) {
       if (!filters.ops.has(bus.travels)) return false;
     }

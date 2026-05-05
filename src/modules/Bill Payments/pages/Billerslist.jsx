@@ -1,9 +1,6 @@
 // BillersList.jsx
 // Route: /billers
 // Navigate: navigate("/billers", { state: { category: "Electricity" } })
-//
-// Navbar: fixed, h-16 (64px) desktop / h-20 (80px) sm+ → we offset with pt-16 / pt-20
-// Nothing is sticky here — title + search + list all scroll normally.
 
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -11,7 +8,6 @@ import axios from "axios";
 
 const API = "https://api.bobros.co.in/db/select";
 
-// ── Parsers ──────────────────────────────────────────────────────────────────
 const safeParseJson = (raw) => {
   if (!raw || raw === "nan") return null;
   try {
@@ -58,7 +54,6 @@ const parseAuthenticatorsSafe = (raw) => {
   return results;
 };
 
-// ── Skeleton ──────────────────────────────────────────────────────────────────
 const Skeleton = () => (
   <div className="flex items-center gap-4 py-3 border-b border-gray-100"
     style={{ animation: "blpulse 1.4s ease-in-out infinite" }}>
@@ -67,7 +62,6 @@ const Skeleton = () => (
   </div>
 );
 
-// ── Biller Row ─────────────────────────────────────────────────────────────────
 const BillerRow = ({ biller, onSelect, busy }) => {
   const [hov, setHov]       = useState(false);
   const [imgErr, setImgErr] = useState(false);
@@ -90,27 +84,23 @@ const BillerRow = ({ biller, onSelect, busy }) => {
         cursor: busy ? "not-allowed" : "pointer",
       }}
     >
-      {/* Logo */}
       <div className="w-12 h-12 shrink-0 flex items-center justify-center overflow-hidden">
         {logo && !imgErr ? (
           <img src={logo} alt={name}
             className="w-12 h-12 object-contain"
             onError={() => setImgErr(true)} />
         ) : (
-          <span className="text-xl font-black select-none"
-            style={{ color: "#fd561e" }}>
+          <span className="text-xl font-black select-none" style={{ color: "#fd561e" }}>
             {name.charAt(0).toUpperCase()}
           </span>
         )}
       </div>
 
-      {/* Name */}
       <p className="flex-1 text-sm font-semibold truncate m-0"
         style={{ color: hov ? "#fd561e" : "#111", transition: "color 0.15s" }}>
         {name}
       </p>
 
-      {/* Arrow / spinner */}
       {isBusy ? (
         <div className="w-4 h-4 rounded-full shrink-0"
           style={{ border: "2px solid #f0f0f0", borderTopColor: "#fd561e",
@@ -129,7 +119,6 @@ const BillerRow = ({ biller, onSelect, busy }) => {
   );
 };
 
-// ── Main ──────────────────────────────────────────────────────────────────────
 const BillersList = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -207,24 +196,38 @@ const BillersList = () => {
         } catch {}
       }
 
+      // ── KEY FIX: pay_multiple_bills included — same as manual search flow ──
       localStorage.setItem("billData", JSON.stringify({
-        billerid: d.billerid, biller: d.biller_name,
-        category: d.biller_category, category1: d.biller_category,
-        biller_logo: d.biller_logo, online_validation: d.online_validation,
-        bill_presentment: d.bill_presentment, partial_pay: d.partial_pay,
-        partial_pay_amount: d.partial_pay_amount, pay_after_duedate: d.pay_after_duedate,
-        paymentamount_validation: d.paymentamount_validation, plan_available: d.plan_available,
-        biller_type: d.biller_type, biller_mode: d.biller_mode,
-        allowed_payment_methods: allowedPaymentMethods, payment_channels: paymentChannels,
-        customer_conv_fee: customerConvFee, authenticators,
-        biller_authenticator_group: authGroup,
+        billerid:                    d.billerid,
+        biller:                      d.biller_name,
+        category:                    d.biller_category,
+        category1:                   d.biller_category,
+        biller_logo:                 d.biller_logo,
+        online_validation:           d.online_validation,
+        bill_presentment:            d.bill_presentment,
+        partial_pay:                 d.partial_pay,
+        partial_pay_amount:          d.partial_pay_amount,
+        pay_after_duedate:           d.pay_after_duedate,
+        pay_multiple_bills:          d.pay_multiple_bills,   // ← WAS MISSING
+        paymentamount_validation:    d.paymentamount_validation,
+        plan_available:              d.plan_available,
+        biller_type:                 d.biller_type,
+        biller_mode:                 d.biller_mode,
+        allowed_payment_methods:     allowedPaymentMethods,
+        payment_channels:            paymentChannels,
+        customer_conv_fee:           customerConvFee,
+        authenticators,
+        biller_authenticator_group:  authGroup,
         additional_validation_details: additionalValDetails,
-        additional_payment_details: additionalPayDetails,
+        additional_payment_details:  additionalPayDetails,
         billerConsent,
         biller_remarks: d.biller_remarks && d.biller_remarks !== "nan" ? d.biller_remarks : "",
-        bbps_billerid: d.bbps_billerid, isbillerbbps: d.isbillerbbps,
-        isLoggedIn, loggedInUser,
+        bbps_billerid:               d.bbps_billerid,
+        isbillerbbps:                d.isbillerbbps,
+        isLoggedIn,
+        loggedInUser,
       }));
+
       navigate("/bill-details");
     } catch {
       alert("Error fetching biller details. Please try again.");
@@ -248,16 +251,11 @@ const BillersList = () => {
         }
       `}</style>
 
-      {/*
-        ✅ KEY FIX: min-h-screen తీసేశాను — App.jsx లో flex flex-col + flex-1 ఉన్నాయి
-        కాబట్టి content height కి match అవుతుంది, footer gap రాదు అన్ని screens లో
-      */}
       <div className="bg-white pt-16 sm:pt-20"
         style={{ fontFamily: "'Segoe UI', Arial, sans-serif" }}>
 
         <div className="mx-auto w-full max-w-[680px] px-4 sm:px-8 lg:px-12">
 
-          {/* Title block */}
           <div className="pt-6 pb-4 sm:pt-8 sm:pb-5">
             <div className="flex items-start gap-3 mb-4">
               <button
@@ -284,7 +282,6 @@ const BillersList = () => {
               </div>
             </div>
 
-            {/* Search */}
             <div className="relative">
               <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
                 width="16" height="16" viewBox="0 0 24 24" fill="none"
@@ -310,9 +307,7 @@ const BillersList = () => {
 
           <div className="border-t border-gray-100" />
 
-          {/* List */}
           <div className="pb-8">
-
             {loading && [...Array(6)].map((_, i) => <Skeleton key={i} />)}
 
             {!loading && error && (
