@@ -9,7 +9,7 @@ import { fetchAirlines } from '../services/airlineService';
 import OneWayFlightCard from '../components/shared/OneWayFlightCard';
 import OneWaySheet from '../components/sheet/OneWaySheet';
 import FilterSidebar from '../components/shared/FilterSidebar';
-import FlightLoadingAnimation from '../utils/FlightLoadingAnimation'; // IMPORT THE EXISTING COMPONENT
+import FlightLoadingAnimation from '../utils/FlightLoadingAnimation';
 import {
   FaPlane,
   FaExclamationTriangle,
@@ -32,6 +32,11 @@ const OneWayPage = () => {
     updateFlightResults, 
     flightResults
   } = useFlightSearchContext();
+
+  // ============ REFS FOR DUPLICATE API CALL PREVENTION ============
+  const isFetchingRef = useRef(false);
+  const lastFetchedKeyRef = useRef('');
+  const initialFetchDoneRef = useRef(false);
 
   // ============ State for URL parameters and API loading ============
   const [isLoading, setIsLoading] = useState(true);
@@ -104,6 +109,12 @@ const OneWayPage = () => {
   // ============ Parse URL parameters and call API ============
   useEffect(() => {
     const fetchFlightResults = async () => {
+      // ✅ PREVENT DUPLICATE CALLS - Check if already fetching
+      if (isFetchingRef.current) {
+        console.log('🔍 [OneWayPage] Skipping - fetch already in progress');
+        return;
+      }
+      
       setIsLoading(true);
       setApiError(null);
       
@@ -135,6 +146,19 @@ const OneWayPage = () => {
           navigate('/flights');
           return;
         }
+        
+        // ✅ CREATE UNIQUE SEARCH KEY
+        const searchKey = `${from}-${to}-${departureDate}-${adults}-${children}-${infants}`;
+        
+        // ✅ CHECK IF THIS EXACT SEARCH WAS ALREADY FETCHED
+        if (lastFetchedKeyRef.current === searchKey && initialFetchDoneRef.current) {
+          console.log('🔍 [OneWayPage] Skipping - already fetched this search:', searchKey);
+          setIsLoading(false);
+          return;
+        }
+        
+        // ✅ SET FETCHING FLAG
+        isFetchingRef.current = true;
         
         const summary = {
           from: { code: from, name: fromName, city: fromCity },
@@ -184,8 +208,13 @@ const OneWayPage = () => {
         if (result.success) {
           console.log('✅ Search successful:', {
             flightsCount: result.flights?.length || 0,
-            searchId: result.searchId
+            searchId: result.searchId,
+            traceId: result.traceId
           });
+          
+          // ✅ UPDATE LAST FETCHED KEY
+          lastFetchedKeyRef.current = searchKey;
+          initialFetchDoneRef.current = true;
           
           updateFlightResults({
             flights: result.flights || [],
@@ -221,11 +250,18 @@ const OneWayPage = () => {
         });
       } finally {
         setIsLoading(false);
+        // ✅ RESET FETCHING FLAG
+        isFetchingRef.current = false;
       }
     };
     
     fetchFlightResults();
-  }, [location.search, navigate, updateFlightResults]);
+    
+    // ✅ CLEANUP FUNCTION - Reset flags when component unmounts
+    return () => {
+      isFetchingRef.current = false;
+    };
+  }, [location.search]); // ✅ Only depend on location.search
 
   // ============ FETCH AIRLINES DATA AFTER FLIGHTS LOAD ============
   useEffect(() => {
@@ -951,9 +987,6 @@ const OneWayPage = () => {
       {/* Flight Results State */}
       {!isLoading && !apiError && !error && flights && flights.length > 0 && (
         <>
-          {/* Sort and Filter Bar */}
-          
-
           {/* Main Content */}
           <div className="container mx-auto px-4 py-6">
             <div className="flex flex-col lg:flex-row gap-6">
@@ -985,6 +1018,56 @@ const OneWayPage = () => {
 
               {/* Right Side - Flight List */}
               <div className="lg:w-3/4">
+                {/* Sort Bar */}
+                <div className="bg-white rounded-xl p-4 mb-4 shadow-sm flex justify-between items-center">
+                  <div className="text-sm text-gray-600">
+                    Showing {filteredAndSortedFlights.length} of {flights.length} flights
+                  </div>
+                  
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowSortDropdown(!showSortDropdown)}
+                      className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100"
+                    >
+                      Sort by: {sortOptions.find(o => o.value === sortBy)?.label || 'Price'}
+                      <FaChevronDown size={12} />
+                    </button>
+                    
+                    {showSortDropdown && (
+                      <div className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 z-20 min-w-[180px]">
+                        {sortOptions.map(option => (
+                          <button
+                            key={option.value}
+                            onClick={() => {
+                              setSortBy(option.value);
+                              setShowSortDropdown(false);
+                            }}
+                            className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
+                              sortBy === option.value ? 'text-[#FD561E] font-medium' : 'text-gray-700'
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Mobile Filter Button */}
+                  <button
+                    onClick={() => setShowMobileFilters(true)}
+                    className="lg:hidden flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-lg text-sm font-medium text-gray-700"
+                  >
+                    <FaFilter size={12} />
+                    Filters
+                    {activeFilterCount > 0 && (
+                      <span className="bg-[#FD561E] text-white text-xs rounded-full px-1.5 py-0.5">
+                        {activeFilterCount}
+                      </span>
+                    )}
+                  </button>
+                </div>
+                
                 {filteredAndSortedFlights.length === 0 ? (
                   <div className="bg-white rounded-xl p-8 text-center shadow-sm">
                     <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -1026,7 +1109,6 @@ const OneWayPage = () => {
           onClose={handleCloseSheet}
           flight={selectedFlightForSheet}
           passengerCounts={passengerCounts}
-          traceId={flightResults?.traceId}
         />
       )}
 
@@ -1071,7 +1153,7 @@ const OneWayPage = () => {
                         onChange={(e) => updateTempPassengerAge(i, e.target.value)}
                         className="w-full mt-2 px-3 py-2 text-sm border border-gray-200 rounded-lg"
                       >
-                        {p.code === 'CNN' && [...Array(10)].map((_, a) => (
+                        {p.code === 'CNN' && [...Array(16)].map((_, a) => (
                           <option key={a+2} value={a+2}>{a+2} years</option>
                         ))}
                         {p.code === 'INF' && [...Array(3)].map((_, a) => (

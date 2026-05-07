@@ -15,8 +15,10 @@ import {
   FaDatabase,
   FaShieldAlt,
   FaCloudUploadAlt,
+  FaTimes,
+  FaCheckCircle,
 } from "react-icons/fa";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 
 const BRAND = "#fd561e";
 
@@ -31,7 +33,124 @@ const scrollToSection = (id) => {
 const Header = () => null;
 
 // ─────────────────────────────────────────────
-// Hero Section
+// Success Popup Modal
+// ─────────────────────────────────────────────
+const SuccessModal = ({ isOpen, onClose }) => {
+  // Auto-close after 6 seconds
+  useEffect(() => {
+    if (isOpen) {
+      const timer = setTimeout(() => onClose(), 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, onClose]);
+
+  // Close on Escape key
+  useEffect(() => {
+    const handleKey = (e) => { if (e.key === "Escape") onClose(); };
+    if (isOpen) window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [isOpen, onClose]);
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          {/* Backdrop */}
+          <motion.div
+            key="backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            onClick={onClose}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ backgroundColor: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}
+          >
+            {/* Modal Card */}
+            <motion.div
+              key="modal"
+              initial={{ opacity: 0, scale: 0.85, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.85, y: 30 }}
+              transition={{ type: "spring", stiffness: 320, damping: 28 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative bg-white rounded-3xl shadow-2xl w-full max-w-md mx-auto overflow-hidden"
+            >
+              {/* Top accent bar */}
+              <div className="h-2 w-full" style={{ background: `linear-gradient(90deg, ${BRAND}, #ff8c5a)` }} />
+
+              {/* Close button */}
+              <button
+                onClick={onClose}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition p-1 rounded-full hover:bg-gray-100"
+                aria-label="Close"
+              >
+                <FaTimes size={18} />
+              </button>
+
+              <div className="px-8 py-8 text-center">
+                {/* Animated checkmark */}
+                <motion.div
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.15 }}
+                  className="inline-flex items-center justify-center w-20 h-20 rounded-full mb-5"
+                  style={{ backgroundColor: "#fff1ec" }}
+                >
+                  <FaCheckCircle size={44} style={{ color: BRAND }} />
+                </motion.div>
+
+                <motion.h2
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.25 }}
+                  className="text-2xl font-bold text-gray-800 mb-2"
+                >
+                  We've Received Your Message!
+                </motion.h2>
+
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.32 }}
+                  className="text-gray-500 text-sm leading-relaxed mb-6"
+                >
+                  Thank you for reaching out to <span className="font-semibold" style={{ color: BRAND }}>BOBROS</span>.<br />
+                  Our team will get back to you within <strong>24 hours</strong>.
+                </motion.p>
+
+                {/* Progress bar auto-close indicator */}
+                <div className="w-full bg-gray-100 rounded-full h-1.5 mb-6 overflow-hidden">
+                  <motion.div
+                    className="h-full rounded-full"
+                    style={{ backgroundColor: BRAND }}
+                    initial={{ width: "100%" }}
+                    animate={{ width: "0%" }}
+                    transition={{ duration: 6, ease: "linear" }}
+                  />
+                </div>
+
+                <motion.button
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  onClick={onClose}
+                  className="cursor-pointer w-full text-white font-semibold py-3 rounded-xl hover:opacity-90 transition text-sm"
+                  style={{ backgroundColor: BRAND }}
+                >
+                  Got it, thanks! 👍
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+};
+
+// ─────────────────────────────────────────────
+// Hero Section — FIXED spacing (matches local)
 // ─────────────────────────────────────────────
 const Hero = () => (
   <motion.section
@@ -39,7 +158,7 @@ const Hero = () => (
     whileInView={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.6 }}
     viewport={{ once: true }}
-    className="container mx-auto -mt-6 px-4 pt-28 md:pt-32 pb-12"
+    className="container mx-auto px-4 pt-10 pb-12"
   >
     <div className="flex flex-col md:flex-row items-center gap-8">
       <div className="md:w-7/12">
@@ -185,15 +304,16 @@ const Postcards = () => (
               whileHover={{ y: -6, boxShadow: "0 20px 40px rgba(253,86,30,0.18)" }}
               transition={{ duration: 0.5, delay: idx * 0.08 }}
               viewport={{ once: true }}
-              className="flex bg-white rounded-xl shadow-md overflow-hidden transition cursor-pointer"
-              style={{ flexDirection: imgLeft ? "row" : "row-reverse", height: "260px" }}
+              className="flex flex-col md:flex-row bg-white rounded-xl shadow-md overflow-hidden transition cursor-pointer"
+              style={{ flexDirection: imgLeft ? undefined : "row-reverse" }}
             >
-              <div className="relative flex-shrink-0" style={{ width: "320px", height: "260px", overflow: "hidden" }}>
+              {/* Image — full width on mobile, fixed on desktop */}
+              <div className="relative w-full md:w-80 flex-shrink-0" style={{ minHeight: "200px", maxHeight: "260px", overflow: "hidden" }}>
                 <motion.img
                   src={card.img}
                   alt={card.title}
                   className="w-full h-full object-cover"
-                  style={{ display: "block" }}
+                  style={{ display: "block", minHeight: "200px" }}
                   whileHover={{ scale: 1.05 }}
                   transition={{ duration: 0.35 }}
                 />
@@ -447,7 +567,7 @@ const WhatWeDo = () => {
 };
 
 // ─────────────────────────────────────────────
-// Our Partners (Fixed - Cleaner Version)
+// Our Partners
 // ─────────────────────────────────────────────
 const partnerLogos = [
   { src: "/assets/sectigo.png", name: "sectigo", maxWidth: "130px" },
@@ -487,7 +607,6 @@ const PartnerCarousel = () => {
         }
         .partners-viewport::before { left:  0; background: linear-gradient(to right, #f9fafb, transparent); }
         .partners-viewport::after  { right: 0; background: linear-gradient(to left,  #f9fafb, transparent); }
-        
         .partner-logo {
           height: 130px;
           width: auto;
@@ -496,7 +615,6 @@ const PartnerCarousel = () => {
           transition: all 0.3s ease;
           flex-shrink: 0;
         }
-        
         .partner-logo:hover {
           opacity: 1;
           transform: scale(1.05);
@@ -556,7 +674,7 @@ const WhyChoose = () => (
 );
 
 // ─────────────────────────────────────────────
-// Contact Form (FIXED)
+// Contact Form — FIXED with Success Modal
 // ─────────────────────────────────────────────
 const staticPkgOptions = [
   "Go Digital - Standard (₹599/mo)",
@@ -570,7 +688,13 @@ const ecomPkgOptions = [
   "E-Commerce Enterprise",
 ];
 
-const ContactForm = () => {
+// Pre-filled mailto body
+const MAIL_TO_HREF =
+  "mailto:customersupport@bobrosone.com" +
+  "?subject=Enquiry%20About%20Your%20Services" +
+  "&body=Hi%20BOBROS%20Team%2C%0A%0AI%20want%20to%20know%20about%20your%20services.%20Could%20you%20please%20share%20more%20details%20and%20get%20in%20touch%20with%20me%3F%0A%0ARegards";
+
+const ContactForm = ({ onSuccess }) => {
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -581,14 +705,14 @@ const ContactForm = () => {
   });
   const [turnstileToken, setTurnstileToken] = useState(null);
   const [errors, setErrors] = useState({});
-  const [status, setStatus] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [apiError, setApiError] = useState(false);
   const turnstileRef = useRef();
 
   useEffect(() => {
     setForm((p) => ({ ...p, selectedPackage: "" }));
   }, [form.serviceType]);
 
-  // ✅ Fixed email validation – allows +, ., %, etc.
   const validateEmail = (email) => {
     const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     return re.test(email);
@@ -598,18 +722,14 @@ const ContactForm = () => {
     const e = {};
     if (!form.name || !/^[A-Za-z\s]+$/.test(form.name) || form.name.length > 40)
       e.name = "Valid name required (letters only, max 40)";
-
     if (!form.email || !validateEmail(form.email) || form.email.length > 100)
       e.email = "Enter a valid email address (e.g., name@example.com)";
-
     if (!form.phone || !/^[6-9]\d{9}$/.test(form.phone))
       e.phone = "Valid 10-digit mobile number required";
-
     if (!form.serviceType) e.serviceType = "Please select a service type";
     if (!form.selectedPackage) e.selectedPackage = "Please select a package";
     if (!form.billingCycle) e.billingCycle = "Please select billing preference";
     if (!turnstileToken) e.turnstile = "Please complete the security check";
-
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -619,21 +739,25 @@ const ContactForm = () => {
     let v = value;
     if (name === "name") v = value.replace(/[^A-Za-z\s]/g, "");
     if (name === "phone") v = value.replace(/\D/g, "").slice(0, 10);
-    if (name === "email") v = value.trim(); // Do not strip valid characters
+    if (name === "email") v = value.trim();
     setForm((p) => ({ ...p, [name]: v }));
     if (errors[name]) setErrors((p) => ({ ...p, [name]: undefined }));
+    setApiError(false);
   };
 
   const handleSubmit = async (ev) => {
     ev.preventDefault();
     if (!validate()) return;
 
+    setIsSubmitting(true);
+    setApiError(false);
+
     const payload = {
       userName: form.name.trim(),
       userEmail: form.email.trim(),
       userMobile: form.phone.trim(),
       packageName: form.selectedPackage,
-      serviceType: form.serviceType,        // ✅ ADDED – fixes 400 error
+      serviceType: form.serviceType,
       additionalInfo: "No additional notes",
       paymentPlan: form.billingCycle === "monthly" ? "Monthly" : "Annual",
       captchaToken: turnstileToken,
@@ -646,25 +770,21 @@ const ContactForm = () => {
         { headers: { "Content-Type": "application/json" } }
       );
       if (res.status === 200) {
-        setStatus("success");
-        setForm({
-          name: "",
-          email: "",
-          phone: "",
-          serviceType: "",
-          selectedPackage: "",
-          billingCycle: "",
-        });
+        // Reset form
+        setForm({ name: "", email: "", phone: "", serviceType: "", selectedPackage: "", billingCycle: "" });
         setTurnstileToken(null);
         turnstileRef.current?.reset();
-        setTimeout(() => setStatus(null), 5000);
+        setErrors({});
+        // Show success popup
+        onSuccess();
       } else {
-        setStatus("error");
-        console.error("API responded with status:", res.status, res.data);
+        setApiError(true);
       }
     } catch (err) {
       console.error("API call failed:", err.response?.data || err.message);
-      setStatus("error");
+      setApiError(true);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -713,10 +833,9 @@ const ContactForm = () => {
           {/* Form panel */}
           <div className="lg:w-1/2 bg-white rounded-2xl p-6 shadow-md">
             <form onSubmit={handleSubmit} noValidate>
+              {/* Service Type */}
               <div className="mb-4">
-                <label className="block text-sm font-semibold mb-2 text-gray-700">
-                  Service Type
-                </label>
+                <label className="block text-sm font-semibold mb-2 text-gray-700">Service Type</label>
                 <PillRadio
                   fieldName="serviceType"
                   value={form.serviceType}
@@ -728,6 +847,7 @@ const ContactForm = () => {
                 {errors.serviceType && <p className="text-red-500 text-xs mt-1">{errors.serviceType}</p>}
               </div>
 
+              {/* Package selector — shown only after serviceType chosen */}
               {form.serviceType && (
                 <motion.div
                   key={form.serviceType}
@@ -736,9 +856,7 @@ const ContactForm = () => {
                   transition={{ duration: 0.25 }}
                   className="mb-5"
                 >
-                  <label className="block text-sm font-semibold mb-2 text-gray-700">
-                    {packageLabel}
-                  </label>
+                  <label className="block text-sm font-semibold mb-2 text-gray-700">{packageLabel}</label>
                   <select
                     name="selectedPackage"
                     value={form.selectedPackage}
@@ -747,15 +865,14 @@ const ContactForm = () => {
                   >
                     <option value="">-- {packageLabel} --</option>
                     {pkgOptions.map((p, i) => (
-                      <option key={i} value={p}>
-                        {p}
-                      </option>
+                      <option key={i} value={p}>{p}</option>
                     ))}
                   </select>
                   {errors.selectedPackage && <p className="text-red-500 text-xs mt-1">{errors.selectedPackage}</p>}
                 </motion.div>
               )}
 
+              {/* Name */}
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-1 text-gray-700">
                   Name <span className="text-red-500">*</span>
@@ -771,6 +888,7 @@ const ContactForm = () => {
                 {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
               </div>
 
+              {/* Email */}
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-1 text-gray-700">
                   Email <span className="text-red-500">*</span>
@@ -786,6 +904,7 @@ const ContactForm = () => {
                 {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
               </div>
 
+              {/* Phone */}
               <div className="mb-5">
                 <label className="block text-sm font-medium mb-1 text-gray-700">
                   Mobile No <span className="text-red-500">*</span>
@@ -801,10 +920,9 @@ const ContactForm = () => {
                 {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
               </div>
 
+              {/* Billing */}
               <div className="mb-5">
-                <label className="block text-sm font-semibold mb-2 text-gray-700">
-                  Billing Preference
-                </label>
+                <label className="block text-sm font-semibold mb-2 text-gray-700">Billing Preference</label>
                 <PillRadio
                   fieldName="billingCycle"
                   value={form.billingCycle}
@@ -816,10 +934,11 @@ const ContactForm = () => {
                 {errors.billingCycle && <p className="text-red-500 text-xs mt-1">{errors.billingCycle}</p>}
               </div>
 
+              {/* Turnstile */}
               <div className="mb-4 flex justify-center">
                 <Turnstile
                   ref={turnstileRef}
-                  siteKey="0x4AAAAAABvRHvXzt4EuTFLs"  // 🔁 Replace with your actual UAT/production key
+                  siteKey="0x4AAAAAABvRHvXzt4EuTFLs"
                   onSuccess={(token) => setTurnstileToken(token)}
                   onError={() => setTurnstileToken(null)}
                   onExpire={() => setTurnstileToken(null)}
@@ -827,23 +946,31 @@ const ContactForm = () => {
               </div>
               {errors.turnstile && <p className="text-red-500 text-xs text-center mb-2">{errors.turnstile}</p>}
 
-              {status === "success" && (
-                <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg text-center">
-                  ✅ Enquiry received! Our team will contact you within 24 hours.
-                </div>
-              )}
-              {status === "error" && (
-                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg text-center">
+              {/* API error inline */}
+              {apiError && (
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-center text-sm">
                   ❌ Something went wrong. Please try again or contact us directly.
                 </div>
               )}
 
+              {/* Submit */}
               <button
                 type="submit"
-                className="cursor-pointer w-full text-white font-semibold py-3 rounded-lg hover:opacity-90 transition"
-                style={{ backgroundColor: BRAND }}
+                disabled={isSubmitting}
+                className="cursor-pointer w-full text-white font-semibold py-3 rounded-lg hover:opacity-90 transition flex items-center justify-center gap-2"
+                style={{ backgroundColor: BRAND, opacity: isSubmitting ? 0.75 : 1 }}
               >
-                Get Free Quote
+                {isSubmitting ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                    </svg>
+                    Sending...
+                  </>
+                ) : (
+                  "Get Free Quote"
+                )}
               </button>
             </form>
           </div>
@@ -856,6 +983,8 @@ const ContactForm = () => {
                 Begin your digital growth journey with us. Reach out via WhatsApp or email for a quick response.
               </p>
             </div>
+
+            {/* WhatsApp */}
             <button
               onClick={() => window.open("https://wa.me/9133133456", "_blank")}
               className="cursor-pointer w-full flex items-center gap-4 border border-gray-200 rounded-xl p-4 mb-4 hover:shadow-md hover:border-orange-200 transition-all duration-200 bg-white"
@@ -866,8 +995,10 @@ const ContactForm = () => {
                 <div className="text-sm text-gray-500">+91-9133 133 456</div>
               </div>
             </button>
+
+            {/* Email — pre-filled subject + body */}
             <button
-              onClick={() => (window.location.href = "mailto:customersupport@bobrosone.com")}
+              onClick={() => (window.location.href = MAIL_TO_HREF)}
               className="cursor-pointer w-full flex items-center gap-4 border border-gray-200 rounded-xl p-4 mb-4 hover:shadow-md hover:border-orange-200 transition-all duration-200 bg-white"
             >
               <span className="text-2xl">📧</span>
@@ -886,21 +1017,31 @@ const ContactForm = () => {
 // ─────────────────────────────────────────────
 // Main Page Export
 // ─────────────────────────────────────────────
-const ItServicesPage = () => (
-  <div className="overflow-x-hidden">
-    <Header />
-    <Hero />
-    <Services />
-    <ItSection />
-    <Postcards />
-    <EcomPackages />
-    <AppPackages />
-    <PricingSectionFlutter />
-    <WhatWeDo />
-    <PartnerCarousel />
-    <WhyChoose />
-    <ContactForm />
-  </div>
-);
+const ItServicesPage = () => {
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  return (
+    <div className="overflow-x-hidden">
+      <Header />
+      <Hero />
+      <Services />
+      <ItSection />
+      <Postcards />
+      <EcomPackages />
+      <AppPackages />
+      <PricingSectionFlutter />
+      <WhatWeDo />
+      <PartnerCarousel />
+      <WhyChoose />
+      <ContactForm onSuccess={() => setShowSuccessModal(true)} />
+
+      {/* Global Success Modal */}
+      <SuccessModal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+      />
+    </div>
+  );
+};
 
 export default ItServicesPage;

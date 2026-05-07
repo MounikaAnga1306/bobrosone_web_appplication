@@ -223,6 +223,27 @@ const BillDetails = () => {
   const [showPopup,    setShowPopup]    = useState(false);
   const [popupMessage, setPopupMessage] = useState("");
 
+  // ─── FIX 1: Reset paymentLoading when user navigates back from BillDesk ──
+  // BillDesk redirects away → user presses browser back → page becomes visible
+  // again but paymentLoading is still true → button stuck on "Processing..."
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        setPaymentLoading(false);
+      }
+    };
+    // Also reset on pageshow (covers bfcache restore on mobile browsers)
+    const handlePageShow = () => {
+      setPaymentLoading(false);
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("pageshow", handlePageShow);
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("pageshow", handlePageShow);
+    };
+  }, []);
+
   useEffect(() => {
     const raw = localStorage.getItem("billData");
     if (!raw) { navigate("/BillHomePage"); return; }
@@ -359,7 +380,6 @@ const BillDetails = () => {
       }
     }
 
-    // ── Mobile Prepaid: skip validation, fetch plans ──────────────────────
     if (shouldSkipValidation(bd)) {
       setBillAmount(""); setTotalPayable(""); setBillSummary(null);
       setBillList([]); setSelectedBill(null);
@@ -367,20 +387,16 @@ const BillDetails = () => {
       setStep(2); await fetchRechargePlans(subscriberId, bd); return;
     }
 
-    // ── No online validation (CC Corp / manual pay billers) ───────────────
-    // FIX: setBillSummary with a placeholder so step 2 shows the amount
-    // input card with a clear "Enter amount" prompt instead of empty screen.
     if (bd?.online_validation !== "Y") {
       setBillAmount("");
       setTotalPayable("");
       setBillSummary({
-        billNumber:  null,   // null → "No bill returned" section renders
+        billNumber:  null,
         validationId: "",
         editable:    true,
         dueWarning:  bd?.pay_after_duedate === "N",
         minPay:      "",
         maxPay:      "",
-        // flag so we know this is manual-entry mode
         manualEntry: true,
       });
       setBillList([]); setSelectedBill(null);
@@ -389,7 +405,6 @@ const BillDetails = () => {
       setStep(2); return;
     }
 
-    // ── Full online validation ────────────────────────────────────────────
     setFetchingBill(true); setValidationError(false); setValidationMsg(""); setAdditionalInfo([]);
     try {
       const authenticatorValues = {};
@@ -679,8 +694,13 @@ const BillDetails = () => {
         setPaymentLoading(false); return;
       }
       const data = await res.json();
-      if (data.success && data.checkoutUrl) { window.location.href = data.checkoutUrl; }
-      else { alert(data?.message || "Payment initiation failed. Please try again."); setPaymentLoading(false); }
+      if (data.success && data.checkoutUrl) {
+        // Navigate to BillDesk — visibilitychange listener above will reset loading on return
+        window.location.href = data.checkoutUrl;
+      } else {
+        alert(data?.message || "Payment initiation failed. Please try again.");
+        setPaymentLoading(false);
+      }
     } catch (err) {
       console.error("Payment error:", err);
       alert("Error processing payment. Please try again.");
@@ -772,14 +792,21 @@ const BillDetails = () => {
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden h-full">
           <div className="p-5 text-center border-b border-gray-100">
             <div className="w-16 h-16 rounded-2xl bg-orange-50 border border-orange-200 flex items-center justify-center mx-auto mb-3">
-              {billData.biller_logo ? (
-                <img src={billData.biller_logo} alt={billData.biller}
-                  className="w-12 h-12 object-contain"
-                  onError={(e) => (e.target.style.display = "none")} />
-              ) : (
-                <i className="fa-solid fa-building text-2xl text-[#fd561e]" />
-              )}
-            </div>
+  {billData.biller_logo ? (
+    <img
+      src={billData.biller_logo}
+      alt={billData.biller}
+      className="w-12 h-12 object-contain"
+      onError={(e) => {
+        e.target.style.display = "none";
+        e.target.parentElement.innerHTML =
+          '<i class="fa-solid fa-building text-2xl" style="color:#fd561e"></i>';
+      }}
+    />
+  ) : (
+    <i className="fa-solid fa-building text-2xl text-[#fd561e]" />
+  )}
+</div>
             <h4 className="font-bold text-base text-gray-900">{billData.biller}</h4>
             <span className="inline-block text-xs font-semibold text-[#fd561e] border border-[#fd561e] bg-orange-50 px-3 py-0.5 rounded-full mt-1.5">
               {billData.category1 || "Utility"}
@@ -827,14 +854,21 @@ const BillDetails = () => {
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden h-full">
         <div className="p-5 text-center border-b border-gray-100">
           <div className="w-16 h-16 rounded-2xl bg-orange-50 border border-orange-200 flex items-center justify-center mx-auto mb-3">
-            {billData.biller_logo ? (
-              <img src={billData.biller_logo} alt={billData.biller}
-                className="w-12 h-12 object-contain"
-                onError={(e) => (e.target.style.display = "none")} />
-            ) : (
-              <i className="fa-solid fa-building text-2xl text-[#fd561e]" />
-            )}
-          </div>
+  {billData.biller_logo ? (
+    <img
+      src={billData.biller_logo}
+      alt={billData.biller}
+      className="w-12 h-12 object-contain"
+      onError={(e) => {
+        e.target.style.display = "none";
+        e.target.parentElement.innerHTML =
+          '<i class="fa-solid fa-building text-2xl" style="color:#fd561e"></i>';
+      }}
+    />
+  ) : (
+    <i className="fa-solid fa-building text-2xl text-[#fd561e]" />
+  )}
+</div>
           <h4 className="font-bold text-base text-gray-900">{billData.biller}</h4>
           <span className="inline-block text-xs font-semibold text-[#fd561e] border border-[#fd561e] bg-orange-50 px-3 py-0.5 rounded-full mt-1.5">
             {billData.category1 || "Utility"}
@@ -916,33 +950,54 @@ const BillDetails = () => {
     );
   };
 
-  const StepBar = () => (
-    <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 mb-5 shadow-sm">
-      <div className="flex items-center justify-between">
-        {[
-          { num: 1, label: "Account details", sub: "Fill customer info" },
-          { num: 2, label: "Select plan",     sub: "Choose recharge" },
-          { num: 3, label: "Review & pay",    sub: "Confirm payment" },
-          { num: 4, label: "Confirmation",    sub: "Receipt" },
-        ].map((s, i, arr) => (
-          <div key={s.num} className="flex items-center flex-1">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-sm sm:text-base ${step >= s.num ? "bg-[#fd561e] text-white" : "bg-gray-200 text-gray-500"}`}>
-                {step > s.num ? "✓" : s.num}
+  // ─── FIX 2: StepBar logo — try multiple paths, fallback to text badge ────
+  const StepBar = () => {
+    const [logoError, setLogoError] = useState(false);
+    return (
+      <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-6 mb-5 shadow-sm">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center flex-1 gap-0">
+            {[
+              { num: 1, label: "Account details", sub: "Fill customer info" },
+              { num: 2, label: "Select plan",     sub: "Choose recharge" },
+              { num: 3, label: "Review & pay",    sub: "Confirm payment" },
+              { num: 4, label: "Confirmation",    sub: "Receipt" },
+            ].map((s, i, arr) => (
+              <div key={s.num} className="flex items-center flex-1">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-sm sm:text-base shrink-0 ${step >= s.num ? "bg-[#fd561e] text-white" : "bg-gray-200 text-gray-500"}`}>
+                    {step > s.num ? "✓" : s.num}
+                  </div>
+                  <div className="hidden sm:block">
+                    <div className="font-semibold text-sm">{s.label}</div>
+                    <div className="text-xs text-gray-500">{s.sub}</div>
+                  </div>
+                </div>
+                {i < arr.length - 1 && (
+                  <div className={`flex-1 h-0.5 mx-2 sm:mx-4 ${step > s.num ? "bg-[#fd561e]" : "bg-gray-200"}`} />
+                )}
               </div>
-              <div className="hidden sm:block">
-                <div className="font-semibold text-sm">{s.label}</div>
-                <div className="text-xs text-gray-500">{s.sub}</div>
-              </div>
-            </div>
-            {i < arr.length - 1 && (
-              <div className={`flex-1 h-0.5 mx-2 sm:mx-4 ${step > s.num ? "bg-[#fd561e]" : "bg-gray-200"}`} />
+            ))}
+          </div>
+          {/* Logo with fallback to text badge */}
+          <div className="shrink-0 ml-3 sm:ml-4">
+            {!logoError ? (
+              <img
+                src="/assets/Bharat_connect_logo.png"
+                alt="Bharat Connect"
+                className="h-8 sm:h-10 md:h-12 w-auto object-contain"
+                onError={() => setLogoError(true)}
+              />
+            ) : (
+              <span className="text-[10px] sm:text-xs font-bold text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-lg whitespace-nowrap">
+                Bharat Connect
+              </span>
             )}
           </div>
-        ))}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const PlanSelector = () => {
     const getCat      = (p) => p.plan_category_name || p.planCategoryName || p.plan_category || p.category || "Others";
@@ -1087,9 +1142,6 @@ const BillDetails = () => {
     const bd         = billDataRef.current;
     const grandTotal = (parseFloat(totalPayable || 0) + convFeeInfo.total).toFixed(2);
     const availableMethods = (bd?.allowed_payment_methods || []).map((m) => m.payment_method);
-    const selectedBillsArr = isMultiMode
-      ? billList.filter((b) => selectedBillIds.includes(b._stableId))
-      : selectedBill ? [selectedBill] : billList.slice(0, 1);
 
     return (
       <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 px-0 sm:px-4">
@@ -1319,7 +1371,6 @@ const BillDetails = () => {
 
               {!isMobilePrepaid(billData) && (
                 <>
-                  {/* Multi-bill selector */}
                   {billList.length > 0 && (() => {
                     const bd  = billDataRef.current;
                     const pmb = (billDataRef.current?.pay_multiple_bills || "N").toUpperCase();
@@ -1535,7 +1586,6 @@ const BillDetails = () => {
                     );
                   })()}
 
-                  {/* NCMC / PAYEE additional_info mode */}
                   {!isMultiMode && billList.length === 0 && additionalInfo.length > 0 && (() => {
                     const getInfo = (name) => additionalInfo.find((x) => x.parameter_name === name)?.value || "";
                     const metro       = getInfo("Metro Name");
@@ -1556,67 +1606,25 @@ const BillDetails = () => {
                           <span className="text-sm font-bold uppercase text-gray-700 tracking-wide">Recharge Summary</span>
                         </div>
                         <div className="grid grid-cols-2 gap-3 mb-5">
-                          {metro && (
-                            <div className="col-span-2 sm:col-span-1 bg-gray-50 rounded-xl border border-gray-200 px-4 py-3">
-                              <p className="text-[10px] font-bold uppercase text-gray-400 tracking-wide mb-1">Metro</p>
-                              <p className="text-sm font-bold text-gray-800">{metro}</p>
-                            </div>
-                          )}
-                          {balance && (
-                            <div className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-3">
-                              <p className="text-[10px] font-bold uppercase text-gray-400 tracking-wide mb-1">Current Balance</p>
-                              <p className="text-sm font-bold text-gray-800">₹{balance}</p>
-                            </div>
-                          )}
-                          {minRecharge && (
-                            <div className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-3">
-                              <p className="text-[10px] font-bold uppercase text-gray-400 tracking-wide mb-1">Min Recharge</p>
-                              <p className="text-sm font-bold text-gray-800">₹{minRecharge}</p>
-                            </div>
-                          )}
-                          {maxRecharge && (
-                            <div className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-3">
-                              <p className="text-[10px] font-bold uppercase text-gray-400 tracking-wide mb-1">Max Recharge</p>
-                              <p className="text-sm font-bold text-gray-800">₹{maxRecharge}</p>
-                            </div>
-                          )}
-                          {platFeeStr && (
-                            <div className="col-span-2 sm:col-span-1 bg-gray-50 rounded-xl border border-gray-200 px-4 py-3">
-                              <p className="text-[10px] font-bold uppercase text-gray-400 tracking-wide mb-1">Platform Fee</p>
-                              <p className="text-sm font-bold text-gray-800">₹{platFeeStr}</p>
-                            </div>
-                          )}
-                          {extraInfos.map((inf) => (
-                            <div key={inf.parameter_name} className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-3">
-                              <p className="text-[10px] font-bold uppercase text-gray-400 tracking-wide mb-1">{inf.parameter_name}</p>
-                              <p className="text-sm font-bold text-gray-800">{inf.value}</p>
-                            </div>
-                          ))}
+                          {metro && (<div className="col-span-2 sm:col-span-1 bg-gray-50 rounded-xl border border-gray-200 px-4 py-3"><p className="text-[10px] font-bold uppercase text-gray-400 tracking-wide mb-1">Metro</p><p className="text-sm font-bold text-gray-800">{metro}</p></div>)}
+                          {balance && (<div className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-3"><p className="text-[10px] font-bold uppercase text-gray-400 tracking-wide mb-1">Current Balance</p><p className="text-sm font-bold text-gray-800">₹{balance}</p></div>)}
+                          {minRecharge && (<div className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-3"><p className="text-[10px] font-bold uppercase text-gray-400 tracking-wide mb-1">Min Recharge</p><p className="text-sm font-bold text-gray-800">₹{minRecharge}</p></div>)}
+                          {maxRecharge && (<div className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-3"><p className="text-[10px] font-bold uppercase text-gray-400 tracking-wide mb-1">Max Recharge</p><p className="text-sm font-bold text-gray-800">₹{maxRecharge}</p></div>)}
+                          {platFeeStr && (<div className="col-span-2 sm:col-span-1 bg-gray-50 rounded-xl border border-gray-200 px-4 py-3"><p className="text-[10px] font-bold uppercase text-gray-400 tracking-wide mb-1">Platform Fee</p><p className="text-sm font-bold text-gray-800">₹{platFeeStr}</p></div>)}
+                          {extraInfos.map((inf) => (<div key={inf.parameter_name} className="bg-gray-50 rounded-xl border border-gray-200 px-4 py-3"><p className="text-[10px] font-bold uppercase text-gray-400 tracking-wide mb-1">{inf.parameter_name}</p><p className="text-sm font-bold text-gray-800">{inf.value}</p></div>))}
                         </div>
                         <div className="mb-3">
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Recharge Amount (₹) <span className="text-[#fd561e]">*</span>
-                          </label>
-                          <input type="number"
-                            step={minRecharge ? parseFloat(minRecharge) : 1}
-                            min={minRecharge ? parseFloat(minRecharge) : 1}
-                            max={maxRecharge ? parseFloat(maxRecharge) : undefined}
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">Recharge Amount (₹) <span className="text-[#fd561e]">*</span></label>
+                          <input type="number" step={minRecharge ? parseFloat(minRecharge) : 1} min={minRecharge ? parseFloat(minRecharge) : 1} max={maxRecharge ? parseFloat(maxRecharge) : undefined}
                             placeholder={minRecharge && maxRecharge ? `Enter amount between ₹${minRecharge} – ₹${maxRecharge}` : "Enter recharge amount"}
-                            value={totalPayable}
-                            onChange={(e) => setTotalPayable(e.target.value)}
+                            value={totalPayable} onChange={(e) => setTotalPayable(e.target.value)}
                             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm font-semibold focus:border-[#fd561e] outline-none transition-colors" />
                         </div>
                         <div className="rounded-xl border border-orange-200 bg-orange-50 overflow-hidden mb-4">
                           {enteredAmt > 0 && platFeeAmt > 0 && (
                             <div className="divide-y divide-orange-100">
-                              <div className="flex justify-between text-xs text-gray-600 px-5 py-2.5">
-                                <span>Recharge Amount</span>
-                                <span className="font-semibold">₹{enteredAmt.toFixed(2)}</span>
-                              </div>
-                              <div className="flex justify-between text-xs text-gray-600 px-5 py-2.5">
-                                <span>Platform Fee</span>
-                                <span className="font-semibold">₹{platFeeAmt.toFixed(2)}</span>
-                              </div>
+                              <div className="flex justify-between text-xs text-gray-600 px-5 py-2.5"><span>Recharge Amount</span><span className="font-semibold">₹{enteredAmt.toFixed(2)}</span></div>
+                              <div className="flex justify-between text-xs text-gray-600 px-5 py-2.5"><span>Platform Fee</span><span className="font-semibold">₹{platFeeAmt.toFixed(2)}</span></div>
                             </div>
                           )}
                           <div className="flex items-center justify-between px-5 py-3 bg-orange-100/60 border-t border-orange-200">
@@ -1624,48 +1632,24 @@ const BillDetails = () => {
                             <span className="text-xl font-bold text-[#fd561e]">₹{enteredAmt > 0 ? grandTotal : "0.00"}</span>
                           </div>
                         </div>
-                        {note && (
-                          <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 leading-relaxed mb-5">
-                            <i className="fa-solid fa-circle-info text-amber-500 mt-0.5 shrink-0" />
-                            <p>{note}</p>
-                          </div>
-                        )}
+                        {note && (<div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 leading-relaxed mb-5"><i className="fa-solid fa-circle-info text-amber-500 mt-0.5 shrink-0" /><p>{note}</p></div>)}
                         <div className="border-t border-gray-100 pt-5 mt-2">
                           <div className="flex items-center justify-between gap-3 mb-4">
                             <div className="flex items-center gap-2">
                               <div className="w-7 h-7 rounded-full bg-[#fd561e] text-white flex items-center justify-center text-xs font-bold">2</div>
                               <span className="text-sm font-bold uppercase text-gray-700 tracking-wide">Customer Details</span>
                             </div>
-                            <button type="button" onClick={() => setIsEditingUser(!isEditingUser)}
-                              className="text-xs text-[#fd561e] cursor-pointer font-semibold hover:underline">
-                              {isEditingUser ? "Save" : "Edit"}
-                            </button>
+                            <button type="button" onClick={() => setIsEditingUser(!isEditingUser)} className="text-xs text-[#fd561e] cursor-pointer font-semibold hover:underline">{isEditingUser ? "Save" : "Edit"}</button>
                           </div>
                           {isEditingUser ? (
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
-                              <div className="sm:col-span-3">
-                                <label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Full Name</label>
-                                <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] outline-none bg-gray-50 text-sm"
-                                  value={userDetails.name} onChange={(e) => setUserDetails((p) => ({ ...p, name: e.target.value }))} />
-                              </div>
-                              <div>
-                                <label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Mobile</label>
-                                <input type="tel" maxLength="10" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] outline-none bg-gray-50 text-sm"
-                                  value={userDetails.mobile} onChange={(e) => setUserDetails((p) => ({ ...p, mobile: e.target.value }))} />
-                              </div>
-                              <div className="sm:col-span-2">
-                                <label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Email</label>
-                                <input type="email" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] outline-none bg-gray-50 text-sm"
-                                  value={userDetails.email} onChange={(e) => setUserDetails((p) => ({ ...p, email: e.target.value }))} />
-                              </div>
+                              <div className="sm:col-span-3"><label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Full Name</label><input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] outline-none bg-gray-50 text-sm" value={userDetails.name} onChange={(e) => setUserDetails((p) => ({ ...p, name: e.target.value }))} /></div>
+                              <div><label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Mobile</label><input type="tel" maxLength="10" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] outline-none bg-gray-50 text-sm" value={userDetails.mobile} onChange={(e) => setUserDetails((p) => ({ ...p, mobile: e.target.value }))} /></div>
+                              <div className="sm:col-span-2"><label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Email</label><input type="email" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] outline-none bg-gray-50 text-sm" value={userDetails.email} onChange={(e) => setUserDetails((p) => ({ ...p, email: e.target.value }))} /></div>
                             </div>
                           ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
-                              {[
-                                { label: "Name",   value: userDetails.name },
-                                { label: "Mobile", value: userDetails.mobile },
-                                { label: "Email",  value: userDetails.email },
-                              ].map(({ label, value }) => (
+                              {[{ label: "Name", value: userDetails.name }, { label: "Mobile", value: userDetails.mobile }, { label: "Email", value: userDetails.email }].map(({ label, value }) => (
                                 <div key={label} className="flex sm:block items-center justify-between border-b sm:border-b-0 border-gray-100 pb-3 sm:pb-0">
                                   <p className="text-xs text-gray-500 uppercase font-semibold">{label}</p>
                                   <p className="font-bold text-gray-800 text-sm break-all mt-0 sm:mt-1">{value || "—"}</p>
@@ -1674,10 +1658,7 @@ const BillDetails = () => {
                             </div>
                           )}
                           <div className="flex justify-between gap-3">
-                            <button type="button" onClick={() => setStep(1)}
-                              className="px-5 py-2 cursor-pointer rounded-xl border border-gray-300 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-all">
-                              ← Edit Details
-                            </button>
+                            <button type="button" onClick={() => setStep(1)} className="px-5 py-2 cursor-pointer rounded-xl border border-gray-300 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-all">← Edit Details</button>
                             <button type="button"
                               onClick={() => {
                                 const entered = parseFloat(totalPayable) || 0;
@@ -1686,8 +1667,6 @@ const BillDetails = () => {
                                 const maxA = parseFloat(maxRecharge) || 0;
                                 if (minA > 0 && entered < minA) { setPopupMessage(`Minimum recharge amount is ₹${minA}.`); setShowPopup(true); return; }
                                 if (maxA > 0 && entered > maxA) { setPopupMessage(`Maximum recharge amount is ₹${maxA}.`); setShowPopup(true); return; }
-                                // FIX: totalPayable = entered amount only (never add platform fee here)
-                                // Platform fee goes into convFeeInfo so PaymentModal adds it once
                                 setSelectedMethod(""); setUpiId(""); setUpiError(""); setAmountMethodErr("");
                                 setConvFeeInfo({ fee: platFeeAmt, gst: 0, total: platFeeAmt });
                                 const apf = {};
@@ -1704,10 +1683,6 @@ const BillDetails = () => {
                     );
                   })()}
 
-                  {/* ── Manual entry mode (online_validation !== Y, no billList, no additionalInfo) ─────
-                      FIX: billSummary?.manualEntry === true → show a clear amount input card
-                      Previously this fell through to the generic "No bill returned" section
-                      which had no heading or context. Now it shows a proper card. ── */}
                   {!isMultiMode && billList.length === 0 && additionalInfo.length === 0 &&
                    billSummary?.manualEntry === true && (
                     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-4">
@@ -1715,45 +1690,22 @@ const BillDetails = () => {
                         <div className="w-8 h-8 rounded-full bg-[#fd561e] text-white flex items-center justify-center text-sm font-bold">1</div>
                         <span className="text-sm font-bold uppercase text-gray-700 tracking-wide">Enter Payment Amount</span>
                       </div>
-
-                      {/* Info banner */}
                       <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700 mb-5">
-                        <svg className="w-4 h-4 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                        </svg>
-                        <p>
-                          This biller does not support automatic bill fetch.
-                          Please enter the amount you wish to pay manually.
-                        </p>
+                        <svg className="w-4 h-4 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" /></svg>
+                        <p>This biller does not support automatic bill fetch. Please enter the amount you wish to pay manually.</p>
                       </div>
-
-                      {/* Amount input */}
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-orange-50 rounded-xl border border-orange-100 px-5 py-5">
-                        <div>
-                          <p className="font-bold text-gray-800 text-base">Payment Amount</p>
-                          <p className="text-xs text-gray-500 mt-0.5">Enter the exact amount to pay</p>
-                        </div>
+                        <div><p className="font-bold text-gray-800 text-base">Payment Amount</p><p className="text-xs text-gray-500 mt-0.5">Enter the exact amount to pay</p></div>
                         <div className="flex items-center gap-2">
                           <span className="text-[#fd561e] font-bold text-xl">₹</span>
-                          <input
-                            type="number"
-                            min={1}
-                            step="0.01"
-                            autoFocus
-                            placeholder="0.00"
-                            value={totalPayable}
+                          <input type="number" min={1} step="0.01" autoFocus placeholder="0.00" value={totalPayable}
                             onChange={(e) => setTotalPayable(e.target.value)}
-                            className="border-2 border-orange-300 rounded-xl px-4 py-3 text-lg font-bold w-40 focus:border-[#fd561e] outline-none bg-white text-[#fd561e] text-right transition-colors"
-                          />
+                            className="border-2 border-orange-300 rounded-xl px-4 py-3 text-lg font-bold w-40 focus:border-[#fd561e] outline-none bg-white text-[#fd561e] text-right transition-colors" />
                         </div>
                       </div>
-
-                      {/* Account details recap */}
                       {authenticators.filter((a) => formData[a.parameter_name]?.trim()).length > 0 && (
                         <div className="mt-4 border border-gray-200 rounded-xl overflow-hidden">
-                          <div className="bg-gray-50 px-5 py-3 border-b border-gray-200">
-                            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Account Details</p>
-                          </div>
+                          <div className="bg-gray-50 px-5 py-3 border-b border-gray-200"><p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Account Details</p></div>
                           {authenticators.filter((a) => formData[a.parameter_name]?.trim()).map((auth, i) => (
                             <div key={i} className="flex justify-between items-center px-5 py-3 border-b border-gray-100 last:border-b-0">
                               <span className="text-gray-500 text-sm">{auth.parameter_name}</span>
@@ -1765,7 +1717,6 @@ const BillDetails = () => {
                     </div>
                   )}
 
-                  {/* Single-bill summary — N mode with validated bill */}
                   {!isMultiMode && additionalInfo.length === 0 && billSummary?.manualEntry !== true && (
                     (pmbNow === "N" && (selectedBill || billList.length === 0)) ||
                     billList.length === 0
@@ -1783,16 +1734,12 @@ const BillDetails = () => {
                       {billSummary && (
                         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-4">
                           <div className="flex items-center gap-3 mb-5">
-                            <div className="w-8 h-8 rounded-full bg-[#fd561e] text-white flex items-center justify-center text-sm font-bold">
-                              {billSummaryStepNum}
-                            </div>
+                            <div className="w-8 h-8 rounded-full bg-[#fd561e] text-white flex items-center justify-center text-sm font-bold">{billSummaryStepNum}</div>
                             <span className="text-sm font-bold uppercase text-gray-700 tracking-wide">Bill Summary</span>
                           </div>
                           {authenticators.filter((a) => formData[a.parameter_name]?.trim()).length > 0 && (
                             <div className="border border-gray-200 rounded-xl overflow-hidden mb-4">
-                              <div className="bg-gray-50 px-5 py-3 border-b border-gray-200">
-                                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Account Details</p>
-                              </div>
+                              <div className="bg-gray-50 px-5 py-3 border-b border-gray-200"><p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Account Details</p></div>
                               {authenticators.filter((a) => formData[a.parameter_name]?.trim()).map((auth, i) => (
                                 <div key={i} className="flex justify-between items-center px-5 py-3 border-b border-gray-100 last:border-b-0">
                                   <span className="text-gray-500 text-sm">{auth.parameter_name}</span>
@@ -1803,79 +1750,40 @@ const BillDetails = () => {
                           )}
                           {billSummary.billNumber && (
                             <div className="border border-gray-200 rounded-xl overflow-hidden mb-4">
-                              {billSummary.billNumber !== "N/A" && (
-                                <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100">
-                                  <span className="text-gray-500 text-sm">Bill Number</span>
-                                  <span className="font-semibold text-gray-800">{billSummary.billNumber}</span>
-                                </div>
-                              )}
-                              {billAmount && (
-                                <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100">
-                                  <span className="text-gray-500 text-sm">Bill Amount</span>
-                                  <span className="font-bold text-[#fd561e] text-base">₹{parseFloat(billAmount).toFixed(2)}</span>
-                                </div>
-                              )}
-                              {billSummary.dueDate && billSummary.dueDate !== "N/A" && (
-                                <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100">
-                                  <span className="text-gray-500 text-sm">Due Date</span>
-                                  <span className="font-semibold text-gray-800">{billSummary.dueDate}</span>
-                                </div>
-                              )}
-                              {billSummary.billPeriod && (
-                                <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100">
-                                  <span className="text-gray-500 text-sm">Bill Period</span>
-                                  <span className="font-semibold text-gray-800">{billSummary.billPeriod}</span>
-                                </div>
-                              )}
-                              {(billSummary.minPay || billSummary.maxPay) && (
-                                <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100">
-                                  <span className="text-gray-500 text-sm">Pay Range</span>
-                                  <span className="font-semibold text-gray-800">
-                                    ₹{parseFloat(billSummary.minPay || 0).toFixed(0)} – ₹{parseFloat(billSummary.maxPay || 0).toFixed(0)}
-                                  </span>
-                                </div>
-                              )}
+                              {billSummary.billNumber !== "N/A" && (<div className="flex justify-between items-center px-5 py-4 border-b border-gray-100"><span className="text-gray-500 text-sm">Bill Number</span><span className="font-semibold text-gray-800">{billSummary.billNumber}</span></div>)}
+                              {billAmount && (<div className="flex justify-between items-center px-5 py-4 border-b border-gray-100"><span className="text-gray-500 text-sm">Bill Amount</span><span className="font-bold text-[#fd561e] text-base">₹{parseFloat(billAmount).toFixed(2)}</span></div>)}
+                              {billSummary.dueDate && billSummary.dueDate !== "N/A" && (<div className="flex justify-between items-center px-5 py-4 border-b border-gray-100"><span className="text-gray-500 text-sm">Due Date</span><span className="font-semibold text-gray-800">{billSummary.dueDate}</span></div>)}
+                              {billSummary.billPeriod && (<div className="flex justify-between items-center px-5 py-4 border-b border-gray-100"><span className="text-gray-500 text-sm">Bill Period</span><span className="font-semibold text-gray-800">{billSummary.billPeriod}</span></div>)}
+                              {(billSummary.minPay || billSummary.maxPay) && (<div className="flex justify-between items-center px-5 py-4 border-b border-gray-100"><span className="text-gray-500 text-sm">Pay Range</span><span className="font-semibold text-gray-800">₹{parseFloat(billSummary.minPay || 0).toFixed(0)} – ₹{parseFloat(billSummary.maxPay || 0).toFixed(0)}</span></div>)}
                               <div className="flex justify-between items-center px-5 py-4 border-b border-gray-100">
                                 <span className="text-gray-500 text-sm">Status</span>
-                                <span className={`text-xs font-bold px-3 py-1 rounded-full ${(billSummary.status || "").toUpperCase() === "UNPAID" ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"}`}>
-                                  {(billSummary.status || "UNPAID").toUpperCase()}
-                                </span>
+                                <span className={`text-xs font-bold px-3 py-1 rounded-full ${(billSummary.status || "").toUpperCase() === "UNPAID" ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"}`}>{(billSummary.status || "UNPAID").toUpperCase()}</span>
                               </div>
                               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center px-5 py-4 gap-3">
                                 <div>
                                   <span className="text-gray-500 text-sm block">Pay Amount</span>
-                                  {billData.partial_pay !== "Y" && billData.bill_presentment === "Y" && billAmount && (
-                                    <span className="text-[11px] text-gray-400 block">Exact amount only</span>
-                                  )}
+                                  {billData.partial_pay !== "Y" && billData.bill_presentment === "Y" && billAmount && (<span className="text-[11px] text-gray-400 block">Exact amount only</span>)}
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <span className="text-[#fd561e] font-bold text-lg">₹</span>
-                                  <input type="number"
-                                    min={amountConstraints.min || parseFloat(billSummary?.minPay || 1)}
-                                    step="0.01"
+                                  <input type="number" min={amountConstraints.min || parseFloat(billSummary?.minPay || 1)} step="0.01"
                                     max={amountConstraints.max || parseFloat(billSummary?.maxPay || undefined) || undefined}
                                     readOnly={amountConstraints.readOnly && billData.partial_pay !== "Y"}
                                     className={`border border-orange-300 rounded-lg px-3 py-2 text-base font-bold w-36 focus:ring-2 focus:ring-[#fd561e] outline-none bg-white text-[#fd561e] text-right ${amountConstraints.readOnly && billData.partial_pay !== "Y" ? "cursor-not-allowed bg-gray-50" : ""}`}
-                                    placeholder="Enter amount"
-                                    value={totalPayable}
-                                    onChange={(e) => setTotalPayable(e.target.value)} />
+                                    placeholder="Enter amount" value={totalPayable} onChange={(e) => setTotalPayable(e.target.value)} />
                                 </div>
                               </div>
                             </div>
                           )}
                           {(!billSummary || !billSummary.billNumber) && (
                             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center px-4 sm:px-5 py-4 bg-orange-50 rounded-xl border border-orange-100 gap-3">
-                              <div>
-                                <span className="font-bold text-gray-800 text-base block">Total Amount</span>
-                              </div>
+                              <div><span className="font-bold text-gray-800 text-base block">Total Amount</span></div>
                               <div className="flex items-center gap-2 w-full sm:w-auto">
                                 <span className="text-[#fd561e] font-bold text-lg">₹</span>
-                                <input type="number" min={amountConstraints.min || 1} step="0.01"
-                                  max={amountConstraints.max || undefined}
+                                <input type="number" min={amountConstraints.min || 1} step="0.01" max={amountConstraints.max || undefined}
                                   readOnly={amountConstraints.readOnly && billData.partial_pay !== "Y"}
                                   className="border border-orange-300 rounded-lg px-3 py-2 text-base font-bold w-full sm:w-36 focus:ring-2 focus:ring-[#fd561e] outline-none bg-white text-[#fd561e] text-right"
-                                  placeholder="Enter amount" value={totalPayable}
-                                  onChange={(e) => setTotalPayable(e.target.value)} />
+                                  placeholder="Enter amount" value={totalPayable} onChange={(e) => setTotalPayable(e.target.value)} />
                               </div>
                             </div>
                           )}
@@ -1901,7 +1809,6 @@ const BillDetails = () => {
                 </div>
               )}
 
-              {/* Customer details card — not shown in NCMC/additionalInfo mode (merged above) */}
               {additionalInfo.length === 0 && (
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-4">
                   <div className="flex items-center justify-between gap-3 mb-5">
@@ -1918,29 +1825,13 @@ const BillDetails = () => {
                   </div>
                   {isEditingUser ? (
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div className="sm:col-span-3">
-                        <label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Full Name</label>
-                        <input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] outline-none bg-gray-50 text-sm"
-                          value={userDetails.name} onChange={(e) => setUserDetails((p) => ({ ...p, name: e.target.value }))} />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Mobile</label>
-                        <input type="tel" maxLength="10" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] outline-none bg-gray-50 text-sm"
-                          value={userDetails.mobile} onChange={(e) => setUserDetails((p) => ({ ...p, mobile: e.target.value }))} />
-                      </div>
-                      <div className="sm:col-span-2">
-                        <label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Email</label>
-                        <input type="email" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] outline-none bg-gray-50 text-sm"
-                          value={userDetails.email} onChange={(e) => setUserDetails((p) => ({ ...p, email: e.target.value }))} />
-                      </div>
+                      <div className="sm:col-span-3"><label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Full Name</label><input type="text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] outline-none bg-gray-50 text-sm" value={userDetails.name} onChange={(e) => setUserDetails((p) => ({ ...p, name: e.target.value }))} /></div>
+                      <div><label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Mobile</label><input type="tel" maxLength="10" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] outline-none bg-gray-50 text-sm" value={userDetails.mobile} onChange={(e) => setUserDetails((p) => ({ ...p, mobile: e.target.value }))} /></div>
+                      <div className="sm:col-span-2"><label className="block text-xs text-gray-500 uppercase font-semibold mb-1">Email</label><input type="email" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#fd561e] outline-none bg-gray-50 text-sm" value={userDetails.email} onChange={(e) => setUserDetails((p) => ({ ...p, email: e.target.value }))} /></div>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      {[
-                        { label: "Name",   value: userDetails.name },
-                        { label: "Mobile", value: userDetails.mobile },
-                        { label: "Email",  value: userDetails.email },
-                      ].map(({ label, value }) => (
+                      {[{ label: "Name", value: userDetails.name }, { label: "Mobile", value: userDetails.mobile }, { label: "Email", value: userDetails.email }].map(({ label, value }) => (
                         <div key={label} className="flex sm:block items-center justify-between border-b sm:border-b-0 border-gray-100 pb-3 sm:pb-0">
                           <p className="text-xs text-gray-500 uppercase font-semibold">{label}</p>
                           <p className="font-bold text-gray-800 text-sm break-all mt-0 sm:mt-1">{value || "—"}</p>

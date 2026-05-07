@@ -9,6 +9,39 @@ require("dotenv").config();
 const rateLimit = require("express-rate-limit");
 const app = express();
 
+// ======================================================
+// FIX: Trust proxy so req.ip gets the real client IP
+// from X-Forwarded-For when running behind Nginx/load balancer.
+// Without this, req.ip is "::1" or "::ffff:127.0.0.1" in UAT
+// which the upstream BBPS API rejects as "Invalid device ip".
+// ======================================================
+app.set("trust proxy", true);
+
+// ======================================================
+// HELPER: Sanitize IP address
+// - Strips IPv6-mapped IPv4 prefix  "::ffff:1.2.3.4" → "1.2.3.4"
+// - Converts pure IPv6 loopback "::1" → "127.0.0.1"
+// - Falls back to "0.0.0.0" if the result is still not a valid IPv4
+// ======================================================
+const sanitizeIp = (raw) => {
+  if (!raw) return "0.0.0.0";
+
+  // Strip IPv6-mapped IPv4 prefix
+  let ip = raw.replace(/^::ffff:/i, "");
+
+  // Pure IPv6 loopback
+  if (ip === "::1") ip = "127.0.0.1";
+
+  // If it still looks like an IPv6 address (contains ":"), fall back
+  if (ip.includes(":")) ip = "0.0.0.0";
+
+  // Basic IPv4 sanity check
+  const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
+  if (!ipv4Regex.test(ip)) return "0.0.0.0";
+
+  return ip;
+};
+
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, message: "Too many requests, please try again later." });
 app.use(cors({ origin: true, methods: ["GET", "POST"], credentials: true }));
 app.use(limiter);
@@ -183,8 +216,6 @@ app.post("/bbps/billdesk/order", async (req, res) => {
   try {
     const { fare, uid, pname, email, tickid, billerid, validationId, paymentMethod, upiId, authenticators, billerName, isBbps } = req.body;
     const APP_URL = process.env.APP_URL || "http://localhost:5000";
-    // ── PHP redirect సేవ నేరుగా /payment-status కి చేస్తోంది కాబట్టి
-    //    return_url లో frontend URL వాడుతున్నాం ──
     const FRONTEND_URL = process.env.FRONTEND_URL || APP_URL;
     const returnUrl = `${FRONTEND_URL}/payment-status`;
 
@@ -195,10 +226,12 @@ app.post("/bbps/billdesk/order", async (req, res) => {
       payment_data: { method: paymentMethod || "UPI", upi_id: upiId || "" },
       biller_data: { biller_name: billerName || "", biller_id: billerid || "", is_bbps: isBbps !== undefined ? isBbps : true },
       authenticators: authenticators || [],
-      device: { ip: req.ip || "0.0.0.0", mac: "AB:CD:EF:GH", imei: "NA", os: "Node Backend", app: "B-Connect" },
+      // FIX: sanitize IP — was sending "::1" or "::ffff:x.x.x.x" to upstream
+      device: { ip: sanitizeIp(req.ip), mac: "AB:CD:EF:GH", imei: "NA", os: "Node Backend", app: "B-Connect" },
       return_url: returnUrl,
     };
 
+    console.log("[BBPS ORDER] device.ip:", payload.device.ip, "| raw req.ip:", req.ip);
     console.log("[BBPS ORDER] return_url:", returnUrl);
     const response = await axios.post("https://uat.bobros.co.in/billdesk_bbpstest.php", payload, { headers: { "Content-Type": "application/json" }, timeout: 30000 });
     if (response.data.success && response.data.checkoutUrl) return res.json({ success: true, checkoutUrl: response.data.checkoutUrl });
@@ -222,18 +255,18 @@ app.get("/bill/billers", async (req, res) => {
 app.post("/bbps/makepayment", async (req, res) => {
   console.log("\n========== [MAKE_PAYMENT HIT] ==========");
   console.log("Request body:", JSON.stringify(req.body, null, 2));
- 
+
   try {
     const {
       billerid, customerid, orderid, pa_ref_no,
       payment_amount, currency, cou_conv_fee, bou_conv_fee,
       debit_amount, customer, device, validationid, vpa, authenticators,
     } = req.body;
- 
+
     if (!orderid || !payment_amount) {
       return res.status(400).json({ success: false, message: "orderid and payment_amount are required" });
     }
- 
+
     const makePaymentPayload = {
       billerid:       billerid       || "",
       customerid:     customerid     || "",
@@ -246,26 +279,27 @@ app.post("/bbps/makepayment", async (req, res) => {
       bou_conv_fee:   bou_conv_fee   || "0.00",
       debit_amount:   debit_amount   || parseFloat(payment_amount).toFixed(2),
       customer:       customer       || { firstname: "Guest", lastname: "NA", mobile: customerid || "", email: "" },
-      device:         device         || { init_channel: "Internet", ip: req.ip || "0.0.0.0", mac: "AB:CD:EF:GH" },
+      // FIX: sanitize IP here too — same issue can occur in make-payment flow
+      device:         device         || { init_channel: "Internet", ip: sanitizeIp(req.ip), mac: "AB:CD:EF:GH" },
     };
- 
+
     if (validationid) makePaymentPayload.validationid = validationid;
     if (vpa)          makePaymentPayload.vpa           = vpa;
- 
+
     const MAKE_PAYMENT_URL = `${process.env.BASE_URL}/temp-payments/make-payment`;
     console.log("[MAKE_PAYMENT] URL:", MAKE_PAYMENT_URL);
-    console.log("[MAKE_PAYMENT] Payload:", JSON.stringify(makePaymentPayload, null, 2));
- 
+    console.log("[MAKE_PAYMENT] device.ip:", makePaymentPayload.device.ip, "| raw req.ip:", req.ip);
+
     const headers = oauth.toHeader(oauth.authorize({ url: MAKE_PAYMENT_URL, method: "POST", body: makePaymentPayload }));
     headers["Content-Type"] = "application/json";
- 
+
     const mpResponse = await axios.post(MAKE_PAYMENT_URL, makePaymentPayload, { headers, timeout: 30000 });
- 
+
     console.log("[MAKE_PAYMENT] HTTP status:", mpResponse.status);
     console.log("[MAKE_PAYMENT] FULL response:", JSON.stringify(mpResponse.data, null, 2));
- 
+
     return res.json({ success: true, data: mpResponse.data });
- 
+
   } catch (error) {
     console.error("[MAKE_PAYMENT] Error:", error.message);
     if (error.response) {
@@ -436,6 +470,7 @@ app.get("/cancellation-policy/:tripId", async (req, res) => {
 
 // =========================
 // BILL VALIDATE PAYMENT
+// FIX: Use sanitizeIp(req.ip) instead of raw req.ip
 // =========================
 app.post("/bill/validate-payment", async (req, res) => {
   try {
@@ -450,8 +485,10 @@ app.post("/bill/validate-payment", async (req, res) => {
     const finalPayload = {
       customerid: customerDetails.mobile, billerid, authenticatorsFromUI,
       customer: { firstname: customerDetails.name || "", lastname: "NA", mobile: customerDetails.mobile, email: customerDetails.email || "" },
-      device: { init_channel: "Internet", ip: req.ip || "0.0.0.0", mac: "AB:CD:EF:GH" },
+      // FIX: was req.ip which returns "::1" / "::ffff:x.x.x.x" behind proxy
+      device: { init_channel: "Internet", ip: sanitizeIp(req.ip), mac: "AB:CD:EF:GH" },
     };
+    console.log("[VALIDATE-PAYMENT] device.ip:", finalPayload.device.ip, "| raw req.ip:", req.ip);
     if (additionalValidation && Object.keys(additionalValidation).length > 0)
       finalPayload.additional_validation_details = additionalValidation;
     const url = `${process.env.BASE_URL}/temp-payments/validate-payment`;
