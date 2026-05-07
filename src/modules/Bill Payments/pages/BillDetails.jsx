@@ -794,15 +794,15 @@ const BillDetails = () => {
             <div className="w-16 h-16 rounded-2xl bg-orange-50 border border-orange-200 flex items-center justify-center mx-auto mb-3">
   {billData.biller_logo ? (
     <img
-      src={billData.biller_logo}
-      alt={billData.biller}
-      className="w-12 h-12 object-contain"
-      onError={(e) => {
-        e.target.style.display = "none";
-        e.target.parentElement.innerHTML =
-          '<i class="fa-solid fa-building text-2xl" style="color:#fd561e"></i>';
-      }}
-    />
+  src={`/bill/biller-logo?url=${encodeURIComponent(billData.biller_logo)}`}
+  alt={billData.biller}
+  className="w-12 h-12 object-contain"
+  onError={(e) => {
+    e.target.style.display = "none";
+    e.target.parentElement.innerHTML =
+      '<i class="fa-solid fa-building text-2xl" style="color:#fd561e"></i>';
+  }}
+/>
   ) : (
     <i className="fa-solid fa-building text-2xl text-[#fd561e]" />
   )}
@@ -855,16 +855,16 @@ const BillDetails = () => {
         <div className="p-5 text-center border-b border-gray-100">
           <div className="w-16 h-16 rounded-2xl bg-orange-50 border border-orange-200 flex items-center justify-center mx-auto mb-3">
   {billData.biller_logo ? (
-    <img
-      src={billData.biller_logo}
-      alt={billData.biller}
-      className="w-12 h-12 object-contain"
-      onError={(e) => {
-        e.target.style.display = "none";
-        e.target.parentElement.innerHTML =
-          '<i class="fa-solid fa-building text-2xl" style="color:#fd561e"></i>';
-      }}
-    />
+   <img
+  src={`/bill/biller-logo?url=${encodeURIComponent(billData.biller_logo)}`}
+  alt={billData.biller}
+  className="w-12 h-12 object-contain"
+  onError={(e) => {
+    e.target.style.display = "none";
+    e.target.parentElement.innerHTML =
+      '<i class="fa-solid fa-building text-2xl" style="color:#fd561e"></i>';
+  }}
+/>
   ) : (
     <i className="fa-solid fa-building text-2xl text-[#fd561e]" />
   )}
