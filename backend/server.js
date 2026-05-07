@@ -250,6 +250,48 @@ app.get("/bill/billers", async (req, res) => {
 });
 
 // =========================
+// BILLER LOGO PROXY
+// Proxies external logo URLs so CORS/mixed-content
+// issues don't block image loads in the browser.
+// Works identically in local and UAT/prod.
+// =========================
+app.get("/bill/biller-logo", async (req, res) => {
+
+  const { url } = req.query;
+
+  if (!url) return res.status(400).send("url query param required");
+
+  try {
+
+    const response = await axios.get(url, {
+
+      responseType: "arraybuffer",
+
+      timeout: 8000,
+
+      headers: { Accept: "image/*" },
+
+    });
+
+    const contentType =
+
+      response.headers["content-type"] || "image/png";
+
+    res.set("Content-Type", contentType);
+
+    res.set("Cache-Control", "public, max-age=86400");
+
+    res.send(Buffer.from(response.data));
+
+  } catch {
+
+    res.status(404).send("Logo not found");
+
+  }
+
+});
+
+// =========================
 // BBPS MAKE PAYMENT
 // =========================
 app.post("/bbps/makepayment", async (req, res) => {
