@@ -1759,20 +1759,20 @@ const BillDetails = () => {
                                 <span className="text-gray-500 text-sm">Status</span>
                                 <span className={`text-xs font-bold px-3 py-1 rounded-full ${(billSummary.status || "").toUpperCase() === "UNPAID" ? "bg-red-100 text-red-600" : "bg-green-100 text-green-600"}`}>{(billSummary.status || "UNPAID").toUpperCase()}</span>
                               </div>
-                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center px-5 py-4 gap-3">
-                                <div>
-                                  <span className="text-gray-500 text-sm block">Pay Amount</span>
-                                  {billData.partial_pay !== "Y" && billData.bill_presentment === "Y" && billAmount && (<span className="text-[11px] text-gray-400 block">Exact amount only</span>)}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <span className="text-[#fd561e] font-bold text-lg">₹</span>
-                                  <input type="number" min={amountConstraints.min || parseFloat(billSummary?.minPay || 1)} step="0.01"
-                                    max={amountConstraints.max || parseFloat(billSummary?.maxPay || undefined) || undefined}
-                                    readOnly={amountConstraints.readOnly && billData.partial_pay !== "Y"}
-                                    className={`border border-orange-300 rounded-lg px-3 py-2 text-base font-bold w-36 focus:ring-2 focus:ring-[#fd561e] outline-none bg-white text-[#fd561e] text-right ${amountConstraints.readOnly && billData.partial_pay !== "Y" ? "cursor-not-allowed bg-gray-50" : ""}`}
-                                    placeholder="Enter amount" value={totalPayable} onChange={(e) => setTotalPayable(e.target.value)} />
-                                </div>
-                              </div>
+                              <div className="flex flex-row justify-between items-center px-5 py-4 gap-3">
+  <div>
+    <span className="text-gray-500 text-sm block">Pay Amount</span>
+    {billData.partial_pay !== "Y" && billData.bill_presentment === "Y" && billAmount && (<span className="text-[11px] text-gray-400 block">Exact amount only</span>)}
+  </div>
+  <div className="flex items-center gap-2 shrink-0">
+    <span className="text-[#fd561e] font-bold text-lg">₹</span>
+    <input type="number" min={amountConstraints.min || parseFloat(billSummary?.minPay || 1)} step="0.01"
+      max={amountConstraints.max || parseFloat(billSummary?.maxPay || undefined) || undefined}
+      readOnly={amountConstraints.readOnly && billData.partial_pay !== "Y"}
+      className={`border border-orange-300 rounded-lg px-3 py-2 text-base font-bold w-28 focus:ring-2 focus:ring-[#fd561e] outline-none bg-white text-[#fd561e] text-right ${amountConstraints.readOnly && billData.partial_pay !== "Y" ? "cursor-not-allowed bg-gray-50" : ""}`}
+      placeholder="Enter amount" value={totalPayable} onChange={(e) => setTotalPayable(e.target.value)} />
+  </div>
+</div>
                             </div>
                           )}
                           {(!billSummary || !billSummary.billNumber) && (
@@ -1839,16 +1839,16 @@ const BillDetails = () => {
                       ))}
                     </div>
                   )}
-                  <div className="flex justify-between mt-6 gap-3">
-                    <button type="button" onClick={() => setStep(1)}
-                      className="px-5 py-2 cursor-pointer rounded-xl border border-gray-300 text-gray-600 text-sm font-semibold hover:bg-gray-50 transition-all">
-                      ← Edit Details
-                    </button>
-                    <button type="button" onClick={handleProceedToPayment}
-                      className="bg-[#fd561e] text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer inline-flex items-center gap-2">
-                      Proceed to Payment →
-                    </button>
-                  </div>
+                 <div className="flex justify-between mt-6 gap-2">
+  <button type="button" onClick={() => setStep(1)}
+    className="px-3 py-2 sm:px-5 cursor-pointer rounded-xl border border-gray-300 text-gray-600 text-xs sm:text-sm font-semibold hover:bg-gray-50 transition-all whitespace-nowrap">
+    ← Edit Details
+  </button>
+  <button type="button" onClick={handleProceedToPayment}
+    className="bg-[#fd561e] text-white px-4 py-2 sm:px-8 sm:py-3 rounded-xl font-semibold shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer inline-flex items-center gap-1 sm:gap-2 text-xs sm:text-sm whitespace-nowrap">
+    Proceed to Payment →
+  </button>
+</div>
                 </div>
               )}
             </div>
