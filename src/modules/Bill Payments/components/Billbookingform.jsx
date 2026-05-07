@@ -156,26 +156,30 @@ const BillBookingForm = () => {
   const [billerSearch, setBillerSearch] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
 
-  const catRef = useRef(null);
+  const catRef = useRef(null);        
   const billerRef = useRef(null);
+  const mobileCatRef = useRef(null);
+  const mobileBillerRef = useRef(null);
   const catSearchRef = useRef(null);
   const billerSearchRef = useRef(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const handler = (e) => {
-      if (catRef.current && !catRef.current.contains(e.target)) {
-        setCatDropOpen(false);
-        setCatSearch("");
-      }
-      if (billerRef.current && !billerRef.current.contains(e.target)) {
-        setBillerDropOpen(false);
-        setBillerSearch("");
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+ useEffect(() => {
+  const handler = (e) => {
+    if (catRef.current && !catRef.current.contains(e.target) &&
+        mobileCatRef.current && !mobileCatRef.current.contains(e.target)) {
+      setCatDropOpen(false);
+      setCatSearch("");
+    }
+    if (billerRef.current && !billerRef.current.contains(e.target) &&
+        mobileBillerRef.current && !mobileBillerRef.current.contains(e.target)) {
+      setBillerDropOpen(false);
+      setBillerSearch("");
+    }
+  };
+  document.addEventListener("mousedown", handler);
+  return () => document.removeEventListener("mousedown", handler);
+}, []);
 
   useEffect(() => {
     (async () => {
@@ -427,7 +431,7 @@ const BillBookingForm = () => {
               <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-1">
                 <i className="fa-solid fa-table-cells-large" /> Category
               </p>
-              <div className="relative" ref={catRef}>
+              <div className="relative" ref={mobileCatRef}>
                 <div
                   className="flex items-center cursor-pointer"
                   onClick={() => {
@@ -513,7 +517,7 @@ const BillBookingForm = () => {
               >
                 <i className="fa-solid fa-building-columns" /> Biller
               </p>
-              <div className="relative" ref={billerRef}>
+              <div className="relative" ref={mobileBillerRef}>
                 <div
                   className="flex items-center cursor-pointer"
                   onClick={() => {

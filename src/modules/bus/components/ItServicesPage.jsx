@@ -158,7 +158,7 @@ const Hero = () => (
     whileInView={{ opacity: 1, y: 0 }}
     transition={{ duration: 0.6 }}
     viewport={{ once: true }}
-    className="container mx-auto px-4 pt-10 pb-12"
+    className="container mx-auto px-6 md:px-12 pt-10 pb-12"
   >
     <div className="flex flex-col md:flex-row items-center gap-8">
       <div className="md:w-7/12">
@@ -191,8 +191,8 @@ const Hero = () => (
           </button>
         </div>
       </div>
-      <div className="md:w-5/12 text-center">
-        <img src="/assets/hero-web-mobile-development-india.png" alt="web-mobile-development" className="img-fluid" />
+      <div className="md:w-7/12  -mr-10 -mt-14 text-center">
+        <img src="/assets/hero-web-mobile-development-india.png" alt="web-mobile-development" className="img-fluid rounded-lg" />
       </div>
     </div>
   </motion.section>
@@ -677,10 +677,10 @@ const WhyChoose = () => (
 // Contact Form — FIXED with Success Modal
 // ─────────────────────────────────────────────
 const staticPkgOptions = [
-  "Go Digital - Standard (₹599/mo)",
-  "Go Digital - Switch (₹499/mo)",
-  "Go Digital - Build and Deploy (₹399/mo)",
-  "Go Digital - Host (₹199/mo)",
+  "Go Digital - Standard (Rs.599/mo)",
+  "Go Digital - Switch (Rs.499/mo)",
+  "Go Digital - Build and Deploy (Rs.399/mo)",
+  "Go Digital - Host (Rs.199/mo)",
 ];
 const ecomPkgOptions = [
   "E-Commerce Starter",
@@ -1021,7 +1021,7 @@ const ItServicesPage = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   return (
-    <div className="overflow-x-hidden">
+    <div className="overflow-x-hidden pt-20">
       <Header />
       <Hero />
       <Services />
