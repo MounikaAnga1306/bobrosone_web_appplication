@@ -48,18 +48,30 @@ const handleChange = (index, field, value) => {
   if (field === "age") {
     if (value < 0) return;
   }
+  // ── name: only letters and spaces ──
+  if (field === "name") {
+    value = value.replace(/[^a-zA-Z\u0C00-\u0C7F\u0900-\u097F\s]/g, "");
+  }
   const updatedPassengers = [...passengers];
   updatedPassengers[index][field] = value;
   setPassengers(updatedPassengers);
 };
 
 const handleContactChange = (field, value) => {
-  setContact({
-    ...contact,
-    [field]: value
-  });
+  if (field === "city") {
+    value = value.replace(/[^a-zA-Z\u0C00-\u0C7F\u0900-\u097F\s]/g, "");
+  }
+  if (field === "mobile") {
+    value = value.replace(/\D/g, "").slice(0, 10);
+  }
+  if (field === "email") {
+    value = value.replace(/[^a-zA-Z0-9@.]/g, "");
+  }
+  if (field === "address") {
+    value = value.replace(/[^a-zA-Z0-9\u0C00-\u0C7F\u0900-\u097F\s,.-]/g, "");
+  }
+  setContact({ ...contact, [field]: value });
 };
-
 const handleSubmit = (e) => {
   e.preventDefault();
 
@@ -307,22 +319,22 @@ onChange={(e)=>handleContactChange("email",e.target.value)}
 You will receive booking-related SMS updates on the mobile number provided above.
 </p>
 
-<label className="flex items-center justify-center gap-2 mb-4 sm:mb-5 cursor-pointer flex-wrap">
-<input
-type="checkbox"
-checked={termsAccepted}
-onChange={(e) => setTermsAccepted(e.target.checked)}
-className="accent-[#fd561e] w-4 h-4"
-required
-/>
-<span className="text-sm">I accept the</span>
-<span
-  onClick={() => setShowTerms(true)}
-  className="text-[#fd561e] underline cursor-pointer text-sm"
->
-terms and conditions
-</span>
-</label>
+<div className="flex items-center justify-center gap-2 mb-4 sm:mb-5 flex-wrap">
+  <input
+    type="checkbox"
+    checked={termsAccepted}
+    onChange={(e) => setTermsAccepted(e.target.checked)}
+    className="accent-[#fd561e] w-4 h-4 cursor-pointer"
+    required
+  />
+  <span className="text-sm">I accept the</span>
+  <span
+    onClick={() => setShowTerms(true)}
+    className="text-[#fd561e] underline cursor-pointer text-sm"
+  >
+    terms and conditions
+  </span>
+</div>
 
 {error && (
 <p className="text-red-500 mb-3 text-sm">{error}</p>

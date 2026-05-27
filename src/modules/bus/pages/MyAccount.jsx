@@ -62,25 +62,26 @@ const MyAccount = () => {
   }, [navigate]);
 
   const fetchRealBalance = async (userId) => {
-    if (!userId) return;
-    try {
-      const res = await axios.post("https://api.bobros.co.in/db/select", {
-        table: "ulogin",
-        columns: ["ubal"],
-        conditions: { uid: String(userId) }
-      });
-      if (res.data?.rows?.length > 0) {
-        const bal = parseFloat(res.data.rows[0].ubal || 0).toFixed(2);
-        setRewardBalance(bal);
-      }
-    } catch (err) {
-      console.error("Failed to fetch ubal from ulogin:", err);
+  if (!userId) return;
+  try {
+    const res = await axios.post("https://api.bobros.co.in/db/select", {
+      table: "ulogin",
+      columns: ["ubal"],
+      conditions: { uid: String(userId) }
+    });
+    if (res.data?.rows?.length > 0) {
+      const bal = parseFloat(res.data.rows[0].ubal || 0).toFixed(2);
+      setRewardBalance(bal);
     }
-  };
+  } catch (err) {
+    console.error("Failed to fetch ubal from ulogin:", err);
+  }
+};
 
   const fetchTransactions = async () => {
     try {
-      const res = await axios.post("/myAccount", { uid: String(uid) });
+      const API_BASE_URL = import.meta.env.DEV ? "" : "https://api.bobros.co.in";
+const res = await axios.post(`${API_BASE_URL}/myAccount`, { uid: String(uid) });
       if (res.data?.success) {
         const sorted = [...(res.data.transactions || [])].sort((a, b) => b.tid - a.tid);
         setTransactions(sorted);

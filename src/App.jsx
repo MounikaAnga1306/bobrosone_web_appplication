@@ -229,7 +229,7 @@ function App() {
                     <Route path="/BillHomePage" element={<BillHomeScreen />} />
                     <Route path="/billers" element={<BillersList />} />
                     <Route path="/bill-details" element={<BillDetails />} />
-                    <Route path="/payment-status" element={<BillPaymentStatus />} />
+                    <Route path="/bill-payment-status" element={<BillPaymentStatus />} />
  
                     {/* Bus Routes - User Account */}
                     <Route path="/my-bookings" element={<MyBookings />} />

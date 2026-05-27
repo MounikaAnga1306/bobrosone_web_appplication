@@ -1,4 +1,5 @@
 // src/modules/bus/pages/HomePage.jsx
+import { Helmet } from "react-helmet-async";
 import Services from "../components/OurServices";
 import WhyBobros from "../components/WhyBobros";
 import AppDownload from "../components/AppDownload";
@@ -11,6 +12,12 @@ import Advertisement from "../components/Advertisement";
 function HomePage() {
   return (
     <div className="min-h-screen flex flex-col">
+      <Helmet>
+        <title>BOBROS - Bus Booking</title>
+        <meta name="description" content="Book bus tickets online at best prices. Fast, easy and secure bus booking with BOBROS." />
+        <meta name="keywords" content="bus booking, online bus tickets, BOBROS bus" />
+      </Helmet>
+
       <main className="flex-grow">
         {/* Bus Booking Hero Section - FULL WIDTH */}
         <BookingForm />
@@ -28,7 +35,7 @@ function HomePage() {
           </div>
 
           {/* App Download */}
-          <div >
+          <div>
             <AppDownload />
           </div>
 

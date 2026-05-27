@@ -42,6 +42,39 @@ const Navbar = () => {
     setMobileOpen(false);
   }, [location.pathname]);
 
+useEffect(() => {
+  const handleGuestBookings = () => setShowGuestBookings(true);
+  
+  const handleCancellation = () => {
+    clearTimeout(closeTimeout.current);
+    setShowCancel(true);
+    window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
+  };
+
+  const handlePrintTicket = () => {
+    setPrintTin("");
+    setShowPrintTicket(true);
+    window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
+  };
+
+  const handleFlightPrintTicket = () => {
+    setShowFlightPrintTicket(true);
+    window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
+  };
+
+  window.addEventListener("openGuestBookings",      handleGuestBookings);
+  window.addEventListener("openCancellation",       handleCancellation);
+  window.addEventListener("openPrintTicket",        handlePrintTicket);
+  window.addEventListener("openFlightPrintTicket",  handleFlightPrintTicket);
+
+  return () => {
+    window.removeEventListener("openGuestBookings",     handleGuestBookings);
+    window.removeEventListener("openCancellation",      handleCancellation);
+    window.removeEventListener("openPrintTicket",       handlePrintTicket);
+    window.removeEventListener("openFlightPrintTicket", handleFlightPrintTicket);
+  };
+}, []);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -99,12 +132,14 @@ const Navbar = () => {
     navigate("/");
   };
 
-  const handleOpenCancel = () => {
-    setOpenDropdown(false);
-    setMobileDropdownOpen(false);
-    clearTimeout(closeTimeout.current);
-    setShowCancel(true);
-  };
+const handleOpenCancel = () => {
+  setOpenDropdown(false);
+  setMobileDropdownOpen(false);
+  clearTimeout(closeTimeout.current);
+  setShowCancel(true);
+  window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
+};
+
 
   const dynamicPages = ["/", "/HomePage", "/flights", "/BillHomePage", "/hotels", "/cabs", "/Holiday"];
   const isDynamicPage = dynamicPages.includes(location.pathname);
@@ -247,7 +282,16 @@ const Navbar = () => {
                   </div>
                   <button onClick={() => { setOpenDropdown(false); setAuthPage("signin"); setOpenAuthModal(true); }} className="mx-4 my-3 w-[calc(100%-32px)] cursor-pointer bg-[#fd561e] text-white font-semibold py-2.5 rounded-lg ">Login / Sign Up</button>
                   <button onClick={() => { setOpenDropdown(false); setShowGuestBookings(true); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Bookings</button>
-                  <button onClick={() => { setOpenDropdown(false); if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); } else { setPrintTin(""); setShowPrintTicket(true); } }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 hover:text-blue-500 cursor-pointer">Print Ticket</button>
+                  <button onClick={() => { 
+  setOpenDropdown(false); 
+  if (location.pathname.startsWith("/flights")) { 
+    setShowFlightPrintTicket(true); 
+  } else { 
+    setPrintTin(""); 
+    setShowPrintTicket(true); 
+  } 
+  window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
+}} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 hover:text-blue-500 cursor-pointer">Print Ticket</button>
                   <button onClick={handleOpenCancel} className="w-full text-left px-4 py-3 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Cancellation</button>
                 </div>
               )}
@@ -258,7 +302,12 @@ const Navbar = () => {
                   <button onClick={() => { setOpenDropdown(false); navigate("/my-bookings"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 hover:text-blue-500 cursor-pointer hover:text-blue-500">My Booking</button>
                   <button onClick={() => { setOpenDropdown(false); navigate("/my-account"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Account</button>
                   <button onClick={handleOpenCancel} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Cancellation</button>
-                  <button onClick={() => { setOpenDropdown(false); if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); } else { setPrintTin(""); setShowPrintTicket(true); } }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Print Ticket</button>
+                  <button onClick={() => { 
+  setOpenDropdown(false); 
+  window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
+  if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); } 
+  else { setPrintTin(""); setShowPrintTicket(true); } 
+}} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Print Ticket</button>
                   <button onClick={() => { setOpenDropdown(false); navigate("/my-profile"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Profile</button>
                   <button onClick={handleLogout} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-red-500 cursor-pointer ">Logout</button>
                 </div>
@@ -352,7 +401,12 @@ const Navbar = () => {
                           </div>
                           <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); setAuthPage("signin"); setOpenAuthModal(true); }} className="w-full text-left px-4 py-2.5 bg-[#fd561e] text-white font-medium text-sm">Login / Sign Up</button>
                           <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); setShowGuestBookings(true); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Bookings</button>
-                          <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); } else { setPrintTin(""); setShowPrintTicket(true); } }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Print Ticket</button>
+                          <button onClick={() => { 
+  setMobileOpen(false); setMobileDropdownOpen(false); 
+  window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
+  if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); } 
+  else { setPrintTin(""); setShowPrintTicket(true); } 
+}} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Print Ticket</button>
                           <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); handleOpenCancel(); }} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm">Cancellation</button>
                         </>
                       ) : (
@@ -360,7 +414,12 @@ const Navbar = () => {
                           <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-bookings"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Booking</button>
                           <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-account"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Account</button>
                           <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); handleOpenCancel(); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Cancellation</button>
-                          <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); } else { setPrintTin(""); setShowPrintTicket(true); } }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Print Ticket</button>
+                          <button onClick={() => { 
+  setMobileOpen(false); setMobileDropdownOpen(false); 
+  window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
+  if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); } 
+  else { setPrintTin(""); setShowPrintTicket(true); } 
+}} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Print Ticket</button>
                           <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-profile"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Profile</button>
                           <button onClick={handleLogout} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-red-500 text-sm">Logout</button>
                         </>
@@ -393,11 +452,19 @@ const Navbar = () => {
         )}
       </nav>
 
-       {showCancel && <CancellationCard onClose={() => setShowCancel(false)} />}
+      {showCancel && (
+  <CancellationCard onClose={() => {
+    setShowCancel(false);
+    window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: false } }));
+  }} />
+)}
       {showPrintTicket && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 w-[90%] sm:w-[420px] mx-4 relative">
-            <button onClick={() => setShowPrintTicket(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700">✕</button>
+           <button onClick={() => {
+  setShowPrintTicket(false);
+  window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: false } }));
+}} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700">✕</button>
             <PrintTicketModal onClose={() => setShowPrintTicket(false)} prefillTin={printTin} />
           </div>
         </div>
@@ -405,7 +472,10 @@ const Navbar = () => {
       {showFlightPrintTicket && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 w-[90%] sm:w-[440px] mx-4 relative">
-            <button onClick={() => setShowFlightPrintTicket(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700">✕</button>
+           <button onClick={() => {
+  setShowFlightPrintTicket(false);  // ✅ correct
+  window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: false } }));
+}}>✕</button>
             <PrintFlightTicketModal onClose={() => setShowFlightPrintTicket(false)} />
           </div>
         </div>

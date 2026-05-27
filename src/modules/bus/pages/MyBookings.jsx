@@ -21,10 +21,7 @@ import {
 } from "../utils/bookingUtils";
 
 // ✅ Environment based API URL
-const API_BASE_URL = import.meta.env.DEV 
-  ? "http://localhost:5000"  // Local development
-  : "https://api.bobros.co.in"; // Production/UAT
-
+const API_BASE_URL = import.meta.env.DEV ? "" : "https://api.bobros.co.in";
 const MyBookings = () => {
   const navigate = useNavigate();
 
