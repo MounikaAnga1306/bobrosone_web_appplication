@@ -371,7 +371,7 @@ const BillBookingForm = () => {
         alt="Bill payments background"
         className="absolute inset-0 w-full h-full object-cover"
       />
-      <div className="absolute inset-0 bg-gradient-to-r from-red-600/90 via-red-500/80 to-purple-600/70" />
+      <div className="absolute inset-0 bg-gradient-to-r from-red-300/40 via-red-300/40 to-purple-600/70" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
       <div className="relative z-10 w-full max-w-6xl px-4 sm:px-6">

@@ -33,7 +33,7 @@ const SeatLegend = () => {
   ];
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl w-full max-w-[520px] overflow-hidden shadow-sm mx-auto md:mx-0">
+    <div className="bg-white border  border-gray-200 rounded-xl w-full max-w-[520px] overflow-hidden shadow-sm mx-auto md:mx-0">
       
       {/* Title */}
       <h3 className="text-center font-semibold text-sm md:text-base lg:text-lg py-2 md:py-3 lg:py-4">

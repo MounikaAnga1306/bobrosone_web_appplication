@@ -43,7 +43,6 @@ const SeatSelection = ({
   const hasUpper  = upperDeck.length > 0;
   const hasLower  = lowerDeck.length > 0;
 
-  const isSeater   = (s) => s.length === 1 && s.width === 1;
   const isHorizSlp = (s) => s.length === 2 && s.width === 1;
   const isVertSlp  = (s) => s.length === 1 && s.width === 2;
 
@@ -104,7 +103,7 @@ const SeatSelection = ({
           isVertSlp(seat)
             ? { height: 75, width: 45 }
             : isHorizSlp(seat)
-            ? { height: 70, width: 85 }
+            ? { height: 70, width: 78 }
             : { height: 45, width: 40 }
         }
       />
@@ -125,48 +124,61 @@ const SeatSelection = ({
   const renderUnifiedGrid = (deckSeats) => {
     if (!deckSeats.length) return null;
 
-    const GAP          = 6;
+    const GAP          = 0;
     const SEATER_H     = 48;
-    const SEATER_W     = 44;
-    const VERT_H       = 80;
-    const VERT_W       = 50;
-    const HORIZ_HALF_H = 44;
-    const HORIZ_W      = 90;
+    const SEATER_W     = 40;
+    const VERT_H       = 40;
+    const VERT_W       = 30;
+    const HORIZ_HALF_H = 78;
+    const HORIZ_W      = 80;
 
     const minCol = Math.min(...deckSeats.map((s) => s.column));
     const maxCol = Math.max(...deckSeats.map((s) => s.column + s.width - 1));
     const totalCols = maxCol - minCol + 1;
 
-    const occupiedSet = new Set();
+    const startRows = new Set(deckSeats.map((s) => s.row));
+
+    const spanRows = new Set();
     deckSeats.forEach((s) => {
-      for (let r = s.row; r < s.row + s.length; r++) occupiedSet.add(r);
-    });
-    const sortedRows = [...occupiedSet].sort((a, b) => a - b);
-
-    const rowToGrid = {};
-    sortedRows.forEach((apiRow, idx) => { rowToGrid[apiRow] = idx + 1; });
-
-    // Row heights: only seats STARTING at this row define its height
-    const gridRowHeights = sortedRows.map((apiRow) => {
-      let h = 0;
-      deckSeats.forEach((s) => {
-        if (s.row !== apiRow) return;
-        if (isVertSlp(s))  { h = Math.max(h, VERT_H);       return; }
-        if (isHorizSlp(s)) { h = Math.max(h, HORIZ_HALF_H); return; }
-        h = Math.max(h, SEATER_H);
-      });
-      return `${h || SEATER_H}px`;
+      for (let r = s.row + 1; r < s.row + s.length; r++) spanRows.add(r);
     });
 
-    // KEY FIX: per-column widths
-    // Single-width seats set their column's width directly.
-    // Multi-width (spanning) seats share width proportionally as fallback.
-    // This prevents sleeper columns from inflating seater column widths.
+    const allNeededRows = [...new Set([...startRows, ...spanRows])].sort((a, b) => a - b);
+
+    const rowHeightMap = {};
+    allNeededRows.forEach((apiRow) => {
+      if (spanRows.has(apiRow) && !startRows.has(apiRow)) {
+        rowHeightMap[apiRow] = null;
+      } else {
+        let h = 0;
+        deckSeats.forEach((s) => {
+          if (s.row !== apiRow) return;
+          if (isVertSlp(s))  { h = Math.max(h, VERT_H);       return; }
+          if (isHorizSlp(s)) { h = Math.max(h, HORIZ_HALF_H); return; }
+          h = Math.max(h, SEATER_H);
+        });
+        rowHeightMap[apiRow] = h || SEATER_H;
+      }
+    });
+
+    const realRows = allNeededRows.filter((r) => rowHeightMap[r] !== null);
+    const gridRowToIdx = {};
+    realRows.forEach((apiRow, idx) => { gridRowToIdx[apiRow] = idx + 1; });
+
+    const getGridRow = (apiRow) => {
+      if (gridRowToIdx[apiRow] !== undefined) return gridRowToIdx[apiRow];
+      for (let r = apiRow - 1; r >= 0; r--) {
+        if (gridRowToIdx[r] !== undefined) return gridRowToIdx[r];
+      }
+      return 1;
+    };
+
+    const gridRowHeights = realRows.map((apiRow) => `${rowHeightMap[apiRow]}px`);
+
     const colWidths = Array.from({ length: totalCols }, (_, ci) => {
       const gridCol = ci + 1;
       let w = 0;
 
-      // Pass 1: single-width seats get priority
       deckSeats.forEach((s) => {
         if (s.width !== 1) return;
         const colStart = s.column - minCol + 1;
@@ -176,7 +188,6 @@ const SeatSelection = ({
         w = Math.max(w, SEATER_W);
       });
 
-      // Pass 2: if no single-width seat occupies this col, share from spanning seat
       if (w === 0) {
         deckSeats.forEach((s) => {
           if (s.width <= 1) return;
@@ -197,23 +208,23 @@ const SeatSelection = ({
           display: "grid",
           gridTemplateColumns: colWidths.join(" "),
           gridTemplateRows: gridRowHeights.join(" "),
-          columnGap: `${GAP}px`,
-          rowGap:    `${GAP}px`,
+          columnGap: "0px",
+          rowGap: "0px",
           justifyContent: "start",
           width: "fit-content",
         }}
       >
         {deckSeats.map((seat) => {
-          const gridStart = rowToGrid[seat.row];
-          const gridEnd   = rowToGrid[seat.row + seat.length - 1];
-          const spanRows  = gridEnd - gridStart + 1;
+          const gridStart  = getGridRow(seat.row);
+          const gridEnd    = getGridRow(seat.row + seat.length - 1);
+          const spanRows_  = gridEnd - gridStart + 1;
 
           return (
             <div
               key={seat.id}
               style={{
                 gridColumn: `${seat.column - minCol + 1} / span ${seat.width}`,
-                gridRow:    `${gridStart} / span ${spanRows}`,
+                gridRow:    `${gridStart} / span ${spanRows_}`,
                 display:        "flex",
                 alignItems:     "center",
                 justifyContent: "center",
@@ -230,8 +241,8 @@ const SeatSelection = ({
   const renderDeck = (deckSeats, title, showSteering) => {
     if (!deckSeats.length) return null;
     return (
-      <div className="mb-4 md:mb-6 lg:mb-8 flex border border-gray-200 rounded-xl overflow-hidden w-fit max-w-full">
-        <div className="w-8 sm:w-10 md:w-12 lg:w-14 bg-gray-200 flex items-center justify-center relative border-r border-gray-300 flex-shrink-0">
+      <div className="mb-4 md:mb-6 lg:mb-8 flex border border-gray-200 rounded-xl w-full">
+        <div className="w-8 sm:w-10 md:w-12 lg:w-14 bg-gray-200 flex items-center justify-center relative border-r border-gray-300 flex-shrink-0 rounded-l-xl">
           <span className="rotate-[-90deg] font-semibold text-[8px] sm:text-[10px] md:text-xs lg:text-sm text-gray-600 tracking-wide whitespace-nowrap">
             {title}
           </span>
@@ -245,10 +256,10 @@ const SeatSelection = ({
         </div>
 
         <div
-          className={`flex-1 bg-white overflow-x-auto ${
+          className={`flex-1 bg-white rounded-r-xl overflow-x-auto ${
             showSteering
-              ? "pt-2 sm:pt-3 md:pt-4 lg:pt-6 pb-1 sm:pb-2 md:pb-3 lg:pb-4 px-1 sm:px-2 md:px-3 lg:px-4"
-              : "px-1 sm:px-2 md:px-3 lg:px-4 pb-1 sm:pb-2 md:pb-3 lg:pb-4"
+              ? "pt-0 sm:pt-1 md:pt-2 lg:pt-2 pb-2 sm:pb-2 md:pb-3 lg:pb-3 px-1 sm:px-2 md:px-3 lg:px-4"
+              : "pt-0 sm:pt-1 md:pt-2 lg:pt-2 px-1 sm:px-2 md:px-3 lg:px-4 pb-2 sm:pb-2 md:pb-3 lg:pb-3"
           }`}
         >
           {renderUnifiedGrid(deckSeats)}
@@ -291,7 +302,7 @@ const SeatSelection = ({
         </div>
       )}
 
-      <div className="w-full lg:w-fit bg-white rounded-lg p-2 sm:p-3 md:p-4 lg:p-6 lg:ml-20 overflow-x-auto max-w-full">
+      <div className="w-full  lg:w-fit bg-white rounded-lg p-2 sm:p-3 md:p-4 lg:p-6 lg:ml-20 min-w-0">
         <h3 className="font-semibold mb-2 sm:mb-3 md:mb-4 lg:mb-6 text-sm sm:text-base md:text-lg">
           Select Seats
         </h3>
@@ -301,7 +312,7 @@ const SeatSelection = ({
         {!hasUpper && !hasLower && renderUnifiedGrid(seats)}
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-center lg:flex-col lg:items-stretch gap-3 sm:gap-4 md:gap-6 w-full lg:w-auto">
+      <div className="flex flex-col  mt-19 sm:flex-row sm:items-start sm:justify-start md:justify-center lg:flex-col lg:items-stretch lg:justify-start gap-3 sm:gap-4 md:gap-6 w-full lg:w-auto lg:self-start">
         <SeatLegend />
         <SelectedSeatSummary
           selectedSeats={selectedSeats}

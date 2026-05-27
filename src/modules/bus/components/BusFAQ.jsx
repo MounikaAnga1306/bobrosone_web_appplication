@@ -177,7 +177,7 @@ export default function FAQPage() {
                   onClick={() => toggleQuestion(idx)}
                   className="w-full flex justify-between items-center py-3 sm:py-4 text-left gap-3 sm:gap-4"
                 >
-                  <span className="text-gray-800 text-xs sm:text-sm md:text-base pr-2 sm:pr-4 leading-relaxed">
+                  <span className="text-gray-1000  text-xs sm:text-sm md:text-base pr-2 sm:pr-4 leading-relaxed">
                     {faq.question}
                   </span>
                   <svg

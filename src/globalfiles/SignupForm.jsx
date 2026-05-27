@@ -7,9 +7,6 @@ import { Turnstile } from "@marsidev/react-turnstile";
 
 const API = "https://api.bobros.co.in";
 
-// ─────────────────────────────────────────────────────────────
-// SUCCESS TOAST (progress bar now fills left → right)
-// ─────────────────────────────────────────────────────────────
 const SuccessToast = ({ message, subtitle, onDone }) => {
   useEffect(() => {
     const t = setTimeout(onDone, 2800);
@@ -95,9 +92,6 @@ const SuccessToast = ({ message, subtitle, onDone }) => {
   );
 };
 
-// ─────────────────────────────────────────────────────────────
-// LEFT PANEL (unchanged)
-// ─────────────────────────────────────────────────────────────
 const LeftImagePanel = () => (
   <div
     className="hidden md:flex flex-col items-center justify-center rounded-l-2xl overflow-hidden flex-shrink-0"
@@ -111,9 +105,6 @@ const LeftImagePanel = () => (
   </div>
 );
 
-// ─────────────────────────────────────────────────────────────
-// 4-BOX OTP INPUT (unchanged)
-// ─────────────────────────────────────────────────────────────
 const OtpBoxes = ({ value, onChange }) => {
   const inputs = useRef([]);
   const digits = (value + "    ").slice(0, 4).split("");
@@ -165,9 +156,6 @@ const OtpBoxes = ({ value, onChange }) => {
   );
 };
 
-// ─────────────────────────────────────────────────────────────
-// OTP VERIFY CARD (unchanged logic, uses /signup/register)
-// ─────────────────────────────────────────────────────────────
 const OtpVerifyCard = ({ formData, onVerified, onBack, onResendOtp }) => {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
@@ -200,8 +188,6 @@ const OtpVerifyCard = ({ formData, onVerified, onBack, onResendOtp }) => {
         password: formData.password,
         otp: otp.trim(),
       });
-
-       
       onVerified();
     } catch (err) {
       const msg = err.response?.data?.message || err.response?.data?.error || "";
@@ -288,9 +274,6 @@ const OtpVerifyCard = ({ formData, onVerified, onBack, onResendOtp }) => {
   );
 };
 
-// ─────────────────────────────────────────────────────────────
-// Account Deletion Card (unchanged)
-// ─────────────────────────────────────────────────────────────
 const AccountDeletionCard = ({ onBack, onClose }) => {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -404,9 +387,6 @@ const AccountDeletionCard = ({ onBack, onClose }) => {
   );
 };
 
-// ─────────────────────────────────────────────────────────────
-// InputField (unchanged)
-// ─────────────────────────────────────────────────────────────
 const InputField = ({ icon: Icon, ...props }) => (
   <div className="flex items-center border border-gray-300 rounded-xl px-3 sm:px-4 py-2 sm:py-3 mb-3 sm:mb-4 focus-within:border-[#FD561E] focus-within:ring-1 focus-within:ring-[#FD561E] transition-all">
     <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 mr-2 sm:mr-3 flex-shrink-0" />
@@ -414,9 +394,6 @@ const InputField = ({ icon: Icon, ...props }) => (
   </div>
 );
 
-// ─────────────────────────────────────────────────────────────
-// MAIN SIGNUP FORM (unchanged except the toast animation)
-// ─────────────────────────────────────────────────────────────
 const SignUpForm = ({ closeModal, openSignin }) => {
   const location = useLocation();
   const [view, setView] = useState("signup");
@@ -442,7 +419,16 @@ const SignUpForm = ({ closeModal, openSignin }) => {
     }
   }, [location.state]);
 
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  // ── VALIDATION: username = letters+spaces only, email = letters+numbers+@+dot only
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    if (name === "user") {
+      // Only letters and spaces
+      setFormData({ ...formData, [name]: value.replace(/[^a-zA-Z\s]/g, "") });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
+  };
 
   const handleSignup = async (e) => {
     e.preventDefault();
@@ -453,6 +439,14 @@ const SignUpForm = ({ closeModal, openSignin }) => {
       setError("Mobile number must be exactly 10 digits.");
       return;
     }
+
+    // Email: only letters, numbers, @, dot allowed
+    const emailValid = /^[a-zA-Z0-9.]+@[a-zA-Z0-9.]+\.[a-zA-Z]{2,}$/.test(formData.email);
+    if (!emailValid) {
+      setError("Please enter a valid email. Only letters, numbers, @ and dot are allowed.");
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match.");
       return;
@@ -573,6 +567,7 @@ const SignUpForm = ({ closeModal, openSignin }) => {
 
                 <form onSubmit={handleSignup}>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 sm:gap-x-4">
+                    {/* Username — letters and spaces only */}
                     <InputField
                       icon={User}
                       type="text"
@@ -582,13 +577,19 @@ const SignUpForm = ({ closeModal, openSignin }) => {
                       onChange={handleChange}
                       required
                     />
+                    {/* Email — letters, numbers, @, dot only */}
                     <InputField
                       icon={Mail}
                       type="email"
                       name="email"
                       placeholder="Email Address"
                       value={formData.email}
-                      onChange={handleChange}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          email: e.target.value.replace(/[^a-zA-Z0-9@.]/g, ""),
+                        })
+                      }
                       required
                     />
                   </div>
@@ -654,7 +655,6 @@ const SignUpForm = ({ closeModal, openSignin }) => {
                     </div>
                   </div>
 
-                  {/* Cloudflare Turnstile Captcha */}
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Security Verification

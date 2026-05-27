@@ -31,6 +31,7 @@ export default defineConfig({
       '/cities': 'http://localhost:5000',
       '/cancellation-policy': 'http://localhost:5000',
       '/gmailverify': 'http://localhost:5000',
+      '/db': 'http://localhost:5000',
     }
   }
 })

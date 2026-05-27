@@ -18,6 +18,11 @@ const SidebarLayout = ({ children, isLoggedIn, user, onLogout, onOpenAuthModal, 
     "MY BOOKINGS": false,
     "SERVICES": false
   });
+  useEffect(() => {
+  if (location.pathname === "/my-bookings") {
+    setExpandedSections(prev => ({ ...prev, "MY BOOKINGS": true }));
+  }
+}, [location.pathname]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -57,6 +62,14 @@ const SidebarLayout = ({ children, isLoggedIn, user, onLogout, onOpenAuthModal, 
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isMobile, isSidebarOpen, modalOpen]);
+
+  const [navbarModalOpen, setNavbarModalOpen] = useState(false);
+
+useEffect(() => {
+  const handleNavbarModal = (e) => setNavbarModalOpen(e.detail.open);
+  window.addEventListener("navbarModalChange", handleNavbarModal);
+  return () => window.removeEventListener("navbarModalChange", handleNavbarModal);
+}, []);
 
   const toggleSection = (section) => {
     setExpandedSections(prev => ({
@@ -109,15 +122,19 @@ const SidebarLayout = ({ children, isLoggedIn, user, onLogout, onOpenAuthModal, 
   };
 
   const isActive = (path) => {
-    if (!path) return false;
-    if (path === "/my-account" && location.pathname === "/my-account") return true;
-    if (path === "/my-profile" && location.pathname === "/my-profile") return true;
-    if (path === "/my-bookings" && location.pathname === "/my-bookings") return true;
-    if (path === "/reset-password" && location.pathname === "/reset-password") return true;
-    if (path === "/" && location.pathname === "/") return true;
-    if (path.includes("?") && location.pathname === "/my-bookings") return true;
-    return location.pathname === path;
-  };
+  if (!path) return false;
+  // For paths with query params like /my-bookings?type=bus
+  if (path.includes("?")) {
+    const [pathname, query] = path.split("?");
+    const params = new URLSearchParams(query);
+    const locationParams = new URLSearchParams(location.search);
+    return (
+      location.pathname === pathname &&
+      params.get("type") === locationParams.get("type")
+    );
+  }
+  return location.pathname === path;
+};
 
   const menuSections = [
     {
@@ -171,13 +188,19 @@ const SidebarLayout = ({ children, isLoggedIn, user, onLogout, onOpenAuthModal, 
 
   const filteredSections = getFilteredSections();
 
-  const responsiveStyles = `
+ const responsiveStyles = `
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
     @media (min-width: 768px) {
-      .main-content {
-        margin-left: 280px;
+  .main-content {
+    margin-left: 0 !important;
+  }
+      .sidebar-container {
+        position: sticky !important;
+        top: 80px !important;
+        height: calc(100vh - 80px) !important;
+        align-self: flex-start !important;
       }
     }
     @media (max-width: 767px) {
@@ -186,6 +209,7 @@ const SidebarLayout = ({ children, isLoggedIn, user, onLogout, onOpenAuthModal, 
       }
       .sidebar-container.open {
         transform: translateX(0);
+        position: fixed !important;
       }
       .main-content {
         margin-left: 0 !important;
@@ -193,9 +217,10 @@ const SidebarLayout = ({ children, isLoggedIn, user, onLogout, onOpenAuthModal, 
     }
   `;
 
-  // CRITICAL: When modal is open, hide sidebar completely
-  const shouldHideSidebar = modalOpen === true;
 
+  // CRITICAL: When modal is open, hide sidebar completely
+  const shouldHideSidebar = false;
+  const isBehindModal = modalOpen === true || navbarModalOpen === true;
   return (
     <>
       <style>{responsiveStyles}</style>
@@ -243,27 +268,31 @@ const SidebarLayout = ({ children, isLoggedIn, user, onLogout, onOpenAuthModal, 
         </button>
       )}
 
-      <div style={{ display: "flex", background: "#f5f7fa", paddingTop: "80px" }}>
+      <div style={{ display: "flex", background: "#f5f7fa", paddingTop: "80px", alignItems: "flex-start", minHeight: "100vh", gap: 0 }}>
 
         {/* Sidebar - COMPLETELY HIDE WHEN MODAL IS OPEN */}
         {!shouldHideSidebar && (
           <div
             className={`sidebar-container ${isSidebarOpen ? 'open' : ''}`}
             style={{
-              width: "280px",
-              background: "white",
-              borderRight: "1px solid #e5e7eb",
-              position: "fixed",
-              top: isMobile ? 0 : "80px",
-              left: 0,
-              bottom: 0,
-              display: "flex",
-              flexDirection: "column",
-              zIndex: 999,
-              boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-              transition: "transform 0.3s ease-in-out",
-              overflowY: "auto"
-            }}
+  width: "280px",
+  minWidth: "280px",
+  background: "white",
+  borderRight: "1px solid #e5e7eb",
+  position: isMobile ? "fixed" : "sticky",
+  top: isMobile ? 0 : "80px",
+  left: isMobile ? 0 : "auto",
+  bottom: isMobile ? 0 : "auto",
+  height: isMobile ? "100vh" : "calc(100vh - 80px)",
+  paddingBottom: "20px",
+  display: "flex",
+  flexDirection: "column",
+  zIndex: isBehindModal ? 40 : 999,
+  boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+  transition: "transform 0.3s ease-in-out",
+  overflowY: "auto",
+  alignSelf: "flex-start",
+}}
           >
             {isMobile && (
               <button
@@ -490,12 +519,11 @@ const SidebarLayout = ({ children, isLoggedIn, user, onLogout, onOpenAuthModal, 
         <div
           className="main-content"
           style={{
-            flex: 1,
-            minHeight: "auto",
-            width: "100%",
-            marginLeft: (!shouldHideSidebar && !isMobile && isSidebarOpen) ? "280px" : "0",
-            transition: "margin-left 0.3s ease-in-out"
-          }}
+  flex: 1,
+  minHeight: "auto",
+  minWidth: 0,
+  transition: "margin-left 0.3s ease-in-out"
+}}
         >
           {children}
         </div>

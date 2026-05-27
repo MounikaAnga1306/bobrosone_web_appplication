@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import {
   Plane,
@@ -619,6 +620,11 @@ export default function HolidayHomepage() {
   // ══════════════════════════════════════════════════════════════════════════
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white font-sans">
+      <Helmet>
+  <title>BOBROS - Holiday Packages</title>
+  <meta name="description" content="Explore amazing holiday packages and tour deals with BOBROS. Discover Munnar, Coorg, Wayanad and more." />
+  <meta name="keywords" content="holiday packages, tour packages, BOBROS holidays, travel packages India" />
+</Helmet>
 
       {/* ════════════════════════════════════════════════════════
           HERO — pure opacity crossfade, zero zoom/scale/pan

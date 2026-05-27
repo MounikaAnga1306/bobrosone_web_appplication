@@ -192,9 +192,39 @@ app.post("/billdesk/order", async (req, res) => {
   try {
     const { fare, uid, pname, tickid, redirect_url } = req.body;
     if (!fare || !tickid) return res.status(400).json({ success: false, message: "fare and ticketId required" });
-    const body = new URLSearchParams({ fare, uid: uid || "Not Applicable", pname: pname || "Guest", tickid, return_url: redirect_url || "https://your-domain.com/payment-status" });
-    res.json((await axios.post("https://uat.bobros.co.in/billdesktest.php", body, { headers: { "Content-Type": "application/x-www-form-urlencoded" } })).data);
-  } catch (error) { res.status(500).json({ success: false, message: "BillDesk order creation failed" }); }
+
+    const returnUrl = redirect_url || "http://localhost:5173/payment-status";
+
+    const body = new URLSearchParams({
+      fare:       String(fare),
+      uid:        uid   || "Not Applicable",
+      pname:      pname || "Guest",
+      tickid:     String(tickid),
+      return_url: returnUrl,
+    });
+
+    const result = await axios.post(
+      "https://uat.bobros.co.in/billdesktest.php",
+      body.toString(),
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Accept": "application/json",
+          "Authorization": `Basic ${Buffer.from(
+            `${process.env.BILLDESK_PHP_USER}:${process.env.BILLDESK_PHP_PASS}`
+          ).toString("base64")}`,
+        },
+        timeout: 30000,
+      }
+    );
+
+    console.log("[BILLDESK BUS ORDER] response:", result.data);
+    res.json(result.data);
+
+  } catch (error) {
+    console.error("[BILLDESK BUS ORDER] Error:", error.response?.status, error.message);
+    res.status(500).json({ success: false, message: "BillDesk order creation failed" });
+  }
 });
 
 // =========================
@@ -215,9 +245,7 @@ app.post("/verifyPayment", async (req, res) => {
 app.post("/bbps/billdesk/order", async (req, res) => {
   try {
     const { fare, uid, pname, email, tickid, billerid, validationId, paymentMethod, upiId, authenticators, billerName, isBbps } = req.body;
-    const APP_URL = process.env.APP_URL || "http://localhost:5000";
-    const FRONTEND_URL = process.env.FRONTEND_URL || APP_URL;
-    const returnUrl = `${FRONTEND_URL}/payment-status`;
+    const returnUrl = "https://uat.bobros.co.in/bill-payment-status";
 
     const payload = {
       fare: parseFloat(fare).toFixed(2),
@@ -226,18 +254,37 @@ app.post("/bbps/billdesk/order", async (req, res) => {
       payment_data: { method: paymentMethod || "UPI", upi_id: upiId || "" },
       biller_data: { biller_name: billerName || "", biller_id: billerid || "", is_bbps: isBbps !== undefined ? isBbps : true },
       authenticators: authenticators || [],
-      // FIX: sanitize IP — was sending "::1" or "::ffff:x.x.x.x" to upstream
       device: { ip: sanitizeIp(req.ip), mac: "AB:CD:EF:GH", imei: "NA", os: "Node Backend", app: "B-Connect" },
       return_url: returnUrl,
     };
 
-    console.log("[BBPS ORDER] device.ip:", payload.device.ip, "| raw req.ip:", req.ip);
     console.log("[BBPS ORDER] return_url:", returnUrl);
-    const response = await axios.post("https://uat.bobros.co.in/billdesk_bbpstest.php", payload, { headers: { "Content-Type": "application/json" }, timeout: 30000 });
-    if (response.data.success && response.data.checkoutUrl) return res.json({ success: true, checkoutUrl: response.data.checkoutUrl });
+    console.log("[BBPS ORDER] device.ip:", payload.device.ip);
+
+    // ✅ Basic Auth add చేశాం — bus BillDesk లాగే
+    const response = await axios.post(
+      "https://uat.bobros.co.in/billdesk_bbpstest.php",
+      payload,
+      {
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Basic ${Buffer.from(
+            `${process.env.BILLDESK_PHP_USER}:${process.env.BILLDESK_PHP_PASS}`
+          ).toString("base64")}`,
+        },
+        timeout: 30000,
+      }
+    );
+
+    console.log("[BBPS ORDER] response:", response.data);
+
+    if (response.data.success && response.data.checkoutUrl) {
+      return res.json({ success: true, checkoutUrl: response.data.checkoutUrl });
+    }
     return res.status(400).json({ success: false, message: "BillDesk order creation failed" });
+
   } catch (error) {
-    console.error("[BBPS ORDER] Error:", error.message);
+    console.error("[BBPS ORDER] Error:", error.response?.status, error.message);
     return res.status(500).json({ success: false, message: "Failed to create BillDesk order", error: error.message });
   }
 });

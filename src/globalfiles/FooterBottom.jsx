@@ -1,6 +1,6 @@
 export default function FooterBottom() {
   return (
-    <div className="w-full bg-gray px-4 sm:px-6 md:px-8 lg:px-10 py-4 sm:py-5 md:py-6 ">
+    <div className="w-full bg-gray px-4 sm:px-6 md:px-8 lg:px-10 py-4 sm:py-5 md:py-6 relative" style={{ zIndex: 10 }}>
       {/* TOP SECTION */}
       <div className="flex flex-col md:flex-row justify-center items-center gap-8 md:gap-10 lg:gap-16">
         
