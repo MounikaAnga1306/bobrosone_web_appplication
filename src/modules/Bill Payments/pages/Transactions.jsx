@@ -7,7 +7,7 @@ import {
   AlertTriangle, Receipt, X, Search, RefreshCw, ChevronRight,
 } from "lucide-react";
 
-const API_BASE_URL = import.meta.env.DEV ? "" : "https://api.bobros.co.in";
+const API_BASE_URL = "";
 const RESEND_SECONDS = 45;
 const PAYMENT_ID_KEYS = ["paymentid"];
 
