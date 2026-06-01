@@ -7,7 +7,7 @@ import {
   Bus, Plane, Building2, Palmtree, Car, X
 } from "lucide-react";
 
-const SidebarLayout = ({ children, isLoggedIn, user, onLogout, onOpenAuthModal, onOpenCancel, onOpenPrintTicket, onOpenForgotPassword, modalOpen = false }) => {
+const SidebarLayout = ({ children, isLoggedIn, user, onLogout, onOpenAuthModal, onOpenCancel, onOpenPrintTicket, onOpenForgotPassword, modalOpen = false, hideSidebar = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobile, setIsMobile] = useState(false);
@@ -219,7 +219,7 @@ useEffect(() => {
 
 
   // CRITICAL: When modal is open, hide sidebar completely
-  const shouldHideSidebar = false;
+  const shouldHideSidebar = hideSidebar;
   const isBehindModal = modalOpen === true || navbarModalOpen === true;
   return (
     <>

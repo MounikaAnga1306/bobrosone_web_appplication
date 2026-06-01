@@ -8,6 +8,7 @@ import BusFAQ from "../../bus/components/BusFAQ";
 import BillBookingForm from "../../Bill Payments/components/Billbookingform";
 import PopularBillers from "../components/PopularBillers";
 import RechargeAndBillsIcons from "../components/Rechargeandbillsicons";
+import BillPaymentFAQ from "../components/BillPaymentFAQ";
 
 function BillHomeScreen() {
   return (
@@ -25,6 +26,8 @@ function BillHomeScreen() {
         <RechargeAndBillsIcons />
         <WhyBobros />
         <PopularBillers />
+        <BillPaymentFAQ />
+        
       </main>
     </div>
   );
