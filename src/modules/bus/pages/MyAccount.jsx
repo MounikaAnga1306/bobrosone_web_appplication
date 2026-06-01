@@ -81,8 +81,8 @@ const MyAccount = () => {
 
   const fetchTransactions = async () => {
     try {
-      const API_BASE_URL = import.meta.env.DEV ? "" : "https://api.bobros.co.in";
-const res = await axios.post(`${API_BASE_URL}/myAccount`, { uid: String(uid) });
+      //const API_BASE_URL = import.meta.env.DEV ? "" : "https://api.bobros.co.in";
+const res = await axios.post(`/myAccount`, { uid: String(uid) });
       if (res.data?.success) {
         const sorted = [...(res.data.transactions || [])].sort((a, b) => b.tid - a.tid);
         setTransactions(sorted);

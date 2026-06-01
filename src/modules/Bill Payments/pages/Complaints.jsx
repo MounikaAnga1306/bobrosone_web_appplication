@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 
 // MyAccount lo unna pattern ne follow chesa: dev lo proxy, prod lo full URL
-const API_BASE_URL = import.meta.env.DEV ? "" : "https://api.bobros.co.in";
+const API_BASE_URL = "";
 
 const DISPOSITIONS = ["Payment Failed", "Transaction Pending", "Refund Not Received"];
 const SOURCES = ["Bobros Web", "Bobros App"];
