@@ -197,6 +197,7 @@ useEffect(() => {
     margin-left: 0 !important;
   }
       .sidebar-container {
+      transform: translateX(0) !important;
         position: sticky !important;
         top: 80px !important;
         height: calc(100vh - 80px) !important;

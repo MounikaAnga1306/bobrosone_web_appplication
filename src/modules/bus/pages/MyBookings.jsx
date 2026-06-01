@@ -21,7 +21,7 @@ import {
 } from "../utils/bookingUtils";
 
 // ✅ Environment based API URL
-const API_BASE_URL = import.meta.env.DEV ? "" : "https://api.bobros.co.in";
+const API_BASE_URL = "";
 const MyBookings = () => {
   const navigate = useNavigate();
 
