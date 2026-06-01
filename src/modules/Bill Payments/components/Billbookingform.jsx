@@ -156,7 +156,7 @@ const BillBookingForm = () => {
   const [billerSearch, setBillerSearch] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
 
-  const catRef = useRef(null);        
+  const catRef = useRef(null);
   const billerRef = useRef(null);
   const mobileCatRef = useRef(null);
   const mobileBillerRef = useRef(null);
@@ -164,22 +164,22 @@ const BillBookingForm = () => {
   const billerSearchRef = useRef(null);
   const navigate = useNavigate();
 
- useEffect(() => {
-  const handler = (e) => {
-    if (catRef.current && !catRef.current.contains(e.target) &&
-        mobileCatRef.current && !mobileCatRef.current.contains(e.target)) {
-      setCatDropOpen(false);
-      setCatSearch("");
-    }
-    if (billerRef.current && !billerRef.current.contains(e.target) &&
-        mobileBillerRef.current && !mobileBillerRef.current.contains(e.target)) {
-      setBillerDropOpen(false);
-      setBillerSearch("");
-    }
-  };
-  document.addEventListener("mousedown", handler);
-  return () => document.removeEventListener("mousedown", handler);
-}, []);
+  useEffect(() => {
+    const handler = (e) => {
+      if (catRef.current && !catRef.current.contains(e.target) &&
+          mobileCatRef.current && !mobileCatRef.current.contains(e.target)) {
+        setCatDropOpen(false);
+        setCatSearch("");
+      }
+      if (billerRef.current && !billerRef.current.contains(e.target) &&
+          mobileBillerRef.current && !mobileBillerRef.current.contains(e.target)) {
+        setBillerDropOpen(false);
+        setBillerSearch("");
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -326,7 +326,7 @@ const BillBookingForm = () => {
         partial_pay: d.partial_pay,
         partial_pay_amount: d.partial_pay_amount,
         pay_after_duedate: d.pay_after_duedate,
-        pay_multiple_bills: d.pay_multiple_bills || "N", 
+        pay_multiple_bills: d.pay_multiple_bills || "N",
         paymentamount_validation: d.paymentamount_validation,
         plan_available: d.plan_available,
         biller_type: d.biller_type,
@@ -365,7 +365,7 @@ const BillBookingForm = () => {
   };
 
   return (
-    <section className="relative min-h-[520px] md:min-h-[400px]  lg:min-h-[540px] flex items-center justify-center py-8 md:py-0">
+    <section className="relative min-h-[520px] md:min-h-[450px]  lg:min-h-[540px] flex items-center justify-center py-8 md:py-0">
       <img
         src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-4.0.3&auto=format&fit=crop&w=2071&q=80"
         alt="Bill payments background"
@@ -376,7 +376,7 @@ const BillBookingForm = () => {
 
       <div className="relative z-10 w-full max-w-6xl px-4 sm:px-6">
         <div className="text-center mb-4 sm:mb-6 md:mb-8 text-white">
-          <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-bold mt-6 md:-mt-6">
+          <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-bold mt-6 md:mt-6 lg:-mt-6">
             Pay Bills, Stress-Free
           </h1>
           <p className="text-xs sm:text-sm md:text-lg opacity-90 mt-1 sm:mt-2">
@@ -385,7 +385,9 @@ const BillBookingForm = () => {
         </div>
 
         <div className="relative bg-white/95 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-2xl border border-white/20 px-4 sm:px-6 md:px-8 lg:px-10 pt-5 sm:pt-6 md:pt-8 pb-12">
-          <div className="hidden lg:flex gap-3 mb-8">
+
+          {/* ===== TABS — mobile: bus-style icon boxes | iPad: desktop layout (smaller) | desktop: full ===== */}
+          <div className="flex flex-nowrap md:flex-wrap items-center justify-between md:justify-start gap-1.5 sm:gap-2 md:gap-3 mb-6 md:mb-8">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const active = activeTab === tab.id;
@@ -396,37 +398,32 @@ const BillBookingForm = () => {
                     setActiveTab(tab.id);
                     navigate(tabRoutes[tab.id]);
                   }}
-                  className={`flex items-center gap-2 px-3 lg:px-4 xl:px-5 py-1.5 lg:py-2 xl:py-2.5 cursor-pointer rounded-full text-xs sm:text-sm font-semibold transition-all duration-300 border ${
+                  title={tab.label}
+                  aria-label={tab.label}
+                  className={`flex-1 md:flex-none flex items-center justify-center gap-0 md:gap-1.5 lg:gap-2 py-2 px-2.5 md:px-2.5 lg:px-4 xl:px-5 md:py-1.5 lg:py-2 xl:py-2.5 cursor-pointer rounded-xl md:rounded-full text-[11px] md:text-xs lg:text-sm font-semibold transition-all duration-300 border ${
                     active
-                      ? "bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white border-transparent shadow-lg scale-105"
+                      ? "bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white border-transparent shadow-lg lg:scale-105"
                       : "border-gray-200 text-gray-600 hover:border-[#FD561E] hover:text-[#FD561E] bg-white/80"
                   }`}
                 >
-                  <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  {tab.label}
+                  <Icon className="w-6 h-6 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0" />
+                  <span className="hidden md:inline">{tab.label}</span>
                 </button>
               );
             })}
-             {/* Bharat Connect logo — pushed to right */}
-  <div className="ml-auto -mr-4 -mt-3 flex-shrink-0">
-    <img
-      src="/assets/Bharat_connect_logo.png"
-      alt="Bharat Connect"
-      className="h-[50px] w-auto object-contain "
-    />
-  </div>
+
+            {/* Bharat Connect logo — right side, desktop + iPad only (smaller on iPad) */}
+            <div className="hidden md:block md:ml-auto flex-shrink-0">
+              <img
+                src="/assets/Bharat_connect_logo.png"
+                alt="Bharat Connect"
+                className="h-[40px] lg:h-[50px] w-auto object-contain"
+              />
+            </div>
           </div>
 
           {/* ── Mobile View ── */}
           <div className="md:hidden space-y-3">
-             {/* ADD THIS — logo row inside white card */}
-  <div className="flex justify-end mb-1 -mt-4">
-    <img
-      src="/assets/Bharat_connect_logo.png"
-      alt="Bharat Connect"
-      className="h-[50px] w-auto object-contain"
-    />
-  </div>
             <div className="border border-gray-200 rounded-xl px-3 pt-2 pb-2">
               <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-1">
                 <i className="fa-solid fa-table-cells-large" /> Category
@@ -599,7 +596,7 @@ const BillBookingForm = () => {
                 disabled={searchLoading}
                 className="bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white px-8 py-3 rounded-full font-bold text-sm shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer whitespace-nowrap disabled:opacity-50"
               >
-                {searchLoading ? "Loading..." : "Fetch Bill Details"}
+                {searchLoading ? "Loading..." : "Search"}
               </button>
             </div>
             <div className="flex justify-center pt-2 pb-2">
@@ -613,17 +610,8 @@ const BillBookingForm = () => {
             </div>
           </div>
 
-          {/* ── Desktop View ── */}
-          
+          {/* ── Desktop / Tablet View ── */}
           <div className="hidden md:block">
-              {/* ADD THIS — logo above the grid, right aligned */}
-  <div className="hidden md:flex lg:hidden justify-end -mb-3 -mt-8 ">
-    <img
-      src="/assets/Bharat_connect_logo.png"
-      alt="Bharat Connect"
-      className="h-[50px] w-auto object-contain"
-    />
-  </div>
             <div className="grid grid-cols-2 gap-0">
               <div className="group pr-6">
                 <p className="text-[11px] text-gray-400 uppercase tracking-wide mb-1 group-hover:text-[#FD561E] transition-colors duration-300 flex items-center gap-1">
@@ -819,7 +807,7 @@ const BillBookingForm = () => {
                 disabled={searchLoading}
                 className="bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white px-8 py-3 rounded-full font-bold text-sm shadow-xl hover:scale-105 transition-all duration-300 cursor-pointer whitespace-nowrap disabled:opacity-50"
               >
-                {searchLoading ? "Loading..." : "Fetch Bill Details"}
+                {searchLoading ? "Loading..." : "Search"}
               </button>
             </div>
           </div>

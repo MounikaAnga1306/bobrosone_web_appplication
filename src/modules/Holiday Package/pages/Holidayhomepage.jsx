@@ -76,7 +76,7 @@ const destinations = [
     id: "coorg",
     name: "Coorg",
     location: "Karnataka, India",
-    image: "https://uat.bobros.co.in/images/coorg.jpg",
+    image: "/assets/coorg.jpg",
     about:
       'Known as the "Scotland of India", Coorg is a stunning hill station renowned for its coffee plantations, lush greenery, and cascading waterfalls.',
     thingsToDo: [
@@ -629,7 +629,7 @@ export default function HolidayHomepage() {
       {/* ════════════════════════════════════════════════════════
           HERO — pure opacity crossfade, zero zoom/scale/pan
       ════════════════════════════════════════════════════════ */}
-      <section className="relative min-h-[550px] md:min-h-[450px] lg:min-h-[590px] flex items-center justify-center py-8 md:py-0 overflow-hidden">
+      <section className="relative min-h-[550px] md:min-h-[520px] lg:min-h-[590px] flex items-center justify-center py-8 md:py-0 overflow-hidden">
 
         {/* Background layers — only opacity animates, no transform */}
         <div className="absolute inset-0 w-full h-full">
@@ -707,24 +707,28 @@ export default function HolidayHomepage() {
             className="relative bg-white/95 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-2xl p-3 sm:p-4 md:p-6 lg:p-8 border border-white/20 pb-12"
           >
             {/* Service tabs — lg only */}
-            <div className="hidden lg:flex gap-3 mb-6 md:mb-8">
-              {quickServices.map((service, idx) => {
-                const Icon = service.icon;
-                const isActive = activeTab === service.label.toLowerCase();
-                return (
-                  <button key={idx}
-                    onClick={() => { setActiveTab(service.label.toLowerCase()); navigate(service.path); }}
-                    className={`flex items-center gap-2 px-3 lg:px-4 xl:px-5 py-1.5 lg:py-2 xl:py-2.5 cursor-pointer rounded-full text-xs sm:text-sm font-semibold transition-all duration-300 border ${
-                      isActive
-                        ? "bg-gradient-to-r from-[#fd561e] to-[#ff7b4a] text-white border-transparent shadow-lg scale-105"
-                        : "border-gray-200 text-gray-600 hover:border-[#fd561e] hover:text-[#fd561e] bg-white/80"
-                    }`}>
-                    <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    {service.label}
-                  </button>
-                );
-              })}
-            </div>
+            <div className="flex flex-nowrap md:flex-wrap items-center justify-between md:justify-start gap-1.5 sm:gap-2 md:gap-3 mb-6 md:mb-8">
+  {quickServices.map((service, idx) => {
+    const Icon = service.icon;
+    const isActive = activeTab === service.label.toLowerCase();
+    return (
+      <button
+        key={idx}
+        onClick={() => { setActiveTab(service.label.toLowerCase()); navigate(service.path); }}
+        title={service.label}
+        aria-label={service.label}
+        className={`flex-1 md:flex-none flex items-center justify-center gap-0 md:gap-1.5 lg:gap-2 py-2 px-2.5 md:px-2.5 lg:px-4 xl:px-5 md:py-1.5 lg:py-2 xl:py-2.5 cursor-pointer rounded-xl md:rounded-full text-[11px] md:text-xs lg:text-sm font-semibold transition-all duration-300 border ${
+          isActive
+            ? "bg-gradient-to-r from-[#fd561e] to-[#ff7b4a] text-white border-transparent shadow-lg lg:scale-105"
+            : "border-gray-200 text-gray-600 hover:border-[#fd561e] hover:text-[#fd561e] bg-white/80"
+        }`}
+      >
+        <Icon className="w-6 h-6 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0" />
+        <span className="hidden md:inline">{service.label}</span>
+      </button>
+    );
+  })}
+</div>
 
             {/* MOBILE FORM */}
             <div className="md:hidden space-y-0">

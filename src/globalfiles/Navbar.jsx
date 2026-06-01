@@ -349,17 +349,26 @@ const handleOpenCancel = () => {
             </div>
           </div>
 
-          {/* Hamburger Menu Button */}
-          <button 
-            className={`lg:hidden p-2 rounded-lg transition-all duration-300 ${
-              isSolid 
-                ? "text-gray-800 hover:bg-gray-100" 
-                : "text-white hover:bg-white/10"
-            }`} 
-            onClick={() => setMobileOpen(!mobileOpen)}
-          >
-            {mobileOpen ? <X size={22} /> : <Menu size={22} />}
-          </button>
+          {/* Mobile right: Bharat Connect (bill pages, MOBILE only) + Hamburger */}
+          <div className="flex items-center gap-2 lg:hidden">
+            {isBillPayment && (
+              <img
+                src="/assets/Bharat_connect_logo.png"
+                alt="Bharat Connect"
+                className="md:hidden h-7 w-auto object-contain"
+              />
+            )}
+            <button 
+              className={`p-2 rounded-lg transition-all duration-300 ${
+                isSolid 
+                  ? "text-gray-800 hover:bg-gray-100" 
+                  : "text-white hover:bg-white/10"
+              }`} 
+              onClick={() => setMobileOpen(!mobileOpen)}
+            >
+              {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Menu - Side Drawer */}
