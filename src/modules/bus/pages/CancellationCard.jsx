@@ -250,7 +250,7 @@ const CancellationCard = ({ onClose }) => {
 
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 text-sm transition-all z-10"
+          className="absolute top-4 right-4 w-8 h-8  cursor-pointer rounded-full  hover:bg-gray-200 flex items-center justify-center text-gray-500 text-sm transition-all z-10"
         >
           ✕
         </button>
