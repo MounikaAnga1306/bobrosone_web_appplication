@@ -15,6 +15,7 @@ import SignupForm from "../../../globalfiles/SignupForm";
 const MyAccount = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const hideSidebar = new URLSearchParams(location.search).get("source") === "bill";
   const [transactions, setTransactions] = useState([]);
   const [rewardBalance, setRewardBalance] = useState("0.00");
   const [loading, setLoading] = useState(true);
@@ -185,6 +186,7 @@ const res = await axios.post(`${API_BASE_URL}/myAccount`, { uid: String(uid) });
         onOpenPrintTicket={handleOpenPrintTicket}
         onOpenForgotPassword={handleOpenForgotPassword}
         modalOpen={showPrintTicket || showCancel || openAuthModal || showForgotPassword || showResetPasswordModal}
+        hideSidebar={hideSidebar} 
       >
         <div style={{ 
           padding: getContainerPadding(),

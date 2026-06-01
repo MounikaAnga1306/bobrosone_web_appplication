@@ -53,72 +53,118 @@ const Field = ({ label, icon, children, error }) => (
   </div>
 );
 
+// ── Separate component for hoverable card ──
+const ContactCard = ({ card }) => {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div
+      onClick={() => card.href && window.open(card.href, card.href.startsWith("mailto") ? "_blank" : "_self")}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: "#fff",
+        borderRadius: 18,
+        padding: "clamp(20px, 4vw, 26px) clamp(18px, 3.5vw, 24px)",
+        boxShadow: hovered ? "0 14px 36px rgba(253,86,30,0.13)" : "0 2px 16px rgba(0,0,0,0.06)",
+        border: `1px solid ${hovered && card.href ? "rgba(253,86,30,0.22)" : "rgba(0,0,0,0.05)"}`,
+        display: "flex",
+        alignItems: "flex-start",
+        gap: "clamp(12px, 2.5vw, 16px)",
+        transition: "transform 0.2s, box-shadow 0.2s, border-color 0.2s",
+        cursor: card.href ? "pointer" : "default",
+        transform: hovered && card.href ? "translateY(-5px)" : "translateY(0)",
+      }}
+    >
+      <div style={{ width: "clamp(44px, 8vw, 50px)", height: "clamp(44px, 8vw, 50px)", borderRadius: 14, flexShrink: 0, background: "linear-gradient(135deg, #FD561E, #ff7a4d)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", boxShadow: "0 4px 14px rgba(253,86,30,0.3)" }}>{card.icon}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: "clamp(9px, 2.2vw, 10.5px)", color: "#bbb", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 6px" }}>{card.label}</p>
+        <p style={{
+          fontSize: "clamp(12px, 3vw, 14.5px)",
+          fontWeight: 700,
+          // ── hover అయినప్పుడు clickable cards కి #FD561E, లేదంటే original color ──
+          color: card.href ? (hovered ? "#FD561E" : "#1a1a2e") : "#1a1a2e",
+          margin: "0 0 5px",
+          lineHeight: 1.45,
+          wordBreak: "break-word",
+          transition: "color 0.2s",
+        }}>{card.value}</p>
+        <p style={{ fontSize: "clamp(10px, 2.5vw, 12px)", color: "#aaa", margin: 0 }}>{card.sub}</p>
+      </div>
+    </div>
+  );
+};
+
+// ── Separate component for hoverable left panel item ──
+const LeftPanelItem = ({ item }) => {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div
+      onClick={() => item.href && window.open(item.href, item.href.startsWith("mailto") ? "_blank" : "_self")}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "clamp(10px, 2.5vw, 14px)",
+        marginBottom: "clamp(14px, 3vw, 18px)",
+        cursor: item.href ? "pointer" : "default",
+      }}
+    >
+      <div style={{ width: "clamp(32px, 7vw, 36px)", height: "clamp(32px, 7vw, 36px)", borderRadius: 10, flexShrink: 0, background: "rgba(253,86,30,0.18)", border: "1px solid rgba(253,86,30,0.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#FD561E" }}>{item.icon}</div>
+      <span style={{
+        fontSize: "clamp(11px, 2.5vw, 13.5px)",
+        // ── hover అయినప్పుడు clickable items కి bright orange, లేదంటే soft color ──
+        color: item.href ? (hovered ? "#FD561E" : "rgba(255,255,255,0.75)") : "rgba(255,255,255,0.75)",
+        wordBreak: "break-word",
+        transition: "color 0.2s",
+      }}>{item.text}</span>
+    </div>
+  );
+};
+
 const ContactUs = () => {
   useEffect(() => { window.scrollTo(0, 0); }, []);
 
-  const [formData, setFormData]   = useState({ name: "", email: "", phone: "", message: "" });
-  const [errors, setErrors]       = useState({});
+  const [formData, setFormData] = useState({ name: "", email: "", phone: "", message: "" });
+  const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState({ type: "", show: false });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     let filtered = value;
-
-    if (name === "name") {
-      filtered = value.replace(/[^a-zA-Z\u0C00-\u0C7F\u0900-\u097F\s]/g, "");
-    } else if (name === "email") {
-      filtered = value.replace(/[^a-zA-Z0-9@.]/g, "");
-    } else if (name === "phone") {
-      filtered = value.replace(/\D/g, "").slice(0, 10);
-    } else if (name === "message") {
-      filtered = value.replace(/[^a-zA-Z0-9\u0C00-\u0C7F\u0900-\u097F\s.,]/g, "");
-    }
-
+    if (name === "name") filtered = value.replace(/[^a-zA-Z\u0C00-\u0C7F\u0900-\u097F\s]/g, "");
+    else if (name === "email") filtered = value.replace(/[^a-zA-Z0-9@.]/g, "");
+    else if (name === "phone") filtered = value.replace(/\D/g, "").slice(0, 10);
+    else if (name === "message") filtered = value.replace(/[^a-zA-Z0-9\u0C00-\u0C7F\u0900-\u097F\s.,]/g, "");
     setFormData(prev => ({ ...prev, [name]: filtered }));
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: "" }));
   };
 
-  // ── Validation — message optional ────────────────────────────────────────
   const validate = () => {
     const errs = {};
-
     const nameTrimmed = formData.name.trim();
-    if (!nameTrimmed) {
-      errs.name = "Full name is required.";
-    } else if (nameTrimmed.length < 2) {
-      errs.name = "Name must be at least 2 characters.";
-    } else if (!/^[a-zA-Z\u0C00-\u0C7F\u0900-\u097F\s]+$/.test(nameTrimmed)) {
-      errs.name = "Name must contain letters only — no numbers or symbols.";
-    }
+    if (!nameTrimmed) errs.name = "Full name is required.";
+    else if (nameTrimmed.length < 2) errs.name = "Name must be at least 2 characters.";
+    else if (!/^[a-zA-Z\u0C00-\u0C7F\u0900-\u097F\s]+$/.test(nameTrimmed)) errs.name = "Name must contain letters only — no numbers or symbols.";
 
     const emailTrimmed = formData.email.trim();
-    if (!emailTrimmed) {
-      errs.email = "Email address is required.";
-    } else if (!/^[a-zA-Z0-9.]+@[a-zA-Z0-9.]+\.[a-zA-Z]{2,}$/.test(emailTrimmed)) {
-      errs.email = "Enter a valid email (e.g. name@example.com).";
-    } else if (emailTrimmed.includes("..")) {
-      errs.email = "Email cannot have consecutive dots.";
-    }
+    if (!emailTrimmed) errs.email = "Email address is required.";
+    else if (!/^[a-zA-Z0-9.]+@[a-zA-Z0-9.]+\.[a-zA-Z]{2,}$/.test(emailTrimmed)) errs.email = "Enter a valid email (e.g. name@example.com).";
+    else if (emailTrimmed.includes("..")) errs.email = "Email cannot have consecutive dots.";
 
     const phoneTrimmed = formData.phone.trim();
-    if (phoneTrimmed && !/^[6-9]\d{9}$/.test(phoneTrimmed)) {
-      errs.phone = "Enter a valid 10-digit number starting with 6–9.";
-    }
+    if (phoneTrimmed && !/^[6-9]\d{9}$/.test(phoneTrimmed)) errs.phone = "Enter a valid 10-digit number starting with 6–9.";
 
-    // ── Message: optional — entered అయితే మాత్రమే length check ──
     const msgTrimmed = formData.message.trim();
-    if (msgTrimmed.length > 0 && msgTrimmed.length < 5) {
-      errs.message = "Message must be at least 5 characters if provided.";
-    } else if (msgTrimmed.length > 1000) {
-      errs.message = "Message cannot exceed 1000 characters.";
-    }
+    if (msgTrimmed.length > 0 && msgTrimmed.length < 5) errs.message = "Message must be at least 5 characters if provided.";
+    else if (msgTrimmed.length > 1000) errs.message = "Message cannot exceed 1000 characters.";
 
     return errs;
   };
 
   const buildWhatsAppText = () => encodeURIComponent(
     `Hello BOBROS Team! 👋\n\n` +
-    `I came across your services and would love to know more.\n\n` +
+    `I would like to connect with you and know more about your services.\n\n` +
     `━━━━━━━━━━━━━━━━━━━━\n` +
     `📋 *My Details*\n` +
     `━━━━━━━━━━━━━━━━━━━━\n` +
@@ -127,12 +173,12 @@ const ContactUs = () => {
     `📱 *Phone:* ${formData.phone.trim() || "Not provided"}\n\n` +
     `💬 *My Message:*\n${formData.message.trim() || "No message provided."}\n\n` +
     `━━━━━━━━━━━━━━━━━━━━\n` +
-    `I would like to get more information about your services. Please let me know the next steps. Thank you! 🙏`
+    `I want to know more about your services. Please let me know the next steps. Thank you! 🙏`
   );
 
   const buildEmailBody = () => encodeURIComponent(
     `Hello BOBROS Team,\n\n` +
-    `I came across your services and would love to know more.\n\n` +
+    `I would like to connect with you and know more about your services.\n\n` +
     `─────────────────────────────\n` +
     `My Details:\n` +
     `─────────────────────────────\n` +
@@ -142,7 +188,7 @@ const ContactUs = () => {
     `My Message:\n` +
     `${formData.message.trim() || "No message provided."}\n\n` +
     `─────────────────────────────\n` +
-    `I would like to get more information about your services.\n` +
+    `I want to know more about your services and would love to explore how we can work together.\n` +
     `Please feel free to reach out to me at your earliest convenience.\n\n` +
     `Thank you,\n` +
     `${formData.name.trim()}`
@@ -170,13 +216,24 @@ const ContactUs = () => {
   };
 
   const cards = [
-    { icon: <Phone size={20} />, label: "Customer Support & Offline Booking", value: "+91-9133 133 456", sub: "Mon–Sat, 9:30am – 7:00pm" },
-    { icon: <MailIcon size={20} color="#fff" />, label: "Customer Support – Email", value: "customersupport@bobrosone.com", sub: "We reply within 24 hours" },
-    { icon: <MapPin size={20} />, label: "Registered Office", value: "1-232, Mulakaluru, Narasaraopet – 522601", sub: "Andhra Pradesh, India" },
-    { icon: <MapPin size={20} />, label: "Branch Office", value: "202, Block B, Anjanadri Residence, Aurobindo Colony, Miyapur", sub: "Hyderabad – 500049, Telangana, India" },
-    { icon: <MailIcon size={20} color="#fff" />, label: "Share Holders & Public Relations", value: "ir@bobroscapital.com", sub: "Investor inquiries welcome" },
-    { icon: <Clock size={20} />, label: "Business Hours", value: "9:30am – 7:00pm", sub: "Monday to Saturday (Except holidays)" },
+    { icon: <Phone size={20} />, label: "Customer Support & Offline Booking", value: "+91-9133 133 456", sub: "Mon–Sat, 9:30am – 7:30pm", href: "tel:+919133133456" },
+    { icon: <MailIcon size={20} color="#fff" />, label: "Customer Support – Email", value: "customersupport@bobrosone.com", sub: "We reply within 24 hours", href: "mailto:customersupport@bobrosone.com" },
+    { icon: <MapPin size={20} />, label: "Registered Office", value: "1-232, Mulakaluru, Narasaraopet – 522601", sub: "Andhra Pradesh, India", href: null },
+    { icon: <MapPin size={20} />, label: "Branch Office", value: "202, Block B, Anjanadri Residence, Aurobindo Colony, Miyapur", sub: "Hyderabad – 500049, Telangana, India", href: null },
+    { icon: <MailIcon size={20} color="#fff" />, label: "Share Holders & Public Relations", value: "ir@bobroscapital.com", sub: "Investor inquiries welcome", href: "mailto:ir@bobroscapital.com" },
+    { icon: <Clock size={20} />, label: "Business Hours", value: "9:30am – 7:30pm", sub: "Monday to Saturday (Except holidays)", href: null },
   ];
+
+ const leftPanelItems = [
+  { icon: <Phone size={16} />, text: "+91-9133 133 456", href: "tel:+919133133456" },
+  { 
+    icon: <MailIcon size={16} color="#FD561E" />, 
+    text: "customersupport@bobrosone.com", 
+    href: `mailto:customersupport@bobrosone.com?subject=${encodeURIComponent("Enquiry – BOBROS")}&body=${encodeURIComponent("Hello BOBROS Team,\n\nI would like to connect with you and know more about your services.\n\nThank you")}` 
+  },
+  { icon: <MapPin size={16} />, text: "Miyapur, Hyderabad – 500049", href: null },
+  { icon: <Clock size={16} />, text: "Mon–Sat, 9:30am – 7:30pm", href: null },
+];
 
   return (
     <div style={{ fontFamily: "'Segoe UI', 'Poppins', sans-serif", background: "#F0F2F8", minHeight: "100vh", marginTop: "80px", overflowX: "hidden" }}>
@@ -195,7 +252,7 @@ const ContactUs = () => {
           </p>
           <div style={{ display: "flex", gap: 12, alignItems: "center", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 30, padding: "8px 18px", flexWrap: "wrap", justifyContent: "center" }}>
             <Clock size={15} color="#FD561E" />
-            <span style={{ color: "rgba(255,255,255,0.85)", fontSize: "clamp(11px, 2.8vw, 13px)" }}>Business Hours: 9:30am – 7:00pm &nbsp;|&nbsp; Monday to Saturday</span>
+            <span style={{ color: "rgba(255,255,255,0.85)", fontSize: "clamp(11px, 2.8vw, 13px)" }}>Business Hours: 9:30am – 7:30pm &nbsp;|&nbsp; Monday to Saturday</span>
           </div>
         </div>
       </div>
@@ -209,22 +266,9 @@ const ContactUs = () => {
           <p style={{ fontSize: "clamp(13px, 3vw, 15px)", color: "#888", margin: "0 auto", maxWidth: "90%", padding: "0 16px" }}>Multiple ways to reach us — choose what works best for you.</p>
         </div>
 
-        {/* Cards */}
+        {/* ── CARDS ── */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: "clamp(16px, 3vw, 22px)", marginBottom: "clamp(40px, 8vw, 68px)" }}>
-          {cards.map((card, i) => (
-            <div key={i}
-              style={{ background: "#fff", borderRadius: 18, padding: "clamp(20px, 4vw, 26px) clamp(18px, 3.5vw, 24px)", boxShadow: "0 2px 16px rgba(0,0,0,0.06)", border: "1px solid rgba(0,0,0,0.05)", display: "flex", alignItems: "flex-start", gap: "clamp(12px, 2.5vw, 16px)", transition: "transform 0.2s, box-shadow 0.2s, border-color 0.2s", cursor: "default" }}
-              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-5px)"; e.currentTarget.style.boxShadow = "0 14px 36px rgba(253,86,30,0.13)"; e.currentTarget.style.borderColor = "rgba(253,86,30,0.22)"; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 2px 16px rgba(0,0,0,0.06)"; e.currentTarget.style.borderColor = "rgba(0,0,0,0.05)"; }}
-            >
-              <div style={{ width: "clamp(44px, 8vw, 50px)", height: "clamp(44px, 8vw, 50px)", borderRadius: 14, flexShrink: 0, background: "linear-gradient(135deg, #FD561E, #ff7a4d)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", boxShadow: "0 4px 14px rgba(253,86,30,0.3)" }}>{card.icon}</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: "clamp(9px, 2.2vw, 10.5px)", color: "#bbb", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.8, margin: "0 0 6px" }}>{card.label}</p>
-                <p style={{ fontSize: "clamp(12px, 3vw, 14.5px)", fontWeight: 700, color: "#1a1a2e", margin: "0 0 5px", lineHeight: 1.45, wordBreak: "break-word" }}>{card.value}</p>
-                <p style={{ fontSize: "clamp(10px, 2.5vw, 12px)", color: "#aaa", margin: 0 }}>{card.sub}</p>
-              </div>
-            </div>
-          ))}
+          {cards.map((card, i) => <ContactCard key={i} card={card} />)}
         </div>
 
         <div style={{ textAlign: "center", marginBottom: "clamp(28px, 5vw, 36px)" }}>
@@ -240,17 +284,7 @@ const ContactUs = () => {
             <div>
               <h3 style={{ fontSize: "clamp(20px, 5vw, 26px)", fontWeight: 800, color: "#fff", margin: "0 0 14px", lineHeight: 1.25 }}>We'd Love to<br />Hear From You</h3>
               <p style={{ fontSize: "clamp(12px, 2.8vw, 14px)", color: "rgba(255,255,255,0.55)", margin: "0 0 clamp(24px, 5vw, 40px)", lineHeight: 1.75 }}>Fill in the form and our team will respond within 24 hours.</p>
-              {[
-                { icon: <Phone size={16} />, text: "+91-9133 133 456" },
-                { icon: <MailIcon size={16} color="#FD561E" />, text: "customersupport@bobrosone.com" },
-                { icon: <MapPin size={16} />, text: "Miyapur, Hyderabad – 500049" },
-                { icon: <Clock size={16} />, text: "Mon–Sat, 9:30am – 7:00pm" },
-              ].map((item, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: "clamp(10px, 2.5vw, 14px)", marginBottom: "clamp(14px, 3vw, 18px)" }}>
-                  <div style={{ width: "clamp(32px, 7vw, 36px)", height: "clamp(32px, 7vw, 36px)", borderRadius: 10, flexShrink: 0, background: "rgba(253,86,30,0.18)", border: "1px solid rgba(253,86,30,0.3)", display: "flex", alignItems: "center", justifyContent: "center", color: "#FD561E" }}>{item.icon}</div>
-                  <span style={{ fontSize: "clamp(11px, 2.5vw, 13.5px)", color: "rgba(255,255,255,0.75)", wordBreak: "break-word" }}>{item.text}</span>
-                </div>
-              ))}
+              {leftPanelItems.map((item, i) => <LeftPanelItem key={i} item={item} />)}
             </div>
             {[{ size: 180, bottom: -60, right: -60 }, { size: 100, bottom: 60, right: 40 }, { size: 50, bottom: 140, right: 140 }].map((c, i) => (
               <div key={i} style={{ position: "absolute", borderRadius: "50%", width: c.size, height: c.size, bottom: c.bottom, right: c.right, border: "1.5px solid rgba(253,86,30,0.18)", background: "rgba(253,86,30,0.05)" }} />
@@ -260,39 +294,28 @@ const ContactUs = () => {
 
           {/* RIGHT form */}
           <div style={{ padding: "clamp(32px, 6vw, 48px) clamp(24px, 5vw, 52px)" }}>
-            <p style={{ fontSize: "clamp(20px, 2.8vw, 13.5px)", color: "#171616", margin: "0 0 clamp(20px, 4vw, 30px)" }}>
-              Enquiry Form
-            </p>
+            <p style={{ fontSize: "clamp(20px, 2.8vw, 13.5px)", color: "#171616", margin: "0 0 clamp(20px, 4vw, 30px)" }}>Enquiry Form</p>
 
             {submitted.show && (
               <div style={{ background: submitted.type === "whatsapp" ? "#f0fdf4" : "#eff6ff", border: `1px solid ${submitted.type === "whatsapp" ? "#86efac" : "#93c5fd"}`, borderRadius: 12, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10, marginBottom: 24, flexWrap: "wrap" }}>
                 <CheckCircle size={18} color={submitted.type === "whatsapp" ? "#16a34a" : "#2563eb"} />
                 <span style={{ fontSize: "clamp(12px, 2.8vw, 13.5px)", color: submitted.type === "whatsapp" ? "#15803d" : "#1d4ed8", fontWeight: 600 }}>
-                  {submitted.type === "whatsapp"
-                    ? "WhatsApp opened! Continue the conversation there. 💬"
-                    : "Email client opened! Your enquiry is ready to send. 📧"}
+                  {submitted.type === "whatsapp" ? "WhatsApp opened! Continue the conversation there. 💬" : "Email client opened! Your enquiry is ready to send. 📧"}
                 </span>
               </div>
             )}
 
             <div style={{ display: "flex", flexDirection: "column", gap: "clamp(16px, 3vw, 20px)" }}>
-
-              {/* Name + Phone */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "clamp(14px, 3vw, 18px)" }}>
                 <Field label="Full Name *" icon={<User size={15} />} error={errors.name}>
-                  <input
-                    name="name" value={formData.name} onChange={handleChange}
-                    placeholder="Enter Your Name"
+                  <input name="name" value={formData.name} onChange={handleChange} placeholder="Enter Your Name"
                     style={{ ...inputStyle, borderColor: errors.name ? "#e53e3e" : "#e8e8e8" }}
                     onFocus={e => { e.target.style.borderColor = errors.name ? "#e53e3e" : "#FD561E"; e.target.style.background = "#fff"; }}
                     onBlur={e => { e.target.style.borderColor = errors.name ? "#e53e3e" : "#e8e8e8"; e.target.style.background = "#fafafa"; }}
                   />
                 </Field>
                 <Field label="Phone Number *" icon={<Phone size={15} />} error={errors.phone}>
-                  <input
-                    name="phone" type="tel" value={formData.phone} onChange={handleChange}
-                    placeholder="10-digit mobile number"
-                    maxLength={10}
+                  <input name="phone" type="tel" value={formData.phone} onChange={handleChange} placeholder="10-digit mobile number" maxLength={10}
                     style={{ ...inputStyle, borderColor: errors.phone ? "#e53e3e" : "#e8e8e8" }}
                     onFocus={e => { e.target.style.borderColor = errors.phone ? "#e53e3e" : "#FD561E"; e.target.style.background = "#fff"; }}
                     onBlur={e => { e.target.style.borderColor = errors.phone ? "#e53e3e" : "#e8e8e8"; e.target.style.background = "#fafafa"; }}
@@ -300,28 +323,21 @@ const ContactUs = () => {
                 </Field>
               </div>
 
-              {/* Email */}
               <Field label="Email Address *" icon={<MailIcon size={15} color={errors.email ? "#e53e3e" : "#bbb"} />} error={errors.email}>
-                <input
-                  name="email" type="text" value={formData.email} onChange={handleChange}
-                  placeholder="name@example.com"
+                <input name="email" type="text" value={formData.email} onChange={handleChange} placeholder="name@example.com"
                   style={{ ...inputStyle, borderColor: errors.email ? "#e53e3e" : "#e8e8e8" }}
                   onFocus={e => { e.target.style.borderColor = errors.email ? "#e53e3e" : "#FD561E"; e.target.style.background = "#fff"; }}
                   onBlur={e => { e.target.style.borderColor = errors.email ? "#e53e3e" : "#e8e8e8"; e.target.style.background = "#fafafa"; }}
                 />
               </Field>
 
-              {/* Message — optional */}
               <div>
                 <label style={{ fontSize: "clamp(11px, 2.5vw, 12.5px)", fontWeight: 600, color: "#444", display: "block", marginBottom: 7 }}>
-                  Message
-                  <span style={{ fontSize: "clamp(9px, 2vw, 10px)", color: "#aaa", fontWeight: 400, marginLeft: 6 }}>(optional)</span>
+                  Message <span style={{ fontSize: "clamp(9px, 2vw, 10px)", color: "#aaa", fontWeight: 400, marginLeft: 6 }}>(optional)</span>
                 </label>
                 <div style={{ position: "relative" }}>
                   <MessageSquare size={15} color={errors.message ? "#e53e3e" : "#bbb"} style={{ position: "absolute", left: 12, top: 14 }} />
-                  <textarea
-                    name="message" value={formData.message} onChange={handleChange}
-                    rows={5}
+                  <textarea name="message" value={formData.message} onChange={handleChange} rows={5}
                     placeholder="Tell us what you'd like to know more about. (optional)"
                     style={{ ...inputStyle, paddingTop: 12, paddingBottom: 12, resize: "vertical", borderColor: errors.message ? "#e53e3e" : "#e8e8e8" }}
                     onFocus={e => { e.target.style.borderColor = errors.message ? "#e53e3e" : "#FD561E"; e.target.style.background = "#fff"; }}
@@ -329,9 +345,7 @@ const ContactUs = () => {
                   />
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
-                  {errors.message
-                    ? <p style={{ ...errorStyle, margin: 0 }}><span>⚠</span> {errors.message}</p>
-                    : <span />}
+                  {errors.message ? <p style={{ ...errorStyle, margin: 0 }}><span>⚠</span> {errors.message}</p> : <span />}
                   {formData.message.length > 0 && (
                     <span style={{ fontSize: "clamp(10px, 2vw, 11px)", color: formData.message.length > 900 ? "#e53e3e" : "#bbb", marginLeft: "auto", flexShrink: 0 }}>
                       {formData.message.length}/1000
@@ -340,29 +354,22 @@ const ContactUs = () => {
                 </div>
               </div>
 
-              {/* Buttons */}
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                <button
-                  onClick={handleWhatsApp}
+                <button onClick={handleWhatsApp}
                   style={{ flex: 1, minWidth: "140px", background: "linear-gradient(135deg, #25D366 0%, #128C7E 100%)", color: "#fff", border: "none", borderRadius: 12, padding: "clamp(12px, 3vw, 14px) clamp(16px, 3vw, 24px)", fontSize: "clamp(12px, 2.8vw, 14px)", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 4px 18px rgba(37,211,102,0.35)", fontFamily: "inherit", transition: "transform 0.15s, box-shadow 0.15s" }}
                   onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(37,211,102,0.5)"; }}
                   onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 4px 18px rgba(37,211,102,0.35)"; }}
                 >
-                  <WhatsAppIcon size={16} />
-                  Send WhatsApp
+                  <WhatsAppIcon size={16} /> Send WhatsApp
                 </button>
-
-                <button
-                  onClick={handleEmail}
+                <button onClick={handleEmail}
                   style={{ flex: 1, minWidth: "140px", background: "linear-gradient(135deg, #FD561E 0%, #ff7a4d 100%)", color: "#fff", border: "none", borderRadius: 12, padding: "clamp(12px, 3vw, 14px) clamp(16px, 3vw, 24px)", fontSize: "clamp(12px, 2.8vw, 14px)", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 8, boxShadow: "0 4px 18px rgba(253,86,30,0.38)", fontFamily: "inherit", transition: "transform 0.15s, box-shadow 0.15s" }}
                   onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(253,86,30,0.5)"; }}
                   onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 4px 18px rgba(253,86,30,0.38)"; }}
                 >
-                  <MailIcon size={16} color="#fff" />
-                  Send Enquiry
+                  <MailIcon size={16} color="#fff" /> Send Enquiry
                 </button>
               </div>
-
             </div>
           </div>
         </div>

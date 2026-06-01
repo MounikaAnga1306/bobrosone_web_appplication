@@ -148,6 +148,11 @@ const handleOpenCancel = () => {
   location.pathname === "/results" ||
   location.pathname.startsWith("/hotels/");
 
+  // ===== BILL PAYMENTS FLOW CHECK =====
+  // Bill Payments page (and its sub-routes) lo unnappudu profile dropdown
+  // lo vere headings chupinchadaniki ee flag use chestunnam.
+  const isBillPayment = location.pathname.toLowerCase().startsWith("/bill");
+
   useEffect(() => {
     if (!isDynamicPage) return;
     const handleScroll = () => setScrolled(window.scrollY > window.innerHeight * 0.5);
@@ -276,13 +281,27 @@ const handleOpenCancel = () => {
               {/* GUEST DROPDOWN */}
               {!isLoggedIn && openDropdown && (
                 <div className="absolute right-0 top-12 w-64 bg-white rounded-xl shadow-lg border border-gray-100 text-gray-700 overflow-hidden z-50">
-                  <div className="px-4 py-3 bg-gray-50">
-                    <p className="font-semibold text-gray-800">Hey Traveller</p>
-                    <p className="text-sm text-gray-500">Get exclusive deals & Manage your trips</p>
-                  </div>
-                  <button onClick={() => { setOpenDropdown(false); setAuthPage("signin"); setOpenAuthModal(true); }} className="mx-4 my-3 w-[calc(100%-32px)] cursor-pointer bg-[#fd561e] text-white font-semibold py-2.5 rounded-lg ">Login / Sign Up</button>
-                  <button onClick={() => { setOpenDropdown(false); setShowGuestBookings(true); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Bookings</button>
-                  <button onClick={() => { 
+                  {isBillPayment ? (
+                    /* ===== BILL PAYMENTS GUEST DROPDOWN (My Account raadu) ===== */
+                    <>
+                      <div className="px-4 py-3 bg-gray-50">
+                        <p className="font-semibold text-gray-800">Hey Traveller</p>
+                        <p className="text-sm text-gray-500">Manage your bill payments & transactions</p>
+                      </div>
+                      <button onClick={() => { setOpenDropdown(false); setAuthPage("signin"); setOpenAuthModal(true); }} className="mx-4 my-3 w-[calc(100%-32px)] cursor-pointer bg-[#fd561e] text-white font-semibold py-2.5 rounded-lg ">Login / Sign Up</button>
+                      <button onClick={() => { setOpenDropdown(false); navigate("/bill-transactions"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Transactions</button>
+                      <button onClick={() => { setOpenDropdown(false); navigate("/bill-complaints"); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Complaints</button>
+                    </>
+                  ) : (
+                    /* ===== EXISTING BUS/FLIGHTS GUEST DROPDOWN ===== */
+                    <>
+                      <div className="px-4 py-3 bg-gray-50">
+                        <p className="font-semibold text-gray-800">Hey Traveller</p>
+                        <p className="text-sm text-gray-500">Get exclusive deals & Manage your trips</p>
+                      </div>
+                      <button onClick={() => { setOpenDropdown(false); setAuthPage("signin"); setOpenAuthModal(true); }} className="mx-4 my-3 w-[calc(100%-32px)] cursor-pointer bg-[#fd561e] text-white font-semibold py-2.5 rounded-lg ">Login / Sign Up</button>
+                      <button onClick={() => { setOpenDropdown(false); setShowGuestBookings(true); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Bookings</button>
+                      <button onClick={() => { 
   setOpenDropdown(false); 
   if (location.pathname.startsWith("/flights")) { 
     setShowFlightPrintTicket(true); 
@@ -292,24 +311,39 @@ const handleOpenCancel = () => {
   } 
   window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
 }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 hover:text-blue-500 cursor-pointer">Print Ticket</button>
-                  <button onClick={handleOpenCancel} className="w-full text-left px-4 py-3 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Cancellation</button>
+                      <button onClick={handleOpenCancel} className="w-full text-left px-4 py-3 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Cancellation</button>
+                    </>
+                  )}
                 </div>
               )}
 
               {/* LOGGED IN DROPDOWN */}
               {isLoggedIn && openDropdown && (
                 <div className="absolute right-0 mt-3 w-56 bg-white rounded-xl shadow-lg border border-gray-100 text-gray-700 overflow-hidden z-50">
-                  <button onClick={() => { setOpenDropdown(false); navigate("/my-bookings"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 hover:text-blue-500 cursor-pointer hover:text-blue-500">My Booking</button>
-                  <button onClick={() => { setOpenDropdown(false); navigate("/my-account"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Account</button>
-                  <button onClick={handleOpenCancel} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Cancellation</button>
-                  <button onClick={() => { 
+                  {isBillPayment ? (
+                    /* ===== BILL PAYMENTS LOGGED-IN DROPDOWN ===== */
+                    <>
+                     <button onClick={() => { setOpenDropdown(false); navigate("/my-account?source=bill"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Account</button>
+                      <button onClick={() => { setOpenDropdown(false); navigate("/bill-transactions"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Transactions</button>
+                      <button onClick={() => { setOpenDropdown(false); navigate("/bill-complaints"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Complaints</button>
+                      <button onClick={handleLogout} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-red-500 cursor-pointer ">Logout</button>
+                    </>
+                  ) : (
+                    /* ===== EXISTING BUS/FLIGHTS LOGGED-IN DROPDOWN ===== */
+                    <>
+                      <button onClick={() => { setOpenDropdown(false); navigate("/my-bookings"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 hover:text-blue-500 cursor-pointer hover:text-blue-500">My Booking</button>
+                      <button onClick={() => { setOpenDropdown(false); navigate("/my-account?source=bill"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Account</button>
+                      <button onClick={handleOpenCancel} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Cancellation</button>
+                      <button onClick={() => { 
   setOpenDropdown(false); 
   window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
   if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); } 
   else { setPrintTin(""); setShowPrintTicket(true); } 
 }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Print Ticket</button>
-                  <button onClick={() => { setOpenDropdown(false); navigate("/my-profile"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Profile</button>
-                  <button onClick={handleLogout} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-red-500 cursor-pointer ">Logout</button>
+                      <button onClick={() => { setOpenDropdown(false); navigate("/my-profile"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Profile</button>
+                      <button onClick={handleLogout} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-red-500 cursor-pointer ">Logout</button>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -393,36 +427,61 @@ const handleOpenCancel = () => {
                   {/* Dropdown for both guest and logged in users */}
                   {mobileDropdownOpen && (
                     <div className="mt-2 bg-white rounded-lg border border-gray-200 overflow-hidden">
-                      {!isLoggedIn ? (
-                        <>
-                          <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200">
-                            <p className="font-medium text-gray-800 text-sm">Hey Traveller</p>
-                            <p className="text-xs text-gray-500">Get exclusive deals & Manage your trips</p>
-                          </div>
-                          <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); setAuthPage("signin"); setOpenAuthModal(true); }} className="w-full text-left px-4 py-2.5 bg-[#fd561e] text-white font-medium text-sm">Login / Sign Up</button>
-                          <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); setShowGuestBookings(true); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Bookings</button>
-                          <button onClick={() => { 
-  setMobileOpen(false); setMobileDropdownOpen(false); 
-  window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
-  if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); } 
-  else { setPrintTin(""); setShowPrintTicket(true); } 
-}} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Print Ticket</button>
-                          <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); handleOpenCancel(); }} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm">Cancellation</button>
-                        </>
+                      {isBillPayment ? (
+                        /* ===== BILL PAYMENTS MOBILE DROPDOWN ===== */
+                        !isLoggedIn ? (
+                          /* Guest -> My Account raadu */
+                          <>
+                            <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200">
+                              <p className="font-medium text-gray-800 text-sm">Hey Traveller</p>
+                              <p className="text-xs text-gray-500">Manage your bill payments & transactions</p>
+                            </div>
+                            <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); setAuthPage("signin"); setOpenAuthModal(true); }} className="w-full text-left px-4 py-2.5 bg-[#fd561e] text-white font-medium text-sm">Login / Sign Up</button>
+                            <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/bill-transactions"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Transactions</button>
+                            <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/bill-complaints"); }} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm">Complaints</button>
+                          </>
+                        ) : (
+                          /* Logged in -> My Account + Transactions + Complaints */
+                          <>
+                            <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-account?source=bill"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Account</button>
+                            <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/bill-transactions"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Transactions</button>
+                            <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/bill-complaints"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Complaints</button>
+                            <button onClick={handleLogout} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-red-500 text-sm">Logout</button>
+                          </>
+                        )
                       ) : (
-                        <>
-                          <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-bookings"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Booking</button>
-                          <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-account"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Account</button>
-                          <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); handleOpenCancel(); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Cancellation</button>
-                          <button onClick={() => { 
+                        /* ===== EXISTING BUS/FLIGHTS MOBILE DROPDOWN ===== */
+                        !isLoggedIn ? (
+                          <>
+                            <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200">
+                              <p className="font-medium text-gray-800 text-sm">Hey Traveller</p>
+                              <p className="text-xs text-gray-500">Get exclusive deals & Manage your trips</p>
+                            </div>
+                            <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); setAuthPage("signin"); setOpenAuthModal(true); }} className="w-full text-left px-4 py-2.5 bg-[#fd561e] text-white font-medium text-sm">Login / Sign Up</button>
+                            <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); setShowGuestBookings(true); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Bookings</button>
+                            <button onClick={() => { 
   setMobileOpen(false); setMobileDropdownOpen(false); 
   window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
   if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); } 
   else { setPrintTin(""); setShowPrintTicket(true); } 
 }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Print Ticket</button>
-                          <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-profile"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Profile</button>
-                          <button onClick={handleLogout} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-red-500 text-sm">Logout</button>
-                        </>
+                            <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); handleOpenCancel(); }} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm">Cancellation</button>
+                          </>
+                        ) : (
+                          <>
+                            <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-bookings"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Booking</button>
+                            <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-account"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Account</button>
+                            <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); handleOpenCancel(); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Cancellation</button>
+                            <button onClick={() => { 
+  setMobileOpen(false); setMobileDropdownOpen(false); 
+  window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
+  if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); } 
+  else { setPrintTin(""); setShowPrintTicket(true); } 
+}} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Print Ticket</button>
+                            <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-profile"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Profile</button>
+                            <button onClick={handleLogout} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-red-500 text-sm">Logout</button>
+                          </>
+                        )
                       )}
                     </div>
                   )}

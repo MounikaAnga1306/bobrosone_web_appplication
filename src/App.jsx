@@ -66,6 +66,8 @@ import BillHomeScreen from "./modules/Bill Payments/pages/BillHomeScreen";
 import BillersList from "./modules/Bill Payments/pages/Billerslist";
 import BillDetails from './modules/Bill Payments/pages/BillDetails';
 import BillPaymentStatus from "./modules/Bill Payments/pages/BillPaymentStatus";
+import Complaints from "./modules/Bill Payments/pages/Complaints";
+import Transactions from "./modules/Bill Payments/pages/Transactions";
  
 import { GoogleOAuthProvider } from "@react-oauth/google";
  
@@ -230,6 +232,8 @@ function App() {
                     <Route path="/billers" element={<BillersList />} />
                     <Route path="/bill-details" element={<BillDetails />} />
                     <Route path="/bill-payment-status" element={<BillPaymentStatus />} />
+                    <Route path="/bill-complaints" element={<Complaints />} />
+                    <Route path="/bill-transactions" element={<Transactions />} />
  
                     {/* Bus Routes - User Account */}
                     <Route path="/my-bookings" element={<MyBookings />} />

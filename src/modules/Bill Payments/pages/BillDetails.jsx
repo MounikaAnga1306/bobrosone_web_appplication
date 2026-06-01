@@ -664,15 +664,31 @@ const BillDetails = () => {
       const subscriberParamName = authenticators[0]?.parameter_name || "";
       const billlistPayload     = buildBilllistPayload();
 
-      sessionStorage.setItem("billPaymentCtx", JSON.stringify({
-        formData, userDetails, totalPayable, convFeeInfo, selectedPlan,
-        billerid: bd.billerid, billerName: bd.biller, billSummary, grandTotal,
-        method: selectedMethod, validationId, subscriberParamName,
-        upiId: selectedMethod === "UPI" ? (upiRef.current?.value?.trim() || "") : "",
-        authenticators: [{ parameter_name: subscriberParamName || "Mobile Number", value: formData[subscriberParamName] || "" }],
-        billlist: billlistPayload,
-        isMultiBill: isMultiMode && selectedBillIds.length > 1,
-      }));
+      const isGuestUser = !userDetails.uid || userDetails.uid.trim() === "";
+sessionStorage.setItem("billPaymentCtx", JSON.stringify({
+  formData,
+  totalPayable,
+  convFeeInfo,
+  selectedPlan,
+  billerid:           bd.billerid,
+  billerName:         bd.biller,
+  billSummary,
+  grandTotal,
+  method:             selectedMethod,
+  validationId,
+  subscriberParamName,
+  upiId:              selectedMethod === "UPI" ? (upiRef.current?.value?.trim() || "") : "",
+  authenticators:     [{ parameter_name: subscriberParamName || "Mobile Number", value: formData[subscriberParamName] || "" }],
+  billlist:           billlistPayload,
+  isMultiBill:        isMultiMode && selectedBillIds.length > 1,
+  // ✅ KEY FIX: logged-in → uid, guest → mobile as customerid
+  userDetails: {
+    name:   userDetails.name   || "Guest",
+    mobile: userDetails.mobile || "",
+    email:  userDetails.email  || "",
+    uid:    isGuestUser ? "" : (userDetails.uid || ""),
+  },
+}));
 
       const payload = {
         fare: Number(grandTotal), uid: userDetails.mobile, pname: userDetails.name,
@@ -682,6 +698,7 @@ const BillDetails = () => {
         authenticators: [{ parameter_name: subscriberParamName || "Mobile Number", value: formData[subscriberParamName] || "" }],
         billerName: bd.biller, isBbps: true,
         billlist: billlistPayload,
+        return_url: `${import.meta.env.VITE_APP_URL || window.location.origin}/bill-payment-status`,
       };
 
       const res = await fetch(`${API_BASE}bbps/billdesk/order`, {

@@ -42,6 +42,7 @@ const tabRoutes = {
 
 // Modern bus/transport background images
 const backgroundImages = [
+  "/assets/blue_image.png",
   "https://www.touristsecrets.com/wp-content/uploads/2023/10/washington-d-c-road-trippin-with-greyhound-1697125082.jpg",
   "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
   "https://img.freepik.com/premium-photo/bus-driving-road_81048-20397.jpg",

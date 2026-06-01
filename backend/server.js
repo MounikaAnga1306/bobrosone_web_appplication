@@ -15,7 +15,7 @@ const app = express();
 // Without this, req.ip is "::1" or "::ffff:127.0.0.1" in UAT
 // which the upstream BBPS API rejects as "Invalid device ip".
 // ======================================================
-app.set("trust proxy", true);
+app.set("trust proxy", 1);
 
 // ======================================================
 // HELPER: Sanitize IP address
@@ -42,7 +42,7 @@ const sanitizeIp = (raw) => {
   return ip;
 };
 
-const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, message: "Too many requests, please try again later." });
+const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, message: "Too many requests, please try again later.",validate: { trustProxy: false }, });
 app.use(cors({ origin: true, methods: ["GET", "POST"], credentials: true }));
 app.use(limiter);
 app.use(express.json());
@@ -245,7 +245,9 @@ app.post("/verifyPayment", async (req, res) => {
 app.post("/bbps/billdesk/order", async (req, res) => {
   try {
     const { fare, uid, pname, email, tickid, billerid, validationId, paymentMethod, upiId, authenticators, billerName, isBbps } = req.body;
-    const returnUrl = "https://uat.bobros.co.in/bill-payment-status";
+    // ✅ ఇలా మార్చు:
+const APP_URL = process.env.APP_URL || "http://localhost:5173";
+const returnUrl = req.body.return_url || `${APP_URL}/bill-payment-status`;
 
     const payload = {
       fare: parseFloat(fare).toFixed(2),
@@ -615,12 +617,179 @@ app.post("/bill/retrieve-recharge-plan", async (req, res) => {
     res.status(error.response?.status || 500).json({ success: false, message: error.response?.data?.message || error.message || "Failed to fetch recharge plans", error: error.response?.data });
   }
 });
+// =========================
+// BBPS COMPLAINT (Bill Payments)
+// Legacy raise_complaints.php ne mirror chestundi.
+// Route name "/bill/complaint" (upstream path tho clash kakunda — loop avoid)
+// PHP laage oauth ledu.
+// =========================
+app.post("/bill/complaint", async (req, res) => {
+  try {
+    const {
+      userName, userEmail, userMobile,
+      b_connect_transactionId, disposition,
+      complaintSource, description,
+    } = req.body;
+
+    // PHP validation rules
+    if (!userName || !userEmail || !userMobile || !description) {
+      return res.status(400).json({ success: false, message: "Name, email, mobile and description are required" });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userEmail)) {
+      return res.status(400).json({ success: false, message: "Invalid email" });
+    }
+    if (!/^[0-9]{10}$/.test(String(userMobile))) {
+      return res.status(400).json({ success: false, message: "Invalid mobile" });
+    }
+
+    // PHP $payload ne exact ga match
+    const payload = {
+      userName,
+      userEmail,
+      userMobile,
+      b_connect_transactionId: b_connect_transactionId || "",
+      disposition: disposition || "",
+      complaintSource: complaintSource || "",
+      description,
+    };
+
+    const response = await axios.post(
+      "https://api.bobros.co.in/email/bbps-complaint",
+      payload,
+      { headers: { "Content-Type": "application/json" }, timeout: 15000 }
+    );
+
+    console.log("[BBPS COMPLAINT] response:", response.status);
+    return res.json({ success: true, data: response.data });
+
+  } catch (error) {
+    console.error("[BBPS COMPLAINT] Error:", error.response?.status, error.message);
+    return res.status(error.response?.status || 500).json({
+      success: false,
+      message: error.response?.data?.message || error.message || "Failed to submit complaint",
+      error: error.response?.data,
+    });
+  }
+});
+
+
+// =========================
+// BILL TRANSACTIONS - SEARCH (upayments)
+// Flutter TransactionSearchScreen _fetchTransactions ne mirror chestundi.
+// Route name "/bill/txn-search" — upstream "/db/select" tho clash kakunda (loop avoid)
+// =========================
+app.post("/bill/txn-search", async (req, res) => {
+  try {
+    const { mobile, email, transactionId } = req.body;
+    if (!mobile) return res.status(400).json({ success: false, message: "mobile required" });
+
+    let conditions;
+    if (email && !transactionId) {
+      conditions = { tmobile: String(mobile), temail: String(email).toLowerCase().trim() };
+    } else if (transactionId && !email) {
+      conditions = { tmobile: String(mobile), paymentid: String(transactionId).trim() };
+    } else {
+      return res.status(400).json({ success: false, message: "Provide email OR transactionId" });
+    }
+
+    const response = await axios.post(
+      "https://api.bobros.co.in/db/select",
+      { table: "upayments", columns: ["*"], conditions },
+      { headers: { "Content-Type": "application/json" }, timeout: 30000 }
+    );
+    return res.json({ success: true, rows: response.data?.rows || [] });
+  } catch (error) {
+    console.error("[TXN SEARCH] Error:", error.response?.status, error.message);
+    return res.status(error.response?.status || 500).json({ success: false, message: "Failed to fetch transactions", error: error.response?.data });
+  }
+});
+
+// =========================
+// BILL OTP - SEND
+// =========================
+app.post("/bill/send-otp", async (req, res) => {
+  try {
+    const { mobile } = req.body;
+    if (!mobile) return res.status(400).json({ success: false, message: "mobile required" });
+    const response = await axios.post(
+      "https://api.bobros.co.in/sms/sendotp",
+      { mobile: String(mobile), templateName: "BOBROSOTP" },
+      { headers: { "Content-Type": "application/json" }, timeout: 30000 }
+    );
+    const ok = response.data?.status === "ok";
+    return res.json({ success: ok, status: response.data?.status, message: response.data?.message, data: response.data });
+  } catch (error) {
+    console.error("[SEND OTP] Error:", error.response?.status, error.message);
+    return res.status(error.response?.status || 500).json({ success: false, message: "Failed to send OTP" });
+  }
+});
+
+// =========================
+// BILL OTP - VERIFY
+// =========================
+app.post("/bill/verify-otp", async (req, res) => {
+  try {
+    const { mobile, otp } = req.body;
+    if (!mobile || !otp) return res.status(400).json({ success: false, message: "mobile and otp required" });
+    const response = await axios.post(
+      "https://api.bobros.co.in/sms/verifyotp",
+      { mobile: String(mobile), otp: String(otp) },
+      { headers: { "Content-Type": "application/json" }, timeout: 30000 }
+    );
+    const d = response.data || {};
+    const ok = d.status === "ok" || d.status === "success" || d.success === true;
+    return res.json({ success: ok, status: d.status, message: d.message, data: d });
+  } catch (error) {
+    console.error("[VERIFY OTP] Error:", error.response?.status, error.message);
+    return res.status(error.response?.status || 500).json({ success: false, message: "OTP verification failed" });
+  }
+});
+
+// =========================
+// BILL TRANSACTION DETAILS — retrieve-payments (oauth signed, like print-ticket)
+// Flutter TransactionPaymentDetailsScreen ne mirror chestundi
+// =========================
+app.post("/bill/txn-details", async (req, res) => {
+  try {
+    const { paymentid, mobile, customerid } = req.body;
+    if (!paymentid) return res.status(400).json({ success: false, message: "paymentid required" });
+
+    const payload = { paymentid: String(paymentid), customerid: String(customerid || mobile || "") };
+    const url = `${process.env.BASE_URL}/payments/retrieve-payments`;
+
+    console.log("[TXN DETAILS] payload:", payload);
+
+    const headers = oauth.toHeader(oauth.authorize({ url, method: "POST", body: payload }));
+    headers["Content-Type"] = "application/json";
+    console.log("[TXN DETAILS] url:", url);              // 👈 ADD
+console.log("[TXN DETAILS] auth header:", headers.Authorization?.slice(0, 60));
+
+    const response = await axios.post(url, payload, { headers, timeout: 30000 });
+
+    console.log("[TXN DETAILS] upstream OK");
+    return res.json({ success: true, data: response.data });
+  } catch (error) {
+    console.error("[TXN DETAILS] Error:", error.response?.status, error.message);
+    console.error("[TXN DETAILS] upstream body:", JSON.stringify(error.response?.data));
+    const code = error.response?.status;
+    const msg =
+      code === 404 ? "Transaction not found with the provided details" :
+      code === 400 ? "Invalid payment ID or mobile number" :
+      "Failed to fetch transaction details";
+    return res.status(code || 500).json({ success: false, message: msg, error: error.response?.data });
+  }
+});
+
 
 // =========================
 // React Routing
 // =========================
-app.use(express.static(path.join(__dirname, "public", "dist")));
-app.get("*", (req, res) => { res.sendFile(path.join(__dirname, "public", "dist", "index.html")); });
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "public", "dist")));
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "dist", "index.html"));
+  });
+}
 
 // =========================
 // START SERVER
