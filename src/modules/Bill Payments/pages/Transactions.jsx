@@ -104,6 +104,13 @@ const pick = (row, keys) => {
   }
   return null;
 };
+// Latest transaction top lo — pdat (transaction date) descending sort
+const sortByDate = (raw) =>
+  [...(raw || [])].sort((a, b) => {
+    const da = new Date(String(a?.pdat || "").replace(" ", "T")).getTime() || 0;
+    const db = new Date(String(b?.pdat || "").replace(" ", "T")).getTime() || 0;
+    return db - da;
+  });
 const fmtDate = (val) => {
   if (!val) return "—";
   const d = new Date(String(val).replace(" ", "T"));
@@ -124,6 +131,16 @@ const statusColor = (status) => {
   if (s.includes("fail") || s.includes("reject")) return "text-red-600";
   if (s.includes("pend")) return "text-amber-600";
   return "text-gray-700";
+};
+
+// Stored user object nunchi field teesukovadaniki (multiple possible keys)
+const grab = (obj, keys) => {
+  if (!obj) return "";
+  for (const k of keys) {
+    const v = obj[k];
+    if (v !== undefined && v !== null && String(v).trim() !== "") return v;
+  }
+  return "";
 };
 
 /* ---------------- Popup section ---------------- */
@@ -177,13 +194,34 @@ const TransactionCard = ({ row, onMore }) => (
 const Transactions = () => {
   const navigate = useNavigate();
 
-  // Logged-in user uid (localStorage) — Complaints lo unna pattern ne follow chesa
+  /* =====================================================================
+     LOGGED-IN USER CHECK
+     - Login unte: direct ga transactions open avvali (search + OTP skip).
+       Profile lo unna mobile/email/uid tho auto fetch chestam.
+     - Login lekapote (or mobile profile lo lekapote): existing
+       "Transaction Verification" (search -> OTP -> details) flow.
+     ===================================================================== */
   const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-  const loggedInUid =
-    storedUser?.user?.uid || storedUser?.uid ||
-    storedUser?.user?.id  || storedUser?.id  || "";
+  const userObj = storedUser?.user || storedUser || {};
 
-  const [step, setStep] = useState("search"); // search | otp | details
+  const loggedInUid =
+    grab(userObj, ["uid", "id"]) || grab(storedUser, ["uid", "id"]) || "";
+
+  // Profile mobile (country code unte chివరి 10 digits teesukుంటాం)
+  const loggedInMobile = String(
+    grab(userObj,  ["umobile", "mobile", "phone", "mobileno", "mobile_no", "phno", "contact"]) ||
+    grab(storedUser, ["umobile", "mobile", "phone", "mobileno", "mobile_no", "phno", "contact"]) || ""
+  ).replace(/[^0-9]/g, "").slice(-10);
+
+  const loggedInEmail =
+    grab(userObj,  ["uemail", "email", "mail", "emailid", "email_id"]) ||
+    grab(storedUser, ["uemail", "email", "mail", "emailid", "email_id"]) || "";
+
+  const isLoggedIn = !!loggedInUid;
+  const canAutoLoad = isLoggedIn && !!loggedInMobile;
+
+  // Login + mobile unte "auto" (silent loading) tho start, lekapote "search"
+  const [step, setStep] = useState(canAutoLoad ? "auto" : "search"); // auto | search | otp | details
 
   const [opt1Mobile, setOpt1Mobile] = useState("");
   const [opt1Email, setOpt1Email] = useState("");
@@ -191,6 +229,7 @@ const Transactions = () => {
   const [opt2TxnId, setOpt2TxnId] = useState("");
   const [errors, setErrors] = useState({});
   const [apiError, setApiError] = useState("");
+  const [autoError, setAutoError] = useState(""); // logged-in auto fetch error
 
   const [checking, setChecking] = useState(false);
   const [sendingOtp, setSendingOtp] = useState(false);
@@ -210,7 +249,39 @@ const Transactions = () => {
   const [dialog, setDialog] = useState(null);   // {title, message}
   const [details, setDetails] = useState(null);  // {loading,row,error,paymentId}
 
+  // ===== Logged-in auto fetch (no OTP) =====
+  const autoLoadTransactions = async () => {
+    if (!loggedInMobile) { setStep("search"); return; } // mobile lekapote manual verify
+    setStep("auto");
+    setAutoError(""); setApiError("");
+    try {
+      // Login identity already authenticated kabatti OTP avasaram ledu.
+      // Backend ki uid kuda pamputunnam — supported aithe daani base ga
+      // search cheyyochu, lekapothe mobile/email tho serve avtundi.
+      const body = {
+        mobile: loggedInMobile,
+        uid: loggedInUid,
+        ...(loggedInEmail ? { email: loggedInEmail } : {}),
+      };
+      const res = await axios.post(`${API_BASE_URL}/bill/txn-search`, body, {
+        headers: { "Content-Type": "application/json" }, timeout: 30000,
+      });
+      const rows = sortByDate(res.data?.rows || []);
+      setVMobile(loggedInMobile); setVEmail(loggedInEmail); setVTxnId(""); setUseTxnId(false);
+      setTransactions(rows);
+      setStep("details");
+    } catch (err) {
+      setAutoError(err.response?.data?.message || "Failed to load your transactions. Please try again.");
+    }
+  };
+
   useEffect(() => { window.scrollTo({ top: 0, behavior: "smooth" }); }, [step]);
+
+  // Mount lo login unte auto fetch trigger
+  useEffect(() => {
+    if (canAutoLoad) autoLoadTransactions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (step !== "otp" || canResend) return;
@@ -249,13 +320,7 @@ const Transactions = () => {
       const res = await axios.post(`${API_BASE_URL}/bill/txn-search`, body, {
         headers: { "Content-Type": "application/json" }, timeout: 30000,
       });
-      const raw = res.data?.rows || [];
-      // Latest transaction top lo — pdat (transaction date) descending sort
-      const rows = [...raw].sort((a, b) => {
-        const da = new Date(String(a?.pdat || "").replace(" ", "T")).getTime() || 0;
-        const db = new Date(String(b?.pdat || "").replace(" ", "T")).getTime() || 0;
-        return db - da;
-      });
+      const rows = sortByDate(res.data?.rows || []);
       if (rows.length > 0) {
         setTransactions(rows);
         setVMobile(mobile); setVEmail(email); setVTxnId(txnId); setUseTxnId(mode === "txn");
@@ -323,6 +388,15 @@ const Transactions = () => {
     setTransactions([]); setVMobile(""); setVEmail(""); setVTxnId(""); setUseTxnId(false);
   };
 
+  // Back button: login user ki search/otp ledu kabatti direct BillHomePage ki.
+  const handleBack = () => {
+    if (step === "otp") { backToSearch(); return; }
+    if (step === "details" && !isLoggedIn) { backToSearch(); return; }
+    navigate("/BillHomePage");
+  };
+  const backLabel =
+    (step === "otp" || (step === "details" && !isLoggedIn)) ? "Back" : "Back to Bill Payments";
+
   // View More -> 1 API call (Payment ID lekapote popup error)
   const fetchDetails = async (pid, cust) => {
     setDetails((d) => ({ ...(d || {}), loading: true, error: "", paymentId: pid, customerId: cust ?? d?.customerId }));
@@ -363,11 +437,38 @@ const Transactions = () => {
     <div className="min-h-screen bg-gray-50 pt-24 pb-12 px-4">
       <div className={step === "details" ? "max-w-6xl mx-auto" : "max-w-2xl mx-auto"}>
         <button
-          onClick={() => (step === "search" ? navigate("/BillHomePage") : backToSearch())}
+          onClick={handleBack}
           className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-[#fd561e] mb-4 transition-colors cursor-pointer"
         >
-          <ChevronLeft className="w-4 h-4" /> {step === "search" ? "Back to Bill Payments" : "Back"}
+          <ChevronLeft className="w-4 h-4" /> {backLabel}
         </button>
+
+        {/* ===== AUTO (logged-in silent load) ===== */}
+        {step === "auto" && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+            {autoError ? (
+              <div className="text-center">
+                <AlertTriangle className="w-12 h-12 mx-auto text-amber-400 mb-3" />
+                <p className="text-sm text-gray-700 mb-5">{autoError}</p>
+                <div className="flex items-center justify-center gap-3">
+                  <button onClick={autoLoadTransactions}
+                    className="px-5 py-2.5 rounded-xl bg-[#fd561e] text-white text-sm font-semibold hover:bg-[#e04d19] transition-colors cursor-pointer">
+                    Retry
+                  </button>
+                  <button onClick={() => { setAutoError(""); setStep("search"); }}
+                    className="px-5 py-2.5 rounded-xl border border-gray-200 text-gray-700 text-sm font-semibold hover:bg-gray-50 transition-colors cursor-pointer">
+                    Verify manually
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="py-10 flex flex-col items-center text-gray-500">
+                <Loader2 className="w-8 h-8 animate-spin text-[#fd561e] mb-4" />
+                <span className="text-sm">Loading your transactions...</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ===== SEARCH ===== */}
         {step === "search" && (
@@ -487,7 +588,13 @@ const Transactions = () => {
                 <h1 className="text-xl font-bold text-gray-900">Transaction Details</h1>
                 <p className="text-sm text-gray-500">{transactions.length} record(s) found</p>
               </div>
-              <button onClick={resetAll} className="text-sm font-semibold text-[#fd561e] hover:underline cursor-pointer">Search again</button>
+              {isLoggedIn ? (
+                <button onClick={autoLoadTransactions} className="inline-flex items-center gap-1 text-sm font-semibold text-[#fd561e] hover:underline cursor-pointer">
+                  <RefreshCw className="w-4 h-4" /> Refresh
+                </button>
+              ) : (
+                <button onClick={resetAll} className="text-sm font-semibold text-[#fd561e] hover:underline cursor-pointer">Search again</button>
+              )}
             </div>
             {transactions.length === 0 ? (
               <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center text-gray-500">No transactions to show.</div>

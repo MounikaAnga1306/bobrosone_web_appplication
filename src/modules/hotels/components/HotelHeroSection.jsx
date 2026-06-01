@@ -297,7 +297,7 @@ const HotelHeroSection = () => {
     <>
       {GuestsModal}
 
-      <section className="relative min-h-[470px] md:min-h-[460px] flex items-center justify-center py-4 md:py-0 overflow-hidden">
+      <section className="relative min-h-[540px] md:min-h-[500px] lg:min-h-[460px] flex items-center justify-center py-4 md:py-0 overflow-hidden">
         <div
           className="absolute inset-0 w-full h-full bg-cover bg-center bg-no-repeat"
           style={{
@@ -308,7 +308,7 @@ const HotelHeroSection = () => {
 
         <div className="relative z-10 w-full max-w-6xl px-4 sm:px-6">
           <div className="text-center mb-2 sm:mb-6 text-white">
-            <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-bold mt-2 md:-mt-6">
+            <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-bold mt-2 md:mt-12 lg:-mt-6">
               Stay Comfortably, Travel Happily
             </h1>
             <p className="text-xs sm:text-sm md:text-lg opacity-90 mt-1 sm:mt-2">
@@ -318,29 +318,31 @@ const HotelHeroSection = () => {
 
           <div className="relative bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl p-4 sm:p-6 pb-8 border border-white/20">
             {/* Desktop Tabs */}
-            <div className="hidden lg:flex gap-4 mb-8">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                const active = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => {
-                      setActiveTab(tab.id);
-                      navigate(tabRoutes[tab.id]);
-                    }}
-                    className={`flex items-center gap-2 px-6 py-3 rounded-full cursor-pointer text-sm font-semibold transition-all duration-300 border ${
-                      active
-                        ? "bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white border-transparent shadow-lg scale-105"
-                        : "border-gray-200 text-gray-600 hover:border-[#FD561E] hover:text-[#FD561E]"
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    {tab.label}
-                  </button>
-                );
-              })}
-            </div>
+            <div className="flex flex-nowrap md:flex-wrap items-center justify-between md:justify-start gap-1.5 sm:gap-2 md:gap-3 mb-6 md:mb-8">
+  {tabs.map((tab) => {
+    const Icon = tab.icon;
+    const active = activeTab === tab.id;
+    return (
+      <button
+        key={tab.id}
+        onClick={() => {
+          setActiveTab(tab.id);
+          navigate(tabRoutes[tab.id]);
+        }}
+        title={tab.label}
+        aria-label={tab.label}
+        className={`flex-1 md:flex-none flex items-center justify-center gap-0 md:gap-1.5 lg:gap-2 py-2 px-2.5 md:px-2.5 lg:px-4 xl:px-5 md:py-1.5 lg:py-2 xl:py-2.5 cursor-pointer rounded-xl md:rounded-full text-[11px] md:text-xs lg:text-sm font-semibold transition-all duration-300 border ${
+          active
+            ? "bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white border-transparent shadow-lg lg:scale-105"
+            : "border-gray-200 text-gray-600 hover:border-[#FD561E] hover:text-[#FD561E] bg-white/80"
+        }`}
+      >
+        <Icon className="w-6 h-6 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 flex-shrink-0" />
+        <span className="hidden md:inline">{tab.label}</span>
+      </button>
+    );
+  })}
+</div>
 
             {/* Desktop / Tablet grid (unchanged) */}
             <div className="hidden md:block">

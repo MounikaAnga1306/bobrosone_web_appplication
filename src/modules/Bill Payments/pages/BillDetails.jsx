@@ -997,7 +997,7 @@ sessionStorage.setItem("billPaymentCtx", JSON.stringify({
             ))}
           </div>
           {/* Logo with fallback to text badge */}
-          <div className="shrink-0 ml-3 sm:ml-4">
+           <div className="hidden sm:block shrink-0 sm:ml-4">
             {!logoError ? (
               <img
                 src="/assets/Bharat_connect_logo.png"

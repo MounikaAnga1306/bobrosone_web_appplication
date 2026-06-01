@@ -348,26 +348,28 @@ const BookingForm = () => {
 
         <div className="relative bg-white/95 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-2xl p-3 sm:p-4 md:p-6 lg:p-8 border border-white/20">
           {/* TABS - desktop only */}
-          <div className="hidden lg:flex gap-3 mb-6 md:mb-8">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const active = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => { setActiveTab(tab.id); navigate(tabRoutes[tab.id]); }}
-                  className={`flex items-center gap-2 px-3 lg:px-4 xl:px-5 py-1.5 lg:py-2 xl:py-2.5 cursor-pointer rounded-full text-xs sm:text-sm font-semibold transition-all duration-300 border ${
-                    active
-                      ? "bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white border-transparent shadow-lg scale-105"
-                      : "border-gray-200 text-gray-600 hover:border-[#FD561E] hover:text-[#FD561E] bg-white/80"
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </div>
+        <div className="flex flex-nowrap md:flex-wrap items-center justify-between md:justify-start gap-1.5 sm:gap-2 md:gap-3 mb-6 md:mb-8">
+  {tabs.map((tab) => {
+    const Icon = tab.icon;
+    const active = activeTab === tab.id;
+    return (
+      <button
+        key={tab.id}
+        onClick={() => { setActiveTab(tab.id); navigate(tabRoutes[tab.id]); }}
+        title={tab.label}
+        aria-label={tab.label}
+        className={`flex-1 md:flex-none flex items-center justify-center gap-0 md:gap-2 py-2 px-2.5 md:px-3 lg:px-4 xl:px-5 md:py-2 xl:py-2.5 cursor-pointer rounded-xl md:rounded-full text-[11px] md:text-sm font-semibold transition-all duration-300 border ${
+          active
+            ? "bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white border-transparent shadow-lg md:scale-105"
+            : "border-gray-200 text-gray-600 hover:border-[#FD561E] hover:text-[#FD561E] bg-white/80"
+        }`}
+      >
+        <Icon className="w-6 h-6 md:w-4 md:h-4 flex-shrink-0" />
+        <span className="hidden md:inline">{tab.label}</span>
+      </button>
+    );
+  })}
+</div>
 
           {/* ── MOBILE FORM ── (unchanged) */}
           <div className="md:hidden space-y-0">
