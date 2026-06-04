@@ -103,7 +103,7 @@ const SeatSelection = ({
           isVertSlp(seat)
             ? { height: 75, width: 45 }
             : isHorizSlp(seat)
-            ? { height: 70, width: 78 }
+            ? { height: 54, width: 98 }
             : { height: 45, width: 40 }
         }
       />
@@ -124,80 +124,88 @@ const SeatSelection = ({
   const renderUnifiedGrid = (deckSeats) => {
     if (!deckSeats.length) return null;
 
-    const GAP          = 0;
     const SEATER_H     = 48;
     const SEATER_W     = 40;
     const VERT_H       = 40;
     const VERT_W       = 30;
-    const HORIZ_HALF_H = 78;
+    const HORIZ_HALF_H = 44;   // berth row height = berth image height (54), so
+                               // the top berth pair sits tight (no gap). The
+                               // single 3rd berth is separated by GAP_ROW below.
     const HORIZ_W      = 80;
 
+    const COL_GAP = 6;         // a little space between columns (seaters/berths)
+    const ROW_GAP = 0;         // no gap between consecutive rows (berth pair sits tight)
+    const GAP_ROW = 30;         // height of an empty (skipped) row -> shows as a
+                               // real vertical gap, e.g. between a close berth
+                               // pair and the next berth. Tweak to taste.
+
+    // A horizontal sleeper is stored as width:1 in the API data but is
+    // physically as wide as 2 seaters (HORIZ_W = 2 x SEATER_W). Treating it as
+    // a 2-column span lets the sleeper berths sit flush next to each other (no
+    // empty gap column) and line up exactly with the seaters below them, while
+    // seaters keep their original 40px column width unchanged.
+    const colSpan = (s) => (isHorizSlp(s) ? 2 : s.width);
+
     const minCol = Math.min(...deckSeats.map((s) => s.column));
-    const maxCol = Math.max(...deckSeats.map((s) => s.column + s.width - 1));
+    const maxCol = Math.max(...deckSeats.map((s) => s.column + colSpan(s) - 1));
     const totalCols = maxCol - minCol + 1;
 
-    const startRows = new Set(deckSeats.map((s) => s.row));
+    // Honour the spacing the API encodes via row numbers. Consecutive rows
+    // (e.g. 1 then 2) sit close together as a pair, but a skipped row number
+    // (e.g. 2 then 4 — row 3 missing) becomes a real vertical gap. This makes
+    // the two berth lines sit close while leaving a gap before the next berth,
+    // like a real sleeper bus, instead of spacing every row out evenly.
+    const startRowsArr = [...new Set(deckSeats.map((s) => s.row))].sort((a, b) => a - b);
+    const startRowSet  = new Set(startRowsArr);
+    const minRow = startRowsArr[0];
+    const maxRow = startRowsArr[startRowsArr.length - 1];
 
-    const spanRows = new Set();
-    deckSeats.forEach((s) => {
-      for (let r = s.row + 1; r < s.row + s.length; r++) spanRows.add(r);
-    });
-
-    const allNeededRows = [...new Set([...startRows, ...spanRows])].sort((a, b) => a - b);
-
-    const rowHeightMap = {};
-    allNeededRows.forEach((apiRow) => {
-      if (spanRows.has(apiRow) && !startRows.has(apiRow)) {
-        rowHeightMap[apiRow] = null;
-      } else {
-        let h = 0;
-        deckSeats.forEach((s) => {
-          if (s.row !== apiRow) return;
-          if (isVertSlp(s))  { h = Math.max(h, VERT_H);       return; }
-          if (isHorizSlp(s)) { h = Math.max(h, HORIZ_HALF_H); return; }
-          h = Math.max(h, SEATER_H);
-        });
-        rowHeightMap[apiRow] = h || SEATER_H;
-      }
-    });
-
-    const realRows = allNeededRows.filter((r) => rowHeightMap[r] !== null);
-    const gridRowToIdx = {};
-    realRows.forEach((apiRow, idx) => { gridRowToIdx[apiRow] = idx + 1; });
-
-    const getGridRow = (apiRow) => {
-      if (gridRowToIdx[apiRow] !== undefined) return gridRowToIdx[apiRow];
-      for (let r = apiRow - 1; r >= 0; r--) {
-        if (gridRowToIdx[r] !== undefined) return gridRowToIdx[r];
-      }
-      return 1;
+    const rowStartHeight = (apiRow) => {
+      let h = 0;
+      deckSeats.forEach((s) => {
+        if (s.row !== apiRow) return;
+        if (isVertSlp(s))  { h = Math.max(h, VERT_H);       return; }
+        if (isHorizSlp(s)) { h = Math.max(h, HORIZ_HALF_H); return; }
+        h = Math.max(h, SEATER_H);
+      });
+      return h || SEATER_H;
     };
 
-    const gridRowHeights = realRows.map((apiRow) => `${rowHeightMap[apiRow]}px`);
+    const gridRowHeightsArr = [];
+    const gridRowToIdx = {};
+    for (let r = minRow; r <= maxRow; r++) {
+      gridRowHeightsArr.push(startRowSet.has(r) ? rowStartHeight(r) : GAP_ROW);
+      gridRowToIdx[r] = gridRowHeightsArr.length; // 1-based grid row index
+    }
+
+    const getGridRow = (apiRow) => gridRowToIdx[apiRow] ?? 1;
+    const gridRowHeights = gridRowHeightsArr.map((h) => `${h}px`);
 
     const colWidths = Array.from({ length: totalCols }, (_, ci) => {
       const gridCol = ci + 1;
       let w = 0;
 
+      // single-column seats (seaters). Horizontal sleepers span 2 columns and
+      // are handled in the multi-column pass below.
       deckSeats.forEach((s) => {
-        if (s.width !== 1) return;
+        if (colSpan(s) !== 1) return;
         const colStart = s.column - minCol + 1;
         if (colStart !== gridCol) return;
-        if (isVertSlp(s))  { w = Math.max(w, VERT_W);  return; }
-        if (isHorizSlp(s)) { w = Math.max(w, HORIZ_W); return; }
+        if (isVertSlp(s)) { w = Math.max(w, VERT_W); return; }
         w = Math.max(w, SEATER_W);
       });
 
-      if (w === 0) {
-        deckSeats.forEach((s) => {
-          if (s.width <= 1) return;
-          const colStart = s.column - minCol + 1;
-          const colEnd   = colStart + s.width - 1;
-          if (gridCol < colStart || gridCol > colEnd) return;
-          if (isVertSlp(s))  w = Math.max(w, Math.floor(VERT_W  / s.width));
-          if (isHorizSlp(s)) w = Math.max(w, Math.floor(HORIZ_W / s.width));
-        });
-      }
+      // multi-column seats split their physical width across the columns they
+      // cover (horizontal sleeper: 80 / 2 = 40 per column => matches seaters).
+      deckSeats.forEach((s) => {
+        const span = colSpan(s);
+        if (span <= 1) return;
+        const colStart = s.column - minCol + 1;
+        const colEnd   = colStart + span - 1;
+        if (gridCol < colStart || gridCol > colEnd) return;
+        if (isHorizSlp(s))     w = Math.max(w, Math.floor(HORIZ_W / span));
+        else if (isVertSlp(s)) w = Math.max(w, Math.floor(VERT_W  / span));
+      });
 
       return `${w || SEATER_W}px`;
     });
@@ -208,32 +216,29 @@ const SeatSelection = ({
           display: "grid",
           gridTemplateColumns: colWidths.join(" "),
           gridTemplateRows: gridRowHeights.join(" "),
-          columnGap: "0px",
-          rowGap: "0px",
+          columnGap: `${COL_GAP}px`,
+          rowGap: `${ROW_GAP}px`,
           justifyContent: "start",
           width: "fit-content",
         }}
       >
-        {deckSeats.map((seat) => {
-          const gridStart  = getGridRow(seat.row);
-          const gridEnd    = getGridRow(seat.row + seat.length - 1);
-          const spanRows_  = gridEnd - gridStart + 1;
-
-          return (
-            <div
-              key={seat.id}
-              style={{
-                gridColumn: `${seat.column - minCol + 1} / span ${seat.width}`,
-                gridRow:    `${gridStart} / span ${spanRows_}`,
-                display:        "flex",
-                alignItems:     "center",
-                justifyContent: "center",
-              }}
-            >
-              {renderSeatCell(seat)}
-            </div>
-          );
-        })}
+        {deckSeats.map((seat) => (
+          <div
+            key={seat.id}
+            style={{
+              // each seat occupies a single grid row (its own row's height is
+              // already sized for sleepers), so stacked sleepers in the same
+              // column no longer overlap. Horizontal sleepers span 2 columns.
+              gridColumn: `${seat.column - minCol + 1} / span ${colSpan(seat)}`,
+              gridRow:    `${getGridRow(seat.row)} / span 1`,
+              display:        "flex",
+              alignItems:     "center",
+              justifyContent: "center",
+            }}
+          >
+            {renderSeatCell(seat)}
+          </div>
+        ))}
       </div>
     );
   };

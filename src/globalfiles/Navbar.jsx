@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Menu, X, Briefcase, MapPin, User, ChevronDown } from "lucide-react";
+import axios from "axios";
+import { Menu, X, Briefcase, MapPin, User, ChevronDown, Gift } from "lucide-react";
 import { Bus, Plane, Building2, Palmtree, Car } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import AuthModal from "../modules/bus/pages/AuthModal";
@@ -27,7 +28,7 @@ const Navbar = () => {
   const [printTin, setPrintTin] = useState("");
   const [showFlightPrintTicket, setShowFlightPrintTicket] = useState(false);
   const [mobileDropdownOpen, setMobileDropdownOpen] = useState(false);
-  
+
   const navigate = useNavigate();
   const location = useLocation();
   const dropdownRef = useRef(null);
@@ -36,44 +37,65 @@ const Navbar = () => {
   const [openDropdown, setOpenDropdown] = useState(false);
   const closeTimeout = useRef(null);
 
+  const [rewardBalance, setRewardBalance] = useState(null);
+
+  const fetchRewardBalance = async (userId) => {
+    if (!userId) return;
+    try {
+      const res = await axios.post("https://api.bobros.co.in/db/select", {
+        table: "ulogin",
+        columns: ["ubal"],
+        conditions: { uid: String(userId) },
+      });
+      if (res.data?.rows?.length > 0) {
+        const bal = String(parseFloat(res.data.rows[0].ubal ?? 0));
+        setRewardBalance(bal);
+      } else {
+        setRewardBalance("0");
+      }
+    } catch (err) {
+      console.error("Failed to fetch ubal from ulogin:", err);
+    }
+  };
+
   useEffect(() => {
     setOpenDropdown(false);
     setMobileDropdownOpen(false);
     setMobileOpen(false);
   }, [location.pathname]);
 
-useEffect(() => {
-  const handleGuestBookings = () => setShowGuestBookings(true);
-  
-  const handleCancellation = () => {
-    clearTimeout(closeTimeout.current);
-    setShowCancel(true);
-    window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
-  };
+  useEffect(() => {
+    const handleGuestBookings = () => setShowGuestBookings(true);
 
-  const handlePrintTicket = () => {
-    setPrintTin("");
-    setShowPrintTicket(true);
-    window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
-  };
+    const handleCancellation = () => {
+      clearTimeout(closeTimeout.current);
+      setShowCancel(true);
+      window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
+    };
 
-  const handleFlightPrintTicket = () => {
-    setShowFlightPrintTicket(true);
-    window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
-  };
+    const handlePrintTicket = () => {
+      setPrintTin("");
+      setShowPrintTicket(true);
+      window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
+    };
 
-  window.addEventListener("openGuestBookings",      handleGuestBookings);
-  window.addEventListener("openCancellation",       handleCancellation);
-  window.addEventListener("openPrintTicket",        handlePrintTicket);
-  window.addEventListener("openFlightPrintTicket",  handleFlightPrintTicket);
+    const handleFlightPrintTicket = () => {
+      setShowFlightPrintTicket(true);
+      window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
+    };
 
-  return () => {
-    window.removeEventListener("openGuestBookings",     handleGuestBookings);
-    window.removeEventListener("openCancellation",      handleCancellation);
-    window.removeEventListener("openPrintTicket",       handlePrintTicket);
-    window.removeEventListener("openFlightPrintTicket", handleFlightPrintTicket);
-  };
-}, []);
+    window.addEventListener("openGuestBookings", handleGuestBookings);
+    window.addEventListener("openCancellation", handleCancellation);
+    window.addEventListener("openPrintTicket", handlePrintTicket);
+    window.addEventListener("openFlightPrintTicket", handleFlightPrintTicket);
+
+    return () => {
+      window.removeEventListener("openGuestBookings", handleGuestBookings);
+      window.removeEventListener("openCancellation", handleCancellation);
+      window.removeEventListener("openPrintTicket", handlePrintTicket);
+      window.removeEventListener("openFlightPrintTicket", handleFlightPrintTicket);
+    };
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -112,6 +134,16 @@ useEffect(() => {
   }, []);
 
   useEffect(() => {
+    if (isLoggedIn && user) {
+      const stored = JSON.parse(localStorage.getItem("user") || "{}");
+      const uid = stored?.user?.uid || stored?.uid || user?.uid || "";
+      fetchRewardBalance(uid);
+    } else {
+      setRewardBalance(null);
+    }
+  }, [isLoggedIn, user]);
+
+  useEffect(() => {
     const handler = (e) => {
       setAuthPage(e.detail === "signup" ? "signup" : "signin");
       setOpenAuthModal(true);
@@ -125,6 +157,7 @@ useEffect(() => {
     localStorage.removeItem("isLoggedIn");
     setIsLoggedIn(false);
     setUser(null);
+    setRewardBalance(null);
     setOpenDropdown(false);
     setMobileDropdownOpen(false);
     setMobileOpen(false);
@@ -132,25 +165,21 @@ useEffect(() => {
     navigate("/");
   };
 
-const handleOpenCancel = () => {
-  setOpenDropdown(false);
-  setMobileDropdownOpen(false);
-  clearTimeout(closeTimeout.current);
-  setShowCancel(true);
-  window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
-};
-
+  const handleOpenCancel = () => {
+    setOpenDropdown(false);
+    setMobileDropdownOpen(false);
+    clearTimeout(closeTimeout.current);
+    setShowCancel(true);
+    window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
+  };
 
   const dynamicPages = ["/", "/HomePage", "/flights", "/BillHomePage", "/hotels", "/cabs", "/Holiday"];
   const isDynamicPage = dynamicPages.includes(location.pathname);
   const isSolid = !isDynamicPage || scrolled;
   const isNoFixedPage =
-  location.pathname === "/results" ||
-  location.pathname.startsWith("/hotels/");
+    location.pathname === "/results" ||
+    location.pathname.startsWith("/hotels/");
 
-  // ===== BILL PAYMENTS FLOW CHECK =====
-  // Bill Payments page (and its sub-routes) lo unnappudu profile dropdown
-  // lo vere headings chupinchadaniki ee flag use chestunnam.
   const isBillPayment = location.pathname.toLowerCase().startsWith("/bill");
 
   useEffect(() => {
@@ -169,18 +198,44 @@ const handleOpenCancel = () => {
     { id: "cabs", label: "Cabs", icon: Car, path: "/cabs" },
   ];
 
+  // ===== ACTIVE TAB =====
+  // Bus flow motham (home → results → booking-success → payment-status) ki "bus" active ravali.
+  // Note: bus payment-status route "/payment-status"; bill di "/bill-payment-status"
+  // (adi paina isBillPayment / "/bill" check tho cover అవుతుంది), kabatti clash raadu.
   const getActiveTab = () => {
-    if (location.pathname === "/" || location.pathname === "/HomePage") return "bus";
-     if (location.pathname === "/BillHomePage") return "billpayment";
-    if (location.pathname.startsWith("/results")) return "bus";
-    if (location.pathname.startsWith("/flights")) return "flights";
-    if (location.pathname.startsWith("/hotels")) return "hotels";
-    if (location.pathname.startsWith("/Holiday")) return "holidays";
-    if (location.pathname.startsWith("/cabs")) return "cabs";
+    const path = location.pathname;
+
+    // Bill payments flow (motham bill flow)
+    if (
+      path === "/BillHomePage" ||
+      path.startsWith("/billers") ||
+      path.startsWith("/bill-details") ||
+      path.startsWith("/bill-payment-status") ||
+      path.startsWith("/bill-transactions") ||
+      path.startsWith("/bill-complaints") ||
+      (path.startsWith("/my-account") && location.search.includes("source=bill"))
+    ) return "billpayment";
+
+    // Bus flow (whole flow)
+    if (
+      path === "/" ||
+      path === "/HomePage" ||
+      path.startsWith("/results") ||
+      path.startsWith("/booking-success") ||
+      path.startsWith("/payment-status")
+    ) return "bus";
+
+    if (path.startsWith("/flights")) return "flights";
+    if (path.startsWith("/hotels")) return "hotels";
+    if (path.startsWith("/Holiday")) return "holidays";
+    if (path.startsWith("/cabs")) return "cabs";
     return "";
   };
 
   const activeTab = getActiveTab();
+
+  // First letter of user's name for avatar
+  const userInitial = user?.uname?.charAt(0)?.toUpperCase() || "U";
 
   return (
     <>
@@ -190,6 +245,7 @@ const handleOpenCancel = () => {
         }`}
       >
         <div className="max-w-8xl mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-8 h-16 sm:h-20">
+
           {/* LOGO */}
           <div onClick={() => navigate("/")} className="flex items-center cursor-pointer">
             <img
@@ -204,7 +260,7 @@ const handleOpenCancel = () => {
 
           {/* CENTER TABS */}
           {(isSolid || !isDynamicPage) && (
-            <div className="hidden lg:flex items-center gap-2 xl:gap-3 flex-1 justify-center">
+            <div className="hidden lg:flex items-center gap-3 xl:gap-5 flex-1 justify-center">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const active = activeTab === tab.id;
@@ -266,51 +322,95 @@ const handleOpenCancel = () => {
                   if (!isLoggedIn) {
                     setAuthPage("signin");
                     setOpenAuthModal(true);
-                  } else {
-                    setOpenDropdown(!openDropdown);
                   }
+                  // Logged-in: profile avatar matrame dropdown toggle chestundi (avatar onClick lo)
                 }}
-                className={`flex items-center gap-2 px-3 xl:px-4 py-2 rounded-full border transition-all duration-300 cursor-pointer text-sm ${
-                  isSolid ? "border-gray-300 text-gray-700 hover:bg-gray-100" : "border-white/40 text-white hover:bg-white/10"
-                }`}
+                className={
+                  isLoggedIn
+                    ? "flex items-center gap-2.5 cursor-default bg-transparent"
+                    : `flex items-center gap-2 px-3 xl:px-4 py-2 rounded-full border transition-all duration-300 cursor-pointer text-sm ${
+                        isSolid ? "border-gray-300 text-gray-700 hover:bg-gray-100" : "border-white/40 text-white hover:bg-white/10"
+                      }`
+                }
               >
-                <User className="w-5 h-5" />
-                {isLoggedIn ? <>Hi {user?.uname?.split(" ")[0]}</> : "Login/Signup"}
+                {isLoggedIn ? (
+                  <>
+                    {/* Reward points chip — roundness tagginchaం (rounded-lg) */}
+                    <span style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 5,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: "#FD561E",
+                      whiteSpace: "nowrap",
+                      background: "#FFF3EE",
+                      border: "1px solid #FFD9C7",
+                      borderRadius: 8,
+                      padding: "6px 12px",
+                    }}>
+                      <Gift style={{ width: 14, height: 14, flexShrink: 0 }} />
+                      ₹ {rewardBalance ?? "—"} Reward Points
+                    </span>
+                    {/* Avatar — clean round circle, chuttu ring ledu. Profile click ki ee dropdown open avtundi */}
+                    <div
+                      onClick={(e) => { e.stopPropagation(); setOpenDropdown(!openDropdown); }}
+                      style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: "50%",
+                      background: "#FD561E",
+                      color: "white",
+                      fontSize: 15,
+                      fontWeight: 600,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                      cursor: "pointer",
+                    }}>
+                      {userInitial}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <User className="w-5 h-5" />
+                    Login/Signup
+                  </>
+                )}
               </button>
 
               {/* GUEST DROPDOWN */}
               {!isLoggedIn && openDropdown && (
                 <div className="absolute right-0 top-12 w-64 bg-white rounded-xl shadow-lg border border-gray-100 text-gray-700 overflow-hidden z-50">
                   {isBillPayment ? (
-                    /* ===== BILL PAYMENTS GUEST DROPDOWN (My Account raadu) ===== */
                     <>
                       <div className="px-4 py-3 bg-gray-50">
                         <p className="font-semibold text-gray-800">Hey Traveller</p>
                         <p className="text-sm text-gray-500">Manage your bill payments & transactions</p>
                       </div>
-                      <button onClick={() => { setOpenDropdown(false); setAuthPage("signin"); setOpenAuthModal(true); }} className="mx-4 my-3 w-[calc(100%-32px)] cursor-pointer bg-[#fd561e] text-white font-semibold py-2.5 rounded-lg ">Login / Sign Up</button>
+                      <button onClick={() => { setOpenDropdown(false); setAuthPage("signin"); setOpenAuthModal(true); }} className="mx-4 my-3 w-[calc(100%-32px)] cursor-pointer bg-[#fd561e] text-white font-semibold py-2.5 rounded-lg">Login / Sign Up</button>
                       <button onClick={() => { setOpenDropdown(false); navigate("/bill-transactions"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Transactions</button>
                       <button onClick={() => { setOpenDropdown(false); navigate("/bill-complaints"); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Complaints</button>
                     </>
                   ) : (
-                    /* ===== EXISTING BUS/FLIGHTS GUEST DROPDOWN ===== */
                     <>
                       <div className="px-4 py-3 bg-gray-50">
                         <p className="font-semibold text-gray-800">Hey Traveller</p>
                         <p className="text-sm text-gray-500">Get exclusive deals & Manage your trips</p>
                       </div>
-                      <button onClick={() => { setOpenDropdown(false); setAuthPage("signin"); setOpenAuthModal(true); }} className="mx-4 my-3 w-[calc(100%-32px)] cursor-pointer bg-[#fd561e] text-white font-semibold py-2.5 rounded-lg ">Login / Sign Up</button>
+                      <button onClick={() => { setOpenDropdown(false); setAuthPage("signin"); setOpenAuthModal(true); }} className="mx-4 my-3 w-[calc(100%-32px)] cursor-pointer bg-[#fd561e] text-white font-semibold py-2.5 rounded-lg">Login / Sign Up</button>
                       <button onClick={() => { setOpenDropdown(false); setShowGuestBookings(true); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Bookings</button>
-                      <button onClick={() => { 
-  setOpenDropdown(false); 
-  if (location.pathname.startsWith("/flights")) { 
-    setShowFlightPrintTicket(true); 
-  } else { 
-    setPrintTin(""); 
-    setShowPrintTicket(true); 
-  } 
-  window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
-}} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 hover:text-blue-500 cursor-pointer">Print Ticket</button>
+                      <button onClick={() => {
+                        setOpenDropdown(false);
+                        if (location.pathname.startsWith("/flights")) {
+                          setShowFlightPrintTicket(true);
+                        } else {
+                          setPrintTin("");
+                          setShowPrintTicket(true);
+                        }
+                        window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
+                      }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 hover:text-blue-500 cursor-pointer">Print Ticket</button>
                       <button onClick={handleOpenCancel} className="w-full text-left px-4 py-3 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Cancellation</button>
                     </>
                   )}
@@ -320,28 +420,37 @@ const handleOpenCancel = () => {
               {/* LOGGED IN DROPDOWN */}
               {isLoggedIn && openDropdown && (
                 <div className="absolute right-0 mt-3 w-56 bg-white rounded-xl shadow-lg border border-gray-100 text-gray-700 overflow-hidden z-50">
+                  {/* Reward points header */}
+                  <div className="px-4 py-3 border-b border-gray-100" style={{ background: "#FFF3EE" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 13, color: "#666" }}>Reward Points</span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#FD561E", fontWeight: 700, fontSize: 14 }}>
+                        <Gift style={{ width: 14, height: 14 }} />
+                        ₹ {rewardBalance ?? "—"}
+                      </span>
+                    </div>
+                  </div>
+
                   {isBillPayment ? (
-                    /* ===== BILL PAYMENTS LOGGED-IN DROPDOWN ===== */
                     <>
-                     <button onClick={() => { setOpenDropdown(false); navigate("/my-account?source=bill"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Account</button>
+                      <button onClick={() => { setOpenDropdown(false); navigate("/my-account?source=bill"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Account</button>
                       <button onClick={() => { setOpenDropdown(false); navigate("/bill-transactions"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Transactions</button>
                       <button onClick={() => { setOpenDropdown(false); navigate("/bill-complaints"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Complaints</button>
-                      <button onClick={handleLogout} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-red-500 cursor-pointer ">Logout</button>
+                      <button onClick={handleLogout} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-red-500 cursor-pointer">Logout</button>
                     </>
                   ) : (
-                    /* ===== EXISTING BUS/FLIGHTS LOGGED-IN DROPDOWN ===== */
                     <>
-                      <button onClick={() => { setOpenDropdown(false); navigate("/my-bookings?type=bus"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 hover:text-blue-500 cursor-pointer hover:text-blue-500">My Booking</button>
+                      <button onClick={() => { setOpenDropdown(false); navigate("/my-bookings?type=bus"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 hover:text-blue-500 cursor-pointer">My Booking</button>
                       <button onClick={() => { setOpenDropdown(false); navigate("/my-account"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Account</button>
                       <button onClick={handleOpenCancel} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Cancellation</button>
-                      <button onClick={() => { 
-  setOpenDropdown(false); 
-  window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
-  if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); } 
-  else { setPrintTin(""); setShowPrintTicket(true); } 
-}} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Print Ticket</button>
+                      <button onClick={() => {
+                        setOpenDropdown(false);
+                        window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
+                        if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); }
+                        else { setPrintTin(""); setShowPrintTicket(true); }
+                      }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Print Ticket</button>
                       <button onClick={() => { setOpenDropdown(false); navigate("/my-profile"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Profile</button>
-                      <button onClick={handleLogout} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-red-500 cursor-pointer ">Logout</button>
+                      <button onClick={handleLogout} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-red-500 cursor-pointer">Logout</button>
                     </>
                   )}
                 </div>
@@ -349,7 +458,7 @@ const handleOpenCancel = () => {
             </div>
           </div>
 
-          {/* Mobile right: Bharat Connect (bill pages, MOBILE only) + Hamburger */}
+          {/* Mobile right: Bharat Connect + Hamburger */}
           <div className="flex items-center gap-2 lg:hidden">
             {isBillPayment && (
               <img
@@ -358,12 +467,12 @@ const handleOpenCancel = () => {
                 className="md:hidden h-7 w-auto object-contain"
               />
             )}
-            <button 
+            <button
               className={`p-2 rounded-lg transition-all duration-300 ${
-                isSolid 
-                  ? "text-gray-800 hover:bg-gray-100" 
+                isSolid
+                  ? "text-gray-800 hover:bg-gray-100"
                   : "text-white hover:bg-white/10"
-              }`} 
+              }`}
               onClick={() => setMobileOpen(!mobileOpen)}
             >
               {mobileOpen ? <X size={22} /> : <Menu size={22} />}
@@ -378,7 +487,7 @@ const handleOpenCancel = () => {
             <div className="fixed top-0 right-0 h-full w-[280px] sm:w-[320px] bg-white shadow-2xl z-50 lg:hidden overflow-y-auto">
               <div className="pt-16 pb-4">
                 <button onClick={() => setMobileOpen(false)} className="absolute top-3 right-3 p-1.5 rounded-lg hover:bg-gray-100"><X size={18} /></button>
-                
+
                 {/* Tabs in Mobile */}
                 <div className="flex flex-col gap-2 px-4">
                   {tabs.map((tab) => {
@@ -403,43 +512,87 @@ const handleOpenCancel = () => {
                     );
                   })}
                 </div>
-                
+
                 <div className="border-t border-gray-200 my-3 mx-4"></div>
-                
+
                 <div className="px-4">
                   <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm mb-2">
                     <Briefcase className="w-4 h-4" />
                     Business
                   </button>
-                  
+
                   <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm mb-4">
                     <MapPin className="w-4 h-4" />
                     For Travel Agent
                   </button>
                 </div>
-                
+
                 <div className="border-t border-gray-200 my-3 mx-4"></div>
-                
-                {/* Mobile User Section - WITH DROPDOWN FOR BOTH GUEST AND LOGGED IN USERS */}
+
+                {/* Mobile User Section */}
                 <div ref={mobileDropdownRef} className="px-4">
-                  <button 
-                    onClick={() => setMobileDropdownOpen(!mobileDropdownOpen)} 
+                  <button
+                    onClick={() => setMobileDropdownOpen(!mobileDropdownOpen)}
                     className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
                   >
-                    <div className="flex items-center gap-2">
-                      <User className="w-4 h-4" />
-                      <span className="text-sm font-medium">{isLoggedIn ? `Hi ${user?.uname?.split(" ")[0]}` : "Login/Signup"}</span>
+                    <div className="flex items-center gap-3">
+                      {isLoggedIn ? (
+                        /* Avatar circle */
+                        <div style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: "50%",
+                          background: "#FD561E",
+                          color: "white",
+                          fontSize: 15,
+                          fontWeight: 600,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}>
+                          {userInitial}
+                        </div>
+                      ) : (
+                        <User className="w-4 h-4" />
+                      )}
+
+                      {isLoggedIn ? (
+                        /* Reward points pakkana avatar ki */
+                        <span style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 4,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: "#FD561E",
+                          whiteSpace: "nowrap",
+                        }}>
+                          <Gift style={{ width: 13, height: 13, flexShrink: 0 }} />
+                          ₹ {rewardBalance ?? "—"} Reward Points
+                        </span>
+                      ) : (
+                        <span className="text-sm font-medium">Login/Signup</span>
+                      )}
                     </div>
                     <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${mobileDropdownOpen ? "rotate-180" : ""}`} />
                   </button>
-                  
-                  {/* Dropdown for both guest and logged in users */}
+
+                  {/* Mobile Dropdown */}
                   {mobileDropdownOpen && (
                     <div className="mt-2 bg-white rounded-lg border border-gray-200 overflow-hidden">
+                      {isLoggedIn && (
+                        <div className="px-4 py-2.5 border-b border-gray-200 flex items-center justify-between" style={{ background: "#FFF3EE" }}>
+                          <span className="text-sm font-medium text-gray-700">Reward Points</span>
+                          <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#FD561E", fontWeight: 700, fontSize: 14 }}>
+                            <Gift style={{ width: 14, height: 14 }} />
+                            ₹ {rewardBalance ?? "—"}
+                          </span>
+                        </div>
+                      )}
+
                       {isBillPayment ? (
-                        /* ===== BILL PAYMENTS MOBILE DROPDOWN ===== */
                         !isLoggedIn ? (
-                          /* Guest -> My Account raadu */
                           <>
                             <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200">
                               <p className="font-medium text-gray-800 text-sm">Hey Traveller</p>
@@ -450,7 +603,6 @@ const handleOpenCancel = () => {
                             <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/bill-complaints"); }} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm">Complaints</button>
                           </>
                         ) : (
-                          /* Logged in -> My Account + Transactions + Complaints */
                           <>
                             <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-account?source=bill"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Account</button>
                             <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/bill-transactions"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Transactions</button>
@@ -459,7 +611,6 @@ const handleOpenCancel = () => {
                           </>
                         )
                       ) : (
-                        /* ===== EXISTING BUS/FLIGHTS MOBILE DROPDOWN ===== */
                         !isLoggedIn ? (
                           <>
                             <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200">
@@ -468,12 +619,12 @@ const handleOpenCancel = () => {
                             </div>
                             <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); setAuthPage("signin"); setOpenAuthModal(true); }} className="w-full text-left px-4 py-2.5 bg-[#fd561e] text-white font-medium text-sm">Login / Sign Up</button>
                             <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); setShowGuestBookings(true); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Bookings</button>
-                            <button onClick={() => { 
-  setMobileOpen(false); setMobileDropdownOpen(false); 
-  window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
-  if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); } 
-  else { setPrintTin(""); setShowPrintTicket(true); } 
-}} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Print Ticket</button>
+                            <button onClick={() => {
+                              setMobileOpen(false); setMobileDropdownOpen(false);
+                              window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
+                              if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); }
+                              else { setPrintTin(""); setShowPrintTicket(true); }
+                            }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Print Ticket</button>
                             <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); handleOpenCancel(); }} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm">Cancellation</button>
                           </>
                         ) : (
@@ -481,12 +632,12 @@ const handleOpenCancel = () => {
                             <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-bookings?type=bus"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Booking</button>
                             <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-account"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Account</button>
                             <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); handleOpenCancel(); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Cancellation</button>
-                            <button onClick={() => { 
-  setMobileOpen(false); setMobileDropdownOpen(false); 
-  window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
-  if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); } 
-  else { setPrintTin(""); setShowPrintTicket(true); } 
-}} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Print Ticket</button>
+                            <button onClick={() => {
+                              setMobileOpen(false); setMobileDropdownOpen(false);
+                              window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
+                              if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); }
+                              else { setPrintTin(""); setShowPrintTicket(true); }
+                            }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Print Ticket</button>
                             <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-profile"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Profile</button>
                             <button onClick={handleLogout} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-red-500 text-sm">Logout</button>
                           </>
@@ -521,18 +672,18 @@ const handleOpenCancel = () => {
       </nav>
 
       {showCancel && (
-  <CancellationCard onClose={() => {
-    setShowCancel(false);
-    window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: false } }));
-  }} />
-)}
+        <CancellationCard onClose={() => {
+          setShowCancel(false);
+          window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: false } }));
+        }} />
+      )}
       {showPrintTicket && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 w-[90%] sm:w-[420px] mx-4 relative">
-           <button onClick={() => {
-  setShowPrintTicket(false);
-  window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: false } }));
-}} className="absolute top-4 right-4 text-gray-400 cursor-pointer hover:text-gray-700">✕</button>
+            <button onClick={() => {
+              setShowPrintTicket(false);
+              window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: false } }));
+            }} className="absolute top-4 right-4 text-gray-400 cursor-pointer hover:text-gray-700">✕</button>
             <PrintTicketModal onClose={() => setShowPrintTicket(false)} prefillTin={printTin} />
           </div>
         </div>
@@ -540,10 +691,10 @@ const handleOpenCancel = () => {
       {showFlightPrintTicket && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 w-[90%] sm:w-[440px] mx-4 relative">
-           <button onClick={() => {
-  setShowFlightPrintTicket(false);  // ✅ correct
-  window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: false } }));
-}}>✕</button>
+            <button onClick={() => {
+              setShowFlightPrintTicket(false);
+              window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: false } }));
+            }}>✕</button>
             <PrintFlightTicketModal onClose={() => setShowFlightPrintTicket(false)} />
           </div>
         </div>

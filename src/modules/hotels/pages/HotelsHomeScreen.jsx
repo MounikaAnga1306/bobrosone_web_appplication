@@ -20,10 +20,10 @@ const HotelsHomeScreen = () => {
         <div className="md:mt-10 lg:mt-10">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8"></div>
           <div className="sm:-mt-10">
-            <Services />
+            {/* <Services /> */}
           </div>
-          <AppDownload />
-          <WhyBobros />
+          {/* <AppDownload /> */}
+          {/* <WhyBobros /> */}
           <Quick_Links />
         </div>
       </main>

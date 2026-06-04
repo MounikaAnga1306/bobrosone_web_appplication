@@ -345,7 +345,7 @@ const PopularBillers = () => {
       {error   && <ErrorPopup message={error} onClose={() => setError("")} />}
 
       <div className="popular-billers-root w-full pt-8 bg-white" style={{ borderTop: "1px solid #f0f0f0" }}>
-        <h3 className="pb-heading text-[22px] font-semibold text-gray-900 mb-5">
+        <h3 className="pb-heading text-[26px] font-bold text-gray-900 mb-5">
           Popular Billers
         </h3>
 
@@ -356,12 +356,12 @@ const PopularBillers = () => {
               className="pb-row py-2"
               style={{
                 borderBottom: rowIdx < BILLERS.length - 1 ? "1px solid #f5f5f5" : "none",
-                fontSize: "13px",
-                lineHeight: "1.8",
+                fontSize: "18px",
+                lineHeight: "1.4",
               }}
             >
               {/* Category label */}
-              <span className="pb-cat font-bold text-gray-900" style={{ marginRight: "8px", fontSize: "13px" }}>
+              <span className="pb-cat font-bold text-gray-900" style={{ marginRight: "8px", fontSize: "15px" }}>
                 {row.category}:
               </span>
 

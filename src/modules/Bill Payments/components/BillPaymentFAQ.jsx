@@ -52,7 +52,7 @@ export default function FAQPage() {
     <div className="bg-white">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 md:px-8 lg:px-6 py-6 sm:pt-8 md:pt-10 ml-0 md:ml-4 lg:ml-8 xl:ml-16">
 
-        <h1 className="text-xl sm:text-2xl md:text-2xl lg:text-3xl font-bold text-gray-900 mb-4 sm:mb-5 md:mb-6">
+        <h1 className="text-xl sm:text-2xl md:text-2xl -ml-4 lg:text-3xl font-bold text-gray-900 mb-4 sm:mb-5 md:mb-6">
           FAQs related to Bill Payments
         </h1>
 
@@ -63,12 +63,12 @@ export default function FAQPage() {
             const userFeedback = feedback[idx];
 
             return (
-              <div key={idx} className="border-b border-gray-200">
+              <div key={idx} className="border-b border-gray-300">
                 <button
                   onClick={() => toggleQuestion(idx)}
                   className="w-full flex justify-between items-center py-3 sm:py-4 text-left gap-3 sm:gap-4"
                 >
-                  <span className="text-gray-1000 text-xs sm:text-sm md:text-base pr-2 sm:pr-4 leading-relaxed">
+                  <span className="text-gray-1000 text-xs sm:text-sm md:text-base pr-2 sm:pr-4 leading-relaxed font-semibold">
                     {faq.question}
                   </span>
                   <svg
