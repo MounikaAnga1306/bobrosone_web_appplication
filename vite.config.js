@@ -10,23 +10,25 @@ export default defineConfig({
       },
     }),
   ],
-   server: {
+  server: {
+    port: 5173,        // eppుడూ ee port ney vadు
+    strictPort: true,  // 5173 busy aithే error istుంది (silently 5174 ki marదు)
     proxy: {
       '/bill/billers': 'http://localhost:5000',
-'/bill/biller-logo':           'http://localhost:5000',
-'/bill/validate-payment':      'http://localhost:5000',
-'/bill/retrieve-recharge-plan':'http://localhost:5000',
-'/bill/complaint':             'http://localhost:5000', 
-'/bill/txn-search':            'http://localhost:5000',   
-'/bill/send-otp':              'http://localhost:5000',  
-'/bill/txn-details':           'http://localhost:5000', 
-'/bill/verify-otp':            'http://localhost:5000', 
-       '/bbps/billdesk/order':         'http://localhost:5000',
+      '/bill/biller-logo':            'http://localhost:5000',
+      '/bill/validate-payment':       'http://localhost:5000',
+      '/bill/retrieve-recharge-plan': 'http://localhost:5000',
+      '/bill/complaint':              'http://localhost:5000',
+      '/bill/txn-search':             'http://localhost:5000',
+      '/bill/send-otp':               'http://localhost:5000',
+      '/bill/txn-details':            'http://localhost:5000',
+      '/bill/verify-otp':             'http://localhost:5000',
+      '/bbps/billdesk/order':         'http://localhost:5000',
       '/bbps/makepayment':            'http://localhost:5000',
       '/offer': 'http://localhost:5000',
       '/cancel': 'http://localhost:5000',
       '/myAccount': 'http://localhost:5000',
-       '/printTicket': 'http://localhost:5000',
+      '/printTicket': 'http://localhost:5000',
       '/bookticket': 'http://localhost:5000',
       '/guestBookings': 'http://localhost:5000',
       '/myBookings': 'http://localhost:5000',
@@ -41,6 +43,6 @@ export default defineConfig({
       '/cancellation-policy': 'http://localhost:5000',
       '/gmailverify': 'http://localhost:5000',
       '/db': 'http://localhost:5000',
-    }
-  }
+    },
+  },
 })

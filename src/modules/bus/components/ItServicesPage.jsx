@@ -677,10 +677,10 @@ const WhyChoose = () => (
 // Contact Form — FIXED with Success Modal
 // ─────────────────────────────────────────────
 const staticPkgOptions = [
-  "Go Digital - Standard (Rs.599/mo)",
-  "Go Digital - Switch (Rs.499/mo)",
-  "Go Digital - Build and Deploy (Rs.399/mo)",
-  "Go Digital - Host (Rs.199/mo)",
+  "Go Digital Standard Rs.599 per month",
+  "Go Digital Switch Rs.499 per month",
+  "Go Digital Build and Deploy Rs.399 per month",
+  "Go Digital Host Rs.199 per month",
 ];
 const ecomPkgOptions = [
   "E-Commerce Starter",

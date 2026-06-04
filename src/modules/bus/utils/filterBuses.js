@@ -27,14 +27,25 @@ export const filterBuses = (buses, filters) => {
   return buses.filter((bus) => {
 
     // ── Bus Type (OR within group) ─────────────────────────────────────────
-    const isAC           = bus.AC           === true || bus.AC           === "true";
-    const isNonAC        = bus.nonAC        === true || bus.nonAC        === "true";
-    const isSeater       = bus.seater       === true || bus.seater       === "true";
-    const isSleeper      = bus.sleeper      === true || bus.sleeper      === "true";
-    const isPrimo        = bus.primo        === true || bus.primo        === "true";
-    const isSingleSeater = bus.singleSeat   === true || bus.singleSeat   === "true"
-                        || bus.singleSeater === true || bus.singleSeater === "true";
-    const isSingleSleeper= bus.singleSleeper=== true || bus.singleSleeper=== "true";
+    const isAC      = bus.AC      === true || bus.AC      === "true";
+    const isNonAC   = bus.nonAC   === true || bus.nonAC   === "true";
+    const isSeater  = bus.seater  === true || bus.seater  === "true";
+    const isSleeper = bus.sleeper === true || bus.sleeper === "true";
+    const isPrimo   = bus.primo   === true || bus.primo   === "true";
+
+    // ── Single seater / sleeper ────────────────────────────────────────────
+    // The API has no singleSeater/singleSleeper flag; it is encoded in busType,
+    // e.g. "A/C Sleeper (2+1)" or "A/C Seater / Sleeper (2+1)". A "(2+1)" or
+    // "(1+1)" layout means one side has a SINGLE berth/seat. "(2+2)" has none.
+    const busTypeStr    = (bus.busType || "").toLowerCase();
+    const layoutCompact = busTypeStr.replace(/\s+/g, ""); // strip spaces -> "(2+1)"
+    const hasSingleLayout =
+      layoutCompact.includes("(2+1)") || layoutCompact.includes("(1+1)");
+
+    const isSingleSeater  =
+      hasSingleLayout && (isSeater  || busTypeStr.includes("seater"));
+    const isSingleSleeper =
+      hasSingleLayout && (isSleeper || busTypeStr.includes("sleeper"));
 
     const anyBusTypeSelected =
       filters.ac || filters.nonAc || filters.seater || filters.sleeper ||

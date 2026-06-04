@@ -53,25 +53,31 @@ const features = [
   },
 ];
 
+/* ===== ANIMATION CHANGED (UI same) ===== */
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1,
+      delayChildren: 0.12,
+      staggerChildren: 0.13,
     },
   },
 };
 
+// Cards: blur + scale + lift in, with a gentle overshoot
 const itemVariants = {
-  hidden: { y: 20, opacity: 0 },
+  hidden: { y: 50, opacity: 0, scale: 0.92, filter: "blur(8px)" },
   visible: {
     y: 0,
     opacity: 1,
+    scale: 1,
+    filter: "blur(0px)",
     transition: {
       type: "spring",
-      stiffness: 100,
-      damping: 15,
+      stiffness: 120,
+      damping: 14,
+      mass: 0.9,
     },
   },
 };
@@ -84,10 +90,10 @@ export default function Home() {
           {/* Header Section */}
           <div className="text-center mb-16 max-w-2xl mx-auto">
             <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              whileInView={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, y: -30, scale: 0.96 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5 }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
             >
               <h2 className="text-4xl md:text-5xl font-extrabold text-slate-900 mb-4 tracking-tight">
                 Why Choose{" "}
@@ -116,8 +122,12 @@ export default function Home() {
                 <motion.div
                   key={index}
                   variants={itemVariants}
-                  whileHover={{ y: -5 }}
-                  className="group relative bg-white p-8 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(253,86,30,0.1)] transition-all duration-300 border border-slate-100/50 z-10"
+                  whileHover={{
+                    y: -8,
+                    scale: 1.02,
+                    transition: { type: "spring", stiffness: 300, damping: 18 },
+                  }}
+                  className="group relative bg-white p-8 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgba(253,86,30,0.1)] transition-shadow duration-300 border border-slate-100/50 z-10"
                 >
                   {/* Glow Effect behind the card on hover */}
                   <div className="absolute -inset-0.5 bg-gradient-to-r from-[#fd561e] to-orange-400 rounded-2xl blur opacity-0 group-hover:opacity-20 transition duration-500 -z-10"></div>
@@ -125,9 +135,13 @@ export default function Home() {
                   <div className="relative z-10 flex flex-col h-full">
                     <div className="flex justify-between items-start mb-6">
                       {/* Icon Badge */}
-                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#fd561e] to-orange-400 flex items-center justify-center shadow-lg shadow-orange-500/30 transform group-hover:scale-110 group-hover:rotate-3 transition-transform duration-300">
+                      <motion.div
+                        whileHover={{ rotate: -8, scale: 1.12 }}
+                        transition={{ type: "spring", stiffness: 260, damping: 12 }}
+                        className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#fd561e] to-orange-400 flex items-center justify-center shadow-lg shadow-orange-500/30"
+                      >
                         <Icon className="w-7 h-7 text-white" />
-                      </div>
+                      </motion.div>
 
                       {/* Optional Highlight Badge */}
                       <span className="text-[10px] font-bold uppercase tracking-wider text-[#fd561e] bg-orange-100 px-3 py-1 rounded-full">

@@ -106,7 +106,7 @@ const FiltersSidebar = ({ onFilterChange, trips = [], externalFilters = null }) 
   const [dropping,     setDropping]     = useState(new Set());
   const [ops,          setOps]          = useState(new Set());
   const [amens,        setAmens]        = useState(new Set());
-
+  
   // Refs — always latest, no stale closure
   const chipRef  = useRef(new Set());
   const depRef   = useRef(new Set());

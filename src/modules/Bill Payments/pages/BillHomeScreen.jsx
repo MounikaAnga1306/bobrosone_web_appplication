@@ -21,10 +21,10 @@ function BillHomeScreen() {
 
       <main className="flex-grow">
         <BillBookingForm />
-        <Services />
-        <AppDownload />
+        {/* <Services /> */}
+        {/* <AppDownload /> */}
         <RechargeAndBillsIcons />
-        <WhyBobros />
+        {/* <WhyBobros /> */}
         <PopularBillers />
         <BillPaymentFAQ />
         

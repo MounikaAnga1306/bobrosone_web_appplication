@@ -350,7 +350,7 @@ const BookingSuccess = () => {
   if (!state) return null;
 
   return (
-    <div className="booking-success-container" style={{ minHeight: "100vh", background: "#f4f6f9", fontFamily: "'Segoe UI', sans-serif", paddingTop: "90px" }}>
+    <div className="booking-success-container" style={{ minHeight: "100vh", background: "rgb(251, 251, 248)", fontFamily: "'Segoe UI', sans-serif", paddingTop: "90px" }}>
       <style>{`
         /* Mobile & Tablet Responsiveness */
         @media (max-width: 768px) {
