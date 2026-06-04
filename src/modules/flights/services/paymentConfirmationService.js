@@ -1,345 +1,327 @@
 // src/modules/flights/services/paymentConfirmationService.js
+//
+// Called AFTER BillDesk redirects back to the app.
+// Since Zustand store is wiped on redirect, PNR data is read from localStorage.
+//
+// localStorage key written by PassengerDetailsReviewPage after PNR success:
+//   'bobros_pnr_raw'  → full raw PNR API response (rawPnrResponse from usePnrStore)
+//
+// Flow:
+//   BillDesk redirect → TicketConfirmationScreen mounts
+//   → completePaymentConfirmation()
+//   → reads localStorage('bobros_pnr_raw')
+//   → extracts pnr, pricingKeys, traceId
+//   → POST /flights/ticketing/issue-ticket
+//   → ticket issued ✅
 
-const API_BASE_URL = 'https://api.bobros.org';
+const API_BASE_URL = 'https://api.bobros.org/';
 
-// Flag to track if API call is in progress or already completed
+// Guard against duplicate calls (React StrictMode / double-mount)
 let isApiCallInProgress = false;
-let isApiCallCompleted = false;
-let cachedResult = null;
+let isApiCallCompleted  = false;
+let cachedResult        = null;
 
-/**
- * Helper function to make console logs more visible
- */
-const logSection = (title, char = '=') => {
-  console.log('\n' + char.repeat(80));
+// ── localStorage key ─────────────────────────────────────────────
+// PassengerDetailsReviewPage writes this after callPnrAPI() succeeds.
+// Shape stored: the full raw PNR API response object
+//   { success, traceId, pnrLocatorCode, bookingId, rawResponse: { SOAP:Envelope... } }
+const PNR_STORAGE_KEY = 'bobros_pnr_raw';
+
+// ── Helpers ──────────────────────────────────────────────────────
+const log = (title, char = '=') => {
+  console.log('\n' + char.repeat(60));
   console.log(title);
-  console.log(char.repeat(80));
+  console.log(char.repeat(60));
 };
 
-/**
- * Format JSON for better console display
- */
-const formatJSON = (obj) => {
-  return JSON.stringify(obj, null, 2);
-};
+// ── Data extractors ───────────────────────────────────────────────
+// All paths verified against the actual PNR response shape.
 
 /**
- * Extract PNR from raw response
- * Uses AirReservation LocatorCode as the PNR
+ * Extracts the universal record locator (PNR booking ref).
+ *
+ * Path: rawResponse.rawResponse
+ *   .SOAP:Envelope.SOAP:Body
+ *   .universal:AirCreateReservationRsp
+ *   .universal:UniversalRecord
+ *   .LocatorCode
+ *
+ * Example: "35OV7G"
  */
-const extractPNR = (rawResponse) => {
+const extractPNR = (raw) => {
   try {
-    const pnr = rawResponse?.data?.['SOAP:Envelope']?.['SOAP:Body']?.['universal:AirCreateReservationRsp']?.['universal:UniversalRecord']?.['air:AirReservation']?.$?.LocatorCode;
-    console.log('✈️ Extracted PNR (AirReservation LocatorCode):', pnr);
-    return pnr;
-  } catch (error) {
-    console.error('Error extracting PNR:', error);
+    const pnr = raw
+      ?.rawResponse
+      ?.['SOAP:Envelope']
+      ?.['SOAP:Body']
+      ?.['universal:AirCreateReservationRsp']
+      ?.['universal:UniversalRecord']
+      ?.LocatorCode;
+    console.log('✈️  Extracted PNR:', pnr);
+    return pnr ?? null;
+  } catch (err) {
+    console.error('extractPNR error:', err);
     return null;
   }
 };
 
 /**
- * Extract Pricing Keys as an array from raw response
- * Uses AirPricingInfo Key(s) - can be single or multiple
+ * Extracts AirPricingInfo Key(s) as an array.
+ *
+ * Path: ...universal:UniversalRecord
+ *   .air:AirReservation
+ *   .air:AirPricingInfo  (can be single object or array)
+ *   .$?.Key
+ *
+ * Example: ["cfnJB5TqWDKAD3RnBAAAAA=="]
  */
-const extractPricingKeys = (rawResponse) => {
+const extractPricingKeys = (raw) => {
   try {
-    // Get from AirPricingInfo Key
-    const pricingInfo = rawResponse?.data?.['SOAP:Envelope']?.['SOAP:Body']?.['universal:AirCreateReservationRsp']?.['universal:UniversalRecord']?.['air:AirReservation']?.['air:AirPricingInfo'];
-    
-    // Handle both single object and array
-    let pricingKeys = [];
-    
+    const pricingInfo = raw
+      ?.rawResponse
+      ?.['SOAP:Envelope']
+      ?.['SOAP:Body']
+      ?.['universal:AirCreateReservationRsp']
+      ?.['universal:UniversalRecord']
+      ?.['air:AirReservation']
+      ?.['air:AirPricingInfo'];
+
+    let keys = [];
     if (Array.isArray(pricingInfo)) {
-      // If it's an array, extract all keys
-      pricingKeys = pricingInfo.map(info => info?.$?.Key).filter(key => key);
-    } else if (pricingInfo && pricingInfo.$?.Key) {
-      // If it's a single object, push as single item array
-      pricingKeys = [pricingInfo.$.Key];
+      keys = pricingInfo.map(p => p?.$.Key ?? p?.Key).filter(Boolean);
+    } else if (pricingInfo) {
+      const key = pricingInfo?.$.Key ?? pricingInfo?.Key;
+      if (key) keys = [key];
     }
-    
-    console.log('🔑 Extracted Pricing Keys (AirPricingInfo Keys):', pricingKeys);
-    return pricingKeys;
-  } catch (error) {
-    console.error('Error extracting Pricing Keys:', error);
+    console.log('🔑 Extracted PricingKeys:', keys);
+    return keys;
+  } catch (err) {
+    console.error('extractPricingKeys error:', err);
     return [];
   }
 };
 
 /**
- * Extract Trace ID from raw response
+ * Extracts TraceId from the AirCreateReservationRsp attributes.
+ *
+ * Path: ...universal:AirCreateReservationRsp.TraceId
+ *   OR  raw.traceId  (top-level field set by our API wrapper)
+ *
+ * Example: "BOBROS-1779298183795"
  */
-const extractTraceId = (rawResponse) => {
+const extractTraceId = (raw) => {
   try {
-    const traceId = rawResponse?.data?.['SOAP:Envelope']?.['SOAP:Body']?.['universal:AirCreateReservationRsp']?.$?.TraceId;
-    console.log('🔍 Extracted Trace ID:', traceId);
+    // Primary: from SOAP response attributes
+    const fromSoap = raw
+      ?.rawResponse
+      ?.['SOAP:Envelope']
+      ?.['SOAP:Body']
+      ?.['universal:AirCreateReservationRsp']
+      ?.TraceId;
+
+    // Fallback: top-level traceId our API wrapper returns
+    const traceId = fromSoap ?? raw?.traceId ?? null;
+    console.log('🔍 Extracted TraceId:', traceId);
     return traceId;
-  } catch (error) {
-    console.error('Error extracting Trace ID:', error);
+  } catch (err) {
+    console.error('extractTraceId error:', err);
     return null;
   }
 };
 
+// ── localStorage read/write ───────────────────────────────────────
+
 /**
- * Get PNR response from localStorage
+ * Reads the raw PNR response from localStorage.
+ * Written by PassengerDetailsReviewPage after PNR API succeeds.
  */
-const getPnrResponseFromLocalStorage = () => {
+const readPnrFromStorage = () => {
   try {
-    // Try to get from pnrContextData first (full extracted data)
-    const contextData = localStorage.getItem('pnrContextData');
-    if (contextData) {
-      const parsed = JSON.parse(contextData);
-      if (parsed.rawResponse) {
-        console.log('📦 Found PNR response in pnrContextData from localStorage');
-        return parsed.rawResponse;
-      }
+    const stored = localStorage.getItem(PNR_STORAGE_KEY);
+    if (!stored) {
+      console.log('❌ No PNR data in localStorage (key: bobros_pnr_raw)');
+      return null;
     }
-    
-    // Fallback to raw response only
-    const rawResponse = localStorage.getItem('pnrRawResponse');
-    if (rawResponse) {
-      console.log('📦 Found PNR response in pnrRawResponse from localStorage');
-      return JSON.parse(rawResponse);
-    }
-    
-    console.log('❌ No PNR response found in localStorage');
-    return null;
-  } catch (error) {
-    console.error('Error reading from localStorage:', error);
+    const parsed = JSON.parse(stored);
+    console.log('📦 PNR data read from localStorage');
+    return parsed;
+  } catch (err) {
+    console.error('readPnrFromStorage error:', err);
     return null;
   }
 };
 
 /**
- * Reset the API call state (useful for testing or retry scenarios)
+ * Writes the raw PNR API response to localStorage.
+ * Called by PassengerDetailsReviewPage immediately after callPnrAPI() succeeds.
+ *
+ * @param {object} rawPnrResponse — the full response from callPnrAPI()
  */
-export const resetPaymentConfirmationState = () => {
-  isApiCallInProgress = false;
-  isApiCallCompleted = false;
-  cachedResult = null;
-  console.log('🔄 Payment confirmation state reset');
+export const savePnrToStorage = (rawPnrResponse) => {
+  try {
+    localStorage.setItem(PNR_STORAGE_KEY, JSON.stringify(rawPnrResponse));
+    console.log('💾 PNR response saved to localStorage (key: bobros_pnr_raw)');
+  } catch (err) {
+    console.error('savePnrToStorage error:', err);
+  }
 };
 
 /**
- * Complete payment confirmation using localStorage data
- * FOP Type is hardcoded to 'Cash'
- * @returns {Promise<Object>} Confirmation result
+ * Clears PNR data from localStorage.
+ * Call after ticket issuance completes.
+ */
+export const clearPnrFromStorage = () => {
+  localStorage.removeItem(PNR_STORAGE_KEY);
+  localStorage.removeItem('paymentConfirmationResult');
+  console.log('🗑️  PNR data cleared from localStorage');
+};
+
+// ── Main export ───────────────────────────────────────────────────
+
+/**
+ * Issues the airline ticket after BillDesk payment completes.
+ *
+ * Called by TicketConfirmationScreen on mount.
+ * Reads PNR data from localStorage (written before BillDesk redirect).
+ *
+ * @returns {{ success, data, extractedData, timestamp } | { success: false, error }}
  */
 export const completePaymentConfirmation = async () => {
-  // ==============================================
-  // CHECK IF API CALL WAS ALREADY COMPLETED
-  // ==============================================
+  // Return cached result if already done
   if (isApiCallCompleted && cachedResult) {
-    console.log('✅ Payment confirmation already completed, returning cached result');
+    console.log('✅ Already confirmed — returning cached result');
     return cachedResult;
   }
-  
-  // ==============================================
-  // CHECK IF API CALL IS ALREADY IN PROGRESS
-  // ==============================================
+
+  // Wait if another call is in progress (StrictMode double-invoke)
   if (isApiCallInProgress) {
-    console.log('⏳ Payment confirmation already in progress, waiting...');
-    
-    // Wait for the in-progress call to complete
+    console.log('⏳ Confirmation already in progress, waiting...');
     let retries = 0;
     while (isApiCallInProgress && retries < 30) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(r => setTimeout(r, 100));
       retries++;
     }
-    
-    if (cachedResult) {
-      console.log('✅ Returning result from in-progress call');
-      return cachedResult;
-    }
+    if (cachedResult) return cachedResult;
   }
-  
-  const fopType = 'Cash'; // Hardcoded to Cash
-  
-  logSection('🔄 COMPLETE PAYMENT CONFIRMATION FROM LOCALSTORAGE');
-  
-  // Set flag to indicate API call is in progress
+
   isApiCallInProgress = true;
-  
+  log('🔄 COMPLETE PAYMENT CONFIRMATION');
+
   try {
-    // ==============================================
-    // STEP 1: Get data from localStorage
-    // ==============================================
-    console.log('📦 Reading PNR response from localStorage...');
-    const rawResponse = getPnrResponseFromLocalStorage();
-    
-    if (!rawResponse) {
-      throw new Error('No PNR response found in localStorage. Please ensure booking was created successfully.');
+    // ── Step 1: Read PNR data from localStorage ─────────────────
+    const raw = readPnrFromStorage();
+    if (!raw) {
+      throw new Error('PNR data not found in localStorage. Was savePnrToStorage() called before BillDesk redirect?');
     }
-    
-    console.log('✅ Retrieved rawResponse from localStorage');
-    
-    // ==============================================
-    // STEP 2: Extract data from raw response
-    // ==============================================
-    const pnr = extractPNR(rawResponse);
-    const pricingKeys = extractPricingKeys(rawResponse); // Now returns array
-    const traceId = extractTraceId(rawResponse);
-    
-    logSection('📋 EXTRACTED DATA SUMMARY');
-    console.log('✓ PNR:', pnr);
-    console.log('✓ Pricing Keys (array):', pricingKeys);
-    console.log('✓ Trace ID:', traceId);
-    console.log('✓ FOP Type (hardcoded):', fopType);
-    
-    // ==============================================
-    // STEP 3: Validate all required fields
-    // ==============================================
-    const missingFields = [];
-    if (!pnr) missingFields.push('PNR');
-    if (!pricingKeys || pricingKeys.length === 0) missingFields.push('Pricing Keys');
-    if (!traceId) missingFields.push('Trace ID');
-    
-    if (missingFields.length > 0) {
-      const errorMessage = `Missing required data: ${missingFields.join(', ')}`;
-      console.error('❌ Validation failed:', errorMessage);
-      throw new Error(errorMessage);
-    }
-    
-    console.log('\n✅ All required data extracted successfully');
-    
-    // ==============================================
-    // STEP 4: Build request body with pricingKeys as array
-    // ==============================================
+
+    // ── Step 2: Extract required fields ─────────────────────────
+    const pnr         = extractPNR(raw);
+    const pricingKeys = extractPricingKeys(raw);
+    const traceId     = extractTraceId(raw);
+
+    log('📋 EXTRACTED DATA', '-');
+    console.log('PNR:          ', pnr);
+    console.log('PricingKeys:  ', pricingKeys);
+    console.log('TraceId:      ', traceId);
+
+    // ── Step 3: Validate ─────────────────────────────────────────
+    const missing = [];
+    if (!pnr)                          missing.push('PNR');
+    if (!pricingKeys?.length)          missing.push('PricingKeys');
+    if (!traceId)                      missing.push('TraceId');
+    if (missing.length) throw new Error(`Missing required fields: ${missing.join(', ')}`);
+
+    // ── Step 4: Build request ────────────────────────────────────
     const requestBody = {
-      pnr: pnr,
-      pricingKeys: pricingKeys,  // Now sending as array
-      traceId: traceId,
-      fop: {
-        type: fopType  // Hardcoded to 'Cash'
-      }
+      pnr,
+      pricingKeys,   // array: ["cfnJB5TqWDKAD3RnBAAAAA=="]
+      traceId,
+      fop: { type: 'Cash' },  // hardcoded
     };
-    
-    logSection('📤 API REQUEST DETAILS', '-');
-    console.log('📍 Endpoint:', `${API_BASE_URL}/flights/ticketing/issue-ticket`);
-    console.log('🔧 Method: POST');
-    console.log('📦 Request Body:');
-    console.log(formatJSON(requestBody));
-    console.log('💡 Tip: To copy request body, run: copy(' + JSON.stringify(requestBody, null, 2) + ')');
-    
-    // ==============================================
-    // STEP 5: Call the payment confirmation API
-    // ==============================================
+
+    log('📤 TICKETING REQUEST', '-');
+    console.log(JSON.stringify(requestBody, null, 2));
+
+    // ── Step 5: Call ticketing API ───────────────────────────────
     const response = await fetch(`${API_BASE_URL}/flights/ticketing/issue-ticket`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody)
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(requestBody),
     });
-    
-    logSection('📥 API RESPONSE DETAILS', '-');
-    console.log('📍 Status Code:', response.status);
-    console.log('📍 Status Text:', response.statusText);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ Error response body:', errorText);
-      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
-    }
-    
-    const data = await response.json();
-    
-    logSection('✅ PAYMENT CONFIRMATION RESPONSE');
-    console.log('📦 Response Data:');
-    console.log(formatJSON(data));
-    console.log('\n💡 To copy response, run: copy(' + JSON.stringify(data, null, 2) + ')');
-    
-    // ==============================================
-    // STEP 6: Store confirmation result
-    // ==============================================
-    const confirmationResult = {
-      success: true,
-      data: data,
-      extractedData: { pnr, pricingKeys, traceId, fopType },
-      timestamp: new Date().toISOString()
+
+    const text = await response.text();
+    log('📥 TICKETING RESPONSE', '-');
+    console.log('Status:', response.status);
+    console.log(text);
+
+    if (!response.ok) throw new Error(`HTTP ${response.status}: ${text}`);
+
+    const data = JSON.parse(text);
+
+    // ── Step 6: Cache + return ───────────────────────────────────
+    cachedResult = {
+      success:       true,
+      data,
+      extractedData: { pnr, pricingKeys, traceId, fopType: 'Cash' },
+      timestamp:     new Date().toISOString(),
     };
-    
-    // Store in localStorage for backup
-    localStorage.setItem('paymentConfirmationResult', JSON.stringify(confirmationResult));
-    
-    // Cache the result and mark as completed
-    cachedResult = confirmationResult;
+
+    localStorage.setItem('paymentConfirmationResult', JSON.stringify(cachedResult));
     isApiCallCompleted = true;
-    
-    logSection('🎉 PAYMENT CONFIRMATION COMPLETED');
-    console.log('Status: Success ✅');
-    console.log('PNR Used:', pnr);
-    console.log('Pricing Keys Used (array):', pricingKeys);
-    console.log('Trace ID Used:', traceId);
-    console.log('FOP Type Used (hardcoded):', fopType);
-    
-    return confirmationResult;
-    
-  } catch (error) {
-    logSection('❌ PAYMENT CONFIRMATION ERROR');
-    console.error('Error Message:', error.message);
-    console.error('Error Stack:', error.stack);
-    
-    const errorResult = {
-      success: false,
-      error: error.message,
-      timestamp: new Date().toISOString()
-    };
-    
-    return errorResult;
-    
+
+    log('🎉 TICKET ISSUED SUCCESSFULLY');
+    console.log('PNR:', pnr);
+    console.log('PricingKeys:', pricingKeys);
+
+    return cachedResult;
+
+  } catch (err) {
+    log('❌ TICKET ISSUANCE ERROR');
+    console.error(err.message);
+    return { success: false, error: err.message, timestamp: new Date().toISOString() };
   } finally {
-    // Reset the in-progress flag
     isApiCallInProgress = false;
   }
 };
 
-/**
- * Helper function to check if PNR data exists in localStorage
- */
-export const hasPnrDataInStorage = () => {
-  const hasContextData = !!localStorage.getItem('pnrContextData');
-  const hasRawResponse = !!localStorage.getItem('pnrRawResponse');
-  console.log('Storage check - pnrContextData:', hasContextData, 'pnrRawResponse:', hasRawResponse);
-  return hasContextData || hasRawResponse;
+// ── Utility exports ───────────────────────────────────────────────
+
+export const resetPaymentConfirmationState = () => {
+  isApiCallInProgress = false;
+  isApiCallCompleted  = false;
+  cachedResult        = null;
+  console.log('🔄 Payment confirmation state reset');
 };
 
+export const isPaymentConfirmed  = () => isApiCallCompleted;
+export const getCachedPaymentResult = () => cachedResult;
+
 /**
- * Helper function to get extracted data from localStorage without calling API
+ * Check if PNR data exists in localStorage (for debugging).
+ */
+export const hasPnrDataInStorage = () => !!localStorage.getItem(PNR_STORAGE_KEY);
+
+/**
+ * Preview extracted data without calling the API (for debugging).
  */
 export const getExtractedDataFromStorage = () => {
-  const rawResponse = getPnrResponseFromLocalStorage();
-  if (!rawResponse) {
-    return { error: 'No data found in localStorage' };
-  }
-  
+  const raw = readPnrFromStorage();
+  if (!raw) return { error: 'No data in localStorage' };
   return {
-    pnr: extractPNR(rawResponse),
-    pricingKeys: extractPricingKeys(rawResponse), // Now returns array
-    traceId: extractTraceId(rawResponse),
-    hasData: true
+    pnr:         extractPNR(raw),
+    pricingKeys: extractPricingKeys(raw),
+    traceId:     extractTraceId(raw),
+    hasData:     true,
   };
-};
-
-/**
- * Check if payment confirmation has already been completed
- */
-export const isPaymentConfirmed = () => {
-  return isApiCallCompleted;
-};
-
-/**
- * Get cached payment confirmation result
- */
-export const getCachedPaymentResult = () => {
-  return cachedResult;
 };
 
 export default {
   completePaymentConfirmation,
+  savePnrToStorage,
+  clearPnrFromStorage,
   hasPnrDataInStorage,
   getExtractedDataFromStorage,
   resetPaymentConfirmationState,
   isPaymentConfirmed,
-  getCachedPaymentResult
+  getCachedPaymentResult,
 };

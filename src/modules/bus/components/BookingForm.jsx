@@ -12,22 +12,26 @@ import {
   ArrowRightLeft,
   ChevronLeft,
   ChevronRight,
+  Ticket,
+  Gift,
+  Star,
+  TrendingUp,
 } from "lucide-react";
 
 const tabs = [
   { id: "bus", label: "Bus", icon: Bus },
-  { id: "billpayments", label: "Bill Payments", icon: Bus },
+  { id: "billpayments", label: "Bill Payments", icon: Ticket },
   { id: "flights", label: "Flights", icon: Plane },
   { id: "hotels", label: "Hotels", icon: Building2 },
-  { id: "holidays", label: "Holidays", icon: Palmtree },
+  { id: "holidays", label: "Holidays", icon: Star },
   { id: "cabs", label: "Cabs", icon: Car },
 ];
 
 const specialFares = [
-  { id: "regular", label: "Regular", desc: "Regular fares" },
-  { id: "first", label: "First SignUp", desc: "100 reward points" },
-  { id: "reward", label: "Ride & Get Rewarded!", desc: "Earn 4% Every Trip" },
-  { id: "promo", label: "Apply. Save. Smile!", desc: "Use Promocode upto 10%" },
+  { id: "regular", label: "Regular", desc: "Regular fares", icon: Ticket },
+  { id: "first", label: "First SignUp", desc: "100 reward points", icon: Gift },
+  { id: "reward", label: "Ride & Get Rewarded!", desc: "Earn 4% Every Trip", icon: TrendingUp },
+  { id: "promo", label: "Apply. Save. Smile!", desc: "Use Promocode upto 10%", icon: Star },
 ];
 
 const tabRoutes = {
@@ -39,9 +43,54 @@ const tabRoutes = {
   cabs: "/cabs",
 };
 
+// Professional full sunrise / golden-hour travel images
+const carouselImages = [
+  {
+    url: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+    title: "Journey Into the Sunrise",
+    subtitle: "Travel in comfort with our luxury fleet"
+  },
+  {
+    url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+    title: "Roads That Inspire",
+    subtitle: "Experience the joy of road travel"
+  },
+  {
+    url: "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+    title: "Golden Hour Routes",
+    subtitle: "Beautiful journeys across the country"
+  },
+  {
+    url: "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+    title: "Scenic Horizons",
+    subtitle: "Well-maintained buses for safe travel"
+  },
+  {
+    url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+    title: "Sunrise Destinations",
+    subtitle: "Round the clock connectivity"
+  },
+  {
+    url: "https://images.unsplash.com/photo-1519681393784-d120267933ba?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+    title: "Mountain Sunrise Trails",
+    subtitle: "Luxury coaches at affordable prices"
+  },
+  {
+    url: "https://images.unsplash.com/photo-1501854140801-50d01698950b?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+    title: "Nature's First Light",
+    subtitle: "Fast and reliable bus connections"
+  },
+  {
+    url: "https://images.unsplash.com/photo-1488085061387-422e29b40080?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+    title: "Adventure at Dawn",
+    subtitle: "Sleeper buses for overnight journeys"
+  }
+];
+
 const BookingForm = () => {
   const [activeTab, setActiveTab] = useState("bus");
   const [activeFare, setActiveFare] = useState("regular");
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -71,8 +120,44 @@ const BookingForm = () => {
 
   const fromDebounce = useRef(null);
   const toDebounce = useRef(null);
+  const carouselInterval = useRef(null);
 
   const navigate = useNavigate();
+
+  // Auto-slide carousel
+  useEffect(() => {
+    carouselInterval.current = setInterval(() => {
+      setCurrentImageIndex((prevIndex) =>
+        prevIndex === carouselImages.length - 1 ? 0 : prevIndex + 1
+      );
+    }, 5000);
+    return () => {
+      if (carouselInterval.current) clearInterval(carouselInterval.current);
+    };
+  }, []);
+
+  const resetInterval = () => {
+    if (carouselInterval.current) clearInterval(carouselInterval.current);
+    carouselInterval.current = setInterval(() => {
+      setCurrentImageIndex((prevIndex) =>
+        prevIndex === carouselImages.length - 1 ? 0 : prevIndex + 1
+      );
+    }, 5000);
+  };
+
+  const goToPrevious = () => {
+    setCurrentImageIndex((prevIndex) =>
+      prevIndex === 0 ? carouselImages.length - 1 : prevIndex - 1
+    );
+    resetInterval();
+  };
+
+  const goToNext = () => {
+    setCurrentImageIndex((prevIndex) =>
+      prevIndex === carouselImages.length - 1 ? 0 : prevIndex + 1
+    );
+    resetInterval();
+  };
 
   const handleSearch = () => {
     setFromError("");
@@ -200,34 +285,82 @@ const BookingForm = () => {
   const isPastDate = (d) => {
     const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), d);
     const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return date < today;
+    today.setHours(0, 0, 0, 0);
+    return date < today;
   };
 
   return (
-    <section className="relative min-h-[550px] md:min-h-[590px] flex items-center justify-center py-8 md:py-0">
-      {/* Background */}
-      <img
-        src="https://images.unsplash.com/photo-1570125909232-eb263c188f7e?ixlib=rb-4.0.3&auto=format&fit=crop&w=2071&q=80"
-        alt="Modern bus fleet on highway"
-        className="absolute inset-0 w-full h-full object-cover"
-      />
-      <div className="absolute inset-0 bg-gradient-to-r from-red-600/90 via-red-500/80 to-purple-600/70" />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+    <section className="relative min-h-[550px] md:min-h-[590px] flex items-center justify-center py-8 md:py-0 overflow-hidden">
 
+      {/* ── Carousel Background ──────────────────────────────────────────────── */}
+      <div className="absolute inset-0">
+        {carouselImages.map((image, index) => (
+          <div
+            key={index}
+            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+              index === currentImageIndex ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            <img
+              src={image.url}
+              alt={image.title}
+              className="w-full h-full object-cover object-center"
+            />
+            {/* Subtle dark scrim — lets the sunrise image show through */}
+            <div className="absolute inset-0 bg-black/35" />
+            <div className="absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/50 to-transparent" />
+          </div>
+        ))}
+      </div>
+
+      {/* ── Carousel Arrow Controls ──────────────────────────────────────────── */}
+      <button
+        onClick={goToPrevious}
+        className="absolute left-4 z-20 bg-white/20 hover:bg-white/40 backdrop-blur-sm text-white p-2 rounded-full transition-all duration-300 hover:scale-110"
+      >
+        <ChevronLeft size={24} />
+      </button>
+      <button
+        onClick={goToNext}
+        className="absolute right-4 z-20 bg-white/20 hover:bg-white/40 backdrop-blur-sm text-white p-2 rounded-full transition-all duration-300 hover:scale-110"
+      >
+        <ChevronRight size={24} />
+      </button>
+
+      {/* ── Carousel Dot Indicators — below search button ───────────────────── */}
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20 flex gap-2">
+        {carouselImages.map((_, index) => (
+          <button
+            key={index}
+            onClick={() => { setCurrentImageIndex(index); resetInterval(); }}
+            className={`transition-all duration-300 rounded-full ${
+              index === currentImageIndex
+                ? "w-8 h-2 bg-white"
+                : "w-2 h-2 bg-white/50 hover:bg-white/75"
+            }`}
+          />
+        ))}
+      </div>
+
+      {/* ── Hero Text ────────────────────────────────────────────────────────── */}
+      <div className="absolute top-20 left-0 right-0 z-20 text-center text-white px-4">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-2 animate-fade-in"
+          style={{ textShadow: "2px 2px 4px rgba(0,0,0,0.4)" }}>
+          {carouselImages[currentImageIndex].title}
+        </h1>
+        <p className="text-sm sm:text-base md:text-lg text-white/90 animate-fade-in-up"
+          style={{ textShadow: "1px 1px 2px rgba(0,0,0,0.3)" }}>
+          {carouselImages[currentImageIndex].subtitle}
+        </p>
+      </div>
+
+      {/* ── Main Content ─────────────────────────────────────────────────────── */}
       <div className="relative z-10 w-full max-w-6xl px-4 sm:px-6">
-        {/* Hero Text */}
-        <div className="text-center mb-4 sm:mb-6 md:mb-8 text-white">
-          <h1 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-bold mt-6 md:-mt-6">
-            Your Journey, Our Priority
-          </h1>
-          <p className="text-xs sm:text-sm md:text-lg opacity-90 mt-1 sm:mt-2">
-            Book buses, flights, hotels & more at the best prices
-          </p>
-        </div>
 
-        <div className="relative bg-white/95 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-2xl p-3 sm:p-4 md:p-6 lg:p-8 border border-white/20">
-          {/* TABS - desktop only */}
+        {/* ── Booking Card ─────────────────────────────────────────────────── */}
+        <div className="relative bg-white/95 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-2xl p-3 sm:p-4 md:p-6 lg:p-8 border border-white/20 mt-20 md:mt-28">
+
+          {/* TABS — desktop */}
           <div className="hidden lg:flex gap-3 mb-6 md:mb-8">
             {tabs.map((tab) => {
               const Icon = tab.icon;
@@ -249,16 +382,37 @@ const BookingForm = () => {
             })}
           </div>
 
+          {/* TABS — mobile scrollable */}
+          <div className="lg:hidden overflow-x-auto pb-2 mb-4">
+            <div className="flex gap-2 min-w-max">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                const active = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => { setActiveTab(tab.id); navigate(tabRoutes[tab.id]); }}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 ${
+                      active
+                        ? "bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white"
+                        : "text-gray-600 bg-white/80 border border-gray-200"
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* ── MOBILE FORM ── */}
           <div className="md:hidden space-y-0">
-
-            {/* FROM + TO stacked with swap on the right border */}
-            <div className="relative border border-gray-200 rounded-xl overflow-visible">
-
-              {/* FROM row */}
+            <div className="relative border border-gray-200 rounded-xl overflow-visible bg-white">
+              {/* FROM */}
               <div ref={fromRef} className="relative px-3 pt-3 pb-2 pr-10">
                 <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Depart From</p>
-                <div className={`flex items-center gap-2  pb-1 ${fromError ? "border-red-400" : "border-gray-200"}`}>
+                <div className={`flex items-center gap-2 pb-1 ${fromError ? "border-red-400" : "border-gray-200"}`}>
                   <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${fromError ? "text-red-400" : "text-gray-400"}`} />
                   <input
                     type="text"
@@ -273,14 +427,24 @@ const BookingForm = () => {
                     }}
                   />
                 </div>
-                {fromError && <p className="text-red-500 text-[10px] mt-0.5 flex items-center gap-1"><span>⚠</span>{fromError}</p>}
-
+                {fromError && (
+                  <p className="text-red-500 text-[10px] mt-0.5 flex items-center gap-1">
+                    <span>⚠</span>{fromError}
+                  </p>
+                )}
                 {showFromResults && fromResults.length > 0 && (
                   <div className="absolute left-0 top-full w-full bg-white shadow-lg rounded-xl max-h-48 overflow-y-auto z-50 mt-1">
                     {fromResults.map((city) => (
-                      <div key={city.sid}
-                        onClick={() => { setFromQuery(city.cityname); setFromCity(city); setFromSelected(true); setShowFromResults(false); setFromError(""); if (toCity?.sid === city.sid) setSameCityError("Departure and Destination cannot be the same"); else setSameCityError(""); }}
-                        className="px-3 py-2 hover:bg-orange-50 cursor-pointer text-xs border-b last:border-0">
+                      <div
+                        key={city.sid}
+                        onClick={() => {
+                          setFromQuery(city.cityname); setFromCity(city);
+                          setFromSelected(true); setShowFromResults(false); setFromError("");
+                          if (toCity?.sid === city.sid) setSameCityError("Departure and Destination cannot be the same");
+                          else setSameCityError("");
+                        }}
+                        className="px-3 py-2 hover:bg-orange-50 cursor-pointer text-xs border-b last:border-0"
+                      >
                         {city.cityname}, {city.state}
                       </div>
                     ))}
@@ -288,12 +452,10 @@ const BookingForm = () => {
                 )}
               </div>
             </div>
-            <div className="relative border mt-2 border-gray-200 rounded-xl overflow-visible">
 
-              {/* Divider line */}
+            <div className="relative mt-2 border border-gray-200 rounded-xl overflow-visible bg-white">
               <div className="mx-3 border-t border-dashed border-gray-200" />
-
-              {/* TO row */}
+              {/* TO */}
               <div ref={toRef} className="relative px-3 pt-2 pb-3 pr-10">
                 <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Going To</p>
                 <div className={`flex items-center gap-2 pb-1 ${toError || sameCityError ? "border-red-400" : "border-gray-200"}`}>
@@ -311,22 +473,31 @@ const BookingForm = () => {
                     }}
                   />
                 </div>
-                {(toError || sameCityError) && <p className="text-red-500 text-[10px] mt-0.5 flex items-center gap-1"><span>⚠</span>{sameCityError || toError}</p>}
-
+                {(toError || sameCityError) && (
+                  <p className="text-red-500 text-[10px] mt-0.5 flex items-center gap-1">
+                    <span>⚠</span>{sameCityError || toError}
+                  </p>
+                )}
                 {showToResults && toResults.length > 0 && (
                   <div className="absolute left-0 top-full w-full bg-white shadow-lg rounded-xl max-h-48 overflow-y-auto z-50 mt-1">
                     {toResults.map((city) => (
-                      <div key={city.sid}
-                        onClick={() => { setToQuery(city.cityname); setToCity(city); setToSelected(true); setShowToResults(false); setToError(""); if (fromCity?.sid === city.sid) setSameCityError("Departure and Destination cannot be the same"); else setSameCityError(""); }}
-                        className="px-3 py-2 hover:bg-orange-50 cursor-pointer text-xs border-b last:border-0">
+                      <div
+                        key={city.sid}
+                        onClick={() => {
+                          setToQuery(city.cityname); setToCity(city);
+                          setToSelected(true); setShowToResults(false); setToError("");
+                          if (fromCity?.sid === city.sid) setSameCityError("Departure and Destination cannot be the same");
+                          else setSameCityError("");
+                        }}
+                        className="px-3 py-2 hover:bg-orange-50 cursor-pointer text-xs border-b last:border-0"
+                      >
                         {city.cityname}, {city.state}
                       </div>
                     ))}
                   </div>
                 )}
               </div>
-
-              {/* SWAP button — on the right border, vertically centered between FROM and TO */}
+              {/* SWAP button */}
               <div className="absolute right-8 -top-2 -translate-y-1/2 translate-x-1/2 z-10">
                 <button
                   onClick={handleSwap}
@@ -337,8 +508,8 @@ const BookingForm = () => {
               </div>
             </div>
 
-            {/* DATE — same style card, inline */}
-            <div className="relative mt-3 border border-gray-200 rounded-xl px-3 py-3">
+            {/* DATE */}
+            <div className="relative mt-3 border border-gray-200 rounded-xl px-3 py-3 bg-white">
               <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Depart Date</p>
               <div
                 onClick={() => setShowCalendar(!showCalendar)}
@@ -347,13 +518,16 @@ const BookingForm = () => {
                 <Calendar className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
                 <span className="text-sm font-semibold text-gray-800">{formatDate(selectedDate)}</span>
               </div>
-
               {showCalendar && (
                 <div ref={calendarRef} onMouseDown={(e) => e.stopPropagation()} className="absolute top-full left-0 right-0 bg-white rounded-2xl shadow-2xl p-3 z-50 mt-1">
                   <div className="flex justify-between items-center mb-3">
-                    <button onClick={() => setCurrentDate(new Date(year, currentDate.getMonth() - 1, 1))} className="p-1 hover:bg-gray-100 rounded"><ChevronLeft size={18} /></button>
+                    <button onClick={() => setCurrentDate(new Date(year, currentDate.getMonth() - 1, 1))} className="p-1 hover:bg-gray-100 rounded">
+                      <ChevronLeft size={18} />
+                    </button>
                     <h2 className="font-semibold text-sm">{monthName} {year}</h2>
-                    <button onClick={() => setCurrentDate(new Date(year, currentDate.getMonth() + 1, 1))} className="p-1 hover:bg-gray-100 rounded"><ChevronRight size={18} /></button>
+                    <button onClick={() => setCurrentDate(new Date(year, currentDate.getMonth() + 1, 1))} className="p-1 hover:bg-gray-100 rounded">
+                      <ChevronRight size={18} />
+                    </button>
                   </div>
                   <div className="grid grid-cols-7 text-center text-xs text-gray-500 mb-2">
                     {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d) => <div key={d}>{d}</div>)}
@@ -365,8 +539,12 @@ const BookingForm = () => {
                       const past = isPastDate(day);
                       const isSelected = selectedDate?.getDate() === day && selectedDate?.getMonth() === currentDate.getMonth();
                       return (
-                        <button key={day} onClick={() => !past && handleDateSelect(day)} disabled={past}
-                          className={`p-1 rounded-lg transition text-xs ${isSelected ? "bg-[#FD561E] text-white" : ""} ${past ? "text-gray-300 cursor-not-allowed" : "hover:bg-orange-100"}`}>
+                        <button
+                          key={day}
+                          onClick={() => !past && handleDateSelect(day)}
+                          disabled={past}
+                          className={`p-1 rounded-lg transition text-xs ${isSelected ? "bg-[#FD561E] text-white" : ""} ${past ? "text-gray-300 cursor-not-allowed" : "hover:bg-orange-100"}`}
+                        >
                           {day}
                         </button>
                       );
@@ -376,15 +554,18 @@ const BookingForm = () => {
               )}
             </div>
 
-            {/* Special Fares - mobile */}
+            {/* Special Fares — mobile */}
             <div className="mt-3 flex flex-wrap items-center gap-1.5">
               <span className="text-[10px] font-bold uppercase tracking-wide text-gray-700">Special Fares</span>
               <div className="flex flex-wrap gap-1.5">
                 {specialFares.map((fare) => {
                   const active = activeFare === fare.id;
                   return (
-                    <button key={fare.id} onClick={() => setActiveFare(fare.id)}
-                      className={`px-2 py-1 rounded-lg border text-left transition-all duration-300 ${active ? "border-[#FD561E] bg-orange-50 shadow-sm" : "border-gray-200 text-gray-600 hover:border-[#FD561E] bg-white/80"}`}>
+                    <button
+                      key={fare.id}
+                      onClick={() => setActiveFare(fare.id)}
+                      className={`px-2 py-1 rounded-lg border text-left transition-all duration-300 ${active ? "border-[#FD561E] bg-orange-50 shadow-sm" : "border-gray-200 text-gray-600 hover:border-[#FD561E] bg-white/80"}`}
+                    >
                       <span className="text-[10px] font-semibold block">{fare.label}</span>
                       <span className="text-[8px] text-gray-500">{fare.desc}</span>
                     </button>
@@ -392,93 +573,143 @@ const BookingForm = () => {
                 })}
               </div>
             </div>
+
+            {/* Search button — mobile: full width inside card, no overlap */}
+            <button
+              onClick={handleSearch}
+              className="w-full mt-4 bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white cursor-pointer py-3 rounded-full text-sm font-semibold shadow-xl hover:shadow-2xl transition-shadow duration-300 whitespace-nowrap"
+            >
+              Search
+            </button>
           </div>
 
-          {/* ── DESKTOP / TABLET FORM (unchanged) ── */}
+          {/* ── DESKTOP FORM ── */}
           <div className="hidden md:block relative">
-            <div className="grid grid-cols-12 md:grid-cols-12  lg:grid-cols-12 gap-2 md:gap-2">
+            <div className="grid grid-cols-12 gap-2">
 
               {/* FROM */}
-              <div ref={fromRef} className="col-span-5 md:col-span-4 lg:col-span-4 group relative">
+              <div ref={fromRef} className="col-span-4 group relative">
                 <p className="text-[11px] sm:text-xs text-gray-500 uppercase tracking-wide mb-1 transition-colors duration-300 group-hover:text-[#FD561E]">Depart From</p>
                 <div className={`flex items-center gap-2 pb-1.5 border-b transition-colors duration-300 ${fromError ? "border-red-400" : "border-gray-200 group-hover:border-[#FD561E]"}`}>
                   <MapPin className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors duration-300 flex-shrink-0 ${fromError ? "text-red-400" : "text-gray-400 group-hover:text-[#FD561E]"}`} />
-                  <input type="text" placeholder="Hyderabad"
+                  <input
+                    type="text"
+                    placeholder="Hyderabad"
                     className="w-full text-sm sm:text-base md:text-lg font-semibold outline-none bg-transparent py-1"
                     value={fromQuery}
-                    onChange={(e) => { const val = e.target.value; setFromQuery(val); setFromSelected(false); setFromCity(null); setFromError(""); setSameCityError(""); searchCities(val); }} />
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFromQuery(val); setFromSelected(false); setFromCity(null);
+                      setFromError(""); setSameCityError(""); searchCities(val);
+                    }}
+                  />
                 </div>
-                <div className="h-4 mt-0.5">{fromError && <p className="text-red-500 text-[10px] flex items-center gap-1"><span>⚠</span>{fromError}</p>}</div>
+                <div className="h-4 mt-0.5">
+                  {fromError && <p className="text-red-500 text-[10px] flex items-center gap-1"><span>⚠</span>{fromError}</p>}
+                </div>
                 {showFromResults && fromResults.length > 0 && (
                   <div className="absolute left-0 top-full w-full bg-white shadow-lg rounded-xl max-h-48 overflow-y-auto z-50 mt-1">
                     {fromResults.map((city) => (
-                      <div key={city.sid} onClick={() => { setFromQuery(city.cityname); setFromCity(city); setFromSelected(true); setShowFromResults(false); setFromError(""); if (toCity?.sid === city.sid) setSameCityError("Departure and Destination cannot be the same"); else setSameCityError(""); }}
-                        className="px-3 py-1.5 hover:bg-orange-50 cursor-pointer text-xs">{city.cityname}, {city.state}</div>
+                      <div
+                        key={city.sid}
+                        onClick={() => {
+                          setFromQuery(city.cityname); setFromCity(city);
+                          setFromSelected(true); setShowFromResults(false); setFromError("");
+                          if (toCity?.sid === city.sid) setSameCityError("Departure and Destination cannot be the same");
+                          else setSameCityError("");
+                        }}
+                        className="px-3 py-1.5 hover:bg-orange-50 cursor-pointer text-xs"
+                      >
+                        {city.cityname}, {city.state}
+                      </div>
                     ))}
                   </div>
                 )}
               </div>
 
-              {/* SWAP - desktop */}
-              <div className="flex justify-center items-center md:col-span-[auto] lg:col-span-1 w-auto px-0">
-                <button className="p-1.5 sm:p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-all duration-500 hover:rotate-180 cursor-pointer" onClick={handleSwap}>
+              {/* SWAP — desktop */}
+              <div className="col-span-1 flex justify-center items-center">
+                <button
+                  className="p-1.5 sm:p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-all duration-500 hover:rotate-180 cursor-pointer"
+                  onClick={handleSwap}
+                >
                   <ArrowRightLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600" />
                 </button>
               </div>
 
               {/* TO */}
-              <div ref={toRef} className="col-span-5 md:col-span-4 lg:col-span-4 group relative">
+              <div ref={toRef} className="col-span-4 group relative">
                 <p className="text-[11px] sm:text-xs text-gray-500 uppercase tracking-wide mb-1 transition-colors duration-300 group-hover:text-[#FD561E]">Going To</p>
                 <div className={`flex items-center gap-2 pb-1.5 border-b transition-colors duration-300 ${toError || sameCityError ? "border-red-400" : "border-gray-200 group-hover:border-[#FD561E]"}`}>
                   <MapPin className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors duration-300 flex-shrink-0 ${toError || sameCityError ? "text-red-400" : "text-gray-400 group-hover:text-[#FD561E]"}`} />
-                  <input type="text" placeholder="Mumbai"
+                  <input
+                    type="text"
+                    placeholder="Mumbai"
                     className="w-full text-sm sm:text-base md:text-lg font-semibold outline-none bg-transparent py-1"
                     value={toQuery}
-                    onChange={(e) => { const val = e.target.value; setToQuery(val); setToSelected(false); setToCity(null); setToError(""); setSameCityError(""); searchToCities(val); }} />
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setToQuery(val); setToSelected(false); setToCity(null);
+                      setToError(""); setSameCityError(""); searchToCities(val);
+                    }}
+                  />
                 </div>
-                <div className="h-4 mt-0.5">{(toError || sameCityError) && <p className="text-red-500 text-[10px] flex items-center gap-1"><span>⚠</span>{sameCityError || toError}</p>}</div>
+                <div className="h-4 mt-0.5">
+                  {(toError || sameCityError) && <p className="text-red-500 text-[10px] flex items-center gap-1"><span>⚠</span>{sameCityError || toError}</p>}
+                </div>
                 {showToResults && toResults.length > 0 && (
                   <div className="absolute left-0 top-full w-full bg-white shadow-lg rounded-xl max-h-48 overflow-y-auto z-50 mt-1">
                     {toResults.map((city) => (
-                      <div key={city.sid} onClick={() => { setToQuery(city.cityname); setToCity(city); setToSelected(true); setShowToResults(false); setToError(""); if (fromCity?.sid === city.sid) setSameCityError("Departure and Destination cannot be the same"); else setSameCityError(""); }}
-                        className="px-3 py-1.5 hover:bg-orange-50 cursor-pointer text-xs">{city.cityname}, {city.state}</div>
+                      <div
+                        key={city.sid}
+                        onClick={() => {
+                          setToQuery(city.cityname); setToCity(city);
+                          setToSelected(true); setShowToResults(false); setToError("");
+                          if (fromCity?.sid === city.sid) setSameCityError("Departure and Destination cannot be the same");
+                          else setSameCityError("");
+                        }}
+                        className="px-3 py-1.5 hover:bg-orange-50 cursor-pointer text-xs"
+                      >
+                        {city.cityname}, {city.state}
+                      </div>
                     ))}
                   </div>
                 )}
               </div>
 
               {/* DATE */}
-              <div className="col-span-12 md:col-span-3 lg:col-span-3 relative group">
+              <div className="col-span-3 relative group">
                 <p className="text-[11px] sm:text-xs text-gray-500 uppercase tracking-wide mb-1 transition-colors duration-300 group-hover:text-[#FD561E]">Depart Date</p>
-                <div onClick={() => setShowCalendar(!showCalendar)}
-                  className="flex items-center gap-2 pb-1.5 border-b border-gray-200 transition-colors duration-300 group-hover:border-[#FD561E] cursor-pointer">
+                <div
+                  onClick={() => setShowCalendar(!showCalendar)}
+                  className="flex items-center gap-2 pb-1.5 border-b border-gray-200 transition-colors duration-300 group-hover:border-[#FD561E] cursor-pointer"
+                >
                   <Calendar className="text-gray-400 w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors duration-300 group-hover:text-[#FD561E] flex-shrink-0" />
-                  <input type="text" value={formatDate(selectedDate)} placeholder="Select Date" readOnly
-                    className="w-full text-sm sm:text-base md:text-lg font-semibold outline-none cursor-pointer bg-transparent py-1" />
+                  <input
+                    type="text"
+                    value={formatDate(selectedDate)}
+                    placeholder="Select Date"
+                    readOnly
+                    className="w-full text-sm sm:text-base md:text-lg font-semibold outline-none cursor-pointer bg-transparent py-1"
+                  />
                 </div>
                 <div className="h-4 mt-0.5" />
                 {showCalendar && (
-                  <div ref={calendarRef} className="absolute top-16  right-0 bg-white rounded-2xl shadow-2xl p-3 sm:p-4 w-[280px] sm:w-[320px] z-50">
+                  <div ref={calendarRef} className="absolute top-16 right-0 bg-white rounded-2xl shadow-2xl p-3 sm:p-4 w-[280px] sm:w-[320px] z-50">
                     <div className="flex justify-between items-center mb-3">
-                     <button 
-                      onClick={(e) => { 
-                      e.stopPropagation(); 
-                      setCurrentDate(new Date(year, currentDate.getMonth() - 1, 1)); 
-                      }} 
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setCurrentDate(new Date(year, currentDate.getMonth() - 1, 1)); }}
                         className="p-1 hover:bg-gray-100 rounded"
-                       >
-                         <ChevronLeft size={18} />
-                       </button>
+                      >
+                        <ChevronLeft size={18} />
+                      </button>
                       <h2 className="font-semibold text-sm">{monthName} {year}</h2>
-                      <button 
-                       onClick={(e) => { 
-                           e.stopPropagation(); 
-                           setCurrentDate(new Date(year, currentDate.getMonth() + 1, 1)); 
-                         }} 
-                         className="p-1 hover:bg-gray-100 rounded"
-                           >
-                             <ChevronRight size={18} />
-                         </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setCurrentDate(new Date(year, currentDate.getMonth() + 1, 1)); }}
+                        className="p-1 hover:bg-gray-100 rounded"
+                      >
+                        <ChevronRight size={18} />
+                      </button>
                     </div>
                     <div className="grid grid-cols-7 text-center text-xs text-gray-500 mb-2">
                       {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d) => <div key={d}>{d}</div>)}
@@ -490,17 +721,14 @@ const BookingForm = () => {
                         const past = isPastDate(day);
                         const isSelected = selectedDate?.getDate() === day && selectedDate?.getMonth() === currentDate.getMonth();
                         return (
-                          <button  
+                          <button
                             key={day}
-                             onClick={(e) => { 
-                               e.stopPropagation(); 
-                                !past && handleDateSelect(day);
-                                 }} 
-                                 disabled={past}
-                                 className={`p-1 rounded-lg transition text-xs ${isSelected ? "bg-[#FD561E] text-white" : ""} ${past ? "text-gray-300 cursor-not-allowed" : "hover:bg-orange-100"}`}
-                                 >
-                                   {day}
-                                   </button>
+                            onClick={(e) => { e.stopPropagation(); !past && handleDateSelect(day); }}
+                            disabled={past}
+                            className={`p-1 rounded-lg transition text-xs ${isSelected ? "bg-[#FD561E] text-white" : ""} ${past ? "text-gray-300 cursor-not-allowed" : "hover:bg-orange-100"}`}
+                          >
+                            {day}
+                          </button>
                         );
                       })}
                     </div>
@@ -509,15 +737,18 @@ const BookingForm = () => {
               </div>
             </div>
 
-            {/* Special Fares - desktop */}
+            {/* Special Fares — desktop */}
             <div className="mt-5 sm:mt-6 flex flex-wrap items-center gap-1.5 sm:gap-2 md:gap-3">
               <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wide text-gray-700">Special Fares</span>
               <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {specialFares.map((fare) => {
                   const active = activeFare === fare.id;
                   return (
-                    <button key={fare.id} onClick={() => setActiveFare(fare.id)}
-                      className={`px-2 sm:px-3 py-1 rounded-lg border text-left transition-all duration-300 ${active ? "border-[#FD561E] bg-orange-50 shadow-sm" : "border-gray-200 text-gray-600 hover:border-[#FD561E] bg-white/80"}`}>
+                    <button
+                      key={fare.id}
+                      onClick={() => setActiveFare(fare.id)}
+                      className={`px-2 sm:px-3 py-1 rounded-lg border text-left transition-all duration-300 ${active ? "border-[#FD561E] bg-orange-50 shadow-sm" : "border-gray-200 text-gray-600 hover:border-[#FD561E] bg-white/80"}`}
+                    >
                       <span className="text-[10px] sm:text-xs font-semibold block">{fare.label}</span>
                       <span className="text-[8px] sm:text-[10px] text-gray-500">{fare.desc}</span>
                     </button>
@@ -527,15 +758,26 @@ const BookingForm = () => {
             </div>
           </div>
 
-          {/* SEARCH BUTTON */}
+          {/* SEARCH BUTTON — original position */}
           <div className="absolute left-1/2 -bottom-5 sm:-bottom-6 md:-bottom-7 transform -translate-x-1/2">
-            <button onClick={handleSearch}
-              className="bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white cursor-pointer px-6 sm:px-8 md:px-14 py-1.5 sm:py-2 md:py-3 rounded-full text-xs sm:text-sm md:text-base font-semibold shadow-xl hover:scale-110 transition-all duration-300 whitespace-nowrap">
+            <button
+              onClick={handleSearch}
+              className="bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white cursor-pointer px-6 sm:px-8 md:px-14 py-1.5 sm:py-2 md:py-3 rounded-full text-xs sm:text-sm md:text-base font-semibold shadow-xl transition-all duration-300 whitespace-nowrap"
+            >
               Search
             </button>
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes fade-in {
+          from { opacity: 0; transform: translateY(20px); }
+          to   { opacity: 1; transform: translateY(0);     }
+        }
+        .animate-fade-in     { animation: fade-in 0.8s ease-out;          }
+        .animate-fade-in-up  { animation: fade-in 1s ease-out 0.2s both;  }
+      `}</style>
     </section>
   );
 };

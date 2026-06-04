@@ -36,7 +36,7 @@ export const createBillDeskOrder = async (bookingData, pnrData) => {
   // Get passenger name (first passenger)
   const firstPassenger = passengers[0] || {};
   const firstName = firstPassenger.firstName || firstPassenger.first_name || "Guest";
-  const lastName = firstPassenger.lastName || firstPassenger.last_name || "";
+  const lastName = firstPassenger.lastName || firstPassenger.last_name || "Guest";
   
   // Get phone number
   const phoneNumber = contactInfo?.phone?.number || contactInfo?.phone || "NA";
@@ -48,8 +48,10 @@ export const createBillDeskOrder = async (bookingData, pnrData) => {
     //amount: calculatedAmount.toFixed(2),  // Dynamic from selected fare
     amount:"1.00",
     user_id: phoneNumber,                 // Dynamic from contact info
-    paymentfor: "flight",                 // Hardcoded (always flight)
-    universal_locator_code: pnrNumber,    // Dynamic from PNR response
+    paymentfor: "FBD",                 // Hardcoded (always flight)
+    universal_locator_code: pnrNumber, 
+    // 
+      // universal_locator_code:"35PHE5",    // Dynamic from PNR response
     air_locator_code: airLocatorCode,     // Dynamic from PNR response
     provider_locator_code: providerLocatorCode, // Dynamic from PNR response
     customer: {
