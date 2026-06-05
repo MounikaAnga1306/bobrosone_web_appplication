@@ -151,7 +151,6 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
       localStorage.setItem("blockStartTime", Date.now());
       console.log("tripDetails:", tripDetails);
 
-
       navigate("/booking-success", {
         state: {
           ticketId:             response.blockedTicketId,
@@ -192,7 +191,7 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 flex items-end">
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-end overflow-hidden">
       <div className="bg-white w-full h-[95vh] rounded-t-2xl flex flex-col animate-slideUp-seat">
 
         {warning && (
@@ -214,7 +213,7 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
           operator={operator || tripDetails?.travels}
         />
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-2 sm:p-4 lg:p-6 pb-24">
 
           {step === 1 && tripDetails && (
             <SeatSelection
@@ -369,76 +368,95 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
         </div>
       </div>
 
-      {/* ── BACK CONFIRM POPUP ── */}
-      {showBookConfirm && (
-  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4">
-    <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
-      
-      {isBooking ? (
-        // ── LOADING STATE ──
-        <div className="text-center py-4">
-          <div className="flex justify-center mb-4">
-            <svg className="animate-spin h-10 w-10 text-[#fd561e]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-            </svg>
+      {/* ── BACK CONFIRM POPUP (currently not used but kept for future) ── */}
+      {showBackConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+            <h3 className="text-lg font-bold text-gray-900 text-center mb-2">Are you sure?</h3>
+            <p className="text-sm text-gray-500 text-center mb-6">If you go back, you may lose the selected seats.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowBackConfirm(false)} className="flex-1 py-3 rounded-xl border-2 border-gray-300 text-gray-700 cursor-pointer font-semibold">Cancel</button>
+              <button onClick={() => { setShowBackConfirm(false); onClose(); }} className="flex-1 py-3 rounded-xl bg-[#fd561e] text-white cursor-pointer font-semibold">Yes, Go Back</button>
+            </div>
           </div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2">Processing...</h3>
-          <p className="text-sm text-gray-500">Redirecting to payment page</p>
         </div>
-      ) : (
-        // ── CONFIRM STATE ──
-        <>
-          <div className="text-3xl text-center mb-3">🎟️</div>
-          <h3 className="text-lg font-bold text-gray-900 text-center mb-2">Confirm Booking?</h3>
-          <p className="text-sm text-gray-500 text-center mb-6 leading-relaxed">
-            Are you sure you want to confirm now and proceed for Payment?
-          </p>
-          <div className="flex gap-3">
-            <button
-              onClick={() => setShowBookConfirm(false)}
-              className="flex-1 py-3 rounded-xl border-2 border-gray-300 text-gray-700 font-semibold cursor-pointer hover:bg-gray-50 transition"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => handleConfirmBooking()}
-              className="flex-1 py-3 rounded-xl bg-[#fd561e] text-white font-semibold cursor-pointer hover:bg-[#e24c16] transition"
-            >
-              Confirm
-            </button>
-          </div>
-        </>
       )}
 
-    </div>
-  </div>
-)}
+      {/* ── BOOK CONFIRM POPUP ── */}
+      {showBookConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm">
+            
+            {isBooking ? (
+              // ── LOADING STATE ──
+              <div className="text-center py-4">
+                <div className="flex justify-center mb-4">
+                  <svg className="animate-spin h-10 w-10 text-[#fd561e]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                  </svg>
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Processing...</h3>
+                <p className="text-sm text-gray-500">Redirecting to payment page</p>
+              </div>
+            ) : (
+              // ── CONFIRM STATE ──
+              <>
+                <div className="text-3xl text-center mb-3">🎟️</div>
+                <h3 className="text-lg font-bold text-gray-900 text-center mb-2">Confirm Booking?</h3>
+                <p className="text-sm text-gray-500 text-center mb-6 leading-relaxed">
+                  Are you sure you want to confirm now and proceed for Payment?
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowBookConfirm(false)}
+                    className="flex-1 py-3 rounded-xl border-2 border-gray-300 text-gray-700 font-semibold cursor-pointer hover:bg-gray-50 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => handleConfirmBooking()}
+                    className="flex-1 py-3 rounded-xl bg-[#fd561e] text-white font-semibold cursor-pointer hover:bg-[#e24c16] transition"
+                  >
+                    Confirm
+                  </button>
+                </div>
+              </>
+            )}
+
+          </div>
+        </div>
+      )}
+
+      {/* ── ERROR POPUP (seat unavailable) ── */}
       {showErrorPopup && (
-  <div className="fixed inset-0 bg-black/55 flex items-center justify-center z-[600] p-4">
-    <div className="bg-white rounded-2xl p-8 w-full max-w-sm text-center shadow-2xl">
-      <div className="text-5xl mb-4">😕</div>
-      <h2 className="text-lg font-bold text-gray-900 mb-3">Seat Unavailable</h2>
-      <p className="text-sm text-gray-600 leading-relaxed mb-6">{errorMessage}</p>
-      <button
-        onClick={() => { 
-          setShowErrorPopup(false);
-          setSelectedSeats([]);
-          setBoardingPoint(null);
-          setDroppingPoint(null);
-          setSavedPassengers(null);
-          setSavedContact(null);
-          setIsBooking(false);
-          setStep(1); 
-          
-           }}
-        className="w-full py-3 rounded-xl bg-[#fd561e] text-white font-bold text-base cursor-pointer hover:bg-[#e24c16] transition"
-      >
-        Choose Another Seat
-      </button>
-    </div>
-  </div>
-)}
+        <div className="fixed inset-0 bg-black/55 flex items-center justify-center z-[600] p-4">
+          <div className="bg-white rounded-2xl p-8 w-full max-w-sm text-center shadow-2xl">
+            <div className="text-5xl mb-4">😕</div>
+            <h2 className="text-lg font-bold text-gray-900 mb-3">Seat Unavailable</h2>
+            <p className="text-sm text-gray-600 leading-relaxed mb-6">{errorMessage}</p>
+            <button
+              onClick={() => { 
+                setShowErrorPopup(false);
+                // Reset all booking‑related states and any pending popups
+                setSelectedSeats([]);
+                setBoardingPoint(null);
+                setDroppingPoint(null);
+                setSavedPassengers(null);
+                setSavedContact(null);
+                setIsBooking(false);
+                setStep(1);
+                // IMPORTANT: dismiss any leftover confirmation popups
+                setShowBookConfirm(false);
+                setShowBackConfirm(false);
+              }}
+              className="w-full py-3 rounded-xl bg-[#fd561e] text-white font-bold text-base cursor-pointer hover:bg-[#e24c16] transition"
+            >
+              Choose Another Seat
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -1,5 +1,6 @@
 // src/modules/flights/pages/FlightSearchScreen.jsx
 import React from "react";
+import { Helmet } from "react-helmet-async";
 import FlightHeroSection from "../components/FlightHeroSection";
 import Services from "../../bus/components/OurServices";
 import WhyBobros from "../../bus/components/WhyBobros";
@@ -12,6 +13,12 @@ import FlightAdvertisement from "../../flights/components/sheet/FlightAdvertisem
 const FlightSearchScreen = () => {
   return (
     <div className="min-h-screen flex flex-col overflow-x-hidden w-full max-w-full">
+      <Helmet>
+        <title>BOBROS - Flight Booking</title>
+        <meta name="description" content="Book cheap flights online. Compare and book domestic & international flights with BOBROS." />
+        <meta name="keywords" content="flight booking, cheap flights, BOBROS flights, domestic flights, international flights" />
+      </Helmet>
+
       <main className="flex-grow w-full max-w-full overflow-x-hidden">
         {/* Flight Hero Section - FULL WIDTH */}
         <FlightHeroSection />

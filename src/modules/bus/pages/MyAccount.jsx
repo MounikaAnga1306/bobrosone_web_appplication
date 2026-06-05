@@ -9,12 +9,13 @@ import PrintTicketModal from "./PrintTicketModal";
 import ForgotPassword from "./ForgotPassword";
 import ResetPassword from "./ResetPassword";
 import AuthModal from "./AuthModal";
-import SignIn from "./SignIn";
-import SignupForm from "./SignUpForm";
+import SignIn from "../../../globalfiles/SignIn";
+import SignupForm from "../../../globalfiles/SignupForm";
 
 const MyAccount = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const hideSidebar = new URLSearchParams(location.search).get("source") === "bill";
   const [transactions, setTransactions] = useState([]);
   const [rewardBalance, setRewardBalance] = useState("0.00");
   const [loading, setLoading] = useState(true);
@@ -62,25 +63,26 @@ const MyAccount = () => {
   }, [navigate]);
 
   const fetchRealBalance = async (userId) => {
-    if (!userId) return;
-    try {
-      const res = await axios.post("https://api.bobros.co.in/db/select", {
-        table: "ulogin",
-        columns: ["ubal"],
-        conditions: { uid: String(userId) }
-      });
-      if (res.data?.rows?.length > 0) {
-        const bal = parseFloat(res.data.rows[0].ubal || 0).toFixed(2);
-        setRewardBalance(bal);
-      }
-    } catch (err) {
-      console.error("Failed to fetch ubal from ulogin:", err);
+  if (!userId) return;
+  try {
+    const res = await axios.post("https://api.bobros.co.in/db/select", {
+      table: "ulogin",
+      columns: ["ubal"],
+      conditions: { uid: String(userId) }
+    });
+    if (res.data?.rows?.length > 0) {
+      const bal = parseFloat(res.data.rows[0].ubal || 0).toFixed(2);
+      setRewardBalance(bal);
     }
-  };
+  } catch (err) {
+    console.error("Failed to fetch ubal from ulogin:", err);
+  }
+};
 
   const fetchTransactions = async () => {
     try {
-      const res = await axios.post("/myAccount", { uid: String(uid) });
+      //const API_BASE_URL = import.meta.env.DEV ? "" : "https://api.bobros.co.in";
+const res = await axios.post(`/myAccount`, { uid: String(uid) });
       if (res.data?.success) {
         const sorted = [...(res.data.transactions || [])].sort((a, b) => b.tid - a.tid);
         setTransactions(sorted);
@@ -184,6 +186,7 @@ const MyAccount = () => {
         onOpenPrintTicket={handleOpenPrintTicket}
         onOpenForgotPassword={handleOpenForgotPassword}
         modalOpen={showPrintTicket || showCancel || openAuthModal || showForgotPassword || showResetPasswordModal}
+        hideSidebar={hideSidebar} 
       >
         <div style={{ 
           padding: getContainerPadding(),

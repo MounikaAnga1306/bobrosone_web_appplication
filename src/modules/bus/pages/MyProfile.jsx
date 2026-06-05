@@ -8,8 +8,8 @@ import CancellationCard from "./CancellationCard";
 import PrintTicketModal from "./PrintTicketModal";
 import ForgotPassword from "./ForgotPassword";
 import ResetPassword from "./ResetPassword";
-import SignIn from "./SignIn";
-import SignupForm from "./SignUpForm";
+import SignIn from "../../../globalfiles/SignIn";
+import SignupForm from "../../../globalfiles/SignupForm";
 import AuthModal from "./AuthModal";
 
 const MyProfile = () => {

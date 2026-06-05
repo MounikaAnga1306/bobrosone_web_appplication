@@ -165,27 +165,20 @@ const BusResultCard = ({
   return (
     <>
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
-        {/* Laptop & Desktop View (lg and above) - ORIGINAL LAYOUT - NO CHANGES */}
+        {/* Laptop & Desktop View (lg and above) */}
         <div className="hidden lg:block">
-          {/* Row 1: Operator, Time, and Price */}
           <div className="flex flex-row items-center gap-4">
-            {/* Left – Operator info */}
             <div className="flex items-start gap-3 w-[220px] shrink-0">
               <div className="min-w-0">
-                <h3 className="text-sm font-bold text-gray-900 truncate">
-                  {operator}
-                </h3>
+                <h3 className="text-sm font-bold text-gray-900 truncate">{operator}</h3>
                 <p className="text-xs text-gray-500 truncate">{type}</p>
                 <div className="flex items-center gap-1.5 mt-2">
                   <Users className="w-3.5 h-3.5 text-gray-500" />
-                  <span className={`text-xs font-medium ${seatInfo.color}`}>
-                    {seatInfo.text}
-                  </span>
+                  <span className={`text-xs font-medium ${seatInfo.color}`}>{seatInfo.text}</span>
                 </div>
               </div>
             </div>
 
-            {/* Middle – Time info */}
             <div className="flex-1 flex items-center gap-4">
               <div className="text-center">
                 <p className="text-lg font-bold text-gray-900">{departure}</p>
@@ -203,15 +196,15 @@ const BusResultCard = ({
               </div>
             </div>
 
-            {/* Right – Price */}
-            <div className="w-[100px] shrink-0 text-right">
-              <p className="text-xl font-extrabold -mt-5 text-gray-900">
-                ₹{price?.toLocaleString("en-IN")}
-              </p>
+            <div className="w-[100px] shrink-0 text-right -mb-6">
+              <p className="text-xl font-extrabold -mt-5 text-gray-900">₹{price?.toLocaleString("en-IN")}</p>
+              <div className="-mt-1 mr-0.5">
+              <p className="text-[10px] text-gray-500 mt-0.5 italic  ">(Incl. GST)</p>
+              <p className="text-[12px] text-gray-600 -mt-1.5">Onwards</p>
+              </div>
             </div>
           </div>
 
-          {/* Row 2: Cancellation Policy & Select Seat Button */}
           <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
             <button
               onClick={fetchCancellationPolicy}
@@ -223,7 +216,6 @@ const BusResultCard = ({
               </div>
               {loadingPolicy ? "Loading..." : "Cancellation Policy"}
             </button>
-            
             <Button
               size="sm"
               className="font-bold cursor-pointer bg-[#fd561e] hover:bg-[#e04a16] text-white px-4 py-1.5 text-sm min-w-[100px]"
@@ -236,27 +228,20 @@ const BusResultCard = ({
           {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
         </div>
 
-        {/* iPad View (md to lg) - ONLY FOR TABLETS */}
+        {/* iPad View (md to lg) */}
         <div className="hidden md:block lg:hidden">
-          {/* Row 1: Operator and Time only - reduced sizes for iPad */}
           <div className="flex flex-row items-center gap-3">
-            {/* Left – Operator info */}
             <div className="flex items-start gap-2 w-[180px] shrink-0">
               <div className="min-w-0">
-                <h3 className="text-xs font-bold text-gray-900 truncate">
-                  {operator}
-                </h3>
+                <h3 className="text-xs font-bold text-gray-900 truncate">{operator}</h3>
                 <p className="text-[10px] text-gray-500 truncate">{type}</p>
                 <div className="flex items-center gap-1 mt-1.5">
                   <Users className="w-3 h-3 text-gray-500" />
-                  <span className={`text-[10px] font-medium ${seatInfo.color}`}>
-                    {seatInfo.text}
-                  </span>
+                  <span className={`text-[10px] font-medium ${seatInfo.color}`}>{seatInfo.text}</span>
                 </div>
               </div>
             </div>
 
-            {/* Middle – Time info */}
             <div className="flex-1 flex items-center gap-2">
               <div className="text-center min-w-[50px]">
                 <p className="text-sm font-bold text-gray-900">{departure}</p>
@@ -275,9 +260,7 @@ const BusResultCard = ({
             </div>
           </div>
 
-          {/* Row 2: Cancellation Policy (Left) + Price + Select Seat Button (Right) */}
           <div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between">
-            {/* Left side - Cancellation Policy */}
             <button
               onClick={fetchCancellationPolicy}
               disabled={loadingPolicy}
@@ -288,17 +271,14 @@ const BusResultCard = ({
               </div>
               {loadingPolicy ? "Loading..." : "Cancellation Policy"}
             </button>
-            
-            {/* Right side - Price + Select Seat button */}
             <div className="flex items-center gap-2">
-              {/* Price */}
               <div className="text-right">
-                <p className="text-base font-extrabold text-gray-900">
-                  ₹{price?.toLocaleString("en-IN")}
-                </p>
+                <p className="text-base font-extrabold mr-1 text-gray-900">₹{price?.toLocaleString("en-IN")}</p>
+                <div className="-mt-1">
+                <p className="text-[10px] text-gray-500 mt-0.5 italic">(Incl. GST)</p>
+              <p className="text-[12px] text-gray-600 -mt-1.5">Onwards</p>
               </div>
-              
-              {/* Select Seat button */}
+              </div>
               <Button
                 size="sm"
                 className="font-bold cursor-pointer bg-[#fd561e] hover:bg-[#e04a16] text-white px-3 py-1 text-xs min-w-[90px]"
@@ -312,25 +292,23 @@ const BusResultCard = ({
           {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
         </div>
 
-        {/* Mobile View (below md) - ORIGINAL LAYOUT - NO CHANGES */}
+        {/* Mobile View (below md) */}
         <div className="md:hidden">
           <div className="flex justify-between items-start mb-3">
             <div className="flex-1">
-              <h3 className="text-sm font-bold text-gray-900 truncate">
-                {operator}
-              </h3>
+              <h3 className="text-sm font-bold text-gray-900 truncate">{operator}</h3>
               <p className="text-xs text-gray-500 truncate">{type}</p>
               <div className="flex items-center gap-1.5 mt-2">
                 <Users className="w-3.5 h-3.5 text-gray-500" />
-                <span className={`text-xs font-medium ${seatInfo.color}`}>
-                  {seatInfo.text}
-                </span>
+                <span className={`text-xs font-medium ${seatInfo.color}`}>{seatInfo.text}</span>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-[15px] ml-1  font-extrabold text-gray-900">
-                ₹{price?.toLocaleString("en-IN")}
-              </p>
+              <p className="text-[15px] ml-1 font-extrabold text-gray-900">₹{price?.toLocaleString("en-IN")}</p>
+              <div className="-mt-1 -mr-1">
+              <p className="text-[10px] text-gray-500 mt-0.5 italic ">(Incl. GST)</p>
+              <p className="text-[12px] text-gray-600 -mt-1.5">Onwards</p>
+              </div>
             </div>
           </div>
 
@@ -363,7 +341,6 @@ const BusResultCard = ({
                 </div>
                 {loadingPolicy ? "Loading..." : "Cancellation Policy"}
               </button>
-              
               <Button
                 size="sm"
                 className="font-bold cursor-pointer bg-[#fd561e] hover:bg-[#e04a16] text-white px-4 py-1.5 text-sm min-w-[100px]"

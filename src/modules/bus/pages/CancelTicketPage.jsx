@@ -382,7 +382,7 @@ const CancelTicketPage = () => {
             ) : (
               <button
                 onClick={() => navigate("/")}
-                className="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-4 rounded-2xl text-sm"
+                className="w-full bg-gray-800 cursor-pointer hover:bg-gray-900 text-white font-bold py-4 rounded-2xl text-sm"
               >
                 Back to Home
               </button>

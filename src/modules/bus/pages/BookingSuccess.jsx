@@ -310,26 +310,47 @@ const BookingSuccess = () => {
   };
 
   const handleBillDeskClick = async (fareToCharge) => {
-    const fare = fareToCharge ?? discountedFare;
-    try {
-      const response = await createBillDeskOrder({
-        fare,
-        uid: uid || "NA",
-        pname: passengers[0]?.name || "Guest",
-        tickid: state?.ticketId
-      });
-      if (!response || !response.success || !response.authToken) { alert("BillDesk order creation failed"); return; }
-      window.location.href = `https://uat.bobros.co.in/billdesk_checkout.php?merchantId=HYDBOBROS&bdorderid=${response.bdorderid}&authToken=${encodeURIComponent(response.authToken)}`;
-    } catch (error) {
-      clearStoredBooking();
-      navigate("/payment-status", { state: { status: "failed", payment: { description: "BillDesk payment error", reason: error.message } } });
+  const fare = fareToCharge ?? discountedFare;
+  try {
+    localStorage.setItem("lastBookingPassengers", JSON.stringify(passengers));
+    localStorage.setItem("lastBookingSeats",      JSON.stringify(state?.seats));
+    localStorage.setItem("lastBookingFrom",       state?.fromCity);
+    localStorage.setItem("lastBookingTo",         state?.toCity);
+    localStorage.setItem("lastBookingDate",       state?.date);
+    localStorage.setItem("lastBookingFare",       fare);
+    localStorage.setItem("lastBookingTicketId",   state?.ticketId);
+
+    // ✅ Bus flow కి correct return URL
+    const APP_URL = import.meta.env.VITE_APP_URL || window.location.origin;
+    const returnUrl = `${APP_URL}/payment-status`;
+
+    const response = await createBillDeskOrder({
+      fare,
+      uid:        uid || "NA",
+      pname:      passengers[0]?.name || "Guest",
+      tickid:     state?.ticketId,
+      redirect_url: returnUrl,   // ✅ ఇది పంపడం important
+    });
+
+    if (!response || !response.success || !response.authToken) {
+      alert("BillDesk order creation failed");
+      return;
     }
-  };
+
+    window.location.href = `https://uat.bobros.co.in/billdesk_checkout.php?merchantId=HYDBOBROS&bdorderid=${response.bdorderid}&authToken=${encodeURIComponent(response.authToken)}`;
+
+  } catch (error) {
+    clearStoredBooking();
+    navigate("/payment-status", {
+      state: { status: "failed", payment: { description: "BillDesk payment error", reason: error.message } }
+    });
+  }
+};
 
   if (!state) return null;
 
   return (
-    <div className="booking-success-container" style={{ minHeight: "100vh", background: "#f4f6f9", fontFamily: "'Segoe UI', sans-serif", paddingTop: "90px" }}>
+    <div className="booking-success-container" style={{ minHeight: "100vh", background: "rgb(251, 251, 248)", fontFamily: "'Segoe UI', sans-serif", paddingTop: "90px" }}>
       <style>{`
         /* Mobile & Tablet Responsiveness */
         @media (max-width: 768px) {

@@ -97,6 +97,7 @@ const carouselImages = [
 
 // Modern bus/transport background images
 const backgroundImages = [
+  "/assets/blue_image.png",
   "https://www.touristsecrets.com/wp-content/uploads/2023/10/washington-d-c-road-trippin-with-greyhound-1697125082.jpg",
   "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
   "https://img.freepik.com/premium-photo/bus-driving-road_81048-20397.jpg",
@@ -235,6 +236,14 @@ const BookingForm = () => {
     setToError("");
     setSameCityError("");
 
+
+  // ✅ LOG #1 — enti select chesav ani chuddam
+  console.log("=== SEARCH CLICKED ===");
+  console.log("fromCity:", fromCity);
+  console.log("toCity:", toCity);
+  console.log("selectedDate:", selectedDate);
+
+
     let isValid = true;
 
     if (!fromCity || !fromCity.sid) {
@@ -252,9 +261,24 @@ const BookingForm = () => {
       isValid = false;
     }
 
-    if (!isValid) return;
+    if (!isValid){
+       console.log("❌ Validation failed — not navigating");
+       return;
+    } 
 
-    const formattedDate = selectedDate.toISOString().split("T")[0];
+   const formattedDate = 
+  selectedDate.getFullYear() + "-" +
+  String(selectedDate.getMonth() + 1).padStart(2, "0") + "-" +
+  String(selectedDate.getDate()).padStart(2, "0");
+    
+    console.log("✅ Navigating with:", {
+    source: fromCity.sid,
+    destination: toCity.sid,
+    doj: formattedDate,
+    sourceName: fromCity.cityname,
+    destinationName: toCity.cityname,
+  });
+
 
     navigate(
       `/results?source=${fromCity.sid}&destination=${toCity.sid}&doj=${formattedDate}`,
@@ -390,7 +414,7 @@ const BookingForm = () => {
       </div>
 
       {/* Very subtle dark overlay for text readability (removed heavy gradients) */}
-      <div className="absolute inset-0 bg-black/30" />
+      <div className="absolute inset-0" />
 
       {/* Carousel Navigation Arrows */}
       <button
@@ -658,7 +682,7 @@ const BookingForm = () => {
                 <span className="text-sm font-semibold text-gray-800">{formatDate(selectedDate)}</span>
               </div>
               {showCalendar && (
-                <div ref={calendarRef} onMouseDown={(e) => e.stopPropagation()} className="absolute top-full left-0 right-0 bg-white rounded-2xl shadow-2xl p-3 z-50 mt-1">
+                <div ref={calendarRef} onMouseDown={(e) => e.stopPropagation()} className="relative left-0 right-0 bg-white rounded-2xl shadow-2xl p-2 z-50 mt-1">
                   <div className="flex justify-between items-center mb-3">
                     <button onClick={() => setCurrentDate(new Date(year, currentDate.getMonth() - 1, 1))} className="p-1 hover:bg-gray-100 rounded">
                       <ChevronLeft size={18} />
@@ -853,7 +877,7 @@ const BookingForm = () => {
                 </div>
                 <div className="h-4 mt-0.5" />
                 {showCalendar && (
-                  <div ref={calendarRef} className="absolute top-16 right-0 bg-white rounded-2xl shadow-2xl p-3 sm:p-4 w-[280px] sm:w-[320px] z-50">
+                  <div ref={calendarRef} className="absolute top-12.5 right-0 bg-white rounded-2xl shadow-2xl p-3 sm:p-4 w-[280px] sm:w-[320px] z-50">
                     <div className="flex justify-between items-center mb-3">
 
                       <button

@@ -1,37 +1,63 @@
 // src/modules/bus/pages/PrintTicketModal.jsx
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
+
+const TURNSTILE_SITE_KEY = "0x4AAAAAABvRHvXzt4EuTFLs";
 
 const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
   const [tin, setTin] = useState(prefillTin);
-  const [captchaInput, setCaptchaInput] = useState("");
-  const [captchaValue] = useState(() => {
-    const a = Math.floor(Math.random() * 9) + 1;
-    const b = Math.floor(Math.random() * 9) + 1;
-    return { question: `${a} + ${b}`, answer: String(a + b) };
-  });
+  const [turnstileToken, setTurnstileToken] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const turnstileRef = useRef(null);
+  const widgetIdRef = useRef(null);
+
+  const renderTurnstile = () => {
+    if (!turnstileRef.current || !window.turnstile) return;
+    if (widgetIdRef.current) {
+      try { window.turnstile.remove(widgetIdRef.current); } catch (e) {}
+      widgetIdRef.current = null;
+    }
+    widgetIdRef.current = window.turnstile.render(turnstileRef.current, {
+      sitekey: TURNSTILE_SITE_KEY,
+      callback: (token) => { setTurnstileToken(token); setError(""); },
+      "expired-callback": () => { setTurnstileToken(""); setError("CAPTCHA expired. Please verify again."); },
+      "error-callback": () => { setTurnstileToken(""); setError("CAPTCHA verification failed. Please try again."); },
+    });
+  };
+
+  useEffect(() => {
+    const scriptId = "cloudflare-turnstile-script";
+    const loadScriptAndRender = () => {
+      if (window.turnstile) { renderTurnstile(); return; }
+      const existingScript = document.getElementById(scriptId);
+      if (existingScript) { existingScript.addEventListener("load", renderTurnstile); return; }
+      const script = document.createElement("script");
+      script.id = scriptId; script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+      script.async = true; script.defer = true; script.onload = renderTurnstile;
+      document.head.appendChild(script);
+    };
+    loadScriptAndRender();
+    return () => {
+      if (widgetIdRef.current && window.turnstile) {
+        try { window.turnstile.remove(widgetIdRef.current); } catch (e) {}
+        widgetIdRef.current = null;
+      }
+      setTurnstileToken("");
+    };
+  }, []);
 
   const handlePrint = async (e) => {
     e.preventDefault();
     setError("");
-
     if (!tin.trim()) { setError("Please enter Ticket ID."); return; }
-    if (captchaInput.trim() !== captchaValue.answer) { setError("Incorrect captcha. Please try again."); return; }
-
+    if (!turnstileToken) { setError("Please complete the CAPTCHA verification."); return; }
     try {
       setLoading(true);
-      const res = await axios.get(`/printTicket?tin=${tin.trim()}`);
-
-      if (!res.data?.success) {
-        setError("Ticket not found. Please check the Ticket ID.");
-        return;
-      }
-
+      const res = await axios.get(`/printTicket?tin=${tin.trim()}&cf-turnstile-response=${turnstileToken}`);
+      if (!res.data?.success) { setError("Ticket not found. Please check the Ticket ID."); return; }
       const d = res.data?.data || res.data;
       openPrintWindow(d);
-
     } catch (err) {
       setError("Failed to fetch ticket. Please try again.");
     } finally {
@@ -40,14 +66,12 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
   };
 
   const openPrintWindow = (d) => {
-    // ── Helper: convert minutes from midnight to HH:MM ──
+    // ── Helper: minutes from midnight → HH:MM ──
     const toTime = (mins) => {
       if (!mins) return "—";
       const m = parseInt(mins);
       if (isNaN(m)) return String(mins);
-      const h = Math.floor(m / 60);
-      const min = m % 60;
-      return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+      return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
     };
 
     // ── Helper: format date ──
@@ -60,133 +84,173 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
       } catch { return dt; }
     };
 
+    // ── Helper: parse cancellation policy from response ──
+    // Format: "from:to:rate:type;" — e.g. "0:-1:0:0;" means 0% always
+    const parseCancellationPolicy = (policyStr) => {
+      if (!policyStr || typeof policyStr !== "string") return [];
+      const rules = [];
+      for (const part of policyStr.split(";")) {
+        if (!part.trim()) continue;
+        const parts = part.split(":");
+        if (parts.length !== 4) continue;
+        const from = parseInt(parts[0]);
+        const to   = parseInt(parts[1]);
+        const rate = parseInt(parts[2]);
+        const type = parseInt(parts[3]); // 0 = %, 1 = fixed ₹
+        const chargeStr = type === 0 ? `${rate}%` : `₹${rate}`;
+
+        let timeLabel;
+        if (from === 0 && to === -1) {
+          timeLabel = "Anytime before departure";
+        } else if (from === -1 && to >= 0) {
+          timeLabel = `Up to ${to} hour${to !== 1 ? "s" : ""} before departure`;
+        } else if (from >= 0 && to === -1) {
+          timeLabel = `Less than ${from} hour${from !== 1 ? "s" : ""} before departure`;
+        } else {
+          timeLabel = `${from} – ${to} hours before departure`;
+        }
+
+        rules.push({ timeLabel, chargeStr });
+      }
+      return rules;
+    };
+
     // ── Basic trip fields ──
-    const sourceCity      = d.sourceCity        || d.pickupLocation      || d.from        || "—";
-    const destCity        = d.destinationCity   || d.dropLocation        || d.to          || "—";
-    const pnr             = d.pnr               || d.tin                 || tin;
-    const bookingId       = d.tin               || d.pnr                 || tin;
-    const doj             = d.doj               || "—";
-    const travels         = d.travels           || d.operatorName        || "—";
-    const busType         = d.busType           || d.bus_type            || "—";
-    const status          = d.status            || "CONFIRMED";
-    const operatorContact = d.pickUpContactNo   || d.operatorContact     || "—";
+    const sourceCity      = d.sourceCity       || d.pickupLocation   || d.from       || "—";
+    const destCity        = d.destinationCity  || d.dropLocation     || d.to         || "—";
+    const pnr             = d.pnr              || d.tin              || tin;
+    const bookingId       = d.tin              || d.pnr              || tin;
+    const doj             = d.doj              || "—";
+    const travels         = d.travels          || d.operatorName     || "—";
+    const busType         = d.busType          || d.bus_type         || "—";
+    const status          = d.status           || "CONFIRMED";
+    const operatorContact = d.pickUpContactNo  || d.operatorContact  || "—";
 
-    // ── Passenger parsing — handles BOTH single object AND array ──
+    // ── Cancellation policy — dynamic from response ──
+    const cancellationRules = parseCancellationPolicy(d.cancellationPolicy);
+
+    // ── Passenger parsing ──
     let passengers = [];
-
     const inv = d.inventoryItems;
 
     if (Array.isArray(inv)) {
       passengers = inv.map((item) => ({
-        name:     item.passenger?.name     || item.name     || item.pname  || "—",
-        mobile:   item.passenger?.mobile   || item.mobile   || item.pmob   || "—",
-        gender:   item.passenger?.gender   || item.gender   || item.pgender|| "—",
-        age:      item.passenger?.age      || item.age      || item.page   || "—",
-        seatName: item.seatName            || item.seat     || item.seatno || "—",
-        baseFare: item.baseFare            || item.base_fare|| "0",
+        name:       item.passenger?.name   || item.name    || item.pname   || "—",
+        mobile:     item.passenger?.mobile || item.mobile  || item.pmob    || "—",
+        gender:     item.passenger?.gender || item.gender  || item.pgender || "—",
+        age:        item.passenger?.age    || item.age     || item.page    || "—",
+        seatName:   item.seatName          || item.seat    || item.seatno  || "—",
+        baseFare:   item.baseFare          || item.base_fare || "0",
         serviceTax: item.serviceTax        || item.service_tax || "0",
-        totalFare: item.grandTotalFare     || item.totalFare|| item.fare   || "0",
+        totalFare:  item.grandTotalFare    || item.totalFare || item.fare  || "0",
       }));
     } else if (inv && typeof inv === "object") {
       if (Array.isArray(inv.passenger)) {
         passengers = inv.passenger.map((p, i) => ({
-          name:     p.name     || p.pname  || "—",
-          mobile:   p.mobile   || p.pmob   || "—",
-          gender:   p.gender   || p.pgender|| "—",
-          age:      p.age      || p.page   || "—",
-          seatName: Array.isArray(inv.seatName) ? (inv.seatName[i] || "—") : (inv.seatName || "—"),
-          baseFare: inv.baseFare     || inv.base_fare    || "0",
-          serviceTax: inv.serviceTax || inv.service_tax  || "0",
+          name:       p.name     || p.pname   || "—",
+          mobile:     p.mobile   || p.pmob    || "—",
+          gender:     p.gender   || p.pgender || "—",
+          age:        p.age      || p.page    || "—",
+          seatName:   Array.isArray(inv.seatName) ? (inv.seatName[i] || "—") : (inv.seatName || "—"),
+          baseFare:   inv.baseFare    || inv.base_fare    || "0",
+          serviceTax: inv.serviceTax  || inv.service_tax  || "0",
           totalFare:  inv.grandTotalFare || inv.totalFare || inv.fare || "0",
         }));
       } else {
         const p = inv.passenger || {};
         passengers = [{
-          name:     p.name     || inv.pname  || d.pname  || "—",
-          mobile:   p.mobile   || inv.pmob   || d.pmob   || "—",
-          gender:   p.gender   || inv.pgender|| d.pgender|| "—",
-          age:      p.age      || inv.page   || d.page   || "—",
-          seatName: inv.seatName || inv.seat || d.seatName || "—",
-          baseFare:   inv.baseFare    || inv.base_fare   || "0",
-          serviceTax: inv.serviceTax  || inv.service_tax || "0",
+          name:       p.name     || inv.pname  || d.pname  || "—",
+          mobile:     p.mobile   || inv.pmob   || d.pmob   || "—",
+          gender:     p.gender   || inv.pgender || d.pgender || "—",
+          age:        p.age      || inv.page   || d.page   || "—",
+          seatName:   inv.seatName || inv.seat  || d.seatName || "—",
+          baseFare:   inv.baseFare   || inv.base_fare   || "0",
+          serviceTax: inv.serviceTax || inv.service_tax || "0",
           totalFare:  inv.grandTotalFare || inv.totalFare || inv.fare || "0",
         }];
       }
     } else if (Array.isArray(d.passengers)) {
       passengers = d.passengers.map((p) => ({
-        name:     p.name     || p.pname   || "—",
-        mobile:   p.mobile   || p.pmob    || "—",
-        gender:   p.gender   || p.pgender || "—",
-        age:      p.age      || p.page    || "—",
-        seatName: p.seatName || p.seat    || p.seatno || "—",
+        name:       p.name     || p.pname   || "—",
+        mobile:     p.mobile   || p.pmob    || "—",
+        gender:     p.gender   || p.pgender || "—",
+        age:        p.age      || p.page    || "—",
+        seatName:   p.seatName || p.seat    || p.seatno || "—",
         baseFare:   p.baseFare    || d.baseFare    || "0",
         serviceTax: p.serviceTax  || d.serviceTax  || "0",
         totalFare:  p.grandTotalFare || p.totalFare || p.fare || d.totalFare || "0",
       }));
     } else {
       passengers = [{
-        name:     d.pname    || d.passengerName  || "—",
-        mobile:   d.pmob     || d.mobile         || "—",
-        gender:   d.pgender  || d.gender         || "—",
-        age:      d.page     || d.age            || "—",
-        seatName: d.seatName || d.seat           || "—",
+        name:       d.pname    || d.passengerName || "—",
+        mobile:     d.pmob     || d.mobile        || "—",
+        gender:     d.pgender  || d.gender        || "—",
+        age:        d.page     || d.age           || "—",
+        seatName:   d.seatName || d.seat          || "—",
         baseFare:   d.baseFare    || "0",
         serviceTax: d.serviceTax  || "0",
         totalFare:  d.grandTotalFare || d.totalFare || d.fare || "0",
       }];
     }
 
-    const totalBaseFare   = passengers.reduce((sum, p) => sum + parseFloat(p.baseFare   || 0), 0);
-    const totalServiceTax = passengers.reduce((sum, p) => sum + parseFloat(p.serviceTax || 0), 0);
-    const totalGrandFare  = passengers.reduce((sum, p) => sum + parseFloat(p.totalFare  || 0), 0);
+    const totalBaseFare   = passengers.reduce((s, p) => s + parseFloat(p.baseFare   || 0), 0);
+    const totalServiceTax = passengers.reduce((s, p) => s + parseFloat(p.serviceTax || 0), 0);
+    const totalGrandFare  = passengers.reduce((s, p) => s + parseFloat(p.totalFare  || 0), 0);
 
-    const boardingPoint    = d.pickupLocation         || d.boardingPoint    || "—";
-    const boardingAddress  = d.pickUpLocationAddress  || d.boardingAddress  || "—";
+    const boardingPoint    = d.pickupLocation        || d.boardingPoint   || "—";
+    const boardingAddress  = d.pickUpLocationAddress || d.boardingAddress || "—";
     const boardingLandmark = d.pickupLocationLandmark || d.boardingLandmark || "—";
-    const boardingContact  = d.pickUpContactNo        || d.boardingContact  || "—";
+    const boardingContact  = d.pickUpContactNo       || d.boardingContact || "—";
+    const dropPoint        = d.dropLocation          || d.dropPoint       || destCity || "—";
+    const dropAddress      = d.dropLocationAddress   || d.dropAddress     || "—";
+    const dropLandmark     = d.dropLocationLandmark  || d.dropLandmark    || "—";
 
-    const dropPoint        = d.dropLocation           || d.dropPoint        || destCity  || "—";
-    const dropAddress      = d.dropLocationAddress    || d.dropAddress      || "—";
-    const dropLandmark     = d.dropLocationLandmark   || d.dropLandmark     || "—";
-
-    const departureTime  = toTime(d.pickupTime             || d.primeDepartureTime     || d.firstBoardingPointTime);
-    const dropTime       = toTime(d.dropTime               || d.arrivalTime);
-    const reportingTime  = toTime(d.firstBoardingPointTime || d.reportingTime          || d.pickupTime);
+    const departureTime = toTime(d.pickupTime             || d.primeDepartureTime     || d.firstBoardingPointTime);
+    const dropTime      = toTime(d.dropTime               || d.arrivalTime);
+    const reportingTime = toTime(d.firstBoardingPointTime || d.reportingTime          || d.pickupTime);
 
     const dojFormatted   = formatDate(doj);
     const printTimestamp = new Date().toLocaleString("en-IN", {
       day: "2-digit", month: "2-digit", year: "numeric",
-      hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
+      hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false,
     }).replace(",", "");
 
-    const statusColor = status === "CANCELLED" ? "#dc2626" : status === "CONFIRMED" || status === "BOOKED" ? "#16a34a" : "#d97706";
-    const logoUrl     = `${window.location.origin}/assets/Bobros_logo.png`;
+    const statusColor = status === "CANCELLED"
+      ? "#dc2626"
+      : (status === "CONFIRMED" || status === "BOOKED")
+        ? "#16a34a"
+        : "#d97706";
 
-    const passengerRows = passengers.map(p => `
-       <tr>
+    const logoUrl = `${window.location.origin}/assets/Bobros_logo.png`;
+
+    const passengerRows = passengers.map((p) => `
+      <tr>
         <td>${p.name}</td>
         <td>${p.gender}</td>
         <td>${p.age}</td>
         <td class="orange">${p.seatName}</td>
         <td>${busType}</td>
         <td class="status">${status}</td>
-        <td class="orange">${pnr}</td>
-       </tr>
+        <td class="pnr-cell">${pnr}</td>
+      </tr>
     `).join("");
+
+    // ── Dynamic cancellation policy rows ──
+    const cancellationRows = cancellationRules.length > 0
+      ? cancellationRules.map((r) => `
+          <li><strong>${r.timeLabel}:</strong> ${r.chargeStr} cancellation charge</li>
+        `).join("")
+      : "<li>No cancellation policy available for this booking.</li>";
 
     const printContent = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Ticket - ${pnr}</title>
   <style>
-    * { 
-      box-sizing: border-box; 
-      margin: 0; 
-      padding: 0; 
-    }
-    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
       font-family: 'Arial', sans-serif;
       background: #f5f5f5;
@@ -194,7 +258,7 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
       color: #333;
       font-size: 13px;
     }
-    
+
     .page {
       background: white;
       max-width: 780px;
@@ -213,37 +277,11 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
       flex-wrap: wrap;
       gap: 12px;
     }
-    
-    .logo-img { 
-      height: 32px; 
-      width: auto; 
-      object-fit: contain; 
-    }
-    
-    .logo-fallback {
-      font-size: 24px; 
-      font-weight: 900;
-      color: #fd561e; 
-      letter-spacing: -1px; 
-      display: none;
-    }
-    
-    .logo-fallback sup { 
-      font-size: 9px; 
-      color: #fd561e; 
-    }
-    
-    .company-info {
-      text-align: right;
-      font-size: 10px;
-      color: #555;
-      line-height: 1.5;
-    }
-    
-    .company-info strong { 
-      color: #333; 
-      font-size: 11px; 
-    }
+    .logo-img { height: 32px; width: auto; object-fit: contain; }
+    .logo-fallback { font-size: 24px; font-weight: 900; color: #fd561e; letter-spacing: -1px; display: none; }
+    .logo-fallback sup { font-size: 9px; color: #fd561e; }
+    .company-info { text-align: right; font-size: 10px; color: #555; line-height: 1.5; }
+    .company-info strong { color: #333; font-size: 11px; }
 
     /* ── ROUTE BAR ── */
     .route-bar {
@@ -252,11 +290,10 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
       padding: 12px 16px;
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-start;
       flex-wrap: wrap;
       gap: 12px;
     }
-    
     .route-cities {
       font-size: 16px;
       font-weight: 800;
@@ -266,22 +303,18 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
       gap: 6px;
       flex-wrap: wrap;
     }
-    
-    .route-arrow { 
-      color: #fd561e; 
-      font-size: 14px; 
+    .route-arrow { color: #fd561e; font-size: 14px; }
+    /* ── PNR on right — wraps naturally, no overflow ── */
+    .route-meta {
+      text-align: right;
+      font-size: 11px;
+      color: #555;
+      line-height: 1.8;
+      max-width: 55%;
+      word-break: break-all;
     }
-    
-    .route-meta { 
-      text-align: right; 
-      font-size: 11px; 
-      color: #555; 
-      line-height: 1.6; 
-    }
-    
-    .route-meta strong { 
-      color: #1a1a2e; 
-    }
+    .route-meta strong { color: #1a1a2e; }
+    .route-meta .pnr-val { color: #fd561e; font-weight: 700; }
 
     /* ── OPERATOR ── */
     .operator-bar {
@@ -295,321 +328,129 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
       flex-wrap: wrap;
       gap: 8px;
     }
-    
-    .operator-bar strong { 
-      color: #fd561e; 
-    }
+    .operator-bar strong { color: #fd561e; }
 
     /* ── SECTION ── */
-    .section { 
-      padding: 12px 16px; 
-      border-bottom: 1px solid #eee; 
-    }
-    
+    .section { padding: 12px 16px; border-bottom: 1px solid #eee; }
     .section-title {
-      font-size: 10px;
-      color: #999;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      margin-bottom: 10px;
-      padding-bottom: 6px;
+      font-size: 10px; color: #999; text-transform: uppercase;
+      letter-spacing: 0.8px; margin-bottom: 10px; padding-bottom: 6px;
       border-bottom: 1px solid #f0f0f0;
     }
 
-    /* ── PASSENGER TABLE - MOBILE RESPONSIVE ── */
+    /* ── PASSENGER TABLE ── */
     .passenger-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 11px;
-      display: block;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
+      width: 100%; border-collapse: collapse; font-size: 11px;
+      display: block; overflow-x: auto; -webkit-overflow-scrolling: touch;
     }
-    
     .passenger-table th {
-      font-size: 9px;
-      color: #999;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      font-weight: 600;
-      text-align: left;
-      padding: 8px 6px;
-      background: #f8f9ff;
-      border: 1px solid #eee;
-      white-space: nowrap;
+      font-size: 9px; color: #999; text-transform: uppercase;
+      letter-spacing: 0.5px; font-weight: 600; text-align: left;
+      padding: 8px 6px; background: #f8f9ff; border: 1px solid #eee; white-space: nowrap;
     }
-    
     .passenger-table td {
-      font-size: 11px;
-      font-weight: 700;
-      color: #1a1a2e;
-      padding: 8px 6px;
-      border: 1px solid #eee;
+      font-size: 11px; font-weight: 700; color: #1a1a2e;
+      padding: 8px 6px; border: 1px solid #eee;
     }
-    
-    .passenger-table td.orange { 
-      color: #fd561e; 
+    .passenger-table td.orange { color: #fd561e; }
+    .passenger-table td.status { color: ${statusColor}; font-weight: 800; }
+    /* PNR cell — break long PNRs */
+    .passenger-table td.pnr-cell {
+      color: #fd561e;
+      word-break: break-all;
+      max-width: 130px;
+      white-space: normal;
     }
-    
-    .passenger-table td.status { 
-      color: ${statusColor}; 
-      font-weight: 800; 
-    }
-    
-    .passenger-table tbody tr:nth-child(even) td { 
-      background: #fafafa; 
-    }
+    .passenger-table tbody tr:nth-child(even) td { background: #fafafa; }
 
-    /* ── INFO TABLE - MOBILE RESPONSIVE ── */
+    /* ── INFO TABLE ── */
     .info-table {
-      width: 100%;
-      border-collapse: collapse;
-      display: block;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
+      width: 100%; border-collapse: collapse;
+      display: block; overflow-x: auto; -webkit-overflow-scrolling: touch;
     }
-    
     .info-table th {
-      font-size: 9px;
-      color: #999;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      font-weight: 600;
-      text-align: left;
-      padding: 6px 8px 6px 0;
-      white-space: nowrap;
+      font-size: 9px; color: #999; text-transform: uppercase;
+      letter-spacing: 0.5px; font-weight: 600; text-align: left;
+      padding: 6px 8px 6px 0; white-space: nowrap;
     }
-    
     .info-table td {
-      font-size: 11px;
-      font-weight: 700;
-      color: #1a1a2e;
+      font-size: 11px; font-weight: 700; color: #1a1a2e;
       padding: 6px 8px 6px 0;
+      word-break: break-all;
     }
-    
-    .info-table td.orange { 
-      color: #fd561e; 
-    }
-    
+    .info-table td.orange { color: #fd561e; }
     .info-table tr:not(:last-child) td,
-    .info-table tr:not(:last-child) th {
-      border-bottom: 1px solid #f9f9f9;
-    }
+    .info-table tr:not(:last-child) th { border-bottom: 1px solid #f9f9f9; }
 
-    /* ── ADDRESS GRID - MOBILE RESPONSIVE ── */
-    .address-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 12px;
-      margin-top: 4px;
-    }
-    
-    @media (min-width: 640px) {
-      .address-grid {
-        grid-template-columns: 1fr 1fr;
-      }
-    }
-    
+    /* ── ADDRESS GRID ── */
+    .address-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 4px; }
+    @media (min-width: 640px) { .address-grid { grid-template-columns: 1fr 1fr; } }
     .address-block {
-      background: #f8f9ff;
-      border-radius: 6px;
-      padding: 10px 12px;
-      font-size: 11px;
-      line-height: 1.6;
-      color: #444;
-      word-break: break-word;
+      background: #f8f9ff; border-radius: 6px; padding: 10px 12px;
+      font-size: 11px; line-height: 1.6; color: #444; word-break: break-word;
     }
-    
-    .address-block.drop { 
-      background: #f0fff4; 
-    }
-    
+    .address-block.drop { background: #f0fff4; }
     .address-block .label {
-      font-size: 9px;
-      color: #999;
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-      font-weight: 700;
-      margin-bottom: 4px;
+      font-size: 9px; color: #999; text-transform: uppercase;
+      letter-spacing: 0.6px; font-weight: 700; margin-bottom: 4px;
     }
-    
-    .address-block strong { 
-      color: #fd561e; 
-      display: block; 
-      margin-bottom: 2px; 
-      font-size: 12px;
-    }
-    
-    .address-block.drop strong { 
-      color: #16a34a; 
-    }
+    .address-block strong { color: #fd561e; display: block; margin-bottom: 2px; font-size: 12px; }
+    .address-block.drop strong { color: #16a34a; }
 
-    /* ── FARE TABLE - MOBILE RESPONSIVE ── */
+    /* ── FARE TABLE ── */
     .fare-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 4px;
-      display: block;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
+      width: 100%; border-collapse: collapse; margin-top: 4px;
+      display: block; overflow-x: auto; -webkit-overflow-scrolling: touch;
     }
-    
     .fare-table th {
-      background: #f8f9ff;
-      font-size: 9px;
-      color: #888;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      padding: 8px 10px;
-      text-align: left;
-      border: 1px solid #eee;
-      white-space: nowrap;
+      background: #f8f9ff; font-size: 9px; color: #888; text-transform: uppercase;
+      letter-spacing: 0.5px; padding: 8px 10px; text-align: left;
+      border: 1px solid #eee; white-space: nowrap;
     }
-    
-    .fare-table td {
-      padding: 8px 10px;
-      font-size: 12px;
-      font-weight: 700;
-      color: #1a1a2e;
-      border: 1px solid #eee;
-    }
-    
-    .fare-table td.total { 
-      color: #fd561e; 
-      font-size: 13px; 
-    }
+    .fare-table td { padding: 8px 10px; font-size: 12px; font-weight: 700; color: #1a1a2e; border: 1px solid #eee; }
+    .fare-table td.total { color: #fd561e; font-size: 13px; }
 
     /* ── TERMS ── */
-    .terms {
-      padding: 12px 16px;
-      border-top: 2px solid #eee;
-      font-size: 10px;
-      color: #555;
-      line-height: 1.6;
-    }
-    
-    .terms h3 {
-      font-size: 11px;
-      color: #1a1a2e;
-      margin: 8px 0 4px;
-    }
-    
-    .terms ul { 
-      padding-left: 18px; 
-      margin: 4px 0; 
-    }
-    
-    .terms ul li { 
-      margin-bottom: 3px; 
-    }
-    
-    .not-responsible {
-      border: 1px solid #eee;
-      border-radius: 6px;
-      padding: 10px 12px;
-      margin-top: 8px;
-    }
+    .terms { padding: 12px 16px; border-top: 2px solid #eee; font-size: 10px; color: #555; line-height: 1.6; }
+    .terms h3 { font-size: 11px; color: #1a1a2e; margin: 8px 0 4px; }
+    .terms ul { padding-left: 18px; margin: 4px 0; }
+    .terms ul li { margin-bottom: 3px; }
+    .not-responsible { border: 1px solid #eee; border-radius: 6px; padding: 10px 12px; margin-top: 8px; }
 
     /* ── FOOTER ── */
     .footer {
-      background: #f9f9f9;
-      border-top: 1px solid #eee;
-      padding: 8px 16px;
-      font-size: 9px;
-      color: #aaa;
-      text-align: center;
-      line-height: 1.4;
+      background: #f9f9f9; border-top: 1px solid #eee; padding: 8px 16px;
+      font-size: 9px; color: #aaa; text-align: center; line-height: 1.4;
     }
 
     /* ── DOWNLOAD BUTTON ── */
     .download-btn {
-      display: block;
-      max-width: 780px;
-      margin: 16px auto 0;
-      background: linear-gradient(135deg, #fd561e, #ff8c42);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      padding: 12px 16px;
-      font-size: 14px;
-      font-weight: 700;
-      cursor: pointer;
-      text-align: center;
-      font-family: 'Arial', sans-serif;
-      width: 100%;
+      display: block; max-width: 780px; margin: 16px auto 0;
+      background: linear-gradient(135deg, #fd561e, #ff8c42); color: white;
+      border: none; border-radius: 10px; padding: 12px 16px;
+      font-size: 14px; font-weight: 700; cursor: pointer;
+      text-align: center; font-family: 'Arial', sans-serif; width: 100%;
     }
-    
-    .download-btn:hover { 
-      opacity: 0.92; 
-    }
-    
-    .download-btn:disabled { 
-      opacity: 0.6; 
-      cursor: not-allowed; 
-    }
+    .download-btn:hover { opacity: 0.92; }
+    .download-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
     @media print {
-      body { 
-        background: white; 
-        padding: 0; 
-        margin: 0;
-      }
-      .page { 
-        border: none; 
-        max-width: 100%;
-      }
-      .download-btn { 
-        display: none !important; 
-      }
-      .passenger-table,
-      .info-table,
-      .fare-table {
-        overflow: visible;
-      }
+      body { background: white; padding: 0; margin: 0; }
+      .page { border: none; max-width: 100%; }
+      .download-btn { display: none !important; }
+      .passenger-table, .info-table, .fare-table { overflow: visible; }
     }
 
-    /* Small mobile adjustments */
     @media (max-width: 480px) {
-      body {
-        padding: 5px;
-      }
-      
-      .header {
-        padding: 12px;
-      }
-      
-      .route-bar {
-        padding: 10px 12px;
-      }
-      
-      .route-cities {
-        font-size: 14px;
-      }
-      
-      .operator-bar {
-        padding: 6px 12px;
-        font-size: 10px;
-      }
-      
-      .section {
-        padding: 10px 12px;
-      }
-      
-      .passenger-table th,
-      .passenger-table td {
-        padding: 6px 4px;
-        font-size: 10px;
-      }
-      
-      .address-block {
-        padding: 8px 10px;
-        font-size: 10px;
-      }
-      
-      .terms {
-        padding: 10px 12px;
-        font-size: 9px;
-      }
+      body { padding: 5px; }
+      .header, .route-bar { padding: 10px 12px; }
+      .route-cities { font-size: 14px; }
+      .route-meta { max-width: 100%; text-align: left; }
+      .operator-bar { padding: 6px 12px; font-size: 10px; }
+      .section { padding: 10px 12px; }
+      .passenger-table th, .passenger-table td { padding: 6px 4px; font-size: 10px; }
+      .address-block { padding: 8px 10px; font-size: 10px; }
+      .terms { padding: 10px 12px; font-size: 9px; }
     }
   </style>
 </head>
@@ -619,12 +460,8 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
 
   <!-- HEADER -->
   <div class="header">
-    <img
-      src="${logoUrl}"
-      alt="BOBROS"
-      class="logo-img"
-      onerror="this.style.display='none'; document.querySelector('.logo-fallback').style.display='block';"
-    />
+    <img src="${logoUrl}" alt="BOBROS" class="logo-img"
+      onerror="this.style.display='none'; document.querySelector('.logo-fallback').style.display='block';"/>
     <span class="logo-fallback">BOBROS<sup>®</sup></span>
     <div class="company-info">
       <strong>BOBROS Consultancy Services Pvt. Ltd.</strong><br/>
@@ -640,7 +477,7 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
     </div>
     <div class="route-meta">
       <strong>DOJ: ${dojFormatted}</strong><br/>
-      PNR: <strong style="color:#fd561e;">${pnr}</strong>
+      PNR: <span class="pnr-val">${pnr}</span>
     </div>
   </div>
 
@@ -651,7 +488,7 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
     <span>Contact: <strong>${operatorContact}</strong></span>
   </div>
 
-  <!-- PASSENGER DETAILS TABLE -->
+  <!-- PASSENGER DETAILS -->
   <div class="section">
     <div class="section-title">Passenger Details (${passengers.length} Passenger${passengers.length > 1 ? "s" : ""})</div>
     <table class="passenger-table">
@@ -666,13 +503,11 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
           <th>PNR</th>
         </tr>
       </thead>
-      <tbody>
-        ${passengerRows}
-      </tbody>
+      <tbody>${passengerRows}</tbody>
     </table>
   </div>
 
-  <!-- BOOKING INFO TABLE -->
+  <!-- BOOKING INFO -->
   <div class="section">
     <table class="info-table">
       <thead>
@@ -696,11 +531,10 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
     </table>
   </div>
 
-  <!-- BOARDING + DROP ADDRESS GRID -->
+  <!-- BOARDING + DROP -->
   <div class="section">
     <div class="section-title">Boarding &amp; Drop Point</div>
     <div class="address-grid">
-
       <div class="address-block">
         <div class="label">🟠 Boarding Point</div>
         <strong>${boardingPoint}</strong>
@@ -708,14 +542,12 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
         ${boardingLandmark !== "—" ? `Landmark: ${boardingLandmark}<br/>` : ""}
         ${boardingContact !== "—" ? `Contact: ${boardingContact}` : ""}
       </div>
-
       <div class="address-block drop">
         <div class="label">🟢 Drop Point</div>
         <strong style="color:#16a34a;">${dropPoint}</strong>
         ${dropAddress !== "—" ? `Address: ${dropAddress}<br/>` : ""}
         ${dropLandmark !== "—" ? `Landmark: ${dropLandmark}` : ""}
       </div>
-
     </div>
   </div>
 
@@ -724,11 +556,7 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
     <div class="section-title">Fare Breakup</div>
     <table class="fare-table">
       <thead>
-        <tr>
-          <th>Base Fare</th>
-          <th>Service Tax</th>
-          <th>Total Fare</th>
-        </tr>
+        <tr><th>Base Fare</th><th>Service Tax</th><th>Total Fare</th></tr>
       </thead>
       <tbody>
         <tr>
@@ -748,10 +576,9 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
     <p style="margin-top:6px;">BOBROS is a registered trademark of BOBROS Consultancy Services Private Limited registered as company in India and having its registered office at 1-232, Mulakaluru, Narasaraopet, Andhra Pradesh - 522 601.</p>
     <p style="margin-top:6px;">For detailed Terms and Conditions and Cancellation Policy please visit https://www.bobrosone.com or contact us on 91-9133 133 456 (9:30AM to 7:00PM Monday to Saturday except the Public Holidays).</p>
 
+    <!-- ── DYNAMIC CANCELLATION POLICY ── -->
     <h3>Cancellation Policy</h3>
-    <ul>
-      <li>Less than 1 hour before journey: 0%</li>
-    </ul>
+    <ul>${cancellationRows}</ul>
 
     <h3>BOBROS is responsible for</h3>
     <ul>
@@ -780,57 +607,72 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
 </div>
 
 <!-- DOWNLOAD BUTTON -->
-<button class="download-btn" id="dlBtn">
-  ⬇️ Download Ticket as PDF
-</button>
+<button class="download-btn" id="dlBtn">⬇️ Download Ticket as PDF</button>
 
-<!-- html2canvas + jsPDF CDN -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
   document.getElementById('dlBtn').addEventListener('click', async function () {
     const btn = this;
-    btn.textContent = 'Downloading...';
+    btn.textContent = 'Preparing PDF...';
     btn.disabled = true;
 
     try {
+      // ── Wait for both libraries to load ──
+      await new Promise((resolve, reject) => {
+        let tries = 0;
+        const check = setInterval(() => {
+          if (window.html2canvas && window.jspdf) { clearInterval(check); resolve(); }
+          if (++tries > 50) { clearInterval(check); reject(new Error('Libraries not loaded')); }
+        }, 100);
+      });
+
       const el = document.getElementById('ticketPage');
+
+      // ── Scroll to top so html2canvas captures full page ──
+      window.scrollTo(0, 0);
+
+      btn.textContent = 'Rendering...';
+
       const canvas = await html2canvas(el, {
         scale: 2,
         useCORS: true,
+        allowTaint: true,
         backgroundColor: '#ffffff',
-        logging: false
+        logging: false,
+        windowWidth: el.scrollWidth,
+        windowHeight: el.scrollHeight,
       });
 
-      const imgData = canvas.toDataURL('image/png');
+      btn.textContent = 'Generating PDF...';
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95); // JPEG for smaller size + better CORS compat
       const { jsPDF } = window.jspdf;
 
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
+      const imgW  = pageW;
+      const imgH  = (canvas.height * pageW) / canvas.width;
 
-      const imgW = pageW;
-      const imgH = (canvas.height * pageW) / canvas.width;
-
-      let yPos = 0;
-      let remaining = imgH;
-      let firstPage = true;
-
+      let yPos = 0, remaining = imgH, firstPage = true;
       while (remaining > 0) {
         if (!firstPage) pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, -yPos, imgW, imgH);
-        yPos += pageH;
+        pdf.addImage(imgData, 'JPEG', 0, -yPos, imgW, imgH);
+        yPos      += pageH;
         remaining -= pageH;
-        firstPage = false;
+        firstPage  = false;
       }
 
-      const fromSlug = '${sourceCity}'.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-      const toSlug   = '${destCity}'.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const fromSlug = '${sourceCity}'.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-\$/g, '');
+      const toSlug   = '${destCity}'.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-\$/g, '');
       pdf.save(fromSlug + '-to-' + toSlug + '-ticket_${pnr}.pdf');
 
     } catch (err) {
-      alert('Download failed. Please try again.');
-      console.error(err);
+      console.error('PDF download error:', err);
+      // ── Fallback: browser print dialog ──
+      const confirmed = confirm('PDF generation failed. Open browser print dialog instead?');
+      if (confirmed) window.print();
     } finally {
       btn.textContent = '⬇️ Download Ticket as PDF';
       btn.disabled = false;
@@ -842,35 +684,35 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
 </html>`;
 
     const win = window.open("", "_blank");
+    if (!win) {
+      setError("Popup blocked! Please allow popups for this site.");
+      return;
+    }
     win.document.write(printContent);
     win.document.close();
   };
 
   return (
-    <div style={{ 
-      fontFamily: "'Segoe UI', sans-serif", 
-      minWidth: "auto", 
-      width: "100%",
-      maxWidth: "100%",
-      padding: "0"
+    <div style={{
+      fontFamily: "'Segoe UI', sans-serif",
+      width: "100%", maxWidth: "100%", padding: "0",
     }}>
       {/* HEADER */}
       <div style={{ textAlign: "center", marginBottom: "24px" }}>
         <div style={{ fontSize: "40px", marginBottom: "8px" }}>🎟️</div>
-        <h2 style={{ fontSize: "20px", fontWeight: "700", color: "#1a1a2e", margin: "0 0 4px" }}>Print Ticket</h2>
-        <p style={{ fontSize: "13px", color: "#888", margin: 0 }}>Enter your Ticket ID to view &amp; download</p>
+        <h2 style={{ fontSize: "20px", fontWeight: "700", color: "#1a1a2e", margin: "0 0 4px" }}>
+          Print Ticket
+        </h2>
+        <p style={{ fontSize: "13px", color: "#888", margin: 0 }}>
+          Enter your Ticket ID to view &amp; download
+        </p>
       </div>
 
       {error && (
-        <div style={{ 
-          background: "#fff1f0", 
-          border: "1px solid #ffccc7", 
-          borderRadius: "8px", 
-          padding: "10px 14px", 
-          marginBottom: "16px", 
-          color: "#cf1322", 
-          fontSize: "13px",
-          wordBreak: "break-word"
+        <div style={{
+          background: "#fff1f0", border: "1px solid #ffccc7", borderRadius: "8px",
+          padding: "10px 14px", marginBottom: "16px", color: "#cf1322",
+          fontSize: "13px", wordBreak: "break-word",
         }}>
           {error}
         </div>
@@ -890,45 +732,22 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
             required
             readOnly={!!prefillTin}
             style={{
-              width: "100%", 
-              border: "1.5px solid #e5e7eb", 
-              borderRadius: "8px",
-              padding: "12px 14px", 
-              fontSize: "14px", 
-              outline: "none",
-              boxSizing: "border-box", 
-              fontWeight: "700", 
-              letterSpacing: "1px",
-              background: prefillTin ? "#f9f9f9" : "white"
+              width: "100%", border: "1.5px solid #e5e7eb", borderRadius: "8px",
+              padding: "12px 14px", fontSize: "14px", outline: "none",
+              boxSizing: "border-box", fontWeight: "700", letterSpacing: "1px",
+              background: prefillTin ? "#f9f9f9" : "white",
             }}
-            onFocus={e => { if (!prefillTin) e.target.style.borderColor = "#fd561e"; }}
-            onBlur={e => e.target.style.borderColor = "#e5e7eb"}
+            onFocus={(e) => { if (!prefillTin) e.target.style.borderColor = "#fd561e"; }}
+            onBlur={(e) => (e.target.style.borderColor = "#e5e7eb")}
           />
         </div>
 
-        {/* CAPTCHA */}
+        {/* Turnstile CAPTCHA */}
         <div style={{ marginBottom: "20px" }}>
           <label style={{ display: "block", fontSize: "12px", color: "#555", fontWeight: "600", marginBottom: "6px" }}>
-            Captcha: What is {captchaValue.question}?
+            Security Verification
           </label>
-          <input
-            type="text"
-            value={captchaInput}
-            onChange={(e) => setCaptchaInput(e.target.value)}
-            placeholder="Enter answer"
-            required
-            style={{
-              width: "100%", 
-              border: "1.5px solid #e5e7eb", 
-              borderRadius: "8px",
-              padding: "12px 14px", 
-              fontSize: "14px", 
-              outline: "none", 
-              boxSizing: "border-box"
-            }}
-            onFocus={e => e.target.style.borderColor = "#fd561e"}
-            onBlur={e => e.target.style.borderColor = "#e5e7eb"}
-          />
+          <div ref={turnstileRef} style={{ display: "flex", justifyContent: "center" }} />
         </div>
 
         <button
@@ -937,13 +756,9 @@ const PrintTicketModal = ({ onClose, prefillTin = "" }) => {
           style={{
             width: "100%",
             background: loading ? "#ffb89d" : "linear-gradient(135deg, #fd561e, #ff8c42)",
-            color: "white", 
-            border: "none", 
-            borderRadius: "10px",
-            padding: "14px", 
-            fontSize: "15px", 
-            fontWeight: "700",
-            cursor: loading ? "not-allowed" : "pointer"
+            color: "white", border: "none", borderRadius: "10px",
+            padding: "14px", fontSize: "15px", fontWeight: "700",
+            cursor: loading ? "not-allowed" : "pointer",
           }}
         >
           {loading ? "Fetching Ticket..." : "🖨️ Print Ticket"}

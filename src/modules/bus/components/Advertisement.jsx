@@ -1,4 +1,10 @@
+import { useNavigate } from "react-router-dom";
+
 export default function Advertisement() {
+  const handleBookNow = () => {
+    window.location.href = "/HomePage";
+  };
+
   return (
     <div className="w-full h-[150px] flex justify-center -mt-6 sm:mt-8 md:-mt-18  px-3 sm:px-4  relative z-0">
       <div className="relative w-full max-w-6xl rounded-xl sm:rounded-2xl overflow-hidden shadow-lg">
@@ -29,14 +35,17 @@ export default function Advertisement() {
 
             <p className="text-[11px] sm:text-xs md:text-sm mt-1 opacity-90">
               Use promocode{" "}
-              <span className="font-bold text-[#FD561E]  px-1.5 py-0.5 rounded inline-block text-[10px] sm:text-xs">
+              <span className="font-bold text-[#FD561E] px-1.5 py-0.5 rounded inline-block text-[10px] sm:text-xs">
                 JOINBOBROS
               </span>{" "}
               at checkout
             </p>
           </div>
 
-          <button className="mt-2 md:mt-0 bg-[#FD561E] text-white font-semibold px-4 sm:px-5 md:px-6 py-1.5 sm:py-2 md:py-2 rounded-lg text-[11px] sm:text-xs md:text-sm shadow hover:scale-105 transition-all duration-300 whitespace-nowrap flex-shrink-0">
+          <button
+            onClick={handleBookNow}
+            className="mt-2 md:mt-0 bg-[#FD561E] cursor-pointer text-white font-semibold px-4 sm:px-5 md:px-6 py-1.5 sm:py-2 md:py-2 rounded-lg text-[11px] sm:text-xs md:text-sm shadow hover:scale-105 transition-all duration-300 whitespace-nowrap flex-shrink-0"
+          >
             Book Now
           </button>
         </div>

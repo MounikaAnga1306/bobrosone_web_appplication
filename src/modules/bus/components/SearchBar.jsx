@@ -57,19 +57,19 @@ const useSearchState = (location, params) => {
   }, [location.state, params]);
 
   useEffect(() => {
-  if (!from && !to) {
-    const urlFrom = params.get("fromName");
-    const urlTo = params.get("toName");
-    if (urlFrom) setFrom(decodeURIComponent(urlFrom));
-    if (urlTo) setTo(decodeURIComponent(urlTo));
-    else {
-      const storedFrom = sessionStorage.getItem("sourceName");
-      const storedTo = sessionStorage.getItem("destinationName");
-      if (storedFrom) setFrom(storedFrom);
-      if (storedTo) setTo(storedTo);
+    if (!from && !to) {
+      const urlFrom = params.get("fromName");
+      const urlTo = params.get("toName");
+      if (urlFrom) setFrom(decodeURIComponent(urlFrom));
+      if (urlTo) setTo(decodeURIComponent(urlTo));
+      else {
+        const storedFrom = sessionStorage.getItem("sourceName");
+        const storedTo = sessionStorage.getItem("destinationName");
+        if (storedFrom) setFrom(storedFrom);
+        if (storedTo) setTo(storedTo);
+      }
     }
-  }
-}, [from, to, params]);
+  }, [from, to, params]);
 
   const handleSwap = () => {
     setFrom(to);
@@ -91,9 +91,9 @@ const useSearchState = (location, params) => {
 };
 
 /* ─────────────────────────────────────────────
-   DESKTOP / TABLET  SearchBar  (unchanged logic)
+   DESKTOP / TABLET  SearchBar
 ───────────────────────────────────────────── */
-const DesktopSearchBar = ({ state, navigate }) => {
+const DesktopSearchBar = ({ state, navigate, isSticky }) => {
   const {
     from, setFrom, to, setTo,
     fromCity, setFromCity,
@@ -167,7 +167,16 @@ const DesktopSearchBar = ({ state, navigate }) => {
   }, []);
 
   return (
-    <div className="hidden md:block w-full bg-[#f36b32] py-6 sticky top-0 z-40 shadow-sm">
+    <div
+      className="hidden md:block w-full bg-[#f36b32] py-6 shadow-sm"
+      style={{
+        position: isSticky ? "fixed" : "relative",
+        top: isSticky ? 0 : "auto",
+        left: 0,
+        right: 0,
+        zIndex: 40,
+      }}
+    >
       <div className="max-w-7xl mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_1fr_auto] gap-3 items-end">
 
@@ -269,9 +278,9 @@ const DesktopSearchBar = ({ state, navigate }) => {
 };
 
 /* ─────────────────────────────────────────────
-   MOBILE  SearchBar  (image-2 style)
+   MOBILE  SearchBar
 ───────────────────────────────────────────── */
-const MobileSearchBar = ({ state, navigate }) => {
+const MobileSearchBar = ({ state, navigate, isSticky }) => {
   const {
     from, setFrom, to, setTo,
     fromCity, setFromCity,
@@ -282,10 +291,7 @@ const MobileSearchBar = ({ state, navigate }) => {
   } = state;
 
   const [isOpen, setIsOpen] = useState(false);
-
-  // which field is being edited: "from" | "to" | "date" | null
   const [activeField, setActiveField] = useState(null);
-
   const [fromResults, setFromResults] = useState([]);
   const [toResults, setToResults] = useState([]);
   const [showCalendar, setShowCalendar] = useState(false);
@@ -348,18 +354,24 @@ const MobileSearchBar = ({ state, navigate }) => {
     return null;
   })();
 
-  // Collapsed pill shown in results page header (image 1 style)
-  const collapsedLabel = from && to
-    ? `${from} to ${to}`
-    : "Select route";
+  const collapsedLabel = from && to ? `${from} to ${to}` : "Select route";
   const collapsedDate = selectedDate.toLocaleDateString("en-GB", {
     day: "2-digit", month: "short", year: undefined, weekday: "short"
   });
 
   return (
     <>
-      {/* ── Collapsed bar (always visible on mobile) ── */}
-      <div className="md:hidden w-full bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
+      {/* ── Collapsed bar ── */}
+      <div
+        className="md:hidden w-full bg-white border-b border-gray-200 shadow-sm"
+        style={{
+          position: isSticky ? "fixed" : "relative",
+          top: isSticky ? 0 : "auto",
+          left: 0,
+          right: 0,
+          zIndex: 40,
+        }}
+      >
         <div
           className="flex items-center justify-between px-4 py-3 cursor-pointer"
           onClick={() => setIsOpen(true)}
@@ -375,11 +387,10 @@ const MobileSearchBar = ({ state, navigate }) => {
         </div>
       </div>
 
-      {/* ── Full-screen modal / bottom sheet ── */}
+      {/* ── Full-screen modal ── */}
       {isOpen && (
         <div className="md:hidden fixed inset-0 z-50 flex flex-col bg-white">
 
-          {/* Header */}
           <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-100">
             <button onClick={() => setIsOpen(false)} className="text-gray-600">
               <ArrowLeft size={20} />
@@ -415,7 +426,6 @@ const MobileSearchBar = ({ state, navigate }) => {
                   ))}
                 </div>
               )}
-              {/* SWAP — on right border of FROM card */}
               <div className="absolute right-10 top-18 -translate-y-1/2 translate-x-1/2 z-10">
                 <button
                   onClick={(e) => { e.stopPropagation(); handleSwap(); }}
@@ -465,7 +475,6 @@ const MobileSearchBar = ({ state, navigate }) => {
                   <span className="font-bold text-base text-gray-900">{formattedDateDisplay}</span>
                 </div>
                 <div className="flex gap-2">
-                  {/* Today / Tomorrow quick select */}
                   {(() => {
                     const t = new Date(); t.setHours(0,0,0,0);
                     const tom = new Date(t); tom.setDate(t.getDate()+1);
@@ -524,7 +533,6 @@ const MobileSearchBar = ({ state, navigate }) => {
             )}
           </div>
 
-          {/* MODIFY SEARCH button — sticky bottom */}
           <div className="px-4 pt-2 pb-4 border-t border-gray-100 bg-white">
             <button
               onClick={handleSearch}
@@ -540,7 +548,7 @@ const MobileSearchBar = ({ state, navigate }) => {
 };
 
 /* ─────────────────────────────────────────────
-   MAIN export  –  renders both, CSS handles which shows
+   MAIN export
 ───────────────────────────────────────────── */
 const SearchBar = () => {
   const location = useLocation();
@@ -549,10 +557,51 @@ const SearchBar = () => {
 
   const state = useSearchState(location, params);
 
+  // ── sticky logic ──
+  const wrapperRef = useRef(null);
+  const [isSticky, setIsSticky] = useState(false);
+  const [searchBarHeight, setSearchBarHeight] = useState(0);
+
+  useEffect(() => {
+    // measure search bar height once for placeholder
+    if (wrapperRef.current) {
+      setSearchBarHeight(wrapperRef.current.offsetHeight);
+    }
+
+    const handleScroll = () => {
+      if (!wrapperRef.current) return;
+      // once the wrapper scrolls out of view, go sticky
+      const rect = wrapperRef.current.getBoundingClientRect();
+      setIsSticky(rect.top < 0);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
     <>
-      <DesktopSearchBar state={state} navigate={navigate} />
-      <MobileSearchBar state={state} navigate={navigate} />
+      {/* This wrapper sits in normal flow. When sticky kicks in,
+          it becomes a placeholder so content below doesn't jump. */}
+      <div
+        ref={wrapperRef}
+        style={{ height: isSticky ? searchBarHeight : "auto" }}
+      >
+        {!isSticky && (
+          <>
+            <DesktopSearchBar state={state} navigate={navigate} isSticky={false} />
+            <MobileSearchBar state={state} navigate={navigate} isSticky={false} />
+          </>
+        )}
+      </div>
+
+      {/* When sticky, render fixed bars outside the wrapper */}
+      {isSticky && (
+        <>
+          <DesktopSearchBar state={state} navigate={navigate} isSticky={true} />
+          <MobileSearchBar state={state} navigate={navigate} isSticky={true} />
+        </>
+      )}
     </>
   );
 };

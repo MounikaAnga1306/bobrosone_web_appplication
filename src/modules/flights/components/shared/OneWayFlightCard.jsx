@@ -545,7 +545,6 @@ const OneWayFlightCard = ({
 
       {/* ── MAIN CARD ROW ─────────────────────────────────────── */}
       <div className="p-5">
-        {/* Responsive layout: On mobile, airline and price are on row 1, timeline below */}
         <div className="flex flex-wrap items-center justify-between gap-4">
 
 
@@ -585,8 +584,8 @@ const OneWayFlightCard = ({
             </div>
           </div>
 
-          {/* Flight Timeline - order 2 on mobile, takes full width */}
-          <div className="flex-1 flex items-center justify-center gap-6 md:gap-8 order-2 w-full md:w-auto">
+          {/* Flight Timeline */}
+          <div className="flex-1 flex items-center justify-center gap-6 md:gap-8">
             {/* Departure */}
             <div className="text-center">
               <div className="text-xl font-semibold text-gray-800">{flight.departureTime}</div>
@@ -608,15 +607,10 @@ const OneWayFlightCard = ({
                   : `${flight.stops} stop${flight.stops > 1 ? 's' : ''}`}
 
               <div className="text-xs text-gray-400 mb-1">{formatDuration(flight.duration)}</div>
-             <div className="relative w-20 flex items-center justify-center">
-  {/* Line */}
-  <div className="w-full border-t border-gray-300"></div>
-
-  {/* Plane Icon */}
-  <div className="absolute bg-white px-1">
-    <FaPlane className="text-gray-500 text-xs" />
-  </div>
-</div>
+              <div className="relative w-20">
+                <div className="border-t border-gray-200"></div>
+                <FaPlane className="absolute -top-2 left-1/2 transform -translate-x-1/2 text-gray-300 text-xs rotate-90 bg-white px-1" />
+              </div>
               <div className="text-xs text-gray-500 mt-1">
                 {flight.stops === 0 ? 'Direct' : `${flight.stops} stop${flight.stops > 1 ? 's' : ''}`}
 

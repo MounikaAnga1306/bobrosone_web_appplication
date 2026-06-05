@@ -1,5 +1,6 @@
 import { useState } from "react";
 import axios from "axios";
+import { Turnstile } from "@marsidev/react-turnstile";
 
 const PrintFlightTicketModal = ({ onClose }) => {
   const [pnr, setPnr] = useState("");
@@ -917,20 +918,19 @@ const PrintFlightTicketModal = ({ onClose }) => {
           />
         </div>
 
+        {/* Cloudflare Security Verification Heading + Turnstile */}
         <div style={{ marginBottom: "20px" }}>
           <label style={{ display: "block", fontSize: "12px", color: "#555", fontWeight: "600", marginBottom: "6px" }}>
-            Captcha: What is {captchaValue.question}?
+          Security Verification
           </label>
-          <input
-            type="text"
-            value={captchaInput}
-            onChange={(e) => setCaptchaInput(e.target.value)}
-            placeholder="Enter answer"
-            required
-            style={{ ...inputStyle, fontWeight: "400", letterSpacing: "0" }}
-            onFocus={e => e.target.style.borderColor = "#fd561e"}
-            onBlur={e => e.target.style.borderColor = "#e5e7eb"}
-          />
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <Turnstile
+              siteKey="0x4AAAAAABvRHvXzt4EuTFLs"   // 🔁 Replace with your actual Cloudflare Turnstile site key
+              onSuccess={(token) => setTurnstileToken(token)}
+              onError={() => setTurnstileToken(null)}
+              onExpire={() => setTurnstileToken(null)}
+            />
+          </div>
         </div>
 
         <button

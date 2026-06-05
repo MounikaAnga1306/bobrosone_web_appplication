@@ -19,14 +19,12 @@ const BoardingDropping = ({
   setDroppingPoint,
   onNext,
 }) => {
- 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-0">
       {/* Mobile view - single column, Desktop - two columns */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
-        
         {/* ================= BOARDING ================= */}
-        <div className="border border-gray-300 rounded-xl p-4 sm:p-5 shadow-sm">
+        <div className="border border-gray-300 rounded-xl p-4 sm:p-5 shadow-sm flex flex-col bg-white">
           <h3 className="font-bold text-base sm:text-lg mb-3">Boarding Points</h3>
 
           <div className="text-xs sm:text-sm pb-2 px-2 sm:px-3 text-gray-500 mb-3 border-b border-gray-300 -mt-1 -mx-4 sm:-mx-5">
@@ -35,7 +33,8 @@ const BoardingDropping = ({
               : "Select Boarding Point"}
           </div>
 
-          <div className="space-y-2">
+          {/* Scrollable list container */}
+          <div className="space-y-2 overflow-y-auto max-h-[300px] md:max-h-[400px] pr-1">
             {tripDetails?.boardingTimes?.map((bp, i) => (
               <label
                 key={i}
@@ -83,7 +82,7 @@ const BoardingDropping = ({
         </div>
 
         {/* ================= DROPPING ================= */}
-        <div className="border border-gray-300 rounded-xl p-4 sm:p-5 shadow-sm">
+        <div className="border border-gray-300 rounded-xl p-4 sm:p-5 shadow-sm flex flex-col bg-white">
           <h3 className="font-bold text-base sm:text-lg mb-3">Dropping Points</h3>
 
           <div className="text-xs sm:text-sm pb-2 px-2 sm:px-3 text-gray-500 mb-3 border-b border-gray-300 -mt-1 -mx-4 sm:-mx-5">
@@ -92,7 +91,8 @@ const BoardingDropping = ({
               : "Select Dropping Point"}
           </div>
 
-          <div className="space-y-2">
+          {/* Scrollable list container */}
+          <div className="space-y-2 overflow-y-auto max-h-[300px] md:max-h-[400px] pr-1">
             {tripDetails?.droppingTimes?.map((dp, i) => (
               <label
                 key={i}

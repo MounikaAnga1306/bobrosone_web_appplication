@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { Menu, X, Briefcase, MapPin, User, ChevronDown } from "lucide-react";
+import axios from "axios";
+import { Menu, X, Briefcase, MapPin, User, ChevronDown, Gift } from "lucide-react";
 import { Bus, Plane, Building2, Palmtree, Car } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import AuthModal from "../modules/bus/pages/AuthModal";
-import SignIn from "../modules/bus/pages/SignIn";
-import SignupForm from "../modules/bus/pages/SignUpForm";
+import SignIn from "../globalfiles/SignIn";
+import SignupForm from "../globalfiles/SignupForm";
 import ForgotPassword from "../modules/bus/pages/ForgotPassword";
 import VerifyOTP from "../modules/bus/pages/VerifyOTP";
 import ResetPassword from "../modules/bus/pages/ResetPassword";
@@ -33,7 +34,6 @@ const Navbar = () => {
   const [printTin, setPrintTin] = useState("");
   const [showFlightPrintTicket, setShowFlightPrintTicket] = useState(false);
   const [mobileDropdownOpen, setMobileDropdownOpen] = useState(false);
-  
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -53,6 +53,39 @@ const Navbar = () => {
     setMobileDropdownOpen(false);
     setMobileOpen(false);
   }, [location.pathname]);
+
+  useEffect(() => {
+    const handleGuestBookings = () => setShowGuestBookings(true);
+
+    const handleCancellation = () => {
+      clearTimeout(closeTimeout.current);
+      setShowCancel(true);
+      window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
+    };
+
+    const handlePrintTicket = () => {
+      setPrintTin("");
+      setShowPrintTicket(true);
+      window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
+    };
+
+    const handleFlightPrintTicket = () => {
+      setShowFlightPrintTicket(true);
+      window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
+    };
+
+    window.addEventListener("openGuestBookings", handleGuestBookings);
+    window.addEventListener("openCancellation", handleCancellation);
+    window.addEventListener("openPrintTicket", handlePrintTicket);
+    window.addEventListener("openFlightPrintTicket", handleFlightPrintTicket);
+
+    return () => {
+      window.removeEventListener("openGuestBookings", handleGuestBookings);
+      window.removeEventListener("openCancellation", handleCancellation);
+      window.removeEventListener("openPrintTicket", handlePrintTicket);
+      window.removeEventListener("openFlightPrintTicket", handleFlightPrintTicket);
+    };
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -97,6 +130,16 @@ const Navbar = () => {
   }, []);
 
   useEffect(() => {
+    if (isLoggedIn && user) {
+      const stored = JSON.parse(localStorage.getItem("user") || "{}");
+      const uid = stored?.user?.uid || stored?.uid || user?.uid || "";
+      fetchRewardBalance(uid);
+    } else {
+      setRewardBalance(null);
+    }
+  }, [isLoggedIn, user]);
+
+  useEffect(() => {
     const handler = (e) => {
       // ✅ FIX: also guard the openAuthModal event on passive routes
       if (isPassiveRoute) return;
@@ -112,6 +155,7 @@ const Navbar = () => {
     localStorage.removeItem("isLoggedIn");
     setIsLoggedIn(false);
     setUser(null);
+    setRewardBalance(null);
     setOpenDropdown(false);
     setMobileDropdownOpen(false);
     setMobileOpen(false);
@@ -124,13 +168,17 @@ const Navbar = () => {
     setMobileDropdownOpen(false);
     clearTimeout(closeTimeout.current);
     setShowCancel(true);
+    window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
   };
 
   const dynamicPages = ["/", "/HomePage", "/flights", "/BillHomePage", "/hotels", "/cabs", "/Holiday"];
   const isDynamicPage = dynamicPages.includes(location.pathname);
   const isSolid = !isDynamicPage || scrolled;
-  const noFixedNavbarPages = ["/results"];
-  const isNoFixedPage = noFixedNavbarPages.includes(location.pathname);
+  const isNoFixedPage =
+    location.pathname === "/results" ||
+    location.pathname.startsWith("/hotels/");
+
+  const isBillPayment = location.pathname.toLowerCase().startsWith("/bill");
 
   useEffect(() => {
     if (!isDynamicPage) return;
@@ -157,6 +205,10 @@ const Navbar = () => {
 
   ];
 
+  // ===== ACTIVE TAB =====
+  // Bus flow motham (home → results → booking-success → payment-status) ki "bus" active ravali.
+  // Note: bus payment-status route "/payment-status"; bill di "/bill-payment-status"
+  // (adi paina isBillPayment / "/bill" check tho cover అవుతుంది), kabatti clash raadu.
   const getActiveTab = () => {
     if (location.pathname === "/" || location.pathname === "/HomePage") return "bus";
 
@@ -178,6 +230,9 @@ const Navbar = () => {
 
   const activeTab = getActiveTab();
 
+  // First letter of user's name for avatar
+  const userInitial = user?.uname?.charAt(0)?.toUpperCase() || "U";
+
   return (
     <>
       <nav
@@ -186,6 +241,7 @@ const Navbar = () => {
         }`}
       >
         <div className="max-w-8xl mx-auto flex items-center justify-between px-4 sm:px-6 lg:px-8 h-16 sm:h-20">
+
           {/* LOGO */}
           <div onClick={() => navigate("/")} className="flex items-center cursor-pointer">
             <img
@@ -200,7 +256,7 @@ const Navbar = () => {
 
           {/* CENTER TABS */}
           {(isSolid || !isDynamicPage) && (
-            <div className="hidden lg:flex items-center gap-2 xl:gap-3 flex-1 justify-center">
+            <div className="hidden lg:flex items-center gap-3 xl:gap-5 flex-1 justify-center">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
                 const active = activeTab === tab.id;
@@ -262,16 +318,62 @@ const Navbar = () => {
                   if (!isLoggedIn) {
                     setAuthPage("signin");
                     setOpenAuthModal(true);
-                  } else {
-                    setOpenDropdown(!openDropdown);
                   }
+                  // Logged-in: profile avatar matrame dropdown toggle chestundi (avatar onClick lo)
                 }}
-                className={`flex items-center gap-2 px-3 xl:px-4 py-2 rounded-full border transition-all duration-300 cursor-pointer text-sm ${
-                  isSolid ? "border-gray-300 text-gray-700 hover:bg-gray-100" : "border-white/40 text-white hover:bg-white/10"
-                }`}
+                className={
+                  isLoggedIn
+                    ? "flex items-center gap-2.5 cursor-default bg-transparent"
+                    : `flex items-center gap-2 px-3 xl:px-4 py-2 rounded-full border transition-all duration-300 cursor-pointer text-sm ${
+                        isSolid ? "border-gray-300 text-gray-700 hover:bg-gray-100" : "border-white/40 text-white hover:bg-white/10"
+                      }`
+                }
               >
-                <User className="w-5 h-5" />
-                {isLoggedIn ? <>Hi {user?.uname?.split(" ")[0]}</> : "Login/Signup"}
+                {isLoggedIn ? (
+                  <>
+                    {/* Reward points chip — roundness tagginchaం (rounded-lg) */}
+                    <span style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 5,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: "#FD561E",
+                      whiteSpace: "nowrap",
+                      background: "#FFF3EE",
+                      border: "1px solid #FFD9C7",
+                      borderRadius: 8,
+                      padding: "6px 12px",
+                    }}>
+                      <Gift style={{ width: 14, height: 14, flexShrink: 0 }} />
+                      ₹ {rewardBalance ?? "—"} Reward Points
+                    </span>
+                    {/* Avatar — clean round circle, chuttu ring ledu. Profile click ki ee dropdown open avtundi */}
+                    <div
+                      onClick={(e) => { e.stopPropagation(); setOpenDropdown(!openDropdown); }}
+                      style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: "50%",
+                      background: "#FD561E",
+                      color: "white",
+                      fontSize: 15,
+                      fontWeight: 600,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                      cursor: "pointer",
+                    }}>
+                      {userInitial}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <User className="w-5 h-5" />
+                    Login/Signup
+                  </>
+                )}
               </button>
 
               {/* GUEST DROPDOWN */}
@@ -360,35 +462,112 @@ const Navbar = () => {
                     onClick={() => setMobileDropdownOpen(!mobileDropdownOpen)}
                     className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
                   >
-                    <div className="flex items-center gap-2">
-                      <User className="w-4 h-4" />
-                      <span className="text-sm font-medium">{isLoggedIn ? `Hi ${user?.uname?.split(" ")[0]}` : "Login/Signup"}</span>
+                    <div className="flex items-center gap-3">
+                      {isLoggedIn ? (
+                        /* Avatar circle */
+                        <div style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: "50%",
+                          background: "#FD561E",
+                          color: "white",
+                          fontSize: 15,
+                          fontWeight: 600,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                        }}>
+                          {userInitial}
+                        </div>
+                      ) : (
+                        <User className="w-4 h-4" />
+                      )}
+
+                      {isLoggedIn ? (
+                        /* Reward points pakkana avatar ki */
+                        <span style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 4,
+                          fontSize: 12,
+                          fontWeight: 600,
+                          color: "#FD561E",
+                          whiteSpace: "nowrap",
+                        }}>
+                          <Gift style={{ width: 13, height: 13, flexShrink: 0 }} />
+                          ₹ {rewardBalance ?? "—"} Reward Points
+                        </span>
+                      ) : (
+                        <span className="text-sm font-medium">Login/Signup</span>
+                      )}
                     </div>
                     <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${mobileDropdownOpen ? "rotate-180" : ""}`} />
                   </button>
 
                   {mobileDropdownOpen && (
                     <div className="mt-2 bg-white rounded-lg border border-gray-200 overflow-hidden">
-                      {!isLoggedIn ? (
-                        <>
-                          <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200">
-                            <p className="font-medium text-gray-800 text-sm">Hey Traveller</p>
-                            <p className="text-xs text-gray-500">Get exclusive deals & Manage your trips</p>
-                          </div>
-                          <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); setAuthPage("signin"); setOpenAuthModal(true); }} className="w-full text-left px-4 py-2.5 bg-[#fd561e] text-white font-medium text-sm">Login / Sign Up</button>
-                          <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); setShowGuestBookings(true); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Bookings</button>
-                          <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); } else { setPrintTin(""); setShowPrintTicket(true); } }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Print Ticket</button>
-                          <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); handleOpenCancel(); }} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm">Cancellation</button>
-                        </>
+                      {isLoggedIn && (
+                        <div className="px-4 py-2.5 border-b border-gray-200 flex items-center justify-between" style={{ background: "#FFF3EE" }}>
+                          <span className="text-sm font-medium text-gray-700">Reward Points</span>
+                          <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#FD561E", fontWeight: 700, fontSize: 14 }}>
+                            <Gift style={{ width: 14, height: 14 }} />
+                            ₹ {rewardBalance ?? "—"}
+                          </span>
+                        </div>
+                      )}
+
+                      {isBillPayment ? (
+                        !isLoggedIn ? (
+                          <>
+                            <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200">
+                              <p className="font-medium text-gray-800 text-sm">Hey Traveller</p>
+                              <p className="text-xs text-gray-500">Manage your bill payments & transactions</p>
+                            </div>
+                            <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); setAuthPage("signin"); setOpenAuthModal(true); }} className="w-full text-left px-4 py-2.5 bg-[#fd561e] text-white font-medium text-sm">Login / Sign Up</button>
+                            <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/bill-transactions"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Transactions</button>
+                            <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/bill-complaints"); }} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm">Complaints</button>
+                          </>
+                        ) : (
+                          <>
+                            <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-account?source=bill"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Account</button>
+                            <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/bill-transactions"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Transactions</button>
+                            <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/bill-complaints"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Complaints</button>
+                            <button onClick={handleLogout} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-red-500 text-sm">Logout</button>
+                          </>
+                        )
                       ) : (
-                        <>
-                          <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-bookings"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Booking</button>
-                          <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-account"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Account</button>
-                          <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); handleOpenCancel(); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Cancellation</button>
-                          <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); } else { setPrintTin(""); setShowPrintTicket(true); } }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Print Ticket</button>
-                          <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-profile"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Profile</button>
-                          <button onClick={handleLogout} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-red-500 text-sm">Logout</button>
-                        </>
+                        !isLoggedIn ? (
+                          <>
+                            <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200">
+                              <p className="font-medium text-gray-800 text-sm">Hey Traveller</p>
+                              <p className="text-xs text-gray-500">Get exclusive deals & Manage your trips</p>
+                            </div>
+                            <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); setAuthPage("signin"); setOpenAuthModal(true); }} className="w-full text-left px-4 py-2.5 bg-[#fd561e] text-white font-medium text-sm">Login / Sign Up</button>
+                            <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); setShowGuestBookings(true); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Bookings</button>
+                            <button onClick={() => {
+                              setMobileOpen(false); setMobileDropdownOpen(false);
+                              window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
+                              if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); }
+                              else { setPrintTin(""); setShowPrintTicket(true); }
+                            }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Print Ticket</button>
+                            <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); handleOpenCancel(); }} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-sm">Cancellation</button>
+                          </>
+                        ) : (
+                          <>
+                            <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-bookings?type=bus"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Booking</button>
+                            <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-account"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Account</button>
+                            <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); handleOpenCancel(); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Cancellation</button>
+                            <button onClick={() => {
+                              setMobileOpen(false); setMobileDropdownOpen(false);
+                              window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
+                              if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); }
+                              else { setPrintTin(""); setShowPrintTicket(true); }
+                            }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">Print Ticket</button>
+                            <button onClick={() => { setMobileOpen(false); setMobileDropdownOpen(false); navigate("/my-profile"); }} className="w-full text-left px-4 py-2.5 border-b border-gray-200 hover:bg-gray-50 text-sm">My Profile</button>
+                            <button onClick={handleLogout} className="w-full text-left px-4 py-2.5 hover:bg-gray-50 text-red-500 text-sm">Logout</button>
+                          </>
+                        )
                       )}
                     </div>
                   )}
@@ -412,18 +591,26 @@ const Navbar = () => {
         {showGuestBookings && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 w-[90%] sm:w-[420px] mx-4 relative max-h-[90vh] overflow-y-auto">
-              <button onClick={() => setShowGuestBookings(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700">✕</button>
+              <button onClick={() => setShowGuestBookings(false)} className="absolute top-4 right-4 cursor-pointer text-gray-400 hover:text-gray-700">✕</button>
               <GuestBookings onClose={() => setShowGuestBookings(false)} />
             </div>
           </div>
         )}
       </nav>
 
-       {showCancel && <CancellationCard onClose={() => setShowCancel(false)} />}
+      {showCancel && (
+        <CancellationCard onClose={() => {
+          setShowCancel(false);
+          window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: false } }));
+        }} />
+      )}
       {showPrintTicket && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 w-[90%] sm:w-[420px] mx-4 relative">
-            <button onClick={() => setShowPrintTicket(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700">✕</button>
+            <button onClick={() => {
+              setShowPrintTicket(false);
+              window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: false } }));
+            }} className="absolute top-4 right-4 text-gray-400 cursor-pointer hover:text-gray-700">✕</button>
             <PrintTicketModal onClose={() => setShowPrintTicket(false)} prefillTin={printTin} />
           </div>
         </div>
@@ -431,7 +618,10 @@ const Navbar = () => {
       {showFlightPrintTicket && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 w-[90%] sm:w-[440px] mx-4 relative">
-            <button onClick={() => setShowFlightPrintTicket(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700">✕</button>
+            <button onClick={() => {
+              setShowFlightPrintTicket(false);
+              window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: false } }));
+            }}>✕</button>
             <PrintFlightTicketModal onClose={() => setShowFlightPrintTicket(false)} />
           </div>
         </div>
