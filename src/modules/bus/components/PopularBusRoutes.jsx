@@ -96,7 +96,7 @@ export default function PopularBusRoutes() {
     return today.toISOString().split("T")[0];
   };
 
-  // 🔥 MAIN CLICK FUNCTION
+  // 🔥 MODIFIED: Full page refresh navigation
   const handleRouteClick = async (fromCity, toCity) => {
     try {
       // ✅ Fetch both IDs
@@ -111,18 +111,19 @@ export default function PopularBusRoutes() {
       }
 
       const date = getTomorrowDate();
-      window.scrollTo({ top: 0, behavior: "smooth" });
-
-      // ✅ Navigate to results page
-      navigate(
-        `/results?source=${sourceId}&destination=${destinationId}&doj=${date}`,
-        {
-          state: {
-            sourceName: fromCity,
-            destinationName: toCity,
-          },
-        }
-      );
+      
+      // Build the full URL with parameters
+      const url = `/results?source=${sourceId}&destination=${destinationId}&doj=${date}&fromName=${encodeURIComponent(fromCity)}&toName=${encodeURIComponent(toCity)}`;
+      
+      // ✅ Perform a full page reload (refresh) to the new URL
+      window.location.href = url;
+      
+      // Note: The state (sourceName, destinationName) can be passed via URL params or sessionStorage if needed.
+      // Since window.location.href doesn't support React Router state, you can optionally store names in sessionStorage:
+      sessionStorage.setItem("sourceName", fromCity);
+      sessionStorage.setItem("destinationName", toCity);
+      
+      // Scroll to top is automatic on page reload.
     } catch (err) {
       console.error("Navigation error:", err);
     }
@@ -151,14 +152,14 @@ export default function PopularBusRoutes() {
                   To:{" "}
                   {route.to.map((place, i) => (
                     <button
-      key={i}
-      type="button"
-      onClick={() => handleRouteClick(route.city, place)}
-      className="text-[#fd561e] hover:underline cursor-pointer"
-    >
-      {place}
-      {i !== route.to.length - 1 && ", "}
-    </button>
+                      key={i}
+                      type="button"
+                      onClick={() => handleRouteClick(route.city, place)}
+                      className="text-[#fd561e] hover:underline cursor-pointer"
+                    >
+                      {place}
+                      {i !== route.to.length - 1 && ", "}
+                    </button>
                   ))}
                 </p>
               </div>

@@ -1,5 +1,6 @@
 // src/modules/bus/components/OurServices.jsx
 import { motion } from "framer-motion";
+
 import { 
   ChevronRight, 
   Bus, 
@@ -16,6 +17,9 @@ import {
   Headphones
 } from "lucide-react";
 
+import { useNavigate, useLocation } from "react-router-dom";
+
+
 // Images
 import flights from "../../../assets/flights.jpg";
 import bus from "../../../assets/bus.jpg";
@@ -25,10 +29,10 @@ import cab from "../../../assets/cab.jpg";
 import bill from "../../../assets/bill.png";
 import service from "../../../assets/IT_Services.jpg";
 
-// Image hover animation
 const imageHover = {
   rest: { y: 0, scale: 1, rotate: 0 },
   hover: {
+
     y: -10,
     scale: 1.15,
     rotate: 3,
@@ -37,24 +41,32 @@ const imageHover = {
       stiffness: 400,
       damping: 12,
     },
+
+    y: -8,
+    scale: 1.1,
+    rotate: 2,
+    transition: { type: "spring", stiffness: 300, damping: 14 },
+
   },
 };
 
-// Entry animation
 const cardEntry = {
   hidden: { opacity: 0, y: 40 },
   show: (i) => ({
     opacity: 1,
     y: 0,
+
     transition: {
       delay: i * 0.08,
       duration: 0.6,
       ease: "easeOut",
     },
+
+    transition: { delay: i * 0.06, duration: 0.5, ease: "easeOut" },
+
   }),
 };
 
-// Card hover animation
 const cardHover = {
   rest: {
     y: 0,
@@ -62,6 +74,7 @@ const cardHover = {
     scale: 1,
   },
   hover: {
+
     y: -12,
     boxShadow: "0 30px 50px -15px rgba(253,86,30,0.25)",
     scale: 1.02,
@@ -87,12 +100,35 @@ function ServiceCard({ image, title, description, contain, icon: Icon, color }) 
 
   const gradientColor = colors[color] || colors.orange;
 
+
+    y: -8,
+    boxShadow: "0 25px 40px rgba(253,86,30,0.15)",
+    scale: 1,
+    transition: { type: "spring", stiffness: 200, damping: 18 },
+  },
+};
+
+function ServiceCard({ image, title, description, contain, route }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleClick = () => {
+    if (!route) return;
+    if (location.pathname === route) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      navigate(route);
+    }
+  };
+
+
   return (
     <motion.div
       initial="rest"
       whileHover="hover"
       animate="rest"
       variants={cardHover}
+
       className="group relative bg-white rounded-2xl px-6 pb-8 pt-24 flex flex-col items-center text-center transition-all duration-300 w-full cursor-pointer"
       style={{ minHeight: "300px" }}
     >
@@ -125,12 +161,49 @@ function ServiceCard({ image, title, description, contain, icon: Icon, color }) 
       />
 
       {/* Title */}
+
+      onClick={handleClick}
+      className={`group relative bg-white hover:bg-gradient-to-br hover:from-[#fff1ea] hover:via-[#ffe2d6] hover:to-[#ffd2c1] rounded-2xl px-5 pb-6 pt-24 flex flex-col items-center text-center transition-colors duration-300 w-full h-full ${
+        route ? "cursor-pointer" : "cursor-default"
+      }`}
+    >
+      {/* Fixed size image box - same for ALL cards */}
+      <motion.div
+        variants={imageHover}
+        className="absolute -top-14 left-1/2 -translate-x-1/2 z-10"
+        style={{
+          width: "120px",
+          height: "90px",
+          minWidth: "120px",
+          minHeight: "90px",
+        }}
+      >
+        <div className="w-full h-full rounded-xl overflow-hidden border-[5px] border-white shadow-xl bg-white flex items-center justify-center">
+          <img
+            src={image}
+            alt={title}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: contain ? "contain" : "cover",
+              padding: contain ? "6px" : "0",
+            }}
+          />
+        </div>
+      </motion.div>
+
+      {/* Title - orange line anni cards ki */}
+
       <motion.h3
         variants={{
           rest: { y: 0, color: "#111827" },
           hover: { y: -3, color: "#fd561e", scale: 1.02 },
         }}
+
         className="text-xl font-bold mb-3 relative"
+
+        className="text-base sm:text-lg font-bold mb-2 relative"
+
       >
         {title}
         <motion.span
@@ -143,6 +216,7 @@ function ServiceCard({ image, title, description, contain, icon: Icon, color }) 
       </motion.h3>
 
       {/* Description */}
+
       <motion.p 
         variants={{
           rest: { color: "#6b7280" },
@@ -184,16 +258,21 @@ function FeatureItem({ icon: Icon, title, description }) {
         <h3 className="text-white font-semibold mb-1">{title}</h3>
         <p className="text-gray-300 text-sm">{description}</p>
       </div>
+
+      <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
+        {description}
+      </p>
+
     </motion.div>
   );
 }
 
-// Main Component
 export default function OurServices() {
   const services = [
     {
       image: bus,
       title: "Bus Ticketing",
+
       description: "Convenient and affordable bus ticket booking through our website and BOBROS mobile app.",
       icon: Bus,
       color: "orange"
@@ -204,10 +283,23 @@ export default function OurServices() {
       description: "Quick and hassle-free flight bookings for domestic and international travel.",
       icon: Plane,
       color: "blue"
+
+      description:
+        "Convenient and affordable online bus ticket booking through our website and BOBROS mobile App (Get it on Google Play Store)",
+      route: "/",
+    },
+    {
+      image: flights,
+      title: "Flights",
+      description:
+        "Quick and hassle-free flight bookings(off-line) for domestic and international travel. For bookings, visit any of our branch or contact us",
+      route: "/flights",
+
     },
     {
       image: bill,
       title: "Bill Payments",
+
       description: "Safe, fast, and convenient payments across all services.",
       icon: CreditCard,
       color: "green",
@@ -226,20 +318,51 @@ export default function OurServices() {
       description: "Curated travel packages to explore the best destinations worldwide.",
       icon: Palmtree,
       color: "teal"
+
+      description:
+        "Simplifying your bill payments. Safe, fast, and convenient payments across all services.",
+      contain: true,
+      route: "/BillHomePage",
+    },
+    {
+      image: hotels,
+      title: "Hotels",
+      description:
+        "Book comfortable stays at top hotels with ease and flexibility. Visit any branch or contact us for bookings.",
+      route: "/hotels",
+    },
+    {
+      image: holiday,
+      title: "Holiday Package",
+      description:
+        "Curated travel packages to explore the best destinations. Visit any branch or contact us for bookings.",
+         route: "/Holiday",
+
     },
     {
       image: cab,
       title: "Cab Service",
+
       description: "Affordable cab rentals for personal and business travel.",
       icon: Car,
       color: "red"
+
+      description:
+        "Affordable and convenient cab rentals for personal travel or business commute. Visit any branch or contact us for bookings.",
+
     },
     {
       image: service,
       title: "IT Services",
+
       description: "Reliable IT services to support your business operations.",
       icon: Code2,
       color: "indigo"
+
+      description:
+        "Reliable IT services to support your business and enhance your business operations. Visit any branch or contact our Business Analyst for more info.",
+         route: "/ItService",
+
     },
   ];
 
@@ -266,6 +389,7 @@ export default function OurServices() {
     }
   ];
 
+
   return (
     <div className="bg-gradient-to-b from-gray-50 to-white py-20 px-4 sm:px-6">
       <div className="max-w-7xl mx-auto">
@@ -291,6 +415,10 @@ export default function OurServices() {
 
         {/* Services Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-20">
+
+        {/* Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-20 items-stretch">
+
           {services.map((service, index) => (
             <motion.div
               key={index}
@@ -299,11 +427,13 @@ export default function OurServices() {
               whileInView="show"
               viewport={{ once: true }}
               custom={index}
+              className="mt-14 flex"
             >
               <ServiceCard {...service} />
             </motion.div>
           ))}
         </div>
+
 
         {/* Features Grid */}
         <motion.div
@@ -328,11 +458,17 @@ export default function OurServices() {
         >
           <div className="relative bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 rounded-3xl overflow-hidden shadow-2xl">
             {/* Animated Background Pattern */}
+
+        {/* CTA SECTION */}
+        <div className="mt-14">
+          <div className="relative bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl overflow-hidden">
+
             <div
               className="absolute inset-0 opacity-5"
               style={{
                 backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
               }}
+
             />
 
             {/* Gradient Overlay */}
@@ -388,6 +524,20 @@ export default function OurServices() {
                 </div>
               </motion.div>
             </div>
+
+            </div>
+            {/* <div className="relative px-8 py-12 text-center">
+              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
+                Ready to Get Started?
+              </h2>
+              <p className="text-gray-300 mb-6">
+                Experience seamless service with our expert support team
+              </p>
+              <button className="inline-flex items-center gap-2 px-8 py-3 bg-white text-gray-900 rounded-full font-semibold">
+                Contact Our Team
+              </button>
+            </div> */}
+
           </div>
         </motion.div>
       </div>

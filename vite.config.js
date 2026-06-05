@@ -12,6 +12,7 @@ export default defineConfig({
   ],
    server: {
     proxy: {
+      '/bill': 'http://localhost:5000',
       '/offer': 'http://localhost:5000',
       '/cancel': 'http://localhost:5000',
       '/myAccount': 'http://localhost:5000',
@@ -28,6 +29,7 @@ export default defineConfig({
       '/verifyPayment': 'http://localhost:5000',
       '/cities': 'http://localhost:5000',
       '/cancellation-policy': 'http://localhost:5000',
+      '/gmailverify': 'http://localhost:5000',
     }
   }
 })

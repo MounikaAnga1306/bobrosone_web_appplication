@@ -42,8 +42,28 @@ export default function BusResultsPage() {
   const toId = searchParams.get("destination");
   const date = searchParams.get("doj");
 
-  const fromName = location.state?.sourceName || searchParams.get("fromName") || "";
-  const toName = location.state?.destinationName || searchParams.get("toName") || "";
+  // ✅ FIX: Read city names from multiple sources
+  // 1. React Router state (for client‑side navigation)
+  // 2. URL query parameters (if passed directly)
+  // 3. sessionStorage (for full page reload from PopularBusRoutes)
+  const fromName =
+    location.state?.sourceName ||
+    searchParams.get("fromName") ||
+    sessionStorage.getItem("sourceName") ||
+    "";
+  const toName =
+    location.state?.destinationName ||
+    searchParams.get("toName") ||
+    sessionStorage.getItem("destinationName") ||
+    "";
+
+  // Clear sessionStorage after reading to avoid stale data on next navigation
+  useEffect(() => {
+    if (fromName && toName) {
+      sessionStorage.removeItem("sourceName");
+      sessionStorage.removeItem("destinationName");
+    }
+  }, [fromName, toName]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -65,8 +85,9 @@ export default function BusResultsPage() {
   };
 
   useEffect(() => {
-    if (!fromName || !toName || !date) {
-      setError("Missing search parameters");
+    // We only need the IDs and date to fetch trips – city names are for display only
+    if (!fromId || !toId || !date) {
+      setError("Missing search parameters (source/destination/date).");
       setLoading(false);
       return;
     }
@@ -91,7 +112,7 @@ export default function BusResultsPage() {
         setError(
           err.message === "HTTP 404"
             ? "No trips available for this route."
-            : "Failed to fetch trips. Please try again.",
+            : "Failed to fetch trips. Please try again."
         );
       } finally {
         setLoading(false);
@@ -112,10 +133,10 @@ export default function BusResultsPage() {
       setSelectedTripId(location.state.tripId);
       setSeatPanelOpen(true);
       window.history.replaceState(
-        { 
-          sourceName: location.state.sourceName, 
-          destinationName: location.state.destinationName 
-        }, 
+        {
+          sourceName: location.state.sourceName,
+          destinationName: location.state.destinationName,
+        },
         document.title
       );
     }
@@ -170,6 +191,7 @@ export default function BusResultsPage() {
   return (
     <div className="min-h-screen bg-[#f1f5f9]">
       <SearchBar
+        key={`${fromName}-${toName}-${date}`}
         defaultFrom={fromName}
         defaultTo={toName}
         defaultDate={date}

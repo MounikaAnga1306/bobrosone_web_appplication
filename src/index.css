@@ -1,5 +1,7 @@
 /* Remove ALL previous content and put ONLY this line */
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap');
+
 /* Remove Microsoft Edge password reveal icon */
 input::-ms-reveal,
 input::-ms-clear {

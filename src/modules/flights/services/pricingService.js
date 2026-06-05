@@ -719,6 +719,171 @@ const _parsePenalties = (pricingInfo) => {
   return {
     change: parse(pricingInfo?.['air:ChangePenalty']),
     cancel: parse(pricingInfo?.['air:CancelPenalty']),
+    currencyCode: "INR",
+    traceId: flight.traceId || `BOBROS-${Date.now()}`,
+    segments: normalizedSegments.map((seg) => ({
+      segmentKey: seg.segmentKey,
+      carrier: seg.carrier,
+      flightNumber: seg.flightNumber,
+      origin: seg.origin,
+      destination: seg.destination,
+      departureTime: seg.departureTime,
+      arrivalTime: seg.arrivalTime,
+      flightTime: seg.duration?.toString() || seg.flightTime,
+      distance: seg.distance, // ✅ ADD THIS LINE - Include distance
+      equipment: seg.equipment,
+      changeOfPlane: "false",
+      optionalServicesIndicator: "false",
+      ...(is6E ? { status: seg.status || "KK", supplierCode: seg.supplierCode || "6E" } : {
+        ETicketability: "Yes", LinkAvailability: "true", PolledAvailabilityOption: "Polled avail used",
+        AvailabilitySource: "S", ParticipantLevel: "Secure Sell", AvailabilityDisplayType: "Fare Shop/Optimal Shop"
+      }),
+      group: 0
+    })),
+    passengers: [
+      { code: 'ADT', count: passengerCounts.ADT || 1 },
+      ...(passengerCounts.CNN ? [{ code: 'CNN', count: passengerCounts.CNN }] : []),
+      ...(passengerCounts.INF ? [{ code: 'INF', count: passengerCounts.INF }] : [])
+    ],
+    bookingRequirements: normalizedSegments.map((seg) => {
+      const bookingReq = { segmentKey: seg.segmentKey, bookingCode: selectedFare.bookingCode, fareBasis: selectedFare.fareBasis };
+      if (is6E && hostTokenString) {
+        bookingReq.hostToken = hostTokenString;
+        if (hostTokenRefString) bookingReq.hostTokenRef = hostTokenRefString;
+      }
+      return bookingReq;
+    })
+  };
+};
+
+export const buildRoundTripPricingRequest = (outboundFlight, outboundFare, returnFlight, returnFare, passengerCounts, traceId = null) => {
+  let outboundSegments = outboundFlight?.segments || [outboundFlight];
+  outboundSegments = outboundSegments.map((seg) => ({
+    ...seg, 
+    segmentKey: seg.segmentKey || seg.key, 
+    flightTime: seg.duration?.toString() || seg.flightTime,
+    distance: seg.distance, // ✅ ADD DISTANCE HERE
+    status: seg.status || "KK", 
+    supplierCode: seg.supplierCode || "6E"
+  }));
+  
+  let returnSegments = returnFlight?.segments || [returnFlight];
+  returnSegments = returnSegments.map(seg => ({
+    ...seg, 
+    segmentKey: seg.segmentKey || seg.key, 
+    flightTime: seg.duration?.toString() || seg.flightTime,
+    distance: seg.distance, // ✅ ADD DISTANCE HERE
+    status: seg.status || "KK", 
+    supplierCode: seg.supplierCode || "6E"
+  }));
+  
+  const outboundIs6E = outboundSegments[0]?.carrier === '6E';
+  const returnIs6E = returnSegments[0]?.carrier === '6E';
+  const bookingRequirements = [];
+  
+  outboundSegments.forEach((seg) => {
+    const segmentKey = seg.segmentKey;
+    let hostTokenString = null, hostTokenRefString = null;
+    if (outboundFare.segments && outboundFare.segments.length > 0) {
+      const segmentData = outboundFare.segments.find(s => s.segmentKey === segmentKey);
+      if (segmentData) { hostTokenString = segmentData.hostToken; hostTokenRefString = segmentData.hostTokenRef; }
+    }
+    if (!hostTokenString && outboundFare.hostTokenMap) {
+      hostTokenString = outboundFare.hostTokenMap[segmentKey];
+      hostTokenRefString = outboundFare.hostTokenRefMap?.[segmentKey];
+    }
+    const bookingReq = { 
+      segmentKey: segmentKey, 
+      bookingCode: outboundFare.bookingCode || seg.bookingCode, 
+      fareBasis: outboundFare.fareBasis 
+    };
+    if (outboundIs6E && hostTokenString) {
+      bookingReq.hostToken = hostTokenString;
+      if (hostTokenRefString) bookingReq.hostTokenRef = hostTokenRefString;
+    }
+    bookingRequirements.push(bookingReq);
+  });
+  
+  returnSegments.forEach((seg) => {
+    const segmentKey = seg.segmentKey;
+    let hostTokenString = null, hostTokenRefString = null;
+    if (returnFare.segments && returnFare.segments.length > 0) {
+      const segmentData = returnFare.segments.find(s => s.segmentKey === segmentKey);
+      if (segmentData) { hostTokenString = segmentData.hostToken; hostTokenRefString = segmentData.hostTokenRef; }
+    }
+    if (!hostTokenString && returnFare.hostTokenMap) {
+      hostTokenString = returnFare.hostTokenMap[segmentKey];
+      hostTokenRefString = returnFare.hostTokenRefMap?.[segmentKey];
+    }
+    const bookingReq = { 
+      segmentKey: segmentKey, 
+      bookingCode: returnFare.bookingCode || seg.bookingCode, 
+      fareBasis: returnFare.fareBasis 
+    };
+    if (returnIs6E && hostTokenString) {
+      bookingReq.hostToken = hostTokenString;
+      if (hostTokenRefString) bookingReq.hostTokenRef = hostTokenRefString;
+    }
+    bookingRequirements.push(bookingReq);
+  });
+  
+  return {
+    currencyCode: "INR",
+    traceId: traceId || `PRC-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`, // ✅ USE PROVIDED TRACE ID
+    segments: [
+      ...outboundSegments.map(seg => ({
+        segmentKey: seg.segmentKey, 
+        carrier: seg.carrier, 
+        flightNumber: seg.flightNumber, 
+        origin: seg.origin,
+        destination: seg.destination, 
+        departureTime: seg.departureTime, 
+        arrivalTime: seg.arrivalTime,
+        flightTime: seg.flightTime, 
+        distance: seg.distance, // ✅ ADD DISTANCE HERE
+        equipment: seg.equipment, 
+        changeOfPlane: "false", 
+        optionalServicesIndicator: "false",
+        ...(outboundIs6E ? { status: seg.status || "KK", supplierCode: seg.supplierCode || "6E" } : {
+          ETicketability: "Yes", 
+          LinkAvailability: "true", 
+          PolledAvailabilityOption: "Polled avail used",
+          AvailabilitySource: "S", 
+          ParticipantLevel: "Secure Sell", 
+          AvailabilityDisplayType: "Fare Shop/Optimal Shop"
+        }),
+        group: 0
+      })),
+      ...returnSegments.map(seg => ({
+        segmentKey: seg.segmentKey, 
+        carrier: seg.carrier, 
+        flightNumber: seg.flightNumber, 
+        origin: seg.origin,
+        destination: seg.destination, 
+        departureTime: seg.departureTime, 
+        arrivalTime: seg.arrivalTime,
+        flightTime: seg.flightTime, 
+        distance: seg.distance, // ✅ ADD DISTANCE HERE
+        equipment: seg.equipment, 
+        changeOfPlane: "false", 
+        optionalServicesIndicator: "false",
+        ...(returnIs6E ? { status: seg.status || "KK", supplierCode: seg.supplierCode || "6E" } : {
+          ETicketability: "Yes", 
+          LinkAvailability: "true", 
+          PolledAvailabilityOption: "Polled avail used",
+          AvailabilitySource: "S", 
+          ParticipantLevel: "Secure Sell", 
+          AvailabilityDisplayType: "Fare Shop/Optimal Shop"
+        }),
+        group: 1
+      }))
+    ],
+    passengers: [
+      { code: 'ADT', count: passengerCounts.ADT || 1 },
+      ...(passengerCounts.CNN ? [{ code: 'CNN', count: passengerCounts.CNN }] : []),
+      ...(passengerCounts.INF ? [{ code: 'INF', count: passengerCounts.INF }] : [])
+    ],
+    bookingRequirements
   };
 };
 

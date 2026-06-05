@@ -52,6 +52,8 @@ export const createBillDeskOrder = async (bookingData, pnrData) => {
     universal_locator_code: pnrNumber, 
     // 
       // universal_locator_code:"35PHE5",    // Dynamic from PNR response
+
+    universal_locator_code: pnrNumber,    // Dynamic from PNR response
     air_locator_code: airLocatorCode,     // Dynamic from PNR response
     provider_locator_code: providerLocatorCode, // Dynamic from PNR response
     customer: {

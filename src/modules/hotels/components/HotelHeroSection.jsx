@@ -4,16 +4,17 @@ import { useNavigate } from "react-router-dom";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { FaSearch, FaMapMarkerAlt, FaCalendarAlt, FaUser, FaChevronDown, FaTimes } from "react-icons/fa";
-import { Bus, Plane, Building2, Palmtree, Car } from "lucide-react";
+import { Bus, Plane, Building2, Palmtree, Car,IndianRupee} from "lucide-react";
 
 // IMPORT CHANGED: Import the search hook
 import { useHotelSearch } from "../hooks/useHotelSearch"; 
 
 // Tabs configuration
 const tabs = [
-  { id: "flights", label: "Flights", icon: Plane },
-  { id: "bus", label: "Bus", icon: Bus },
   { id: "hotels", label: "Hotels", icon: Building2 },
+  { id: "bus", label: "Bus", icon: Bus },
+  { id: "billpayments", label: "Bill Payments", icon: IndianRupee },
+  { id: "flights", label: "Flights", icon: Plane },
   { id: "holidays", label: "Holidays", icon: Palmtree },
   { id: "cabs", label: "Cabs", icon: Car },
 ];
@@ -22,7 +23,7 @@ const tabRoutes = {
   bus: "/",
   flights: "/flights",
   hotels: "/hotels",
-  holidays: "/holidays",
+  holidays: "/Holiday",
   cabs: "/cabs",
 };
 
@@ -173,7 +174,7 @@ const HotelHeroSection = () => {
                     setActiveTab(tab.id);
                     navigate(tabRoutes[tab.id]);
                   }}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold transition-all duration-300 border ${
+                  className={`flex items-center gap-2 px-6 py-3 rounded-full cursor-pointer text-sm font-semibold transition-all duration-300 border ${
                     active
                       ? "bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white border-transparent shadow-lg scale-105"
                       : "border-gray-200 text-gray-600 hover:border-[#FD561E] hover:text-[#FD561E]"

@@ -12,15 +12,23 @@ import {
   ArrowRightLeft,
   ChevronLeft,
   ChevronRight,
+
   Ticket,
   Gift,
   Star,
   TrendingUp,
+
+  IndianRupee,
+
 } from "lucide-react";
 
 const tabs = [
   { id: "bus", label: "Bus", icon: Bus },
+
   { id: "billpayments", label: "Bill Payments", icon: Ticket },
+
+  { id: "billpayments", label: "Bill Payments", icon: IndianRupee },
+
   { id: "flights", label: "Flights", icon: Plane },
   { id: "hotels", label: "Hotels", icon: Building2 },
   { id: "holidays", label: "Holidays", icon: Star },
@@ -39,9 +47,10 @@ const tabRoutes = {
   billpayments: "/BillHomePage",
   flights: "/flights",
   hotels: "/hotels",
-  holidays: "/holidays",
+  holidays: "/Holiday",
   cabs: "/cabs",
 };
+
 
 // Professional full sunrise / golden-hour travel images
 const carouselImages = [
@@ -85,6 +94,15 @@ const carouselImages = [
     title: "Adventure at Dawn",
     subtitle: "Sleeper buses for overnight journeys"
   }
+
+// Modern bus/transport background images
+const backgroundImages = [
+  "https://www.touristsecrets.com/wp-content/uploads/2023/10/washington-d-c-road-trippin-with-greyhound-1697125082.jpg",
+  "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
+  "https://img.freepik.com/premium-photo/bus-driving-road_81048-20397.jpg",
+  "https://png.pngtree.com/thumb_back/fh260/background/20241219/pngtree-travel-bus-on-a-beautiful-highway-image_16826753.jpg",
+  "https://tse1.mm.bing.net/th/id/OIP.Nl1KxOe3O_kc9ML0AYtnZAHaEJ?w=996&h=558&rs=1&pid=ImgDetMain&o=7&rm=3",
+
 ];
 
 const BookingForm = () => {
@@ -122,7 +140,14 @@ const BookingForm = () => {
   const toDebounce = useRef(null);
   const carouselInterval = useRef(null);
 
+  // Background carousel state
+  const [currentBgIndex, setCurrentBgIndex] = useState(0);
+  const [nextBgIndex, setNextBgIndex] = useState(1);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const intervalRef = useRef(null);
+
   const navigate = useNavigate();
+
 
   // Auto-slide carousel
   useEffect(() => {
@@ -158,6 +183,52 @@ const BookingForm = () => {
     );
     resetInterval();
   };
+
+
+  // Function to change background (manual or auto)
+  const changeBackground = (direction) => {
+    // Clear existing interval
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setCurrentBgIndex((prev) => {
+        let newIndex;
+        if (direction === 'next') newIndex = (prev + 1) % backgroundImages.length;
+        else if (direction === 'prev') newIndex = (prev - 1 + backgroundImages.length) % backgroundImages.length;
+        else newIndex = (prev + 1) % backgroundImages.length; // auto
+        setNextBgIndex((newIndex + 1) % backgroundImages.length);
+        return newIndex;
+      });
+      setIsTransitioning(false);
+    }, 1000);
+    
+    // Restart auto-rotation
+    startAutoRotation();
+  };
+
+  const startAutoRotation = () => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => {
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setCurrentBgIndex((prev) => {
+          const newIndex = (prev + 1) % backgroundImages.length;
+          setNextBgIndex((newIndex + 1) % backgroundImages.length);
+          return newIndex;
+        });
+        setIsTransitioning(false);
+      }, 1000);
+    }, 5000);
+  };
+
+  useEffect(() => {
+    startAutoRotation();
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
+
 
   const handleSearch = () => {
     setFromError("");
@@ -292,6 +363,52 @@ const BookingForm = () => {
   return (
     <section className="relative min-h-[550px] md:min-h-[590px] flex items-center justify-center py-8 md:py-0 overflow-hidden">
 
+      {/* Background Carousel with Zoom Effect */}
+      <div className="absolute inset-0 w-full h-full">
+        {/* Current Image */}
+        <div
+          className="absolute inset-0 w-full h-full transition-all duration-1000 ease-in-out"
+          style={{
+            backgroundImage: `url(${backgroundImages[currentBgIndex]})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            transform: isTransitioning ? 'scale(1.05)' : 'scale(1)',
+            transition: 'transform 8s ease-in-out',
+          }}
+        />
+        {/* Next Image (for smooth crossfade) */}
+        <div
+          className="absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out"
+          style={{
+            backgroundImage: `url(${backgroundImages[nextBgIndex]})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            opacity: isTransitioning ? 1 : 0,
+            transform: 'scale(1.05)',
+          }}
+        />
+      </div>
+
+      {/* Very subtle dark overlay for text readability (removed heavy gradients) */}
+      <div className="absolute inset-0 bg-black/30" />
+
+      {/* Carousel Navigation Arrows */}
+      <button
+        onClick={() => changeBackground('prev')}
+        className="absolute left-4 md:left-8 z-20 bg-white/20 hover:bg-white/40 backdrop-blur-sm p-2 rounded-full text-white transition-all duration-300"
+        aria-label="Previous image"
+      >
+        <ChevronLeft size={24} />
+      </button>
+      <button
+        onClick={() => changeBackground('next')}
+        className="absolute right-4 md:right-8 z-20 bg-white/20 hover:bg-white/40 backdrop-blur-sm p-2 rounded-full text-white transition-all duration-300"
+        aria-label="Next image"
+      >
+        <ChevronRight size={24} />
+      </button>
+
+
       {/* ── Carousel Background ──────────────────────────────────────────────── */}
       <div className="absolute inset-0">
         {carouselImages.map((image, index) => (
@@ -382,6 +499,7 @@ const BookingForm = () => {
             })}
           </div>
 
+
           {/* TABS — mobile scrollable */}
           <div className="lg:hidden overflow-x-auto pb-2 mb-4">
             <div className="flex gap-2 min-w-max">
@@ -410,13 +528,18 @@ const BookingForm = () => {
           <div className="md:hidden space-y-0">
             <div className="relative border border-gray-200 rounded-xl overflow-visible bg-white">
               {/* FROM */}
+
+          {/* ── MOBILE FORM ── (unchanged) */}
+          <div className="md:hidden space-y-0">
+            <div className="relative border border-gray-200 rounded-xl overflow-visible">
+
               <div ref={fromRef} className="relative px-3 pt-3 pb-2 pr-10">
                 <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Depart From</p>
                 <div className={`flex items-center gap-2 pb-1 ${fromError ? "border-red-400" : "border-gray-200"}`}>
                   <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${fromError ? "text-red-400" : "text-gray-400"}`} />
                   <input
                     type="text"
-                    placeholder="Hyderabad"
+                    placeholder="From"
                     className="w-full text-sm font-semibold outline-none bg-transparent py-0.5"
                     value={fromQuery}
                     onChange={(e) => {
@@ -427,11 +550,15 @@ const BookingForm = () => {
                     }}
                   />
                 </div>
+
                 {fromError && (
                   <p className="text-red-500 text-[10px] mt-0.5 flex items-center gap-1">
                     <span>⚠</span>{fromError}
                   </p>
                 )}
+
+                {fromError && <p className="text-red-500 text-[10px] mt-0.5 flex items-center gap-1"><span>⚠</span>{fromError}</p>}
+
                 {showFromResults && fromResults.length > 0 && (
                   <div className="absolute left-0 top-full w-full bg-white shadow-lg rounded-xl max-h-48 overflow-y-auto z-50 mt-1">
                     {fromResults.map((city) => (
@@ -453,16 +580,21 @@ const BookingForm = () => {
               </div>
             </div>
 
+
             <div className="relative mt-2 border border-gray-200 rounded-xl overflow-visible bg-white">
               <div className="mx-3 border-t border-dashed border-gray-200" />
               {/* TO */}
+
+            <div className="relative mt-2 border border-gray-200 rounded-xl overflow-visible">
+              <div className="mx-3 border-t border-dashed border-gray-200" />
+
               <div ref={toRef} className="relative px-3 pt-2 pb-3 pr-10">
                 <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Going To</p>
                 <div className={`flex items-center gap-2 pb-1 ${toError || sameCityError ? "border-red-400" : "border-gray-200"}`}>
                   <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${toError || sameCityError ? "text-red-400" : "text-gray-400"}`} />
                   <input
                     type="text"
-                    placeholder="Mumbai"
+                    placeholder="To"
                     className="w-full text-sm font-semibold outline-none bg-transparent py-0.5"
                     value={toQuery}
                     onChange={(e) => {
@@ -473,11 +605,15 @@ const BookingForm = () => {
                     }}
                   />
                 </div>
+
                 {(toError || sameCityError) && (
                   <p className="text-red-500 text-[10px] mt-0.5 flex items-center gap-1">
                     <span>⚠</span>{sameCityError || toError}
                   </p>
                 )}
+
+                {(toError || sameCityError) && <p className="text-red-500 text-[10px] mt-0.5 flex items-center gap-1"><span>⚠</span>{sameCityError || toError}</p>}
+
                 {showToResults && toResults.length > 0 && (
                   <div className="absolute left-0 top-full w-full bg-white shadow-lg rounded-xl max-h-48 overflow-y-auto z-50 mt-1">
                     {toResults.map((city) => (
@@ -497,7 +633,9 @@ const BookingForm = () => {
                   </div>
                 )}
               </div>
+
               {/* SWAP button */}
+
               <div className="absolute right-8 -top-2 -translate-y-1/2 translate-x-1/2 z-10">
                 <button
                   onClick={handleSwap}
@@ -508,13 +646,14 @@ const BookingForm = () => {
               </div>
             </div>
 
+
             {/* DATE */}
             <div className="relative mt-3 border border-gray-200 rounded-xl px-3 py-3 bg-white">
+
+            <div className="relative mt-3 border border-gray-200 rounded-xl px-3 py-3">
+
               <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Depart Date</p>
-              <div
-                onClick={() => setShowCalendar(!showCalendar)}
-                className="flex items-center gap-2 cursor-pointer"
-              >
+              <div onClick={() => setShowCalendar(!showCalendar)} className="flex items-center gap-2 cursor-pointer">
                 <Calendar className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
                 <span className="text-sm font-semibold text-gray-800">{formatDate(selectedDate)}</span>
               </div>
@@ -554,7 +693,9 @@ const BookingForm = () => {
               )}
             </div>
 
+
             {/* Special Fares — mobile */}
+
             <div className="mt-3 flex flex-wrap items-center gap-1.5">
               <span className="text-[10px] font-bold uppercase tracking-wide text-gray-700">Special Fares</span>
               <div className="flex flex-wrap gap-1.5">
@@ -585,16 +726,24 @@ const BookingForm = () => {
 
           {/* ── DESKTOP FORM ── */}
           <div className="hidden md:block relative">
+
             <div className="grid grid-cols-12 gap-2">
+
+
+            <div className="grid grid-cols-12 md:grid-cols-12 lg:grid-cols-12 gap-2 md:gap-2">
 
               {/* FROM */}
               <div ref={fromRef} className="col-span-4 group relative">
                 <p className="text-[11px] sm:text-xs text-gray-500 uppercase tracking-wide mb-1 transition-colors duration-300 group-hover:text-[#FD561E]">Depart From</p>
                 <div className={`flex items-center gap-2 pb-1.5 border-b transition-colors duration-300 ${fromError ? "border-red-400" : "border-gray-200 group-hover:border-[#FD561E]"}`}>
                   <MapPin className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors duration-300 flex-shrink-0 ${fromError ? "text-red-400" : "text-gray-400 group-hover:text-[#FD561E]"}`} />
+
                   <input
                     type="text"
                     placeholder="Hyderabad"
+
+                  <input type="text" placeholder="From"
+
                     className="w-full text-sm sm:text-base md:text-lg font-semibold outline-none bg-transparent py-1"
                     value={fromQuery}
                     onChange={(e) => {
@@ -627,12 +776,18 @@ const BookingForm = () => {
                 )}
               </div>
 
+
               {/* SWAP — desktop */}
               <div className="col-span-1 flex justify-center items-center">
                 <button
                   className="p-1.5 sm:p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-all duration-500 hover:rotate-180 cursor-pointer"
                   onClick={handleSwap}
                 >
+
+              {/* SWAP */}
+              <div className="flex justify-center items-center md:col-span-[auto] lg:col-span-1 w-auto px-0">
+                <button className="p-1.5 sm:p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-all duration-500 hover:rotate-180 cursor-pointer" onClick={handleSwap}>
+
                   <ArrowRightLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600" />
                 </button>
               </div>
@@ -645,6 +800,9 @@ const BookingForm = () => {
                   <input
                     type="text"
                     placeholder="Mumbai"
+
+                  <input type="text" placeholder="To"
+
                     className="w-full text-sm sm:text-base md:text-lg font-semibold outline-none bg-transparent py-1"
                     value={toQuery}
                     onChange={(e) => {
@@ -697,6 +855,7 @@ const BookingForm = () => {
                 {showCalendar && (
                   <div ref={calendarRef} className="absolute top-16 right-0 bg-white rounded-2xl shadow-2xl p-3 sm:p-4 w-[280px] sm:w-[320px] z-50">
                     <div className="flex justify-between items-center mb-3">
+
                       <button
                         onClick={(e) => { e.stopPropagation(); setCurrentDate(new Date(year, currentDate.getMonth() - 1, 1)); }}
                         className="p-1 hover:bg-gray-100 rounded"
@@ -710,6 +869,11 @@ const BookingForm = () => {
                       >
                         <ChevronRight size={18} />
                       </button>
+
+                      <button onClick={(e) => { e.stopPropagation(); setCurrentDate(new Date(year, currentDate.getMonth() - 1, 1)); }} className="p-1 hover:bg-gray-100 rounded"><ChevronLeft size={18} /></button>
+                      <h2 className="font-semibold text-sm">{monthName} {year}</h2>
+                      <button onClick={(e) => { e.stopPropagation(); setCurrentDate(new Date(year, currentDate.getMonth() + 1, 1)); }} className="p-1 hover:bg-gray-100 rounded"><ChevronRight size={18} /></button>
+
                     </div>
                     <div className="grid grid-cols-7 text-center text-xs text-gray-500 mb-2">
                       {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d) => <div key={d}>{d}</div>)}
@@ -727,6 +891,10 @@ const BookingForm = () => {
                             disabled={past}
                             className={`p-1 rounded-lg transition text-xs ${isSelected ? "bg-[#FD561E] text-white" : ""} ${past ? "text-gray-300 cursor-not-allowed" : "hover:bg-orange-100"}`}
                           >
+
+                          <button key={day} onClick={(e) => { e.stopPropagation(); !past && handleDateSelect(day); }} disabled={past}
+                            className={`p-1 rounded-lg transition text-xs ${isSelected ? "bg-[#FD561E] text-white" : ""} ${past ? "text-gray-300 cursor-not-allowed" : "hover:bg-orange-100"}`}>
+
                             {day}
                           </button>
                         );

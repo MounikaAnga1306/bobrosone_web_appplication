@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 
+ 
+import React, { useState, useEffect, useRef } from 'react';
+ 
 const FlightLoadingAnimation = ({ searchSummary, isLoading, onComplete }) => {
   const [dots, setDots] = useState('');
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
@@ -16,11 +19,19 @@ const FlightLoadingAnimation = ({ searchSummary, isLoading, onComplete }) => {
   const loadingMessages = [
     "Searching for the best routes",
     "Checking seat availability", 
+ 
+  const animationRef = useRef(null);
+  const searchBarRef = useRef(null);
+ 
+  const loadingMessages = [
+    "Searching for the best routes",
+    "Checking seat availability",
     "Finding the lowest fares",
     "Comparing airline prices",
     "Almost there, preparing your results"
   ];
   
+ 
   // Animated dots effect
   useEffect(() => {
     const dotInterval = setInterval(() => {
@@ -29,6 +40,7 @@ const FlightLoadingAnimation = ({ searchSummary, isLoading, onComplete }) => {
     return () => clearInterval(dotInterval);
   }, []);
   
+ 
   // Rotate through loading messages
   useEffect(() => {
     const messageInterval = setInterval(() => {
@@ -37,6 +49,7 @@ const FlightLoadingAnimation = ({ searchSummary, isLoading, onComplete }) => {
     return () => clearInterval(messageInterval);
   }, []);
   
+ 
   // Update progress bar
   useEffect(() => {
     const progressInterval = setInterval(() => {
@@ -48,6 +61,7 @@ const FlightLoadingAnimation = ({ searchSummary, isLoading, onComplete }) => {
     return () => clearInterval(progressInterval);
   }, []);
   
+ 
   // Get search bar position
   useEffect(() => {
     const updateSearchBarPosition = () => {
@@ -64,6 +78,11 @@ const FlightLoadingAnimation = ({ searchSummary, isLoading, onComplete }) => {
     window.addEventListener('resize', updateSearchBarPosition);
     window.addEventListener('scroll', updateSearchBarPosition);
     
+   
+    updateSearchBarPosition();
+    window.addEventListener('resize', updateSearchBarPosition);
+    window.addEventListener('scroll', updateSearchBarPosition);
+   
     return () => {
       window.removeEventListener('resize', updateSearchBarPosition);
       window.removeEventListener('scroll', updateSearchBarPosition);
@@ -74,6 +93,11 @@ const FlightLoadingAnimation = ({ searchSummary, isLoading, onComplete }) => {
   useEffect(() => {
     if (!isAnimating) return;
     
+ 
+  // Smooth continuous animation
+  useEffect(() => {
+    if (!isAnimating) return;
+   
     const screenWidth = window.innerWidth;
     const imageWidth = 96;
     const startLeft = -imageWidth;
@@ -91,6 +115,17 @@ const FlightLoadingAnimation = ({ searchSummary, isLoading, onComplete }) => {
       const elapsed = timestamp - animationStartTime;
       let newLeft = startLeft + (speed * elapsed);
       
+   
+    let animationStartTime = performance.now();
+    let currentLeft = startLeft;
+    let isLooping = true;
+   
+    const animate = (timestamp) => {
+      if (!isLooping) return;
+     
+      const elapsed = timestamp - animationStartTime;
+      let newLeft = startLeft + (speed * elapsed);
+     
       if (newLeft < endLeft) {
         currentLeft = newLeft;
         setImageLeft(newLeft);
@@ -106,6 +141,8 @@ const FlightLoadingAnimation = ({ searchSummary, isLoading, onComplete }) => {
     
     animationRef.current = requestAnimationFrame(animate);
     
+   
+   
     return () => {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
@@ -114,6 +151,7 @@ const FlightLoadingAnimation = ({ searchSummary, isLoading, onComplete }) => {
     };
   }, [isAnimating]);
   
+ 
   // Handle API response - smooth finish
   useEffect(() => {
     if (!isLoading && isAnimating) {
@@ -124,6 +162,7 @@ const FlightLoadingAnimation = ({ searchSummary, isLoading, onComplete }) => {
       const duration = Math.min(500, Math.max(200, remainingDistance / 5));
       const startTime = performance.now();
       
+     
       const finishAnimation = (timestamp) => {
         const elapsed = timestamp - startTime;
         const progressPercent = Math.min(1, elapsed / duration);
@@ -131,6 +170,7 @@ const FlightLoadingAnimation = ({ searchSummary, isLoading, onComplete }) => {
         const newLeft = startLeftPos + (remainingDistance * eased);
         setImageLeft(newLeft);
         
+       
         if (progressPercent < 1) {
           requestAnimationFrame(finishAnimation);
         } else {
@@ -144,11 +184,17 @@ const FlightLoadingAnimation = ({ searchSummary, isLoading, onComplete }) => {
     }
   }, [isLoading, isAnimating, imageLeft, onComplete]);
   
+     
+      requestAnimationFrame(finishAnimation);
+    }
+  }, [isLoading, isAnimating, imageLeft, onComplete]);
+ 
   return (
     <div className="relative min-h-[calc(100vh-200px)] bg-gradient-to-b from-gray-50 to-white overflow-hidden">
       {/* Search Bar Reference Point */}
       <div ref={searchBarRef} className="absolute top-0 left-0 w-full h-0 pointer-events-none" />
       
+     
       {/* Animated Background Particles */}
       <div className="absolute inset-0 overflow-hidden">
         {[...Array(15)].map((_, i) => (
@@ -167,6 +213,7 @@ const FlightLoadingAnimation = ({ searchSummary, isLoading, onComplete }) => {
         ))}
       </div>
       
+     
       {/* Moving Flight Image */}
       {searchBarTop > 0 && (
         <div
@@ -180,6 +227,7 @@ const FlightLoadingAnimation = ({ searchSummary, isLoading, onComplete }) => {
           <div className="relative group">
             {/* Main Flight Image */}
             <img 
+            <img
               src="/assets/flight_moving_image1.png"
               alt="Flight searching"
               className="w-16 h-16 md:w-20 md:h-20 object-contain"
@@ -189,6 +237,7 @@ const FlightLoadingAnimation = ({ searchSummary, isLoading, onComplete }) => {
               }}
             />
             
+           
             {/* Animated Trail Effect */}
             <div className="absolute -left-10 top-1/2 -translate-y-1/2 flex gap-1">
               {[...Array(4)].map((_, i) => (
@@ -206,17 +255,20 @@ const FlightLoadingAnimation = ({ searchSummary, isLoading, onComplete }) => {
               ))}
             </div>
             
+           
             {/* Glow Effect */}
             <div className="absolute inset-0 rounded-full blur-xl bg-[#f36b32]/20 animate-pulse"></div>
           </div>
         </div>
       )}
       
+     
       {/* Bottom Border Line */}
       <div className="absolute bottom-32 left-0 right-0">
         <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent w-full"></div>
       </div>
       
+     
       {/* Loading Content */}
       <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 text-center z-10 w-full max-w-md px-4">
         {/* Animated Loading Message */}
@@ -225,8 +277,8 @@ const FlightLoadingAnimation = ({ searchSummary, isLoading, onComplete }) => {
             {loadingMessages[currentMessageIndex]}
             <span className="inline-block w-8 text-left text-gray-400">{dots}</span>
           </h2>
-        </div>
-        
+        </div>        
+       
         {/* Route Information */}
         <div className="mb-6">
           <div className="flex items-center justify-center gap-3 text-sm text-gray-500">
@@ -251,6 +303,11 @@ const FlightLoadingAnimation = ({ searchSummary, isLoading, onComplete }) => {
         <div className="mt-6">
           <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
             <div 
+       
+        {/* Progress Bar */}
+        <div className="mt-6">
+          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div
               className="h-full bg-gradient-to-r from-[#f36b32] to-[#fd8a5c] rounded-full transition-all duration-300 ease-out relative"
               style={{ width: `${progress}%` }}
             >
@@ -258,6 +315,7 @@ const FlightLoadingAnimation = ({ searchSummary, isLoading, onComplete }) => {
             </div>
           </div>
           
+         
           {/* Progress Stats */}
           <div className="flex justify-between text-xs text-gray-400 mt-2">
             <div className="flex items-center gap-1.5">
@@ -275,6 +333,7 @@ const FlightLoadingAnimation = ({ searchSummary, isLoading, onComplete }) => {
           </div>
         </div>
         
+       
         {/* Trust Badges */}
         <div className="mt-8 flex flex-wrap items-center justify-center gap-4 text-xs text-gray-400">
           <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-50 rounded-full">
@@ -298,6 +357,7 @@ const FlightLoadingAnimation = ({ searchSummary, isLoading, onComplete }) => {
         </div>
       </div>
       
+     
       <style>{`
         @keyframes trailPulse {
           0%, 100% {
@@ -310,6 +370,7 @@ const FlightLoadingAnimation = ({ searchSummary, isLoading, onComplete }) => {
           }
         }
         
+       
         @keyframes float {
           0%, 100% {
             transform: translateY(0px) rotate(0deg);
@@ -319,6 +380,7 @@ const FlightLoadingAnimation = ({ searchSummary, isLoading, onComplete }) => {
           }
         }
         
+       
         @keyframes shimmer {
           0% {
             transform: translateX(-100%);
@@ -336,6 +398,15 @@ const FlightLoadingAnimation = ({ searchSummary, isLoading, onComplete }) => {
           animation: shimmer 1.5s infinite;
         }
         
+       
+        .animate-float {
+          animation: float linear infinite;
+        }
+       
+        .animate-shimmer {
+          animation: shimmer 1.5s infinite;
+        }
+       
         .will-change-transform {
           will-change: left;
         }
@@ -345,3 +416,5 @@ const FlightLoadingAnimation = ({ searchSummary, isLoading, onComplete }) => {
 };
 
 export default FlightLoadingAnimation;
+ 
+
