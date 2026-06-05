@@ -1,4 +1,4 @@
-const BASE_URL = 'https://api.bobros.org';
+const BASE_URL = '';
 const AIRLINE_NAMES = {
   'AI': 'Air India',
   '6E': 'IndiGo',
@@ -1664,13 +1664,11 @@ const validateMultiCityData = (data) => {
 // ----------------------------------------------------------------------------
 
 const logResults = (data) => {
-  console.log('==========================================');
-  console.log('📊 TRANSFORMATION RESULTS');
-  console.log('==========================================');
+ 
   
   try {
-    if (data?.type === 'one_way') {
-      console.log(`✈️ One-Way Flights: ${data?.flights?.length || 0}`);
+    if (data?.type === 'oneWay') {
+   
       data?.flights?.slice(0, 3).forEach(flight => {
         const lowestFare = flight?.fares?.reduce((min, fare) => 
           fare?.totalPrice < min?.totalPrice ? fare : min, flight?.fares?.[0]);
@@ -1729,14 +1727,14 @@ const transformTravelportResponse = (apiResponse, passengerCount, expectedLegCou
       type = 'multi_city';
     } else {
       transformed = transformOneWayResponse(data, passengerCount, traceId);
-      type = 'one_way';
+      type = 'oneWay';
     }
     
     logResults({ ...transformed, type });
     
     let validationResult;
     switch (type) {
-      case 'one_way':
+      case 'oneWay':
         validationResult = validateOneWayData(transformed);
         break;
       case 'round_trip':

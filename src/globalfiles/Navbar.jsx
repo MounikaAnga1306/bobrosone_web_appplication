@@ -14,6 +14,12 @@ import CancellationCard from "../modules/bus/pages/CancellationCard";
 import PrintTicketModal from "../modules/bus/pages/PrintTicketModal";
 import PrintFlightTicketModal from "../modules/flights/pages/PrintFlightTicketModal";
 
+// ─── Pages where Navbar should do NOTHING proactive ───────────────
+// BillDesk lands here as a fresh page load — no auth modal, no redirects
+const PASSIVE_ROUTES = [
+  "/flights/ticket-confirmation",
+];
+
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -37,26 +43,10 @@ const Navbar = () => {
   const [openDropdown, setOpenDropdown] = useState(false);
   const closeTimeout = useRef(null);
 
-  const [rewardBalance, setRewardBalance] = useState(null);
-
-  const fetchRewardBalance = async (userId) => {
-    if (!userId) return;
-    try {
-      const res = await axios.post("https://api.bobros.co.in/db/select", {
-        table: "ulogin",
-        columns: ["ubal"],
-        conditions: { uid: String(userId) },
-      });
-      if (res.data?.rows?.length > 0) {
-        const bal = String(parseFloat(res.data.rows[0].ubal ?? 0));
-        setRewardBalance(bal);
-      } else {
-        setRewardBalance("0");
-      }
-    } catch (err) {
-      console.error("Failed to fetch ubal from ulogin:", err);
-    }
-  };
+  // ─── Derive once — used to short-circuit all proactive logic ───
+  const isPassiveRoute = PASSIVE_ROUTES.some(
+    (p) => location.pathname === p || location.pathname.startsWith(p)
+  );
 
   useEffect(() => {
     setOpenDropdown(false);
@@ -111,6 +101,12 @@ const Navbar = () => {
   }, []);
 
   useEffect(() => {
+    // ✅ FIX: never auto-open the auth modal on payment callback pages.
+    // BillDesk redirects as a fresh page load → sessionStorage is empty →
+    // firstVisitDone is missing → modal fires after 1.2 s → AuthModal/SignIn
+    // calls navigate('/') when closed → user ends up on home page.
+    if (isPassiveRoute) return;
+
     const firstVisit = sessionStorage.getItem("firstVisitDone");
     if (!firstVisit) {
       setTimeout(() => {
@@ -119,7 +115,7 @@ const Navbar = () => {
       }, 1200);
       sessionStorage.setItem("firstVisitDone", "true");
     }
-  }, []);
+  }, [isPassiveRoute]);
 
   useEffect(() => {
     const checkLogin = () => {
@@ -145,12 +141,14 @@ const Navbar = () => {
 
   useEffect(() => {
     const handler = (e) => {
+      // ✅ FIX: also guard the openAuthModal event on passive routes
+      if (isPassiveRoute) return;
       setAuthPage(e.detail === "signup" ? "signup" : "signin");
       setOpenAuthModal(true);
     };
     window.addEventListener("openAuthModal", handler);
     return () => window.removeEventListener("openAuthModal", handler);
-  }, []);
+  }, [isPassiveRoute]);
 
   const handleLogout = () => {
     localStorage.removeItem("user");
@@ -190,12 +188,21 @@ const Navbar = () => {
   }, [isDynamicPage]);
 
   const tabs = [
+
+    { id: "bus",         label: "Bus",           icon: Bus,       path: "/HomePage"     },
+    { id: "billpayment", label: "Bill Payments",  icon: Bus,       path: "/BillHomePage" },
+    { id: "flights",     label: "Flights",        icon: Plane,     path: "/flights"      },
+    { id: "hotels",      label: "Hotels",         icon: Building2, path: "/hotels"       },
+    { id: "holidays",    label: "Holidays",       icon: Palmtree,  path: "/holidays"     },
+    { id: "cabs",        label: "Cabs",           icon: Car,       path: "/cabs"         },
+
     { id: "bus", label: "Bus", icon: Bus, path: "/HomePage" },
     { id: "billpayment", label: "Bill Payments", icon: Bus, path: "/BillHomePage" },
     { id: "flights", label: "Flights", icon: Plane, path: "/flights" },
     { id: "hotels", label: "Hotels", icon: Building2, path: "/hotels" },
     { id: "holidays", label: "Holidays", icon: Palmtree, path: "/Holiday" },
     { id: "cabs", label: "Cabs", icon: Car, path: "/cabs" },
+
   ];
 
   // ===== ACTIVE TAB =====
@@ -203,32 +210,21 @@ const Navbar = () => {
   // Note: bus payment-status route "/payment-status"; bill di "/bill-payment-status"
   // (adi paina isBillPayment / "/bill" check tho cover అవుతుంది), kabatti clash raadu.
   const getActiveTab = () => {
-    const path = location.pathname;
+    if (location.pathname === "/" || location.pathname === "/HomePage") return "bus";
 
-    // Bill payments flow (motham bill flow)
-    if (
-      path === "/BillHomePage" ||
-      path.startsWith("/billers") ||
-      path.startsWith("/bill-details") ||
-      path.startsWith("/bill-payment-status") ||
-      path.startsWith("/bill-transactions") ||
-      path.startsWith("/bill-complaints") ||
-      (path.startsWith("/my-account") && location.search.includes("source=bill"))
-    ) return "billpayment";
+    if (location.pathname.startsWith("/results"))  return "bus";
+    if (location.pathname.startsWith("/flights"))  return "flights";
+    if (location.pathname.startsWith("/hotels"))   return "hotels";
+    if (location.pathname.startsWith("/holidays")) return "holidays";
+    if (location.pathname.startsWith("/cabs"))     return "cabs";
 
-    // Bus flow (whole flow)
-    if (
-      path === "/" ||
-      path === "/HomePage" ||
-      path.startsWith("/results") ||
-      path.startsWith("/booking-success") ||
-      path.startsWith("/payment-status")
-    ) return "bus";
+     if (location.pathname === "/BillHomePage") return "billpayment";
+    if (location.pathname.startsWith("/results")) return "bus";
+    if (location.pathname.startsWith("/flights")) return "flights";
+    if (location.pathname.startsWith("/hotels")) return "hotels";
+    if (location.pathname.startsWith("/Holiday")) return "holidays";
+    if (location.pathname.startsWith("/cabs")) return "cabs";
 
-    if (path.startsWith("/flights")) return "flights";
-    if (path.startsWith("/hotels")) return "hotels";
-    if (path.startsWith("/Holiday")) return "holidays";
-    if (path.startsWith("/cabs")) return "cabs";
     return "";
   };
 
@@ -254,7 +250,7 @@ const Navbar = () => {
               className={`h-auto transition-all duration-500 ease-in-out hover:scale-105
                 w-[100px] sm:w-[140px] md:w-[180px] lg:w-[220px] xl:w-[250px]
                 -ml-2 sm:-ml-1 md:-ml-0
-                ${isSolid ? 'filter-none' : 'brightness-0 invert'}`}
+                ${isSolid ? "filter-none" : "brightness-0 invert"}`}
             />
           </div>
 
@@ -383,104 +379,43 @@ const Navbar = () => {
               {/* GUEST DROPDOWN */}
               {!isLoggedIn && openDropdown && (
                 <div className="absolute right-0 top-12 w-64 bg-white rounded-xl shadow-lg border border-gray-100 text-gray-700 overflow-hidden z-50">
-                  {isBillPayment ? (
-                    <>
-                      <div className="px-4 py-3 bg-gray-50">
-                        <p className="font-semibold text-gray-800">Hey Traveller</p>
-                        <p className="text-sm text-gray-500">Manage your bill payments & transactions</p>
-                      </div>
-                      <button onClick={() => { setOpenDropdown(false); setAuthPage("signin"); setOpenAuthModal(true); }} className="mx-4 my-3 w-[calc(100%-32px)] cursor-pointer bg-[#fd561e] text-white font-semibold py-2.5 rounded-lg">Login / Sign Up</button>
-                      <button onClick={() => { setOpenDropdown(false); navigate("/bill-transactions"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Transactions</button>
-                      <button onClick={() => { setOpenDropdown(false); navigate("/bill-complaints"); }} className="w-full text-left px-4 py-3 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Complaints</button>
-                    </>
-                  ) : (
-                    <>
-                      <div className="px-4 py-3 bg-gray-50">
-                        <p className="font-semibold text-gray-800">Hey Traveller</p>
-                        <p className="text-sm text-gray-500">Get exclusive deals & Manage your trips</p>
-                      </div>
-                      <button onClick={() => { setOpenDropdown(false); setAuthPage("signin"); setOpenAuthModal(true); }} className="mx-4 my-3 w-[calc(100%-32px)] cursor-pointer bg-[#fd561e] text-white font-semibold py-2.5 rounded-lg">Login / Sign Up</button>
-                      <button onClick={() => { setOpenDropdown(false); setShowGuestBookings(true); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Bookings</button>
-                      <button onClick={() => {
-                        setOpenDropdown(false);
-                        if (location.pathname.startsWith("/flights")) {
-                          setShowFlightPrintTicket(true);
-                        } else {
-                          setPrintTin("");
-                          setShowPrintTicket(true);
-                        }
-                        window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
-                      }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 hover:text-blue-500 cursor-pointer">Print Ticket</button>
-                      <button onClick={handleOpenCancel} className="w-full text-left px-4 py-3 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Cancellation</button>
-                    </>
-                  )}
+                  <div className="px-4 py-3 bg-gray-50">
+                    <p className="font-semibold text-gray-800">Hey Traveller</p>
+                    <p className="text-sm text-gray-500">Get exclusive deals & Manage your trips</p>
+                  </div>
+                  <button onClick={() => { setOpenDropdown(false); setAuthPage("signin"); setOpenAuthModal(true); }} className="mx-4 my-3 w-[calc(100%-32px)] cursor-pointer bg-[#fd561e] text-white font-semibold py-2.5 rounded-lg">Login / Sign Up</button>
+                  <button onClick={() => { setOpenDropdown(false); setShowGuestBookings(true); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Bookings</button>
+                  <button onClick={() => { setOpenDropdown(false); if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); } else { setPrintTin(""); setShowPrintTicket(true); } }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 hover:text-blue-500 cursor-pointer">Print Ticket</button>
+                  <button onClick={handleOpenCancel} className="w-full text-left px-4 py-3 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Cancellation</button>
                 </div>
               )}
 
               {/* LOGGED IN DROPDOWN */}
               {isLoggedIn && openDropdown && (
                 <div className="absolute right-0 mt-3 w-56 bg-white rounded-xl shadow-lg border border-gray-100 text-gray-700 overflow-hidden z-50">
-                  {/* Reward points header */}
-                  <div className="px-4 py-3 border-b border-gray-100" style={{ background: "#FFF3EE" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: 13, color: "#666" }}>Reward Points</span>
-                      <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#FD561E", fontWeight: 700, fontSize: 14 }}>
-                        <Gift style={{ width: 14, height: 14 }} />
-                        ₹ {rewardBalance ?? "—"}
-                      </span>
-                    </div>
-                  </div>
-
-                  {isBillPayment ? (
-                    <>
-                      <button onClick={() => { setOpenDropdown(false); navigate("/my-account?source=bill"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Account</button>
-                      <button onClick={() => { setOpenDropdown(false); navigate("/bill-transactions"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Transactions</button>
-                      <button onClick={() => { setOpenDropdown(false); navigate("/bill-complaints"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Complaints</button>
-                      <button onClick={handleLogout} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-red-500 cursor-pointer">Logout</button>
-                    </>
-                  ) : (
-                    <>
-                      <button onClick={() => { setOpenDropdown(false); navigate("/my-bookings?type=bus"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 hover:text-blue-500 cursor-pointer">My Booking</button>
-                      <button onClick={() => { setOpenDropdown(false); navigate("/my-account"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Account</button>
-                      <button onClick={handleOpenCancel} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Cancellation</button>
-                      <button onClick={() => {
-                        setOpenDropdown(false);
-                        window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
-                        if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); }
-                        else { setPrintTin(""); setShowPrintTicket(true); }
-                      }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Print Ticket</button>
-                      <button onClick={() => { setOpenDropdown(false); navigate("/my-profile"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Profile</button>
-                      <button onClick={handleLogout} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-red-500 cursor-pointer">Logout</button>
-                    </>
-                  )}
+                  <button onClick={() => { setOpenDropdown(false); navigate("/my-bookings"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 hover:text-blue-500 cursor-pointer">My Booking</button>
+                  <button onClick={() => { setOpenDropdown(false); navigate("/my-account"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Account</button>
+                  <button onClick={handleOpenCancel} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Cancellation</button>
+                  <button onClick={() => { setOpenDropdown(false); if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); } else { setPrintTin(""); setShowPrintTicket(true); } }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Print Ticket</button>
+                  <button onClick={() => { setOpenDropdown(false); navigate("/my-profile"); }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer hover:text-blue-500">My Profile</button>
+                  <button onClick={handleLogout} className="w-full text-left px-4 py-3 hover:bg-gray-50 text-red-500 cursor-pointer">Logout</button>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Mobile right: Bharat Connect + Hamburger */}
-          <div className="flex items-center gap-2 lg:hidden">
-            {isBillPayment && (
-              <img
-                src="/assets/Bharat_connect_logo.png"
-                alt="Bharat Connect"
-                className="md:hidden h-7 w-auto object-contain"
-              />
-            )}
-            <button
-              className={`p-2 rounded-lg transition-all duration-300 ${
-                isSolid
-                  ? "text-gray-800 hover:bg-gray-100"
-                  : "text-white hover:bg-white/10"
-              }`}
-              onClick={() => setMobileOpen(!mobileOpen)}
-            >
-              {mobileOpen ? <X size={22} /> : <Menu size={22} />}
-            </button>
-          </div>
+          {/* Hamburger */}
+          <button
+            className={`lg:hidden p-2 rounded-lg transition-all duration-300 ${
+              isSolid ? "text-gray-800 hover:bg-gray-100" : "text-white hover:bg-white/10"
+            }`}
+            onClick={() => setMobileOpen(!mobileOpen)}
+          >
+            {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
         </div>
 
-        {/* Mobile Menu - Side Drawer */}
+        {/* Mobile Side Drawer */}
         {mobileOpen && (
           <>
             <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setMobileOpen(false)} />
@@ -488,7 +423,6 @@ const Navbar = () => {
               <div className="pt-16 pb-4">
                 <button onClick={() => setMobileOpen(false)} className="absolute top-3 right-3 p-1.5 rounded-lg hover:bg-gray-100"><X size={18} /></button>
 
-                {/* Tabs in Mobile */}
                 <div className="flex flex-col gap-2 px-4">
                   {tabs.map((tab) => {
                     const Icon = tab.icon;
@@ -496,10 +430,7 @@ const Navbar = () => {
                     return (
                       <button
                         key={tab.id}
-                        onClick={() => {
-                          navigate(tab.path);
-                          setMobileOpen(false);
-                        }}
+                        onClick={() => { navigate(tab.path); setMobileOpen(false); }}
                         className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-all w-full ${
                           active
                             ? "bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white border-transparent"
@@ -513,23 +444,19 @@ const Navbar = () => {
                   })}
                 </div>
 
-                <div className="border-t border-gray-200 my-3 mx-4"></div>
+                <div className="border-t border-gray-200 my-3 mx-4" />
 
                 <div className="px-4">
                   <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm mb-2">
-                    <Briefcase className="w-4 h-4" />
-                    Business
+                    <Briefcase className="w-4 h-4" /> Business
                   </button>
-
                   <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm mb-4">
-                    <MapPin className="w-4 h-4" />
-                    For Travel Agent
+                    <MapPin className="w-4 h-4" /> For Travel Agent
                   </button>
                 </div>
 
-                <div className="border-t border-gray-200 my-3 mx-4"></div>
+                <div className="border-t border-gray-200 my-3 mx-4" />
 
-                {/* Mobile User Section */}
                 <div ref={mobileDropdownRef} className="px-4">
                   <button
                     onClick={() => setMobileDropdownOpen(!mobileDropdownOpen)}
@@ -578,7 +505,6 @@ const Navbar = () => {
                     <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${mobileDropdownOpen ? "rotate-180" : ""}`} />
                   </button>
 
-                  {/* Mobile Dropdown */}
                   {mobileDropdownOpen && (
                     <div className="mt-2 bg-white rounded-lg border border-gray-200 overflow-hidden">
                       {isLoggedIn && (
@@ -651,16 +577,17 @@ const Navbar = () => {
           </>
         )}
 
-        {/* Auth Modal */}
-        <AuthModal isOpen={openAuthModal} onClose={() => setOpenAuthModal(false)}>
-          {authPage === "signin" && <SignIn closeModal={() => setOpenAuthModal(false)} openSignup={() => setAuthPage("signup")} openForgot={() => setAuthPage("forgot")} />}
-          {authPage === "signup" && <SignupForm closeModal={() => setOpenAuthModal(false)} openSignin={() => setAuthPage("signin")} openVerifyOtp={(data) => { setSignupData(data); setAuthPage("verifyotp"); }} />}
-          {authPage === "verifyotp" && <VerifyOTP signupData={signupData} closeModal={() => setOpenAuthModal(false)} />}
-          {authPage === "forgot" && <ForgotPassword closeModal={() => setOpenAuthModal(false)} openSignin={() => setAuthPage("signin")} openResetPassword={(data) => { setResetData(data); setAuthPage("reset"); }} />}
-          {authPage === "reset" && <ResetPassword resetData={resetData} closeModal={() => setOpenAuthModal(false)} openSignin={() => setAuthPage("signin")} />}
-        </AuthModal>
+        {/* Auth Modal — never rendered on passive routes */}
+        {!isPassiveRoute && (
+          <AuthModal isOpen={openAuthModal} onClose={() => setOpenAuthModal(false)}>
+            {authPage === "signin"     && <SignIn closeModal={() => setOpenAuthModal(false)} openSignup={() => setAuthPage("signup")} openForgot={() => setAuthPage("forgot")} />}
+            {authPage === "signup"     && <SignupForm closeModal={() => setOpenAuthModal(false)} openSignin={() => setAuthPage("signin")} openVerifyOtp={(data) => { setSignupData(data); setAuthPage("verifyotp"); }} />}
+            {authPage === "verifyotp"  && <VerifyOTP signupData={signupData} closeModal={() => setOpenAuthModal(false)} />}
+            {authPage === "forgot"     && <ForgotPassword closeModal={() => setOpenAuthModal(false)} openSignin={() => setAuthPage("signin")} openResetPassword={(data) => { setResetData(data); setAuthPage("reset"); }} />}
+            {authPage === "reset"      && <ResetPassword resetData={resetData} closeModal={() => setOpenAuthModal(false)} openSignin={() => setAuthPage("signin")} />}
+          </AuthModal>
+        )}
 
-        {/* Guest Bookings Modal */}
         {showGuestBookings && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 w-[90%] sm:w-[420px] mx-4 relative max-h-[90vh] overflow-y-auto">
