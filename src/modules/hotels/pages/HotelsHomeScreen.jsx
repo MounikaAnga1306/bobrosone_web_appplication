@@ -5,6 +5,7 @@ import Services from "../../bus/components/OurServices";
 import WhyBobros from "../../bus/components/WhyBobros";
 import AppDownload from "../../bus/components/AppDownload";
 import Quick_Links from "../../bus/components/Quick_Links";
+import RecommendedHotels from "../components/Recommendedhotels";
 
 const HotelsHomeScreen = () => {
   return (
@@ -20,6 +21,7 @@ const HotelsHomeScreen = () => {
         <div className="md:mt-10 lg:mt-10">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8"></div>
           <div className="sm:-mt-10">
+            <RecommendedHotels />
             {/* <Services /> */}
           </div>
           {/* <AppDownload /> */}

@@ -230,22 +230,24 @@ const BusResultCard = ({
 
         {/* iPad View (md to lg) */}
         <div className="hidden md:block lg:hidden">
-          <div className="flex flex-row items-center gap-3">
-            <div className="flex items-start gap-2 w-[180px] shrink-0">
-              <div className="min-w-0">
-                <h3 className="text-xs font-bold text-gray-900 truncate">{operator}</h3>
-                <p className="text-[10px] text-gray-500 truncate">{type}</p>
+          <div className="flex flex-row items-center gap-2">
+            {/* Operator — long names wrap to multiple lines */}
+            <div className="flex items-start gap-2 w-[150px] shrink-0">
+              <div className="min-w-0 w-full">
+                <h3 className="text-xs font-bold text-gray-900 break-words leading-snug">{operator}</h3>
+                <p className="text-[10px] text-gray-500 break-words leading-snug mt-0.5">{type}</p>
                 <div className="flex items-center gap-1 mt-1.5">
-                  <Users className="w-3 h-3 text-gray-500" />
+                  <Users className="w-3 h-3 text-gray-500 shrink-0" />
                   <span className={`text-[10px] font-medium ${seatInfo.color}`}>{seatInfo.text}</span>
                 </div>
               </div>
             </div>
 
-            <div className="flex-1 flex items-center gap-2">
-              <div className="text-center min-w-[50px]">
+            {/* Times */}
+            <div className="flex-1 flex items-center gap-1.5 min-w-0">
+              <div className="text-center min-w-[46px]">
                 <p className="text-sm font-bold text-gray-900">{departure}</p>
-                <p className="text-[9px] text-gray-500 truncate max-w-[70px]">{departureCity}</p>
+                <p className="text-[9px] text-gray-500 truncate max-w-[64px]">{departureCity}</p>
               </div>
               <div className="flex-1 flex flex-col items-center px-1">
                 <span className="text-[9px] text-gray-500 font-medium whitespace-nowrap">{duration}</span>
@@ -253,57 +255,57 @@ const BusResultCard = ({
                   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-[#fd561e] rounded-full" />
                 </div>
               </div>
-              <div className="text-center min-w-[50px]">
+              <div className="text-center min-w-[46px]">
                 <p className="text-sm font-bold text-gray-900">{arrival}</p>
-                <p className="text-[9px] text-gray-500 truncate max-w-[70px]">{arrivalCity}</p>
+                <p className="text-[9px] text-gray-500 truncate max-w-[64px]">{arrivalCity}</p>
               </div>
+            </div>
+
+            {/* Price — own column (like desktop), clean spacing */}
+            <div className="w-[74px] shrink-0 text-right">
+              <p className="text-base font-extrabold text-gray-900 leading-tight">₹{price?.toLocaleString("en-IN")}</p>
+              <p className="text-[9px] text-gray-500 italic leading-tight">(Incl. GST)</p>
+              <p className="text-[11px] text-gray-600 leading-tight">Onwards</p>
             </div>
           </div>
 
-          <div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between">
+          {/* Bottom row — clean: Cancellation Policy + Select Seat */}
+          <div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between gap-2">
             <button
               onClick={fetchCancellationPolicy}
               disabled={loadingPolicy}
-              className="text-[10px] text-[#fd561e] cursor-pointer font-medium flex items-center gap-1 hover:underline transition-all"
+              className="text-[10px] text-[#fd561e] cursor-pointer font-medium flex items-center gap-1 hover:underline transition-all shrink-0"
             >
               <div className="w-3 h-3 rounded-full border border-[#fd561e] flex items-center justify-center">
                 <span className="text-[7px] font-bold">!</span>
               </div>
               {loadingPolicy ? "Loading..." : "Cancellation Policy"}
             </button>
-            <div className="flex items-center gap-2">
-              <div className="text-right">
-                <p className="text-base font-extrabold mr-1 text-gray-900">₹{price?.toLocaleString("en-IN")}</p>
-                <div className="-mt-1">
-                <p className="text-[10px] text-gray-500 mt-0.5 italic">(Incl. GST)</p>
-              <p className="text-[12px] text-gray-600 -mt-1.5">Onwards</p>
-              </div>
-              </div>
-              <Button
-                size="sm"
-                className="font-bold cursor-pointer bg-[#fd561e] hover:bg-[#e04a16] text-white px-3 py-1 text-xs min-w-[90px]"
-                onClick={() => onSelectSeat(id)}
-                disabled={seatsLeft === 0}
-              >
-                {seatsLeft === 0 ? "Sold Out" : "Select Seat"}
-              </Button>
-            </div>
+            <Button
+              size="sm"
+              className="font-bold cursor-pointer bg-[#fd561e] hover:bg-[#e04a16] text-white px-4 py-1.5 text-xs min-w-[100px] shrink-0"
+              onClick={() => onSelectSeat(id)}
+              disabled={seatsLeft === 0}
+            >
+              {seatsLeft === 0 ? "Sold Out" : "Select Seat"}
+            </Button>
           </div>
           {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
         </div>
 
         {/* Mobile View (below md) */}
         <div className="md:hidden">
-          <div className="flex justify-between items-start mb-3">
-            <div className="flex-1">
-              <h3 className="text-sm font-bold text-gray-900 truncate">{operator}</h3>
-              <p className="text-xs text-gray-500 truncate">{type}</p>
+          <div className="flex justify-between items-start mb-3 gap-3">
+            <div className="flex-1 min-w-0">
+              {/* Long operator names wrap to multiple lines instead of pushing the price off-card */}
+              <h3 className="text-sm font-bold text-gray-900 break-words leading-snug">{operator}</h3>
+              <p className="text-xs text-gray-500 break-words leading-snug mt-0.5">{type}</p>
               <div className="flex items-center gap-1.5 mt-2">
-                <Users className="w-3.5 h-3.5 text-gray-500" />
+                <Users className="w-3.5 h-3.5 text-gray-500 shrink-0" />
                 <span className={`text-xs font-medium ${seatInfo.color}`}>{seatInfo.text}</span>
               </div>
             </div>
-            <div className="text-right">
+            <div className="text-right shrink-0">
               <p className="text-[15px] ml-1 font-extrabold text-gray-900">₹{price?.toLocaleString("en-IN")}</p>
               <div className="-mt-1 -mr-1">
               <p className="text-[10px] text-gray-500 mt-0.5 italic ">(Incl. GST)</p>
