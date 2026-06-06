@@ -175,6 +175,7 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
 
         localStorage.setItem("user", JSON.stringify(normalized));
         localStorage.setItem("isLoggedIn", "true");
+        localStorage.setItem("lastActivity", String(Date.now()));
         window.dispatchEvent(new Event("storage"));
 
         setSuccessMsg("Successfully Logged In!");
@@ -221,6 +222,7 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
 
       localStorage.setItem("user", JSON.stringify(normalized));
       localStorage.setItem("isLoggedIn", "true");
+      localStorage.setItem("lastActivity", String(Date.now()));
       window.dispatchEvent(new Event("storage"));
 
       setSuccessMsg("Successfully Logged In!");

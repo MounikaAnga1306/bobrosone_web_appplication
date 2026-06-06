@@ -195,7 +195,7 @@ const OneWayPage = () => {
         setPassengerCounts({ ADT: adults, CNN: children, INF: infants });
 
         // Write search params into Zustand store
-        setTripType('ONE_WAY');
+        setTripType('oneWay');
         updateFlightLeg(0, 'from', from);
         updateFlightLeg(0, 'to', to);
         updateFlightLeg(0, 'departureDate', departureDate);

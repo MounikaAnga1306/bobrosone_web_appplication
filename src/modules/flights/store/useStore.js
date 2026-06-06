@@ -5,7 +5,7 @@ const useStore = create((set) => ({
   // SEARCH PARAMS
   // ─────────────────────────────────────────────
   searchParams: {
-    tripType: "ONE_WAY",
+    tripType: "oneWay",
     flights: [
       { from: "", to: "", departureDate: "" },
     ],
@@ -62,7 +62,7 @@ const useStore = create((set) => ({
   setTripType: (tripType) =>
     set((state) => {
       let flights = [];
-      if (tripType === "ONE_WAY") {
+      if (tripType === "oneWay") {
         flights = [{ from: "", to: "", departureDate: "" }];
       } else if (tripType === "ROUND_TRIP") {
         const outbound = state.searchParams.flights[0];
