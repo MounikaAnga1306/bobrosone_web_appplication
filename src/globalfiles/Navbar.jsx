@@ -96,6 +96,22 @@ const GiftBox = ({ animate }) => {
   );
 };
 
+// ── Session timeout config ──
+const SESSION_IDLE_LIMIT = 30 * 60 * 1000; // 30 nimishalu — idi marchu (e.g. 10*60*1000 = 10 min)
+
+// login valid ah? expire ayithe clear chesi false istundi
+const hasValidLogin = () => {
+  if (localStorage.getItem("isLoggedIn") !== "true") return false;
+  const last = Number(localStorage.getItem("lastActivity") || 0);
+  if (!last || Date.now() - last > SESSION_IDLE_LIMIT) {
+    localStorage.removeItem("user");
+    localStorage.removeItem("isLoggedIn");
+    localStorage.removeItem("lastActivity");
+    return false;
+  }
+  return true;
+};
+
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -208,24 +224,54 @@ const Navbar = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    const firstVisit = sessionStorage.getItem("firstVisitDone");
-    if (!firstVisit) {
-      setTimeout(() => {
-        setAuthPage("signin");
-        setOpenAuthModal(true);
-      }, 1200);
-      sessionStorage.setItem("firstVisitDone", "true");
+  // activity meeda session refresh + idle ayithe auto logout
+useEffect(() => {
+  const bump = () => {
+    if (localStorage.getItem("isLoggedIn") === "true") {
+      localStorage.setItem("lastActivity", String(Date.now()));
     }
-  }, []);
+  };
+  const events = ["click", "keydown", "scroll", "touchstart"];
+  events.forEach((ev) => window.addEventListener(ev, bump));
+
+  const interval = setInterval(() => {
+    if (localStorage.getItem("isLoggedIn") === "true" && !hasValidLogin()) {
+      setIsLoggedIn(false);
+      setUser(null);
+      setRewardBalance(null);
+      window.dispatchEvent(new Event("storage"));
+    }
+  }, 60 * 1000); // prati nimishaniki check
+
+  return () => {
+    events.forEach((ev) => window.removeEventListener(ev, bump));
+    clearInterval(interval);
+  };
+}, []);
+
+ useEffect(() => {
+  
+ const loggedIn = hasValidLogin();
+if (loggedIn) return;
+
+  const alreadyShown = sessionStorage.getItem("popupShown");
+  if (alreadyShown) return;
+
+  sessionStorage.setItem("popupShown", "true");
+
+  setTimeout(() => {
+    setOpenAuthModal(true);
+  }, 1200);
+
+}, []);
 
   useEffect(() => {
     const checkLogin = () => {
-      const loggedIn = localStorage.getItem("isLoggedIn") === "true";
-      const userData = JSON.parse(localStorage.getItem("user"));
-      setIsLoggedIn(loggedIn);
-      setUser(userData?.user || userData || null);
-    };
+  const loggedIn = hasValidLogin();
+  const userData = loggedIn ? JSON.parse(localStorage.getItem("user")) : null;
+  setIsLoggedIn(loggedIn);
+  setUser(userData?.user || userData || null);
+};
     checkLogin();
     window.addEventListener("storage", checkLogin);
     return () => window.removeEventListener("storage", checkLogin);
