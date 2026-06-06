@@ -1,3 +1,25 @@
+// ─────────────────────────────────────────────────────────────────
+// pricingService.js
+//
+// The ONLY file responsible for building + firing the pricing request.
+//
+// Flow:
+//   executePricing()
+//     → reads store: traceId, travelerRefs, selectedOutbound/Inbound, searchParams
+//     → builds segments from selectedFlight.segments (original flightRefs preserved)
+//     → builds classOfService per segment from selectedBrand.passengerFareInfo
+//     → builds passengers from store.travelerRefs
+//     → POSTs to pricing API
+//     → transforms response
+//     → saves to store
+//
+// KEY RULES:
+//   1. traceId   = store.traceId (from CatalogProductOfferingsResponse.traceId)
+//   2. segmentKey = seg.flightRef (original ID from low-fare, e.g. "s3", "s4")
+//   3. classOfService = per-segment from passengerFareInfo, NOT brand-level
+//   4. travelerRefs = store.travelerRefs (set by lowFareSearchService)
+// ─────────────────────────────────────────────────────────────────
+
 import useStore from '../store/useStore';
 
 const PRICING_API_URL = 'https://api.bobros.org/flights/airpricing-updated'; // ← paste your endpoint
@@ -29,8 +51,7 @@ export const executePricing = async () => {
 
   console.log('🔑 executePricing — traceId:', traceId);
   console.log('🔑 executePricing — travelerRefs:', travelerRefs);
-  console.log('🔑 executePricing — selectedOutbound source:', selectedOutbound?.source);
-  console.log('🔑 executePricing — selectedOutbound offeringId:', selectedOutbound?.offeringId);
+  console.log('🔑 executePricing — selectedOutbound:', selectedOutbound?.offeringId);
   console.log('🔑 executePricing — selectedBrand:', selectedOutbound?.selectedBrand?.brandName);
 
   // ── Guards ───────────────────────────────────────────────────────
@@ -69,50 +90,12 @@ export const executePricing = async () => {
       }
     });
 
-    // ── Route to correct request builder based on source ──────────
-    //
-    // NDC_ACH (IndiGo 6E) needs a completely different request shape:
-    //   - currencyCode at top level
-    //   - segments with status, supplierCode, APISRequirementsRef
-    //   - bookingRequirements[] array with hostToken per segment
-    //   - passengers with count + age always present
-    //
-    // GDS (AI — GDS_CPO, GDS_LFS) uses the existing shape:
-    //   - segments with classOfService, eTicketability, etc.
-    //   - no bookingRequirements
-    //
-    // ── NDC detection — multi-signal for robustness ─────────────
-    // source field is primary; fall back to carrier code and ndc leg marker
-    // in case source gets dropped somewhere in the store round-trip.
-    const _isNdcFlight = (f) => {
-      if (!f) return false;
-      if (f.source === 'NDC_ACH') return true;
-      if (f.carrier === '6E')     return true;
-      if (f.segments?.[0]?.ndc != null) return true;
-      return false;
-    };
-
-    const isNdc       = _isNdcFlight(selectedOutbound) || _isNdcFlight(selectedInbound);
+    // ── Build request ─────────────────────────────────────────────
     const isRoundTrip = !!selectedInbound;
 
-    console.log('🔍 Source detection:', {
-      outboundSource:  selectedOutbound?.source,
-      outboundCarrier: selectedOutbound?.carrier,
-      hasNdcLeg:       selectedOutbound?.segments?.[0]?.ndc != null,
-      isNdc,
-      isRoundTrip,
-    });
-
-    let requestBody;
-    if (isNdc) {
-      requestBody = isRoundTrip
-        ? _buildNdcRoundTripRequest(selectedOutbound, selectedInbound, passengerCounts, traceId, travelerRefs)
-        : _buildNdcOneWayRequest(selectedOutbound, passengerCounts, traceId, travelerRefs);
-    } else {
-      requestBody = isRoundTrip
-        ? _buildRoundTripRequest(selectedOutbound, selectedInbound, passengerCounts, traceId, travelerRefs)
-        : _buildOneWayRequest(selectedOutbound, passengerCounts, traceId, travelerRefs);
-    }
+    const requestBody = isRoundTrip
+      ? _buildRoundTripRequest(selectedOutbound, selectedInbound, passengerCounts, traceId, travelerRefs)
+      : _buildOneWayRequest(selectedOutbound, passengerCounts, traceId, travelerRefs);
 
     console.log('📤 PRICING REQUEST BODY:');
     console.log(JSON.stringify(requestBody, null, 2));
@@ -120,7 +103,7 @@ export const executePricing = async () => {
     // ── Validate segments before sending ─────────────────────────
     const missingRef = requestBody.segments.find(s => !s.segmentKey || s.segmentKey.startsWith('MISSING'));
     if (missingRef) {
-      throw new Error(`Segment missing segmentKey: ${JSON.stringify(missingRef)}`);
+      throw new Error(`Segment missing flightRef: ${JSON.stringify(missingRef)}`);
     }
 
     // ── Call API ─────────────────────────────────────────────────
@@ -146,36 +129,52 @@ export const executePricing = async () => {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-// 2.  GDS REQUEST BUILDERS  (AI — GDS_CPO / GDS_LFS)
-//     Unchanged from previous version.
+// 2.  INTERNAL REQUEST BUILDERS
 // ═══════════════════════════════════════════════════════════════════
 
 const _buildOneWayRequest = (flight, passengerCounts, traceId, travelerRefs) => ({
   traceId,
-  segments:   _buildGdsSegments(flight, 0),
+  segments:   _buildSegments(flight, 0),
   passengers: _buildPassengers(passengerCounts, travelerRefs),
 });
 
 const _buildRoundTripRequest = (outbound, inbound, passengerCounts, traceId, travelerRefs) => ({
   traceId,
   segments: [
-    ..._buildGdsSegments(outbound, 0),
-    ..._buildGdsSegments(inbound,  1),
+    ..._buildSegments(outbound, 0),
+    ..._buildSegments(inbound,  1),
   ],
   passengers: _buildPassengers(passengerCounts, travelerRefs),
 });
 
 // ─────────────────────────────────────────────────────────────────
-// _buildGdsSegments
+// _buildSegments
 //
-// segmentKey = seg.flightRef  (original GDS ref e.g. "s3")
-// classOfService from selected brand's ADT fareInfo
+// Builds the segments[] array for the pricing request from a
+// selected flight object (which has selectedBrand attached).
+//
+// KEY RULES:
+//   segmentKey   = seg.flightRef  (original ID from low-fare, e.g. "s3")
+//                  This must match exactly what the GDS returned.
+//
+//   classOfService = resolved per segment from selectedBrand.passengerFareInfo
+//                    Each passengerFareInfo entry covers a set of segment indices.
+//                    We map: segmentIndex (0-based) → classOfService
+//                    Fallback: selectedBrand.classOfService → 'Y'
+//
+// selectedBrand.passengerFareInfo shape (from lowFareTransformer):
+//   [{ passengerType, cabin, classOfService, fareBasisCode, fareType }]
+//   Note: This is simplified — one entry per pax type, same class for all segments.
+//   If you have per-segment class data, it would be in product.FlightSegment.
+//   We use ADT's classOfService as the booking class for all segments.
 // ─────────────────────────────────────────────────────────────────
-const _buildGdsSegments = (flight, group) => {
+const _buildSegments = (flight, group) => {
   if (!flight?.segments?.length) return [];
 
   const brand = flight.selectedBrand;
 
+  // Get classOfService for ADT — this is what the GDS wants for booking
+  // passengerFareInfo is per pax type; ADT's CoS is used for all segments
   const adtFareInfo = (brand?.passengerFareInfo ?? []).find(p => p.passengerType === 'ADT')
     ?? (brand?.passengerFareInfo ?? [])[0]
     ?? null;
@@ -184,9 +183,12 @@ const _buildGdsSegments = (flight, group) => {
     ?? brand?.classOfService
     ?? 'Y';
 
-  console.log(`🔧 _buildGdsSegments group=${group}: brand=${brand?.brandName}, CoS=${brandLevelCoS}`);
+  console.log(`🔧 _buildSegments group=${group}:`);
+  console.log(`   brand: ${brand?.brandName}, CoS from ADT fareInfo: ${brandLevelCoS}`);
 
   return flight.segments.map((seg, idx) => {
+    // segmentKey MUST be the original flightRef from low-fare response
+    // e.g. "s3", "s4" — NOT a generated key
     const segmentKey = seg.flightRef;
     if (!segmentKey) {
       console.error(`❌ seg.flightRef missing for segment index ${idx}:`, seg);
@@ -202,7 +204,7 @@ const _buildGdsSegments = (flight, group) => {
       segmentKey:    segmentKey ?? `MISSING_${group}_${idx}`,
       group,
       carrier:       seg.carrier      ?? '',
-      flightNumber:  seg.number       ?? '',
+      flightNumber:  seg.number       ?? seg.flightNumber ?? '',
       origin:        seg.from.airport ?? '',
       destination:   seg.to.airport   ?? '',
       departureTime: depISO,
@@ -223,216 +225,43 @@ const _buildGdsSegments = (flight, group) => {
   });
 };
 
-// ═══════════════════════════════════════════════════════════════════
-// 3.  NDC REQUEST BUILDERS  (IndiGo 6E — NDC_ACH)
-// ═══════════════════════════════════════════════════════════════════
-
-/**
- * NDC one-way pricing request.
- * Shape required by ACH/NDC pricing endpoint.
- */
-const _buildNdcOneWayRequest = (flight, passengerCounts, traceId, travelerRefs) => {
-  const { segments, bookingRequirements } = _buildNdcSegmentsAndRequirements(flight, 0);
-
-  return {
-    currencyCode: 'INR',
-    traceId,
-    segments,
-    passengers:          _buildNdcPassengers(passengerCounts, travelerRefs),
-    bookingRequirements,
-  };
-};
-
-/**
- * NDC round-trip pricing request.
- * Both outbound + inbound must be NDC_ACH (6E) for this path to be used.
- */
-const _buildNdcRoundTripRequest = (outbound, inbound, passengerCounts, traceId, travelerRefs) => {
-  const out = _buildNdcSegmentsAndRequirements(outbound, 0);
-  const ret = _buildNdcSegmentsAndRequirements(inbound,  1);
-
-  return {
-    currencyCode: 'INR',
-    traceId,
-    segments:            [...out.segments,            ...ret.segments],
-    passengers:          _buildNdcPassengers(passengerCounts, travelerRefs),
-    bookingRequirements: [...out.bookingRequirements, ...ret.bookingRequirements],
-  };
-};
-
 // ─────────────────────────────────────────────────────────────────
-// _buildNdcSegmentsAndRequirements
+// _buildPassengers
 //
-// Returns both arrays together since they share the same segmentKey.
+// UPDATED: travelerRefs is now an array of individual entries:
+// [
+//   { code: 'ADT', mappedCode: 'ADT', passengerIndex: 0, key: 'key1==' },
+//   { code: 'ADT', mappedCode: 'ADT', passengerIndex: 1, key: 'key2==' },
+// ]
+// Each passenger gets their own unique key by type + index.
 //
-// segments[i].segmentKey  = brand.ndcBookingRequirements[i].segmentRef
-//   → the base64 ACH key (e.g. "J6XaM5VqWDKAlI+uSAAAAA==")
-//   → NOT seg.flightRef (which is a GDS-style ref, not valid for NDC)
-//
-// bookingRequirements[i].segmentKey = same base64 key
-// bookingRequirements[i].hostToken  = the full NDC host token string
-// bookingRequirements[i].hostTokenRef = the base64 hostTokenRef key
-//
-// seg.ndc holds the raw NDC leg fields preserved by the transformer:
-//   status, supplierCode, apisRequirementsRef, departureTimeRaw, arrivalTimeRaw
-//
-// Selected brand's ndcBookingRequirements[] is in the same leg order
-// as flight.segments[] — index alignment is guaranteed by the transformer.
-// ─────────────────────────────────────────────────────────────────
-const _buildNdcSegmentsAndRequirements = (flight, group) => {
-  if (!flight?.segments?.length) return { segments: [], bookingRequirements: [] };
-
-  const brand   = flight.selectedBrand;
-  const ndcReqs = brand?.ndcBookingRequirements ?? [];
-
-  console.log(`🔧 _buildNdcSegmentsAndRequirements group=${group}`);
-  console.log(`   brand name:`, brand?.brandName);
-  console.log(`   brand keys:`, brand ? Object.keys(brand) : 'NO BRAND');
-  console.log(`   ndcBookingRequirements (${ndcReqs.length}):`, JSON.stringify(ndcReqs, null, 2));
-  console.log(`   bookingInfos:`, JSON.stringify(brand?.bookingInfos ?? [], null, 2));
-
-  // Guard: if ndcBookingRequirements is empty but bookingInfos exists,
-  // the transformer didn't populate it — fall back to bookingInfos directly
-  const effectiveNdcReqs = ndcReqs.length > 0
-    ? ndcReqs
-    : (brand?.bookingInfos ?? []).map((bi) => ({
-        segmentRef:   bi.segmentRef   || null,
-        fareBasis:    bi.fareBasis    || bi.fareFamily || '',
-        bookingCode:  bi.bookingCode  || '',
-        hostToken:    bi.hostToken    || null,
-        hostTokenRef: bi.hostTokenRef || null,
-      }));
-
-  console.log(`   effectiveNdcReqs (${effectiveNdcReqs.length}):`, JSON.stringify(effectiveNdcReqs, null, 2));
-
-  const segments            = [];
-  const bookingRequirements = [];
-
-  flight.segments.forEach((seg, idx) => {
-    // The base64 NDC segment key — comes from bookingInfo.segmentRef
-    const ndcReq     = effectiveNdcReqs[idx] ?? {};
-    const segmentKey = ndcReq.segmentRef;
-
-    if (!segmentKey) {
-      console.error(`❌ NDC segmentRef missing for segment index ${idx}. ndcReq:`, ndcReq);
-    }
-
-    // Use raw ISO times from seg.ndc (preserved by transformer)
-    // If ndc is null (shouldn't happen for NDC_ACH), fall back to reconstructed ISO
-    const departureTime = seg.ndc?.departureTimeRaw
-      ?? `${seg.from.date}T${seg.from.time}:00.000+05:30`;
-    const arrivalTime   = seg.ndc?.arrivalTimeRaw
-      ?? `${seg.to.date}T${seg.to.time}:00.000+05:30`;
-
-    // flightTime: use raw integer from leg (seg.flightTime preserved by transformer)
-    const flightTime = seg.flightTime ?? _parseDurationToMinutes(seg.durationRaw ?? 0);
-
-    console.log(`   seg[${idx}]: key=${segmentKey} ${seg.carrier}${seg.number} ${seg.from.airport}→${seg.to.airport}`);
-
-    segments.push({
-      segmentKey:            segmentKey ?? `MISSING_NDC_${group}_${idx}`,
-      group,
-      carrier:               seg.carrier      ?? '',
-      flightNumber:          seg.number       ?? '',
-      origin:                seg.from.airport ?? '',
-      destination:           seg.to.airport   ?? '',
-      departureTime,
-      arrivalTime,
-      flightTime:            String(flightTime),  // NDC pricing expects string
-      equipment:             seg.equipment        ?? '',
-      changeOfPlane:         'false',
-      optionalServicesIndicator: 'false',
-
-      // NDC-specific fields from raw leg data
-      status:                seg.ndc?.status            ?? 'KK',
-      supplierCode:          seg.ndc?.supplierCode       ?? seg.carrier ?? '',
-      APISRequirementsRef:   seg.ndc?.apisRequirementsRef ?? null,
-    });
-
-    bookingRequirements.push({
-      segmentKey:   segmentKey ?? `MISSING_NDC_${group}_${idx}`,
-      fareBasis:    ndcReq.fareBasis    ?? '',
-      bookingCode:  ndcReq.bookingCode  ?? '',
-      hostToken:    ndcReq.hostToken    ?? null,
-      hostTokenRef: ndcReq.hostTokenRef ?? null,
-    });
-  });
-
-  return { segments, bookingRequirements };
-};
-
-// ─────────────────────────────────────────────────────────────────
-// _buildNdcPassengers
-//
-// NDC pricing passenger shape differs from GDS:
-//   { code, count, age, bookingTravelerRef }
-// count and age are always required for NDC.
-// ─────────────────────────────────────────────────────────────────
-const _buildNdcPassengers = (passengerCounts, travelerRefs) => {
-  const paxList = [];
-  const typeIndexMap = {};
-
-  const buildEntries = (code, count, age) => {
-    for (let i = 0; i < count; i++) {
-      if (typeIndexMap[code] === undefined) typeIndexMap[code] = 0;
-      const currentIndex = typeIndexMap[code]++;
-
-      const childCodes  = ['CHD', 'CNN'];
-      const lookupCodes = code === 'CHD' ? childCodes : [code];
-      const refEntry    = Array.isArray(travelerRefs)
-        ? travelerRefs.find(
-            (r) => (lookupCodes.includes(r.mappedCode) || lookupCodes.includes(r.code))
-                && r.passengerIndex === currentIndex
-          )
-        : null;
-
-      if (!refEntry) {
-        console.warn(`⚠️ No travelerRef found for NDC code=${code} index=${currentIndex}`);
-      }
-
-      paxList.push({
-        code,
-        count: 1,     // NDC sends one entry per individual passenger, count=1 each
-        age,
-        ...(refEntry ? { bookingTravelerRef: refEntry.key } : {}),
-      });
-    }
-  };
-
-  if ((passengerCounts.ADT ?? 0) > 0) buildEntries('ADT', passengerCounts.ADT, 30);
-  if ((passengerCounts.CNN ?? 0) > 0) buildEntries('CHD', passengerCounts.CNN, passengerCounts.CNNAge ?? 10);
-  if ((passengerCounts.INF ?? 0) > 0) buildEntries('INF', passengerCounts.INF, passengerCounts.INFAge ?? 1);
-
-  console.log('👥 Built NDC passengers:', JSON.stringify(paxList, null, 2));
-  return paxList;
-};
-
-// ═══════════════════════════════════════════════════════════════════
-// 4.  GDS PASSENGER BUILDER  (unchanged)
-// ═══════════════════════════════════════════════════════════════════
-
-// ─────────────────────────────────────────────────────────────────
-// _buildPassengers  (GDS only)
-//
-// travelerRefs is an array of individual entries:
-// [{ code, mappedCode, passengerIndex, key }]
-// CNN passengers are sent as 'CHD' to the GDS pricing API.
+// NOTE: CNN passengers are sent to the pricing API as 'CHD'.
+//       However, travelerRefs are still looked up using 'CNN' since
+//       that is how the low-fare response stored them (mappedCode: 'CNN').
 // ─────────────────────────────────────────────────────────────────
 const _buildPassengers = (passengerCounts, travelerRefs) => {
   const paxList = [];
+
+  // Track how many of each type we've assigned so far
   const typeIndexMap = {};
 
   const buildEntries = (code, count, extraProps = {}) => {
     for (let i = 0; i < count; i++) {
+      // Initialize counter for this type
       if (typeIndexMap[code] === undefined) typeIndexMap[code] = 0;
       const currentIndex = typeIndexMap[code]++;
 
-      const childCodes  = ['CHD', 'CNN'];
+      // ✅ Find the matching travelerRef by mappedCode + passengerIndex.
+      // For CHD (child), the low-fare response may have stored refs under
+      // mappedCode 'CNN' or 'CHD' depending on the GDS response — check both.
+      // Also fall back to matching on the `code` field directly.
+      const childCodes = ['CHD', 'CNN'];
       const lookupCodes = code === 'CHD' ? childCodes : [code];
-      const refEntry    = Array.isArray(travelerRefs)
+      const refEntry = Array.isArray(travelerRefs)
         ? travelerRefs.find(
-            (r) => (lookupCodes.includes(r.mappedCode) || lookupCodes.includes(r.code))
-                && r.passengerIndex === currentIndex
+            (r) =>
+              (lookupCodes.includes(r.mappedCode) || lookupCodes.includes(r.code)) &&
+              r.passengerIndex === currentIndex
           )
         : null;
 
@@ -440,29 +269,44 @@ const _buildPassengers = (passengerCounts, travelerRefs) => {
         console.warn(`⚠️ No travelerRef found for code=${code} index=${currentIndex}. Available refs:`, travelerRefs);
       }
 
-      paxList.push({
+      const entry = {
         code,
         ...extraProps,
         ...(refEntry ? { bookingTravelerRef: refEntry.key } : {}),
-      });
+      };
+
+      paxList.push(entry);
     }
   };
 
-  if ((passengerCounts.ADT ?? 0) > 0) buildEntries('ADT', passengerCounts.ADT);
-  if ((passengerCounts.CNN ?? 0) > 0) buildEntries('CHD', passengerCounts.CNN, { age: passengerCounts.CNNAge ?? 10 });
-  if ((passengerCounts.INF ?? 0) > 0) buildEntries('INF', passengerCounts.INF, { age: passengerCounts.INFAge ?? 1 });
+  if ((passengerCounts.ADT ?? 0) > 0) {
+    buildEntries('ADT', passengerCounts.ADT);
+  }
 
-  console.log('👥 Built GDS passengers:', JSON.stringify(paxList, null, 2));
+  // CNN passengers are sent as 'CHD' to the pricing API
+  if ((passengerCounts.CNN ?? 0) > 0) {
+    buildEntries('CHD', passengerCounts.CNN, {
+      age: passengerCounts.CNNAge ?? 10,
+    });
+  }
+
+  if ((passengerCounts.INF ?? 0) > 0) {
+    buildEntries('INF', passengerCounts.INF, {
+      age: passengerCounts.INFAge ?? 1,
+    });
+  }
+
+  console.log('👥 Built passengers:', JSON.stringify(paxList, null, 2));
   return paxList;
 };
 
 // ═══════════════════════════════════════════════════════════════════
-// 5.  API CALL WRAPPERS  (unchanged)
+// 3.  API CALL WRAPPERS
 // ═══════════════════════════════════════════════════════════════════
 
 export const callPricingAPI = async (requestBody) => {
   try {
-    console.log(`📥 PRICING API request`);
+    console.log(`📥 PRICING API request `);
     console.log(JSON.stringify(requestBody, null, 2));
 
     const response = await fetch(PRICING_API_URL, {
@@ -504,15 +348,13 @@ export const getFlightPricing = async (requestBody) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-// 6.  PUBLIC REQUEST BUILDERS  (for cards that call pricing directly)
+// 4.  PUBLIC REQUEST BUILDERS (for cards that call pricing directly)
 // ═══════════════════════════════════════════════════════════════════
 
 /**
  * Used by OneWayFlightCard / cards that build requests themselves.
- * Auto-detects NDC vs GDS from flight.source.
- *
- * Signature A: (flight, counts, traceId, travelerRefs)         — flight has selectedBrand
- * Signature B: (flight, brand, counts, traceId, travelerRefs)  — brand passed separately
+ * Signature A (from executePricing): (flight, counts, traceId, travelerRefs)
+ * Signature B (from cards):          (flight, brand, counts, traceId, travelerRefs)
  */
 export const buildOneWayPricingRequest = (flight, brandOrCounts, countsOrTraceId, maybeTraceIdOrRefs, maybeRefs) => {
   const looksLikeBrand = brandOrCounts && (
@@ -524,60 +366,34 @@ export const buildOneWayPricingRequest = (flight, brandOrCounts, countsOrTraceId
   let flightWithBrand, passengerCounts, traceId, travelerRefs;
 
   if (looksLikeBrand) {
+    // Signature B: card passes brand separately
     flightWithBrand = { ...flight, selectedBrand: brandOrCounts };
     passengerCounts = countsOrTraceId;
     traceId         = typeof maybeTraceIdOrRefs === 'string' ? maybeTraceIdOrRefs : `BOBROS-${Date.now()}`;
     travelerRefs    = (typeof maybeTraceIdOrRefs === 'object' ? maybeTraceIdOrRefs : maybeRefs) ?? {};
   } else {
+    // Signature A: flight already has selectedBrand
     flightWithBrand = flight;
     passengerCounts = brandOrCounts;
     traceId         = countsOrTraceId ?? `BOBROS-${Date.now()}`;
     travelerRefs    = maybeTraceIdOrRefs ?? {};
   }
 
-  // Route to correct builder based on source
-  if (flightWithBrand.source === 'NDC_ACH') {
-    const { segments, bookingRequirements } = _buildNdcSegmentsAndRequirements(flightWithBrand, 0);
-    return {
-      currencyCode: 'INR',
-      traceId,
-      segments,
-      passengers:          _buildNdcPassengers(passengerCounts, travelerRefs),
-      bookingRequirements,
-    };
-  }
-
   return {
     traceId,
-    segments:   _buildGdsSegments(flightWithBrand, 0),
+    segments:   _buildSegments(flightWithBrand, 0),
     passengers: _buildPassengers(passengerCounts, travelerRefs),
   };
 };
 
-export const buildRoundTripPricingRequest = (outbound, inbound, passengerCounts, traceId, travelerRefs = {}) => {
-  const isNdc = outbound.source === 'NDC_ACH' || inbound?.source === 'NDC_ACH';
-
-  if (isNdc) {
-    const out = _buildNdcSegmentsAndRequirements(outbound, 0);
-    const ret = _buildNdcSegmentsAndRequirements(inbound,  1);
-    return {
-      currencyCode: 'INR',
-      traceId,
-      segments:            [...out.segments,            ...ret.segments],
-      passengers:          _buildNdcPassengers(passengerCounts, travelerRefs),
-      bookingRequirements: [...out.bookingRequirements, ...ret.bookingRequirements],
-    };
-  }
-
-  return {
-    traceId,
-    segments: [..._buildGdsSegments(outbound, 0), ..._buildGdsSegments(inbound, 1)],
-    passengers: _buildPassengers(passengerCounts, travelerRefs),
-  };
-};
+export const buildRoundTripPricingRequest = (outbound, inbound, passengerCounts, traceId, travelerRefs = {}) => ({
+  traceId,
+  segments: [..._buildSegments(outbound, 0), ..._buildSegments(inbound, 1)],
+  passengers: _buildPassengers(passengerCounts, travelerRefs),
+});
 
 // ═══════════════════════════════════════════════════════════════════
-// 7.  DURATION PARSER  (unchanged)
+// 5.  DURATION PARSER
 // ═══════════════════════════════════════════════════════════════════
 
 const _parseDurationToMinutes = (val) => {
@@ -601,7 +417,7 @@ const _parseDurationToMinutes = (val) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-// 8.  RESPONSE TRANSFORMER  (unchanged)
+// 6.  RESPONSE TRANSFORMER
 // ═══════════════════════════════════════════════════════════════════
 
 export const transformPricingResponse = (raw) => {
@@ -719,171 +535,6 @@ const _parsePenalties = (pricingInfo) => {
   return {
     change: parse(pricingInfo?.['air:ChangePenalty']),
     cancel: parse(pricingInfo?.['air:CancelPenalty']),
-    currencyCode: "INR",
-    traceId: flight.traceId || `BOBROS-${Date.now()}`,
-    segments: normalizedSegments.map((seg) => ({
-      segmentKey: seg.segmentKey,
-      carrier: seg.carrier,
-      flightNumber: seg.flightNumber,
-      origin: seg.origin,
-      destination: seg.destination,
-      departureTime: seg.departureTime,
-      arrivalTime: seg.arrivalTime,
-      flightTime: seg.duration?.toString() || seg.flightTime,
-      distance: seg.distance, // ✅ ADD THIS LINE - Include distance
-      equipment: seg.equipment,
-      changeOfPlane: "false",
-      optionalServicesIndicator: "false",
-      ...(is6E ? { status: seg.status || "KK", supplierCode: seg.supplierCode || "6E" } : {
-        ETicketability: "Yes", LinkAvailability: "true", PolledAvailabilityOption: "Polled avail used",
-        AvailabilitySource: "S", ParticipantLevel: "Secure Sell", AvailabilityDisplayType: "Fare Shop/Optimal Shop"
-      }),
-      group: 0
-    })),
-    passengers: [
-      { code: 'ADT', count: passengerCounts.ADT || 1 },
-      ...(passengerCounts.CNN ? [{ code: 'CNN', count: passengerCounts.CNN }] : []),
-      ...(passengerCounts.INF ? [{ code: 'INF', count: passengerCounts.INF }] : [])
-    ],
-    bookingRequirements: normalizedSegments.map((seg) => {
-      const bookingReq = { segmentKey: seg.segmentKey, bookingCode: selectedFare.bookingCode, fareBasis: selectedFare.fareBasis };
-      if (is6E && hostTokenString) {
-        bookingReq.hostToken = hostTokenString;
-        if (hostTokenRefString) bookingReq.hostTokenRef = hostTokenRefString;
-      }
-      return bookingReq;
-    })
-  };
-};
-
-export const buildRoundTripPricingRequest = (outboundFlight, outboundFare, returnFlight, returnFare, passengerCounts, traceId = null) => {
-  let outboundSegments = outboundFlight?.segments || [outboundFlight];
-  outboundSegments = outboundSegments.map((seg) => ({
-    ...seg, 
-    segmentKey: seg.segmentKey || seg.key, 
-    flightTime: seg.duration?.toString() || seg.flightTime,
-    distance: seg.distance, // ✅ ADD DISTANCE HERE
-    status: seg.status || "KK", 
-    supplierCode: seg.supplierCode || "6E"
-  }));
-  
-  let returnSegments = returnFlight?.segments || [returnFlight];
-  returnSegments = returnSegments.map(seg => ({
-    ...seg, 
-    segmentKey: seg.segmentKey || seg.key, 
-    flightTime: seg.duration?.toString() || seg.flightTime,
-    distance: seg.distance, // ✅ ADD DISTANCE HERE
-    status: seg.status || "KK", 
-    supplierCode: seg.supplierCode || "6E"
-  }));
-  
-  const outboundIs6E = outboundSegments[0]?.carrier === '6E';
-  const returnIs6E = returnSegments[0]?.carrier === '6E';
-  const bookingRequirements = [];
-  
-  outboundSegments.forEach((seg) => {
-    const segmentKey = seg.segmentKey;
-    let hostTokenString = null, hostTokenRefString = null;
-    if (outboundFare.segments && outboundFare.segments.length > 0) {
-      const segmentData = outboundFare.segments.find(s => s.segmentKey === segmentKey);
-      if (segmentData) { hostTokenString = segmentData.hostToken; hostTokenRefString = segmentData.hostTokenRef; }
-    }
-    if (!hostTokenString && outboundFare.hostTokenMap) {
-      hostTokenString = outboundFare.hostTokenMap[segmentKey];
-      hostTokenRefString = outboundFare.hostTokenRefMap?.[segmentKey];
-    }
-    const bookingReq = { 
-      segmentKey: segmentKey, 
-      bookingCode: outboundFare.bookingCode || seg.bookingCode, 
-      fareBasis: outboundFare.fareBasis 
-    };
-    if (outboundIs6E && hostTokenString) {
-      bookingReq.hostToken = hostTokenString;
-      if (hostTokenRefString) bookingReq.hostTokenRef = hostTokenRefString;
-    }
-    bookingRequirements.push(bookingReq);
-  });
-  
-  returnSegments.forEach((seg) => {
-    const segmentKey = seg.segmentKey;
-    let hostTokenString = null, hostTokenRefString = null;
-    if (returnFare.segments && returnFare.segments.length > 0) {
-      const segmentData = returnFare.segments.find(s => s.segmentKey === segmentKey);
-      if (segmentData) { hostTokenString = segmentData.hostToken; hostTokenRefString = segmentData.hostTokenRef; }
-    }
-    if (!hostTokenString && returnFare.hostTokenMap) {
-      hostTokenString = returnFare.hostTokenMap[segmentKey];
-      hostTokenRefString = returnFare.hostTokenRefMap?.[segmentKey];
-    }
-    const bookingReq = { 
-      segmentKey: segmentKey, 
-      bookingCode: returnFare.bookingCode || seg.bookingCode, 
-      fareBasis: returnFare.fareBasis 
-    };
-    if (returnIs6E && hostTokenString) {
-      bookingReq.hostToken = hostTokenString;
-      if (hostTokenRefString) bookingReq.hostTokenRef = hostTokenRefString;
-    }
-    bookingRequirements.push(bookingReq);
-  });
-  
-  return {
-    currencyCode: "INR",
-    traceId: traceId || `PRC-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`, // ✅ USE PROVIDED TRACE ID
-    segments: [
-      ...outboundSegments.map(seg => ({
-        segmentKey: seg.segmentKey, 
-        carrier: seg.carrier, 
-        flightNumber: seg.flightNumber, 
-        origin: seg.origin,
-        destination: seg.destination, 
-        departureTime: seg.departureTime, 
-        arrivalTime: seg.arrivalTime,
-        flightTime: seg.flightTime, 
-        distance: seg.distance, // ✅ ADD DISTANCE HERE
-        equipment: seg.equipment, 
-        changeOfPlane: "false", 
-        optionalServicesIndicator: "false",
-        ...(outboundIs6E ? { status: seg.status || "KK", supplierCode: seg.supplierCode || "6E" } : {
-          ETicketability: "Yes", 
-          LinkAvailability: "true", 
-          PolledAvailabilityOption: "Polled avail used",
-          AvailabilitySource: "S", 
-          ParticipantLevel: "Secure Sell", 
-          AvailabilityDisplayType: "Fare Shop/Optimal Shop"
-        }),
-        group: 0
-      })),
-      ...returnSegments.map(seg => ({
-        segmentKey: seg.segmentKey, 
-        carrier: seg.carrier, 
-        flightNumber: seg.flightNumber, 
-        origin: seg.origin,
-        destination: seg.destination, 
-        departureTime: seg.departureTime, 
-        arrivalTime: seg.arrivalTime,
-        flightTime: seg.flightTime, 
-        distance: seg.distance, // ✅ ADD DISTANCE HERE
-        equipment: seg.equipment, 
-        changeOfPlane: "false", 
-        optionalServicesIndicator: "false",
-        ...(returnIs6E ? { status: seg.status || "KK", supplierCode: seg.supplierCode || "6E" } : {
-          ETicketability: "Yes", 
-          LinkAvailability: "true", 
-          PolledAvailabilityOption: "Polled avail used",
-          AvailabilitySource: "S", 
-          ParticipantLevel: "Secure Sell", 
-          AvailabilityDisplayType: "Fare Shop/Optimal Shop"
-        }),
-        group: 1
-      }))
-    ],
-    passengers: [
-      { code: 'ADT', count: passengerCounts.ADT || 1 },
-      ...(passengerCounts.CNN ? [{ code: 'CNN', count: passengerCounts.CNN }] : []),
-      ...(passengerCounts.INF ? [{ code: 'INF', count: passengerCounts.INF }] : [])
-    ],
-    bookingRequirements
   };
 };
 
@@ -925,7 +576,7 @@ const _parseBrandAttributes = (services) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-// 9.  UTILITIES  (unchanged)
+// 7.  UTILITIES
 // ═══════════════════════════════════════════════════════════════════
 
 const _dig = (obj, keys) => keys.reduce((o, k) => o?.[k], obj);
