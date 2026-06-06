@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import { Menu, X, Briefcase, MapPin, User, ChevronDown, Gift } from "lucide-react";
+import { Menu, X, Briefcase, MapPin, User, ChevronDown } from "lucide-react";
 import { Bus, Plane, Building2, Palmtree, Car } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import AuthModal from "../modules/bus/pages/AuthModal";
@@ -56,29 +56,24 @@ const Navbar = () => {
 
   useEffect(() => {
     const handleGuestBookings = () => setShowGuestBookings(true);
-
     const handleCancellation = () => {
       clearTimeout(closeTimeout.current);
       setShowCancel(true);
       window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
     };
-
     const handlePrintTicket = () => {
       setPrintTin("");
       setShowPrintTicket(true);
       window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
     };
-
     const handleFlightPrintTicket = () => {
       setShowFlightPrintTicket(true);
       window.dispatchEvent(new CustomEvent("navbarModalChange", { detail: { open: true } }));
     };
-
     window.addEventListener("openGuestBookings", handleGuestBookings);
     window.addEventListener("openCancellation", handleCancellation);
     window.addEventListener("openPrintTicket", handlePrintTicket);
     window.addEventListener("openFlightPrintTicket", handleFlightPrintTicket);
-
     return () => {
       window.removeEventListener("openGuestBookings", handleGuestBookings);
       window.removeEventListener("openCancellation", handleCancellation);
@@ -205,10 +200,6 @@ const Navbar = () => {
 
   ];
 
-  // ===== ACTIVE TAB =====
-  // Bus flow motham (home → results → booking-success → payment-status) ki "bus" active ravali.
-  // Note: bus payment-status route "/payment-status"; bill di "/bill-payment-status"
-  // (adi paina isBillPayment / "/bill" check tho cover అవుతుంది), kabatti clash raadu.
   const getActiveTab = () => {
     if (location.pathname === "/" || location.pathname === "/HomePage") return "bus";
 
@@ -229,12 +220,18 @@ const Navbar = () => {
   };
 
   const activeTab = getActiveTab();
-
-  // First letter of user's name for avatar
   const userInitial = user?.uname?.charAt(0)?.toUpperCase() || "U";
 
   return (
     <>
+      {/* Keyframes for dropdown slide-in */}
+      <style>{`
+        @keyframes ddFadeIn {
+          from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+          to   { opacity: 1; transform: translateY(0)   scale(1);    }
+        }
+      `}</style>
+
       <nav
         className={`${isNoFixedPage ? "relative" : "fixed top-0 left-0 right-0"} z-50 transition-all duration-300 ${
           isSolid ? "bg-white shadow-md" : "bg-transparent"
@@ -313,47 +310,38 @@ const Navbar = () => {
                 }
               }}
             >
-              <button
-                onClick={() => {
-                  if (!isLoggedIn) {
-                    setAuthPage("signin");
-                    setOpenAuthModal(true);
-                  }
-                  // Logged-in: profile avatar matrame dropdown toggle chestundi (avatar onClick lo)
-                }}
-                className={
-                  isLoggedIn
-                    ? "flex items-center gap-2.5 cursor-default bg-transparent"
-                    : `flex items-center gap-2 px-3 xl:px-4 py-2 rounded-full border transition-all duration-300 cursor-pointer text-sm ${
-                        isSolid ? "border-gray-300 text-gray-700 hover:bg-gray-100" : "border-white/40 text-white hover:bg-white/10"
-                      }`
-                }
-              >
-                {isLoggedIn ? (
-                  <>
-                    {/* Reward points chip — roundness tagginchaం (rounded-lg) */}
-                    <span style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 5,
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: "#FD561E",
-                      whiteSpace: "nowrap",
-                      background: "#FFF3EE",
-                      border: "1px solid #FFD9C7",
-                      borderRadius: 8,
-                      padding: "6px 12px",
-                    }}>
-                      <Gift style={{ width: 14, height: 14, flexShrink: 0 }} />
-                      ₹ {rewardBalance ?? "—"} Reward Points
-                    </span>
-                    {/* Avatar — clean round circle, chuttu ring ledu. Profile click ki ee dropdown open avtundi */}
-                    <div
-                      onClick={(e) => { e.stopPropagation(); setOpenDropdown(!openDropdown); }}
-                      style={{
-                      width: 36,
-                      height: 36,
+              {isLoggedIn ? (
+                /* ── LOGGED IN: reward chip + avatar ── */
+                <div className="flex items-center gap-2">
+
+                  {/* REWARD CHIP — orange+gold combo */}
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "5px 10px",
+                    background: "#FFFAF5",
+                    border: "1.5px solid #FFB300",
+                    borderRadius: 20,
+                  }}>
+                    <GiftBox animate={giftOpen} />
+                    <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                      <span style={{ fontSize: 8, fontWeight: 700, color: "#999", letterSpacing: "0.6px", textTransform: "uppercase", lineHeight: 1 }}>
+                        Reward Points
+                      </span>
+                      <span style={{ display: "flex", alignItems: "baseline", gap: 1, lineHeight: 1 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: "#FD561E" }}>₹</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: "#FD561E" }}>{rewardBalance ?? "—"}</span>
+                        <span style={{ fontSize: 8, color: "#bbb", fontWeight: 500, marginLeft: 1 }}>pts</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* AVATAR — only this toggles dropdown */}
+                  <div
+                    onClick={() => setOpenDropdown(!openDropdown)}
+                    style={{
+                      width: 36, height: 36,
                       borderRadius: "50%",
                       background: "#FD561E",
                       color: "white",
@@ -388,7 +376,18 @@ const Navbar = () => {
                   <button onClick={() => { setOpenDropdown(false); if (location.pathname.startsWith("/flights")) { setShowFlightPrintTicket(true); } else { setPrintTin(""); setShowPrintTicket(true); } }} className="w-full text-left px-4 py-3 border-b border-gray-200 hover:bg-gray-50 hover:text-blue-500 cursor-pointer">Print Ticket</button>
                   <button onClick={handleOpenCancel} className="w-full text-left px-4 py-3 hover:bg-gray-50 cursor-pointer hover:text-blue-500">Cancellation</button>
                 </div>
-              )}
+              ) : (
+                /* ── GUEST: login button + dropdown on hover ── */
+                <>
+                  <button
+                    onClick={() => { setAuthPage("signin"); setOpenAuthModal(true); }}
+                    className={`flex items-center gap-2 px-3 xl:px-4 py-2 rounded-full border transition-all duration-300 cursor-pointer text-sm ${
+                      isSolid ? "border-gray-300 text-gray-700 hover:bg-gray-100" : "border-white/40 text-white hover:bg-white/10"
+                    }`}
+                  >
+                    <User className="w-5 h-5" />
+                    Login/Signup
+                  </button>
 
               {/* LOGGED IN DROPDOWN */}
               {isLoggedIn && openDropdown && (
@@ -464,39 +463,20 @@ const Navbar = () => {
                   >
                     <div className="flex items-center gap-3">
                       {isLoggedIn ? (
-                        /* Avatar circle */
                         <div style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: "50%",
-                          background: "#FD561E",
-                          color: "white",
-                          fontSize: 15,
-                          fontWeight: 600,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
+                          width: 32, height: 32, borderRadius: "50%",
+                          background: "#FD561E", color: "white",
+                          fontSize: 15, fontWeight: 600,
+                          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                         }}>
                           {userInitial}
                         </div>
                       ) : (
                         <User className="w-4 h-4" />
                       )}
-
                       {isLoggedIn ? (
-                        /* Reward points pakkana avatar ki */
-                        <span style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 4,
-                          fontSize: 12,
-                          fontWeight: 600,
-                          color: "#FD561E",
-                          whiteSpace: "nowrap",
-                        }}>
-                          <Gift style={{ width: 13, height: 13, flexShrink: 0 }} />
-                          ₹ {rewardBalance ?? "—"} Reward Points
+                        <span style={{ fontSize: 13, fontWeight: 600, color: "#FD561E" }}>
+                          {user?.uname || "My Account"}
                         </span>
                       ) : (
                         <span className="text-sm font-medium">Login/Signup</span>
@@ -510,8 +490,7 @@ const Navbar = () => {
                       {isLoggedIn && (
                         <div className="px-4 py-2.5 border-b border-gray-200 flex items-center justify-between" style={{ background: "#FFF3EE" }}>
                           <span className="text-sm font-medium text-gray-700">Reward Points</span>
-                          <span style={{ display: "flex", alignItems: "center", gap: 4, color: "#FD561E", fontWeight: 700, fontSize: 14 }}>
-                            <Gift style={{ width: 14, height: 14 }} />
+                          <span style={{ color: "#FD561E", fontWeight: 700, fontSize: 14 }}>
                             ₹ {rewardBalance ?? "—"}
                           </span>
                         </div>

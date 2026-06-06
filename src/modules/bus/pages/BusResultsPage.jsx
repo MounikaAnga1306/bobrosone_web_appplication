@@ -20,6 +20,14 @@ const EMPTY_FILTERS = () => ({
   dropping: new Set(), ops: new Set(), amens: new Set(),
 });
 
+/**
+ * If your top Navbar (the one with the Reward Points / avatar) is FIXED or STICKY,
+ * set this to its height in px so the orange SearchBar + sticky sidebar sit right
+ * below it (no gap / no overlap) on every device.
+ * If the navbar scrolls away with the page, leave it 0.
+ */
+const NAVBAR_OFFSET = 0;
+
 export default function BusResultsPage() {
   const location     = useLocation();
   const searchParams = new URLSearchParams(location.search);
@@ -166,21 +174,30 @@ export default function BusResultsPage() {
     { label: "Price: Low to High", value: "Low to High"     },
   ];
 
-  // ── Sticky sidebar — measure SearchBar height ──────────────────────────────
+  // ── Sticky sidebar — measure SearchBar height (robust across devices) ──────
+  // Re-measures on element resize, viewport resize AND orientation change, so the
+  // sticky filters always sit right below the orange bar on phone / tablet /
+  // Nest Hub / desktop without leaving a phantom gap.
   const searchBarRef = useRef(null);
-  const [sidebarTop, setSidebarTop] = useState(88);
+  const [sidebarTop, setSidebarTop] = useState(96 + NAVBAR_OFFSET);
 
   useEffect(() => {
     const el = searchBarRef.current;
     if (!el) return;
     const update = () => {
       const h = el.getBoundingClientRect().height;
-      if (h > 0) setSidebarTop(h + 16);
+      if (h > 0) setSidebarTop(Math.round(h + 16 + NAVBAR_OFFSET));
     };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
-    return () => ro.disconnect();
+    window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+      window.removeEventListener("orientationchange", update);
+    };
   }, []);
 
   return (
@@ -194,7 +211,14 @@ export default function BusResultsPage() {
         .sidebar-scroll::-webkit-scrollbar-thumb:hover { background: #6b7280; }
       `}</style>
 
-      <div ref={searchBarRef}>
+      {/* SearchBar — stays pinned on md+ so the sidebar offset is exact and no
+          empty space appears above the sticky filters while scrolling results.
+          (bg matches the page so cards don't show through behind it.) */}
+      <div
+        ref={searchBarRef}
+        className="bg-[#f1f5f9] md:sticky md:z-30"
+        style={{ top: NAVBAR_OFFSET }}
+      >
         <SearchBar
           key={`${fromName}-${toName}-${date}`}
           defaultFrom={fromName}
@@ -203,7 +227,7 @@ export default function BusResultsPage() {
         />
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6">
 
         {/* ── Mobile: compact filter + sort bar ── */}
         <div className="md:hidden mb-3">
@@ -267,17 +291,17 @@ export default function BusResultsPage() {
         </div>
 
         {/* ── iPad / Desktop: sidebar + results ── */}
-        <div className="hidden md:flex gap-6 items-start">
+        <div className="hidden md:flex gap-4 lg:gap-6 items-start">
 
           {/* ── Sticky Sidebar with orange scrollbar ── */}
           <div
-            className="w-[280px] shrink-0 sidebar-scroll"
+            className="w-[240px] lg:w-[280px] shrink-0 sidebar-scroll"
             style={{
-              position:      "sticky",
-              top:           `${sidebarTop}px`,
-              alignSelf:     "flex-start",
-              maxHeight:     `calc(100vh - ${sidebarTop}px - 8px)`,
-              overflowY:     "auto",
+              position:       "sticky",
+              top:            `${sidebarTop}px`,
+              alignSelf:      "flex-start",
+              maxHeight:      `calc(100vh - ${sidebarTop}px - 16px)`,
+              overflowY:      "auto",
               scrollbarWidth: "thin",
               scrollbarColor: "#9ca3af #f1f1f1",
             }}

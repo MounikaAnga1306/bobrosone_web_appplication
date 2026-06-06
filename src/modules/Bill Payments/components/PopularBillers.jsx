@@ -344,7 +344,7 @@ const PopularBillers = () => {
       {loading && <LoadingOverlay billerName={loadingLabel} />}
       {error   && <ErrorPopup message={error} onClose={() => setError("")} />}
 
-      <div className="popular-billers-root w-full pt-8 bg-white" style={{ borderTop: "1px solid #f0f0f0" }}>
+      <div className="popular-billers-root w-full pt-8 bg-gray-50" style={{ borderTop: "1px solid #f0f0f0" }}>
         <h3 className="pb-heading text-[26px] font-bold text-gray-900 mb-5">
           Popular Billers
         </h3>

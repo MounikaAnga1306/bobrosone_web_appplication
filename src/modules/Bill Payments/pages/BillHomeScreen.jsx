@@ -25,8 +25,14 @@ function BillHomeScreen() {
         {/* <AppDownload /> */}
         <RechargeAndBillsIcons />
         {/* <WhyBobros /> */}
+        <div className="-mt-8">
         <PopularBillers />
+        </div>
+         <div className="mt-0">
         <BillPaymentFAQ />
+        </div>
+       
+        <Quick_Links />
         
       </main>
     </div>

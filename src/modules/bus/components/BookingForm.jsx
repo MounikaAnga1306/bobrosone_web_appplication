@@ -141,11 +141,20 @@ const BookingForm = () => {
   const toDebounce = useRef(null);
   const carouselInterval = useRef(null);
 
-  // Background carousel state
-  const [currentBgIndex, setCurrentBgIndex] = useState(0);
-  const [nextBgIndex, setNextBgIndex] = useState(1);
-  const [isTransitioning, setIsTransitioning] = useState(false);
+  // ──────────────────────────────────────────────────────────────
+  // Background carousel state — base + crossfade layer.
+  // baseIndex   : eppudu fully opaque ga kanipinche image (gap radu).
+  // fadingIndex : base meeda fade-in ayye next image.
+  // ──────────────────────────────────────────────────────────────
+  const [baseIndex, setBaseIndex] = useState(0);
+  const [fadingIndex, setFadingIndex] = useState(null);
+  const [fadeIn, setFadeIn] = useState(false);
+  const currentIndexRef = useRef(0);
   const intervalRef = useRef(null);
+  const commitRef = useRef(null);
+
+  // Hero text + active index — crossfade time lo incoming image ni follow avutundi.
+  const displayIndex = fadingIndex !== null ? fadingIndex : baseIndex;
 
   const navigate = useNavigate();
 
@@ -203,23 +212,23 @@ const BookingForm = () => {
       });
       setIsTransitioning(false);
     }, 1000);
-    
-    // Restart auto-rotation
+  };
+
+  // Manual next/prev
+  const changeBackground = (direction) => {
+    const len = backgroundImages.length;
+    const cur = currentIndexRef.current;
+    const next =
+      direction === "prev" ? (cur - 1 + len) % len : (cur + 1) % len;
+    transitionTo(next);
     startAutoRotation();
   };
 
   const startAutoRotation = () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     intervalRef.current = setInterval(() => {
-      setIsTransitioning(true);
-      setTimeout(() => {
-        setCurrentBgIndex((prev) => {
-          const newIndex = (prev + 1) % backgroundImages.length;
-          setNextBgIndex((newIndex + 1) % backgroundImages.length);
-          return newIndex;
-        });
-        setIsTransitioning(false);
-      }, 1000);
+      const len = backgroundImages.length;
+      transitionTo((currentIndexRef.current + 1) % len);
     }, 5000);
   };
 
@@ -227,6 +236,7 @@ const BookingForm = () => {
     startAutoRotation();
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
+      if (commitRef.current) clearTimeout(commitRef.current);
     };
   }, []);
 
@@ -389,44 +399,44 @@ const BookingForm = () => {
 
       {/* Background Carousel with Zoom Effect */}
       <div className="absolute inset-0 w-full h-full">
-        {/* Current Image */}
+        {/* Base image — always visible, no transition */}
         <div
-          className="absolute inset-0 w-full h-full transition-all duration-1000 ease-in-out"
+          className="absolute inset-0 w-full h-full"
           style={{
-            backgroundImage: `url(${backgroundImages[currentBgIndex]})`,
+            backgroundImage: `url(${backgroundImages[baseIndex]})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            transform: isTransitioning ? 'scale(1.05)' : 'scale(1)',
-            transition: 'transform 8s ease-in-out',
           }}
         />
-        {/* Next Image (for smooth crossfade) */}
-        <div
-          className="absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out"
-          style={{
-            backgroundImage: `url(${backgroundImages[nextBgIndex]})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            opacity: isTransitioning ? 1 : 0,
-            transform: 'scale(1.05)',
-          }}
-        />
+        {/* Incoming image — base meeda fade-in (crossfade) */}
+        {fadingIndex !== null && (
+          <div
+            className="absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out"
+            style={{
+              backgroundImage: `url(${backgroundImages[fadingIndex]})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              opacity: fadeIn ? 1 : 0,
+            }}
+          />
+        )}
       </div>
 
-      {/* Very subtle dark overlay for text readability (removed heavy gradients) */}
-      <div className="absolute inset-0" />
+      {/* Subtle top gradient — kevalam white hero heading readable ga undadaniki.
+          Form area (center/bottom) clear ga untundi, so glass white ga ne kanipistundi. */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/10 to-transparent pointer-events-none" />
 
       {/* Carousel Navigation Arrows */}
       <button
         onClick={() => changeBackground('prev')}
-        className="absolute left-4 md:left-8 z-20 bg-white/20 hover:bg-white/40 backdrop-blur-sm p-2 rounded-full text-white transition-all duration-300"
+        className="absolute left-4 md:left-8 z-20 bg-white/20 hover:bg-white/40 backdrop-blur-sm p-2 rounded-full text-white transition-all duration-300 hover:scale-110 active:scale-95"
         aria-label="Previous image"
       >
         <ChevronLeft size={24} />
       </button>
       <button
         onClick={() => changeBackground('next')}
-        className="absolute right-4 md:right-8 z-20 bg-white/20 hover:bg-white/40 backdrop-blur-sm p-2 rounded-full text-white transition-all duration-300"
+        className="absolute right-4 md:right-8 z-20 bg-white/20 hover:bg-white/40 backdrop-blur-sm p-2 rounded-full text-white transition-all duration-300 hover:scale-110 active:scale-95"
         aria-label="Next image"
       >
         <ChevronRight size={24} />
@@ -553,18 +563,18 @@ const BookingForm = () => {
             <div className="relative border border-gray-200 rounded-xl overflow-visible bg-white">
               {/* FROM */}
 
-          {/* ── MOBILE FORM ── (unchanged) */}
+          {/* ── MOBILE FORM ── */}
           <div className="md:hidden space-y-0">
             <div className="relative border border-gray-200 rounded-xl overflow-visible">
 
               <div ref={fromRef} className="relative px-3 pt-3 pb-2 pr-10">
-                <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Depart From</p>
+                <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-1">Depart From</p>
                 <div className={`flex items-center gap-2 pb-1 ${fromError ? "border-red-400" : "border-gray-200"}`}>
                   <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${fromError ? "text-red-400" : "text-gray-400"}`} />
                   <input
                     type="text"
                     placeholder="From"
-                    className="w-full text-sm font-semibold outline-none bg-transparent py-0.5"
+                    className="w-full text-sm font-semibold outline-none bg-transparent py-0.5 text-gray-800 placeholder-gray-500"
                     value={fromQuery}
                     onChange={(e) => {
                       const val = e.target.value;
@@ -613,13 +623,13 @@ const BookingForm = () => {
               <div className="mx-3 border-t border-dashed border-gray-200" />
 
               <div ref={toRef} className="relative px-3 pt-2 pb-3 pr-10">
-                <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1">Going To</p>
+                <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-1">Going To</p>
                 <div className={`flex items-center gap-2 pb-1 ${toError || sameCityError ? "border-red-400" : "border-gray-200"}`}>
                   <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${toError || sameCityError ? "text-red-400" : "text-gray-400"}`} />
                   <input
                     type="text"
                     placeholder="To"
-                    className="w-full text-sm font-semibold outline-none bg-transparent py-0.5"
+                    className="w-full text-sm font-semibold outline-none bg-transparent py-0.5 text-gray-800 placeholder-gray-500"
                     value={toQuery}
                     onChange={(e) => {
                       const val = e.target.value;
@@ -663,7 +673,7 @@ const BookingForm = () => {
               <div className="absolute right-8 -top-2 -translate-y-1/2 translate-x-1/2 z-10">
                 <button
                   onClick={handleSwap}
-                  className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center shadow-sm hover:bg-orange-50 hover:border-[#FD561E] transition-all duration-200"
+                  className="w-8 h-8 rounded-full bg-white border border-gray-300 flex items-center justify-center shadow-sm hover:bg-orange-50 hover:border-[#FD561E] hover:rotate-180 active:scale-90 transition-all duration-300"
                 >
                   <ArrowRightLeft className="w-3.5 h-3.5 text-gray-500 rotate-90" />
                 </button>
@@ -682,7 +692,7 @@ const BookingForm = () => {
                 <span className="text-sm font-semibold text-gray-800">{formatDate(selectedDate)}</span>
               </div>
               {showCalendar && (
-                <div ref={calendarRef} onMouseDown={(e) => e.stopPropagation()} className="relative left-0 right-0 bg-white rounded-2xl shadow-2xl p-2 z-50 mt-1">
+                <div ref={calendarRef} onMouseDown={(e) => e.stopPropagation()} className="bf-animate-pop relative left-0 right-0 bg-white rounded-2xl shadow-2xl p-2 z-50 mt-1">
                   <div className="flex justify-between items-center mb-3">
                     <button onClick={() => setCurrentDate(new Date(year, currentDate.getMonth() - 1, 1))} className="p-1 hover:bg-gray-100 rounded">
                       <ChevronLeft size={18} />
@@ -723,7 +733,7 @@ const BookingForm = () => {
             <div className="mt-3 flex flex-wrap items-center gap-1.5">
               <span className="text-[10px] font-bold uppercase tracking-wide text-gray-700">Special Fares</span>
               <div className="flex flex-wrap gap-1.5">
-                {specialFares.map((fare) => {
+                {specialFares.map((fare, i) => {
                   const active = activeFare === fare.id;
                   return (
                     <button
@@ -877,7 +887,7 @@ const BookingForm = () => {
                 </div>
                 <div className="h-4 mt-0.5" />
                 {showCalendar && (
-                  <div ref={calendarRef} className="absolute top-12.5 right-0 bg-white rounded-2xl shadow-2xl p-3 sm:p-4 w-[280px] sm:w-[320px] z-50">
+                  <div ref={calendarRef} className="bf-animate-pop absolute top-12.5 right-0 bg-white rounded-2xl shadow-2xl p-3 sm:p-4 w-[280px] sm:w-[320px] z-50" style={{ transformOrigin: 'top right' }}>
                     <div className="flex justify-between items-center mb-3">
 
                       <button
@@ -933,7 +943,7 @@ const BookingForm = () => {
             <div className="mt-5 sm:mt-6 flex flex-wrap items-center gap-1.5 sm:gap-2 md:gap-3">
               <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wide text-gray-700">Special Fares</span>
               <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                {specialFares.map((fare) => {
+                {specialFares.map((fare, i) => {
                   const active = activeFare === fare.id;
                   return (
                     <button

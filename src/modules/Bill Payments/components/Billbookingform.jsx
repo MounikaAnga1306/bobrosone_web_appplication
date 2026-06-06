@@ -367,11 +367,10 @@ const BillBookingForm = () => {
   return (
     <section className="relative min-h-[520px] md:min-h-[450px]  lg:min-h-[540px] flex items-center justify-center py-8 md:py-0">
       <img
-        src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-4.0.3&auto=format&fit=crop&w=2071&q=80"
+        src="/assets/billhero.png"
         alt="Bill payments background"
         className="absolute inset-0 w-full h-full object-cover"
       />
-      <div className="absolute inset-0 bg-gradient-to-r from-red-300/40 via-red-300/40 to-purple-600/70" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
       <div className="relative z-10 w-full max-w-6xl px-4 sm:px-6">
@@ -384,7 +383,9 @@ const BillBookingForm = () => {
           </p>
         </div>
 
-        <div className="relative bg-white/95 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-2xl border border-white/20 px-4 sm:px-6 md:px-8 lg:px-10 pt-5 sm:pt-6 md:pt-8 pb-12">
+        {/* FROSTED GLASS CARD — booking form lo unna same gradient glass style.
+            from-white/90 -> /68 + backdrop-blur-xl + ring => clear white frosted glass. */}
+        <div className="relative bg-gradient-to-br from-white/95 via-white/90 to-white/84 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl ring-1 ring-white/50 border border-white/60 px-4 sm:px-6 md:px-8 lg:px-10 pt-5 sm:pt-6 md:pt-8 pb-12">
 
           {/* ===== TABS — mobile: bus-style icon boxes | iPad: desktop layout (smaller) | desktop: full ===== */}
           <div className="flex flex-nowrap md:flex-wrap items-center justify-between md:justify-start gap-1.5 sm:gap-2 md:gap-3 mb-6 md:mb-8">
@@ -424,8 +425,8 @@ const BillBookingForm = () => {
 
           {/* ── Mobile View ── */}
           <div className="md:hidden space-y-3">
-            <div className="border border-gray-200 rounded-xl px-3 pt-2 pb-2">
-              <p className="text-[10px] text-gray-400 uppercase tracking-widest mb-1 flex items-center gap-1">
+            <div className="border border-gray-200 rounded-xl px-3 pt-2 pb-2 bg-white/40">
+              <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-1 flex items-center gap-1">
                 <i className="fa-solid fa-table-cells-large" /> Category
               </p>
               <div className="relative" ref={mobileCatRef}>
@@ -503,7 +504,7 @@ const BillBookingForm = () => {
             </div>
 
             <div
-              className={`border rounded-xl px-3 pt-2 pb-2 ${
+              className={`border rounded-xl px-3 pt-2 pb-2 bg-white/40 ${
                 billerError ? "border-red-400" : "border-gray-200"
               }`}
             >
@@ -526,7 +527,7 @@ const BillBookingForm = () => {
                 >
                   <span
                     className={`flex-1 font-semibold text-sm sm:text-base py-1 select-none ${
-                      biller ? "text-gray-800" : "text-gray-400"
+                      biller ? "text-gray-800" : "text-gray-500"
                     }`}
                   >
                     {billerLoading ? "Loading billers..." : billerName || "Search biller"}
@@ -600,7 +601,7 @@ const BillBookingForm = () => {
               </button>
             </div>
             <div className="flex justify-center pt-2 pb-2">
-              <p className="text-[11px] text-gray-400 flex items-center gap-1">
+              <p className="text-[11px] text-gray-500 flex items-center gap-1">
                 <i
                   className="fa-solid fa-shield-halved"
                   style={{ color: "#22c55e", fontSize: "12px" }}
@@ -614,10 +615,10 @@ const BillBookingForm = () => {
           <div className="hidden md:block">
             <div className="grid grid-cols-2 gap-0">
               <div className="group pr-6">
-                <p className="text-[11px] text-gray-400 uppercase tracking-wide mb-1 group-hover:text-[#FD561E] transition-colors duration-300 flex items-center gap-1">
+                <p className="text-[11px] text-gray-600 uppercase tracking-wide mb-1 group-hover:text-[#FD561E] transition-colors duration-300 flex items-center gap-1">
                   <i className="fa-solid fa-table-cells-large" /> Category
                 </p>
-                <div className="pb-1.5 border-b border-gray-200 group-hover:border-[#FD561E] transition-colors duration-300">
+                <div className="pb-1.5 border-b border-gray-300 group-hover:border-[#FD561E] transition-colors duration-300">
                   <div className="relative" ref={catRef}>
                     <div
                       className="flex items-center cursor-pointer"
@@ -695,10 +696,10 @@ const BillBookingForm = () => {
                 </div>
               </div>
 
-              <div className="group pl-6 border-l border-gray-200">
+              <div className="group pl-6 border-l border-gray-300">
                 <p
                   className={`text-[11px] uppercase tracking-wide mb-1 transition-colors duration-300 flex items-center gap-1 ${
-                    billerError ? "text-red-400" : "text-gray-400 group-hover:text-[#FD561E]"
+                    billerError ? "text-red-400" : "text-gray-600 group-hover:text-[#FD561E]"
                   }`}
                 >
                   <i className="fa-solid fa-building-columns" /> Biller
@@ -707,7 +708,7 @@ const BillBookingForm = () => {
                   className={`pb-1.5 border-b transition-colors duration-300 ${
                     billerError
                       ? "border-red-400"
-                      : "border-gray-200 group-hover:border-[#FD561E]"
+                      : "border-gray-300 group-hover:border-[#FD561E]"
                   }`}
                 >
                   <div className="relative" ref={billerRef}>
@@ -722,7 +723,7 @@ const BillBookingForm = () => {
                     >
                       <span
                         className={`flex-1 font-semibold text-sm sm:text-base md:text-lg py-1 select-none ${
-                          biller ? "text-gray-800" : "text-gray-400"
+                          biller ? "text-gray-800" : "text-gray-500"
                         }`}
                       >
                         {billerLoading ? "Loading billers..." : billerName || "Search biller"}
@@ -793,7 +794,7 @@ const BillBookingForm = () => {
 
           <div className="hidden md:block">
             <div className="absolute bottom-6 left-0 right-0 flex justify-center">
-              <p className="text-[11px] text-gray-400 flex items-center gap-1">
+              <p className="text-[11px] text-gray-500 flex items-center gap-1">
                 <i
                   className="fa-solid fa-shield-halved"
                   style={{ color: "#22c55e", fontSize: "12px" }}

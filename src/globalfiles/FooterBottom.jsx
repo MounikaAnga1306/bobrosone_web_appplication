@@ -45,7 +45,7 @@ export default function FooterBottom() {
             <img src="/assets/razorpay_partner2.png" alt="Razorpay Partner" className="h-9 sm:h-10 md:h-9 -mr-4 w-auto object-contain" />
             <img src="/assets/Google-Partner.png" alt="Google Partner" className="h-12 sm:h-13 md:h-18 w-auto object-contain" />
             <img src="/assets/secure-partner-logo.png" alt="SECTIGO Secure Partner" className="h-9 sm:h-10 md:h-11 w-auto object-contain" />
-            <img src="/assets/ISO_logo.png" alt="ISO 27001 Information Security" className="h-9 sm:h-10 md:h-11 w-auto object-contain" />
+            <img src="/assets/isologo.png" alt="ISO 27001 Information Security" className="h-9 sm:h-10 md:h-11 w-auto object-contain" />
           </div>
         </div>
       </div>
@@ -53,70 +53,87 @@ export default function FooterBottom() {
       {/* Divider */}
       <hr className="my-5 sm:my-6 md:my-6 border-gray-300" />
 
-      {/* FOLLOW US */}
-      <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
-        <span className="text-xs font-bold text-gray-800 tracking-widest">
-          FOLLOW US
+      {/* OUR SOCIAL MEDIA HANDLES — wordmark logos + URL text below */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-center gap-5 lg:gap-12">
+        <span className="text-sm sm:text-base font-bold text-gray-900 whitespace-nowrap text-center lg:text-left">
+          Our Social Media Handles :
         </span>
 
-        {/* Facebook */}
-        <a
-          href="https://www.facebook.com/share/v/18TxLzDzCA/"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Facebook"
-          className="hover:opacity-80 transition-opacity"
-        >
-          <svg className="w-7 sm:w-8 md:w-8 h-7 sm:h-8 md:h-8" viewBox="0 0 32 32" fill="none">
-            <circle cx="16" cy="16" r="16" fill="#1877F2" />
-            <path
-              d="M21 10h-2.5C17.67 10 17 10.67 17 11.5V13h4l-.5 4H17v9h-4v-9h-3v-4h3v-1.5C13 8.57 14.57 7 16.5 7H21v3z"
-              fill="white"
-            />
-          </svg>
-        </a>
+        <div className="flex flex-wrap items-start justify-center gap-x-10 gap-y-6 sm:gap-x-14">
 
-        {/* Instagram */}
-        <a
-          href="https://www.instagram.com/reel/DWHbVmcib4M/?igsh=ODdzZjljNzZnejN5"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Instagram"
-          className="hover:opacity-80 transition-opacity"
-        >
-          <svg className="w-7 sm:w-8 md:w-8 h-7 sm:h-8 md:h-8" viewBox="0 0 32 32" fill="none">
-            <defs>
-              <radialGradient id="ig-grad" cx="30%" cy="107%" r="150%">
-                <stop offset="0%" stopColor="#fdf497" />
-                <stop offset="5%" stopColor="#fdf497" />
-                <stop offset="45%" stopColor="#fd5949" />
-                <stop offset="60%" stopColor="#d6249f" />
-                <stop offset="90%" stopColor="#285AEB" />
-              </radialGradient>
-            </defs>
-            <circle cx="16" cy="16" r="16" fill="url(#ig-grad)" />
-            <rect x="9" y="9" width="14" height="14" rx="4" stroke="white" strokeWidth="1.5" />
-            <circle cx="16" cy="16" r="3.5" stroke="white" strokeWidth="1.5" />
-            <circle cx="20.5" cy="11.5" r="1" fill="white" />
-          </svg>
-        </a>
-
-        {/* LinkedIn */}
-        <a
-          href="https://www.linkedin.com/company/bobros/posts/?feedView=all"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="LinkedIn"
-          className="hover:opacity-80 transition-opacity"
-        >
-          <svg className="w-7 sm:w-8 md:w-8 h-7 sm:h-8 md:h-8" viewBox="0 0 32 32" fill="none">
-            <circle cx="16" cy="16" r="16" fill="#0A66C2" />
-            <path
-              d="M11 13h-2v8h2v-8zm-1-1.5a1.25 1.25 0 110-2.5 1.25 1.25 0 010 2.5zM23 21h-2v-4c0-1-.4-1.5-1.2-1.5-.9 0-1.3.6-1.3 1.5V21h-2v-8h2v1.1c.4-.7 1.1-1.1 2-1.1 1.6 0 2.5 1.1 2.5 3V21z"
-              fill="white"
+          {/* Facebook — ni original link */}
+          <a
+            href="https://www.facebook.com/share/v/18TxLzDzCA/"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Facebook"
+            className="flex flex-col items-center gap-1.5 hover:opacity-80 transition-opacity"
+          >
+            <img
+              src="/assets/facebook.webp"
+              alt="Facebook"
+              className="h-6 sm:h-7 w-auto object-contain"
             />
-          </svg>
-        </a>
+            <span className="text-xs sm:text-sm text-gray-700">
+              www.facebook.com/Bobros   {/* display text — kావాలంటే marchuko */}
+            </span>
+          </a>
+
+          {/* LinkedIn — ni original link */}
+          <a
+            href="https://www.linkedin.com/company/bobros/posts/?feedView=all"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="LinkedIn"
+            className="flex flex-col items-center gap-1.5 hover:opacity-80 transition-opacity"
+          >
+            <img
+              src="/assets/linked.svg"
+              alt="LinkedIn"
+              className="h-6 sm:h-7 w-auto object-contain"
+            />
+            <span className="text-xs sm:text-sm text-gray-700">
+              www.linkedin.com/company/bobros   {/* display text — kావాలంటే marchuko */}
+            </span>
+          </a>
+
+          {/* YouTube — nuvve add cheskో (href + display text marchu) */}
+          <a
+            href="https://www.youtube.com/@bobros"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="YouTube"
+            className="flex flex-col items-center gap-1.5 hover:opacity-80 transition-opacity"
+          >
+            <img
+              src="/assets/youtube.svg"
+              alt="YouTube"
+              className="h-6 sm:h-7 w-auto object-contain"
+            />
+            <span className="text-xs sm:text-sm text-gray-700">
+              www.youtube.com/@bobros   {/* TODO: ni youtube channel */}
+            </span>
+          </a>
+
+          {/* Instagram — ni original link */}
+          <a
+            href="https://www.instagram.com/reel/DWHbVmcib4M/?igsh=ODdzZjljNzZnejN5"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Instagram"
+            className="flex flex-col items-center gap-1.5 hover:opacity-80 transition-opacity"
+          >
+            <img
+              src="/assets/Instagram.svg"
+              alt="Instagram"
+              className="h-6 sm:h-7 w-auto object-contain"
+            />
+            <span className="text-xs sm:text-sm text-gray-700">
+              www.instagram.com/bobros   {/* display text — kావాలంటే marchuko */}
+            </span>
+          </a>
+
+        </div>
       </div>
     </div>
   );

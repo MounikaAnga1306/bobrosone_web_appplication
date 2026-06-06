@@ -63,7 +63,7 @@ export default function FAQPage() {
             const userFeedback = feedback[idx];
 
             return (
-              <div key={idx} className="border-b border-gray-300">
+              <div key={idx} className="border-b border-gray-300 ">
                 <button
                   onClick={() => toggleQuestion(idx)}
                   className="w-full flex justify-between items-center py-3 sm:py-4 text-left gap-3 sm:gap-4"

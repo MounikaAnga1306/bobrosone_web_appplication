@@ -8,6 +8,7 @@ import Quick_Links from "../components/Quick_Links";
 import BusFAQ from "../components/BusFAQ";
 import BookingForm from "../components/BookingForm";
 import Advertisement from "../components/Advertisement";
+import PopularDestinations from "../components/PopularDestinations";
 
 function HomePage() {
   return (
@@ -33,15 +34,8 @@ function HomePage() {
           <div className="mt-8">
             <Services />
           </div>
-
-          {/* App Download */}
-          <div>
-            <AppDownload />
-          </div>
-
-          {/* Popular Bus Routes */}
-          <div className="mt-6">
-            <PopularBusRoutes />
+          <div className="mt-5">
+            <PopularDestinations />
           </div>
 
           {/* Why Bobros */}
@@ -49,14 +43,25 @@ function HomePage() {
             <WhyBobros />
           </div>
 
-          {/* Quick Links */}
-          <div className="mt-6">
-            <Quick_Links />
+           {/* App Download */}
+          <div>
+            <AppDownload />
           </div>
+           {/* Popular Bus Routes */}
+          <div className="mt-14">
+            <PopularBusRoutes />
+          </div>
+
+          
 
           {/* Bus FAQ */}
           <div className="mt-16">
             <BusFAQ />
+          </div>
+
+          {/* Quick Links */}
+          <div className="mt-6">
+            <Quick_Links />
           </div>
         </div>
       </main>
