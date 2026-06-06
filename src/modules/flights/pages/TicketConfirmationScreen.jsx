@@ -1,42 +1,12 @@
-import { useEffect, useState } from "react";
-
-export default function TicketConfirmationScreen() {
-  const [params, setParams] = useState(null);
-
-  useEffect(() => {
-    const sp = new URLSearchParams(window.location.search);
-    setParams({
-      success:              sp.get("success")                || "",
-      bdorderid:            sp.get("bdorderid")              || "",
-      transactionid:        sp.get("transactionid")          || "",
-      authStatus:           sp.get("authStatus")             || "",
-      statusMessage:        sp.get("statusMessage")          || "",
-      amount:               sp.get("amount")                 || "",
-      userId:               sp.get("user_id")                || "",
-      passengerName:        sp.get("passenger_name")         || "",
-      universalLocatorCode: sp.get("universal_locator_code") || "",
-      airLocatorCode:       sp.get("air_locator_code")       || "",
-      providerLocatorCode:  sp.get("provider_locator_code")  || "",
-    });
-  }, []);
-
-  if (!params) {
-    return (
-      <div style={{
-        minHeight: "100vh", display: "flex",
-        alignItems: "center", justifyContent: "center",
-        fontFamily: "sans-serif", background: "#f5f5f5",
-      }}>
-        <p style={{ color: "#666", fontSize: 16 }}>Loading...</p>
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { 
-  CheckCircle, 
-  XCircle, 
-  Home, 
-  Download, 
+import {
+  CheckCircle,
+  XCircle,
+  Home,
+  Download,
   Printer,
   AlertCircle,
   RefreshCw,
@@ -95,16 +65,16 @@ const TicketConfirmationScreen = () => {
   }, []);
 
   useEffect(() => {
-    const isBusBooking = 
-    localStorage.getItem("lastBookingPassengers") !== null ||   // bus flow నుండి set చేస్తారు
-    (searchParams.get("bdorderid") === "" && !searchParams.get("pnr")); // fallback
+    const isBusBooking =
+      localStorage.getItem("lastBookingPassengers") !== null ||   // bus flow nundi set chestaru
+      (searchParams.get("bdorderid") === "" && !searchParams.get("pnr")); // fallback
 
-  if (isBusBooking && window.location.pathname === "/flights/ticket-confirmation") {
-    console.log("🚌 Bus booking detected. Redirecting to /payment-status");
-    const queryString = window.location.search; // success, bdorderid, transactionid, amount...
-    navigate(`/payment-status${queryString}`, { replace: true });
-    return; // ✅ ఇక్కడే ఆపేయాలి – flight API call కాకుండా
-  }
+    if (isBusBooking && window.location.pathname === "/flights/ticket-confirmation") {
+      console.log("🚌 Bus booking detected. Redirecting to /payment-status");
+      const queryString = window.location.search; // success, bdorderid, transactionid, amount...
+      navigate(`/payment-status${queryString}`, { replace: true });
+      return; // ✅ ikkade aapaali – flight API call kakunda
+    }
     console.log('='.repeat(80));
     console.log('🎫 TICKET CONFIRMATION SCREEN');
     console.log('='.repeat(80));
@@ -146,27 +116,27 @@ const TicketConfirmationScreen = () => {
       setVerifyingPayment(false);
       if (!success) toast.error("Payment Failed. Please try again.");
     }
-  }, [searchParams,navigate]);
+  }, [searchParams, navigate]);
 
   const callPaymentConfirmationAPI = async () => {
     if (apiCalledRef.current) return;
     apiCalledRef.current = true;
     setLoading(true);
     setVerifyingPayment(true);
-    
+
     try {
       setVerificationStep(1);
       await new Promise(resolve => setTimeout(resolve, 300));
-      
+
       console.log('📞 Calling completePaymentConfirmation API...');
       setVerificationStep(2);
-      
+
       const result = await completePaymentConfirmation();
       console.log('✅ Payment Confirmation Result:', result);
-      
+
       setVerificationStep(3);
       setApiResponse(result);
-      
+
       if (result && !result.success && result.error) {
         setErrorDetails({
           message: result.message || 'Payment verification failed',
@@ -180,19 +150,19 @@ const TicketConfirmationScreen = () => {
         setVerifyingPayment(false);
         return;
       }
-      
+
       setVerificationStep(4);
       const ticketData = extractTicketDetails(result);
       console.log('📋 Extracted Ticket Data:', ticketData);
       setVerificationStep(5);
-      
+
       if (ticketData && ticketData.ticketNumber !== 'N/A') {
         setTicketDetails(ticketData);
         toast.success('Ticket issued successfully!');
       } else if (result.success) {
         toast.success('Ticket issued successfully!');
       }
-      
+
       setIsSuccess(true);
     } catch (error) {
       console.error('❌ Error:', error);
@@ -212,197 +182,197 @@ const TicketConfirmationScreen = () => {
   };
 
   const extractTicketDetails = (response) => {
-  try {
-    console.log('🔍 Extracting ticket details');
-    
-    // Define formatAmount FIRST before using it
-    const formatAmount = (amount) => {
-      if (!amount) return 'N/A';
-      const match = amount.toString().match(/([A-Z]+)?([0-9.]+)/);
-      if (match) {
-        const value = parseFloat(match[2]);
-        return new Intl.NumberFormat('en-IN', { 
-          style: 'currency', 
-          currency: 'INR', 
-          minimumFractionDigits: 0 
-        }).format(value);
+    try {
+      console.log('🔍 Extracting ticket details');
+
+      // Define formatAmount FIRST before using it
+      const formatAmount = (amount) => {
+        if (!amount) return 'N/A';
+        const match = amount.toString().match(/([A-Z]+)?([0-9.]+)/);
+        if (match) {
+          const value = parseFloat(match[2]);
+          return new Intl.NumberFormat('en-IN', {
+            style: 'currency',
+            currency: 'INR',
+            minimumFractionDigits: 0
+          }).format(value);
+        }
+        return `₹${amount}`;
+      };
+
+      let soapData = null;
+
+      // Find SOAP envelope in response
+      if (response?.data?.data && response.data.data['SOAP:Envelope']) {
+        soapData = response.data.data;
+      } else if (response?.data && response.data['SOAP:Envelope']) {
+        soapData = response.data;
+      } else if (response && response['SOAP:Envelope']) {
+        soapData = response;
       }
-      return `₹${amount}`;
-    };
-    
-    let soapData = null;
-    
-    // Find SOAP envelope in response
-    if (response?.data?.data && response.data.data['SOAP:Envelope']) {
-      soapData = response.data.data;
-    } else if (response?.data && response.data['SOAP:Envelope']) {
-      soapData = response.data;
-    } else if (response && response['SOAP:Envelope']) {
-      soapData = response;
-    }
-    
-    if (!soapData) {
-      console.error('❌ Could not find SOAP envelope');
+
+      if (!soapData) {
+        console.error('❌ Could not find SOAP envelope');
+        return null;
+      }
+
+      const soapEnvelope = soapData['SOAP:Envelope'];
+      const soapBody = soapEnvelope['SOAP:Body'];
+      const airTicketingRsp = soapBody['air:AirTicketingRsp'];
+
+      if (!airTicketingRsp) return null;
+
+      let etr = airTicketingRsp['air:ETR'];
+      const etrArray = Array.isArray(etr) ? etr : [etr];
+      if (!etrArray.length) return null;
+
+      const primaryEtr = etrArray[0];
+      const etrAttrs = primaryEtr.$ || {};
+      const ticket = primaryEtr['air:Ticket'];
+      const ticketAttrs = ticket?.$ || {};
+      const coupon = ticket?.['air:Coupon'];
+      const couponAttrs = coupon?.$ || {};
+      const airPricingInfo = primaryEtr['air:AirPricingInfo'];
+
+      let totalBasePrice = 0, totalTaxes = 0, totalPrice = 0;
+      let allPassengers = [];
+
+      // Now use formatAmount inside forEach (it's already defined)
+      etrArray.forEach((etrItem) => {
+        const itemAttrs = etrItem.$ || {};
+        const itemTicket = etrItem['air:Ticket'];
+        const itemTicketAttrs = itemTicket?.$ || {};
+        const itemPricingInfo = etrItem['air:AirPricingInfo'];
+        const itemPricingAttrs = itemPricingInfo?.$ || {};
+        const itemTraveler = etrItem['common_v54_0:BookingTraveler'];
+        const itemTravelerName = itemTraveler?.['common_v54_0:BookingTravelerName']?.$ || {};
+        const itemTravelerAttrs = itemTraveler?.$ || {};
+
+        const basePriceMatch = (itemAttrs.BasePrice || itemPricingAttrs.BasePrice || 'INR0').match(/([0-9.]+)/);
+        const taxesMatch = (itemAttrs.Taxes || itemPricingAttrs.Taxes || 'INR0').match(/([0-9.]+)/);
+        const totalMatch = (itemAttrs.TotalPrice || itemPricingAttrs.TotalPrice || 'INR0').match(/([0-9.]+)/);
+
+        totalBasePrice += basePriceMatch ? parseFloat(basePriceMatch[1]) : 0;
+        totalTaxes += taxesMatch ? parseFloat(taxesMatch[1]) : 0;
+        totalPrice += totalMatch ? parseFloat(totalMatch[1]) : 0;
+
+        let passengerName = '';
+        if (itemTravelerName.First || itemTravelerName.Last) {
+          passengerName = `${itemTravelerName.Prefix || ''} ${itemTravelerName.First || ''} ${itemTravelerName.Last || ''}`.trim();
+        } else if (itemTravelerName['_']) {
+          passengerName = itemTravelerName['_'];
+        }
+
+        let passengerType = 'Adult';
+        if (itemTravelerAttrs.TravelerType === 'ADT') passengerType = 'Adult';
+        else if (itemTravelerAttrs.TravelerType === 'INF') passengerType = 'Infant';
+        else if (itemTravelerAttrs.TravelerType === 'CNN') passengerType = 'Child';
+
+        allPassengers.push({
+          name: passengerName || 'N/A',
+          type: passengerType,
+          typeCode: itemTravelerAttrs.TravelerType || 'ADT',
+          ticketNumber: itemTicketAttrs.TicketNumber || 'N/A',
+          age: itemTravelerAttrs.Age || 'N/A',
+          gender: itemTravelerAttrs.Gender === 'F' ? 'Female' : itemTravelerAttrs.Gender === 'M' ? 'Male' : 'N/A',
+          dob: itemTravelerAttrs.DOB || 'N/A',
+          baseFare: formatAmount(itemAttrs.BasePrice),
+          taxes: formatAmount(itemAttrs.Taxes),
+          totalFare: formatAmount(itemAttrs.TotalPrice),
+        });
+      });
+
+      let taxInfo = airPricingInfo?.['air:TaxInfo'] || [];
+      if (!Array.isArray(taxInfo)) taxInfo = [taxInfo];
+
+      const fareInfo = airPricingInfo?.['air:FareInfo'];
+      const maxWeight = fareInfo?.['air:BaggageAllowance']?.['air:MaxWeight']?.$ || {};
+
+      const getPenaltyAmount = (penalty) => {
+        if (!penalty) return 'N/A';
+        if (typeof penalty === 'string') return penalty;
+        if (penalty['air:Amount']) {
+          const amt = penalty['air:Amount'];
+          if (typeof amt === 'string') return amt;
+          if (amt?.$?.Value) return amt.$.Value;
+        }
+        return 'N/A';
+      };
+
+      let formattedDepartureTime = 'N/A';
+      let departureDate = 'N/A';
+      let departureTimeOnly = 'N/A';
+      if (couponAttrs.DepartureTime) {
+        try {
+          const date = new Date(couponAttrs.DepartureTime);
+          formattedDepartureTime = date.toLocaleString('en-IN', {
+            day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+          });
+          departureDate = date.toLocaleDateString('en-IN', {
+            day: 'numeric', month: 'long', year: 'numeric'
+          });
+          departureTimeOnly = date.toLocaleTimeString('en-IN', {
+            hour: '2-digit', minute: '2-digit'
+          });
+        } catch (e) {
+          formattedDepartureTime = couponAttrs.DepartureTime;
+        }
+      }
+
+      const calculateDuration = (origin, destination) => {
+        const routes = {
+          'HYD-DEL': '2hrs 15min',
+          'DEL-HYD': '2hrs 15min',
+          'HYD-BOM': '1hrs 30min',
+          'BOM-HYD': '1hrs 30min',
+          'HYD-BLR': '1hrs',
+          'BLR-HYD': '1hrs',
+          'BOM-DEL': '2hrs',
+          'DEL-BOM': '2hrs',
+        };
+        return routes[`${origin}-${destination}`] || '2hrs';
+      };
+
+      return {
+        ticketNumber: ticketAttrs.TicketNumber || allPassengers[0]?.ticketNumber || 'N/A',
+        pnr: primaryEtr['air:AirReservationLocatorCode'] || etrAttrs.ProviderLocatorCode || 'N/A',
+        airlinePNR: primaryEtr['common_v54_0:SupplierLocator']?.$?.SupplierLocatorCode || '',
+        providerLocator: etrAttrs.ProviderLocatorCode || 'N/A',
+        ticketStatus: 'CONFIRMED',
+        issuedDate: etrAttrs.IssuedDate ? new Date(etrAttrs.IssuedDate).toLocaleDateString('en-IN', {
+          day: 'numeric', month: 'long', year: 'numeric'
+        }) : new Date().toLocaleDateString('en-IN'),
+        totalPrice: formatAmount(totalPrice),
+        basePrice: formatAmount(totalBasePrice),
+        taxes: formatAmount(totalTaxes),
+        carrier: couponAttrs.MarketingCarrier || 'AI',
+        flightNumber: couponAttrs.MarketingFlightNumber || 'N/A',
+        origin: couponAttrs.Origin || 'N/A',
+        destination: couponAttrs.Destination || 'N/A',
+        departureDate: departureDate,
+        departureTime: departureTimeOnly,
+        fullDepartureDateTime: formattedDepartureTime,
+        fareBasis: couponAttrs.FareBasis || 'N/A',
+        bookingClass: couponAttrs.BookingClass || 'Economy',
+        refundable: etrAttrs.Refundable === 'true',
+        exchangeable: etrAttrs.Exchangeable === 'true',
+        platingCarrier: etrAttrs.PlatingCarrier || 'AI',
+        baggageAllowance: maxWeight.Value ? `${maxWeight.Value} ${maxWeight.Unit || 'kg'}` : '15 kg',
+        changePenalty: getPenaltyAmount(airPricingInfo?.['air:ChangePenalty']),
+        cancelPenalty: getPenaltyAmount(airPricingInfo?.['air:CancelPenalty']),
+        flightDuration: calculateDuration(couponAttrs.Origin, couponAttrs.Destination),
+        taxBreakdown: taxInfo.map(tax => ({
+          category: tax.$?.Category || 'N/A',
+          amount: formatAmount(tax.$?.Amount)
+        })),
+        allPassengers: allPassengers,
+        passengerCount: allPassengers.length,
+      };
+    } catch (error) {
+      console.error('❌ Error extracting ticket details:', error);
       return null;
     }
-    
-    const soapEnvelope = soapData['SOAP:Envelope'];
-    const soapBody = soapEnvelope['SOAP:Body'];
-    const airTicketingRsp = soapBody['air:AirTicketingRsp'];
-    
-    if (!airTicketingRsp) return null;
-    
-    let etr = airTicketingRsp['air:ETR'];
-    const etrArray = Array.isArray(etr) ? etr : [etr];
-    if (!etrArray.length) return null;
-    
-    const primaryEtr = etrArray[0];
-    const etrAttrs = primaryEtr.$ || {};
-    const ticket = primaryEtr['air:Ticket'];
-    const ticketAttrs = ticket?.$ || {};
-    const coupon = ticket?.['air:Coupon'];
-    const couponAttrs = coupon?.$ || {};
-    const airPricingInfo = primaryEtr['air:AirPricingInfo'];
-    
-    let totalBasePrice = 0, totalTaxes = 0, totalPrice = 0;
-    let allPassengers = [];
-    
-    // Now use formatAmount inside forEach (it's already defined)
-    etrArray.forEach((etrItem) => {
-      const itemAttrs = etrItem.$ || {};
-      const itemTicket = etrItem['air:Ticket'];
-      const itemTicketAttrs = itemTicket?.$ || {};
-      const itemPricingInfo = etrItem['air:AirPricingInfo'];
-      const itemPricingAttrs = itemPricingInfo?.$ || {};
-      const itemTraveler = etrItem['common_v54_0:BookingTraveler'];
-      const itemTravelerName = itemTraveler?.['common_v54_0:BookingTravelerName']?.$ || {};
-      const itemTravelerAttrs = itemTraveler?.$ || {};
-      
-      const basePriceMatch = (itemAttrs.BasePrice || itemPricingAttrs.BasePrice || 'INR0').match(/([0-9.]+)/);
-      const taxesMatch = (itemAttrs.Taxes || itemPricingAttrs.Taxes || 'INR0').match(/([0-9.]+)/);
-      const totalMatch = (itemAttrs.TotalPrice || itemPricingAttrs.TotalPrice || 'INR0').match(/([0-9.]+)/);
-      
-      totalBasePrice += basePriceMatch ? parseFloat(basePriceMatch[1]) : 0;
-      totalTaxes += taxesMatch ? parseFloat(taxesMatch[1]) : 0;
-      totalPrice += totalMatch ? parseFloat(totalMatch[1]) : 0;
-      
-      let passengerName = '';
-      if (itemTravelerName.First || itemTravelerName.Last) {
-        passengerName = `${itemTravelerName.Prefix || ''} ${itemTravelerName.First || ''} ${itemTravelerName.Last || ''}`.trim();
-      } else if (itemTravelerName['_']) {
-        passengerName = itemTravelerName['_'];
-      }
-      
-      let passengerType = 'Adult';
-      if (itemTravelerAttrs.TravelerType === 'ADT') passengerType = 'Adult';
-      else if (itemTravelerAttrs.TravelerType === 'INF') passengerType = 'Infant';
-      else if (itemTravelerAttrs.TravelerType === 'CNN') passengerType = 'Child';
-      
-      allPassengers.push({
-        name: passengerName || 'N/A',
-        type: passengerType,
-        typeCode: itemTravelerAttrs.TravelerType || 'ADT',
-        ticketNumber: itemTicketAttrs.TicketNumber || 'N/A',
-        age: itemTravelerAttrs.Age || 'N/A',
-        gender: itemTravelerAttrs.Gender === 'F' ? 'Female' : itemTravelerAttrs.Gender === 'M' ? 'Male' : 'N/A',
-        dob: itemTravelerAttrs.DOB || 'N/A',
-        baseFare: formatAmount(itemAttrs.BasePrice),
-        taxes: formatAmount(itemAttrs.Taxes),
-        totalFare: formatAmount(itemAttrs.TotalPrice),
-      });
-    });
-    
-    let taxInfo = airPricingInfo?.['air:TaxInfo'] || [];
-    if (!Array.isArray(taxInfo)) taxInfo = [taxInfo];
-    
-    const fareInfo = airPricingInfo?.['air:FareInfo'];
-    const maxWeight = fareInfo?.['air:BaggageAllowance']?.['air:MaxWeight']?.$ || {};
-    
-    const getPenaltyAmount = (penalty) => {
-      if (!penalty) return 'N/A';
-      if (typeof penalty === 'string') return penalty;
-      if (penalty['air:Amount']) {
-        const amt = penalty['air:Amount'];
-        if (typeof amt === 'string') return amt;
-        if (amt?.$?.Value) return amt.$.Value;
-      }
-      return 'N/A';
-    };
-    
-    let formattedDepartureTime = 'N/A';
-    let departureDate = 'N/A';
-    let departureTimeOnly = 'N/A';
-    if (couponAttrs.DepartureTime) {
-      try {
-        const date = new Date(couponAttrs.DepartureTime);
-        formattedDepartureTime = date.toLocaleString('en-IN', {
-          day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-        });
-        departureDate = date.toLocaleDateString('en-IN', {
-          day: 'numeric', month: 'long', year: 'numeric'
-        });
-        departureTimeOnly = date.toLocaleTimeString('en-IN', {
-          hour: '2-digit', minute: '2-digit'
-        });
-      } catch (e) {
-        formattedDepartureTime = couponAttrs.DepartureTime;
-      }
-    }
-    
-    const calculateDuration = (origin, destination) => {
-      const routes = {
-        'HYD-DEL': '2hrs 15min',
-        'DEL-HYD': '2hrs 15min',
-        'HYD-BOM': '1hrs 30min',
-        'BOM-HYD': '1hrs 30min',
-        'HYD-BLR': '1hrs',
-        'BLR-HYD': '1hrs',
-        'BOM-DEL': '2hrs',
-        'DEL-BOM': '2hrs',
-      };
-      return routes[`${origin}-${destination}`] || '2hrs';
-    };
-    
-    return {
-      ticketNumber: ticketAttrs.TicketNumber || allPassengers[0]?.ticketNumber || 'N/A',
-      pnr: primaryEtr['air:AirReservationLocatorCode'] || etrAttrs.ProviderLocatorCode || 'N/A',
-      airlinePNR: primaryEtr['common_v54_0:SupplierLocator']?.$?.SupplierLocatorCode || '',
-      providerLocator: etrAttrs.ProviderLocatorCode || 'N/A',
-      ticketStatus: 'CONFIRMED',
-      issuedDate: etrAttrs.IssuedDate ? new Date(etrAttrs.IssuedDate).toLocaleDateString('en-IN', {
-        day: 'numeric', month: 'long', year: 'numeric'
-      }) : new Date().toLocaleDateString('en-IN'),
-      totalPrice: formatAmount(totalPrice),
-      basePrice: formatAmount(totalBasePrice),
-      taxes: formatAmount(totalTaxes),
-      carrier: couponAttrs.MarketingCarrier || 'AI',
-      flightNumber: couponAttrs.MarketingFlightNumber || 'N/A',
-      origin: couponAttrs.Origin || 'N/A',
-      destination: couponAttrs.Destination || 'N/A',
-      departureDate: departureDate,
-      departureTime: departureTimeOnly,
-      fullDepartureDateTime: formattedDepartureTime,
-      fareBasis: couponAttrs.FareBasis || 'N/A',
-      bookingClass: couponAttrs.BookingClass || 'Economy',
-      refundable: etrAttrs.Refundable === 'true',
-      exchangeable: etrAttrs.Exchangeable === 'true',
-      platingCarrier: etrAttrs.PlatingCarrier || 'AI',
-      baggageAllowance: maxWeight.Value ? `${maxWeight.Value} ${maxWeight.Unit || 'kg'}` : '15 kg',
-      changePenalty: getPenaltyAmount(airPricingInfo?.['air:ChangePenalty']),
-      cancelPenalty: getPenaltyAmount(airPricingInfo?.['air:CancelPenalty']),
-      flightDuration: calculateDuration(couponAttrs.Origin, couponAttrs.Destination),
-      taxBreakdown: taxInfo.map(tax => ({
-        category: tax.$?.Category || 'N/A',
-        amount: formatAmount(tax.$?.Amount)
-      })),
-      allPassengers: allPassengers,
-      passengerCount: allPassengers.length,
-    };
-  } catch (error) {
-    console.error('❌ Error extracting ticket details:', error);
-    return null;
-  }
-};
+  };
 
   const handleRetry = () => {
     resetPaymentConfirmationState();
@@ -413,31 +383,31 @@ const TicketConfirmationScreen = () => {
   };
 
   const handleGoHome = () => navigate('/');
-  
+
   const handleDownloadPDF = () => {
-  const printContent = ticketRef.current;
-  
-  if (!printContent) {
-    toast.error('Unable to generate PDF');
-    return;
-  }
-  
-  // Create a new window for printing
-  const printWindow = window.open('', '_blank');
-  
-  if (!printWindow) {
-    toast.error('Please allow popups to download PDF');
-    return;
-  }
-  
-  // Get the HTML content and convert Tailwind classes to inline styles for better compatibility
-  const getStyles = () => {
-    return `
+    const printContent = ticketRef.current;
+
+    if (!printContent) {
+      toast.error('Unable to generate PDF');
+      return;
+    }
+
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+
+    if (!printWindow) {
+      toast.error('Please allow popups to download PDF');
+      return;
+    }
+
+    // Get the HTML content and convert Tailwind classes to inline styles for better compatibility
+    const getStyles = () => {
+      return `
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-          font-family: 'Segoe UI', Arial, sans-serif; 
-          padding: 40px 20px; 
+        body {
+          font-family: 'Segoe UI', Arial, sans-serif;
+          padding: 40px 20px;
           background: white;
         }
         .ticket-container {
@@ -511,25 +481,25 @@ const TicketConfirmationScreen = () => {
         .space-y-1 > * + * { margin-top: 4px; }
       </style>
     `;
-  };
-  
-  // Get the inner HTML and clean it up
-  const getCleanHTML = () => {
-    // Clone the element to avoid modifying the original
-    const clone = printContent.cloneNode(true);
-    
-    // Remove any buttons or interactive elements
-    const buttons = clone.querySelectorAll('button');
-    buttons.forEach(btn => btn.remove());
-    
-    // Remove any no-print elements
-    const noPrint = clone.querySelectorAll('.no-print');
-    noPrint.forEach(el => el.remove());
-    
-    return clone.innerHTML;
-  };
-  
-  printWindow.document.write(`
+    };
+
+    // Get the inner HTML and clean it up
+    const getCleanHTML = () => {
+      // Clone the element to avoid modifying the original
+      const clone = printContent.cloneNode(true);
+
+      // Remove any buttons or interactive elements
+      const buttons = clone.querySelectorAll('button');
+      buttons.forEach(btn => btn.remove());
+
+      // Remove any no-print elements
+      const noPrint = clone.querySelectorAll('.no-print');
+      noPrint.forEach(el => el.remove());
+
+      return clone.innerHTML;
+    };
+
+    printWindow.document.write(`
     <!DOCTYPE html>
     <html>
       <head>
@@ -555,9 +525,10 @@ const TicketConfirmationScreen = () => {
       </body>
     </html>
   `);
-  
-  printWindow.document.close();
-};
+
+    printWindow.document.close();
+  };
+
   const formatCurrency = (amount) => {
     if (!amount) return '₹0';
     const match = amount.toString().match(/([0-9.]+)/);
@@ -586,72 +557,6 @@ const TicketConfirmationScreen = () => {
       </div>
     );
   }
-
-  const ok = params.authStatus === "0300";
-
-  return (
-    <div style={{
-      minHeight: "100vh", background: "#f5f5f5",
-      fontFamily: "'Segoe UI', sans-serif", padding: "40px 16px",
-    }}>
-      <div style={{
-        maxWidth: 560, margin: "0 auto",
-        background: "#fff", borderRadius: 16,
-        boxShadow: "0 2px 16px rgba(0,0,0,0.10)", overflow: "hidden",
-      }}>
-
-        {/* ── Banner ── */}
-        <div style={{
-          background: ok ? "#16a34a" : "#dc2626",
-          padding: "32px 28px", textAlign: "center", color: "#fff",
-        }}>
-          <div style={{
-            width: 64, height: 64, borderRadius: "50%",
-            background: "rgba(255,255,255,0.2)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            margin: "0 auto 16px", fontSize: 32,
-          }}>
-            {ok ? "✓" : "✕"}
-          </div>
-          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>
-            {ok ? "Payment Successful" : "Payment Failed"}
-          </h1>
-          <p style={{ margin: "8px 0 0", opacity: 0.85, fontSize: 14 }}>
-            {params.statusMessage || (ok ? "Your booking is confirmed." : "Something went wrong.")}
-          </p>
-        </div>
-
-        {/* ── Rows ── */}
-        <div style={{ padding: "8px 0" }}>
-          <Row label="Auth Status"       value={params.authStatus      || "—"} highlight={ok} />
-          <Row label="Amount"            value={params.amount ? `₹ ${params.amount}` : "—"} />
-          <Row label="Transaction ID"    value={params.transactionid   || "—"} mono />
-          <Row label="Order ID"          value={params.bdorderid       || "—"} mono />
-          <Row label="Passenger"         value={params.passengerName   || "—"} />
-          <Row label="User ID"           value={params.userId          || "—"} mono />
-          <Row label="Universal Locator" value={params.universalLocatorCode || "—"} mono />
-          <Row label="Air Locator"       value={params.airLocatorCode       || "—"} mono />
-          <Row label="Provider Locator"  value={params.providerLocatorCode  || "—"} mono />
-        </div>
-
-        {/* ── Raw dump ── */}
-        <details style={{ borderTop: "1px solid #f0f0f0", padding: "12px 24px" }}>
-          <summary style={{
-            cursor: "pointer", fontSize: 12,
-            color: "#999", userSelect: "none",
-          }}>
-            Show raw params
-          </summary>
-          <pre style={{
-            marginTop: 10, fontSize: 11, color: "#555",
-            background: "#f9f9f9", borderRadius: 8,
-            padding: 12, overflowX: "auto",
-            whiteSpace: "pre-wrap", wordBreak: "break-all",
-            lineHeight: 1.7,
-          }}>
-            {JSON.stringify(params, null, 2)}
-          </pre>
-        </details>
 
   // Verification Loading Screen
   if (verifyingPayment) {
@@ -734,11 +639,10 @@ const TicketConfirmationScreen = () => {
     <div className="min-h-screen bg-gray-100 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Success Header */}
-        
 
         {/* PDF Style Ticket */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          
+
           {/* Ticket Content for PDF Download */}
           <div ref={ticketRef} className="p-6">
             {/* Header with Logo and Booking Info */}
@@ -809,7 +713,7 @@ const TicketConfirmationScreen = () => {
               <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
                 <Plane className="w-5 h-5 text-blue-600" /> Your Flight
               </h3>
-              
+
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-4 flex-wrap">
@@ -819,12 +723,12 @@ const TicketConfirmationScreen = () => {
                       <p className="text-sm">{ticketDetails.departureDate}</p>
                       <p className="text-lg font-semibold text-blue-600">{ticketDetails.departureTime}</p>
                     </div>
-                    
+
                     <div className="text-center">
                       <Plane className="w-8 h-8 text-gray-400" />
                       <p className="text-xs text-gray-500">{ticketDetails.flightDuration}</p>
                     </div>
-                    
+
                     <div>
                       <p className="text-xs text-gray-500">To</p>
                       <p className="text-2xl font-bold">{ticketDetails.destination}</p>
@@ -833,7 +737,7 @@ const TicketConfirmationScreen = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="text-right border-l border-gray-300 pl-4">
                   <p className="text-sm font-semibold">{ticketDetails.carrier} {ticketDetails.flightNumber}</p>
                   <p className="text-xs text-gray-500">Fare Basis: {ticketDetails.fareBasis}</p>
@@ -885,14 +789,14 @@ const TicketConfirmationScreen = () => {
 
           {/* Action Buttons - Only Home and Download PDF */}
           <div className="border-t border-gray-200 p-4 flex flex-wrap gap-3 justify-center bg-gray-50">
-            <button 
-              onClick={handleGoHome} 
+            <button
+              onClick={handleGoHome}
               className="bg-orange-500 text-white px-6 py-2 rounded-lg font-semibold hover:bg-orange-600 transition flex items-center gap-2"
             >
               <Home className="w-4 h-4" /> Go to Home
             </button>
-            <button 
-              onClick={handleDownloadPDF} 
+            <button
+              onClick={handleDownloadPDF}
               disabled={downloading}
               className="border border-orange-500 text-orange-600 px-6 py-2 rounded-lg font-semibold hover:bg-orange-50 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -912,27 +816,6 @@ const TicketConfirmationScreen = () => {
       </div>
     </div>
   );
-}
+};
 
-function Row({ label, value, mono, highlight }) {
-  return (
-    <div style={{
-      display: "flex", justifyContent: "space-between",
-      alignItems: "center", padding: "13px 24px",
-      borderBottom: "1px solid #f5f5f5", gap: 12,
-    }}>
-      <span style={{ fontSize: 13, color: "#888", flexShrink: 0 }}>
-        {label}
-      </span>
-      <span style={{
-        fontSize: 13,
-        fontFamily: mono ? "monospace" : "inherit",
-        color: highlight ? "#16a34a" : "#111",
-        fontWeight: highlight ? 600 : 400,
-        textAlign: "right", wordBreak: "break-all",
-      }}>
-        {value}
-      </span>
-    </div>
-  );
-}
+export default TicketConfirmationScreen;

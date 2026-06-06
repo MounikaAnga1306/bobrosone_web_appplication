@@ -14,7 +14,6 @@ import OneWayFlightCard from '../components/shared/OneWayFlightCard';
 import OneWaySheet from '../components/sheet/OneWaySheet';
 import FilterSidebar from '../components/shared/FilterSidebar';
 import FlightLoadingAnimation from '../utils/FlightLoadingAnimation';
-import FlightLoadingAnimation from '../utils/FlightLoadingAnimation'; // IMPORT THE EXISTING COMPONENT
 import {
   FaPlane, FaExclamationTriangle, FaFilter, FaTimes,
   FaChevronDown, FaChevronRight, FaCalendarAlt,
@@ -51,10 +50,6 @@ const OneWayPage = () => {
 
   // ── Airline data ──
   const [airlinesMap, setAirlinesMap]         = useState({});
-  const [searchParamsData, setSearchParamsData] = useState(null);
-  
-  // ============ AIRLINE DATA STATE ============
-  const [airlinesMap, setAirlinesMap] = useState({});
   const [airlinesLoading, setAirlinesLoading] = useState(true);
 
   // ── Edit mode ──
@@ -200,7 +195,7 @@ const OneWayPage = () => {
         setPassengerCounts({ ADT: adults, CNN: children, INF: infants });
 
         // Write search params into Zustand store
-        setTripType('oneWay');
+        setTripType('ONE_WAY');
         updateFlightLeg(0, 'from', from);
         updateFlightLeg(0, 'to', to);
         updateFlightLeg(0, 'departureDate', departureDate);
@@ -249,10 +244,6 @@ const OneWayPage = () => {
   useEffect(() => {
     const loadAirlines = async () => {
       if (!outbound || outbound.length === 0) {
-  // ============ FETCH AIRLINES DATA AFTER FLIGHTS LOAD ============
-  useEffect(() => {
-    const loadAirlines = async () => {
-      if (!flightResults.flights || flightResults.flights.length === 0) {
         setAirlinesLoading(false);
         return;
       }
@@ -266,23 +257,12 @@ const OneWayPage = () => {
         console.log('[OneWayPage] Airlines loaded →', Object.keys(map).length);
       } catch (err) {
         console.error('[OneWayPage] Airlines fetch failed →', err);
-        
-        const airlinesMapData = {};
-        airlines.forEach(airline => {
-          airlinesMapData[airline.code] = airline;
-        });
-        
-        setAirlinesMap(airlinesMapData);
-        console.log('✅ Airlines data loaded:', Object.keys(airlinesMapData).length);
-      } catch (error) {
-        console.error('❌ Failed to load airlines:', error);
       } finally {
         setAirlinesLoading(false);
       }
     };
     loadAirlines();
   }, [outbound]);
-  }, [flightResults.flights]);
 
   // ============ EDIT MODE FUNCTIONS (unchanged) ============
 
@@ -536,47 +516,6 @@ const OneWayPage = () => {
                   onClick={!isEditing ? openEditMode : undefined}
                 />
                 {fromLoading && <FaSpinner className="animate-spin text-gray-400" />}
-  // ============ RENDER COMPONENT WITH SEARCH BAR ALWAYS VISIBLE ============
-  
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* ============ EDIT SEARCH BAR - ALWAYS VISIBLE ============ */}
-      <div className="w-full bg-[#f36b32] py-4 sticky top-0 z-40 shadow-md flight-search-bar">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr_auto_1fr_auto] lg:grid-cols-[1fr_auto_1fr_180px_200px_auto] items-end gap-4">
-            
-            {/* From Field */}
-            <div className="relative" ref={fromRef}>
-              <p className="text-white text-sm font-bold mb-2">FROM</p>
-              <div className="relative">
-                <div className="flex items-center gap-3 px-6 h-16 rounded-md bg-white shadow-md">
-                  <FaMapMarkerAlt className="text-[#f36b32] w-5 h-5" />
-                  <input
-                    type="text"
-                    value={isEditing ? editFromDisplay : (searchSummary?.fromName || '')}
-                    onChange={isEditing ? handleFromInputChange : undefined}
-                    onFocus={isEditing ? () => setShowFromDropdown(true) : undefined}
-                    placeholder="City or airport"
-                    readOnly={!isEditing}
-                    className={`w-full text-base font-bold outline-none bg-transparent ${!isEditing ? 'cursor-pointer' : ''}`}
-                    onClick={!isEditing ? openEditMode : undefined}
-                  />
-                  {fromLoading && <FaSpinner className="animate-spin text-gray-400" />}
-                </div>
-                {showFromDropdown && isEditing && fromAirports.length > 0 && (
-                  <div className="absolute left-0 top-full w-full bg-white shadow-lg rounded-md max-h-60 overflow-y-auto z-50 border border-gray-100 mt-1">
-                    {fromAirports.map((airport) => (
-                      <div
-                        key={airport.location_code}
-                        className="px-4 py-3 hover:bg-gray-100 cursor-pointer text-sm"
-                        onClick={() => handleFromSelect(airport)}
-                      >
-                        <div className="font-medium">{airport.name}</div>
-                        <div className="text-xs text-gray-500">{airport.location_code}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
               {showFromDropdown && isEditing && fromAirports.length > 0 && (
                 <div className="absolute left-0 top-full w-full bg-white shadow-lg rounded-md max-h-60 overflow-y-auto z-50 border border-gray-100 mt-1">
@@ -593,12 +532,6 @@ const OneWayPage = () => {
             {/* Swap */}
             <div className="flex justify-center mb-2">
               <button onClick={isEditing ? handleSwap : openEditMode} className="bg-white w-12 h-12 rounded-full flex items-center justify-center shadow-md hover:scale-110 transition-all duration-300">
-            {/* Swap Button */}
-            <div className="flex justify-center mb-2">
-              <button
-                onClick={isEditing ? handleSwap : openEditMode}
-                className="bg-white w-12 h-12 rounded-full flex items-center justify-center shadow-md hover:scale-110 transition-all duration-300"
-              >
                 <FaExchangeAlt className="w-5 h-5 text-[#f36b32]" />
               </button>
             </div>
@@ -617,35 +550,6 @@ const OneWayPage = () => {
                   onClick={!isEditing ? openEditMode : undefined}
                 />
                 {toLoading && <FaSpinner className="animate-spin text-gray-400" />}
-              <div className="relative">
-                <div className="flex items-center gap-3 px-6 h-16 rounded-md bg-white shadow-md">
-                  <FaMapMarkerAlt className="text-[#f36b32] w-5 h-5" />
-                  <input
-                    type="text"
-                    value={isEditing ? editToDisplay : (searchSummary?.toName || '')}
-                    onChange={isEditing ? handleToInputChange : undefined}
-                    onFocus={isEditing ? () => setShowToDropdown(true) : undefined}
-                    placeholder="City or airport"
-                    readOnly={!isEditing}
-                    className={`w-full text-base font-bold outline-none bg-transparent ${!isEditing ? 'cursor-pointer' : ''}`}
-                    onClick={!isEditing ? openEditMode : undefined}
-                  />
-                  {toLoading && <FaSpinner className="animate-spin text-gray-400" />}
-                </div>
-                {showToDropdown && isEditing && toAirports.length > 0 && (
-                  <div className="absolute left-0 top-full w-full bg-white shadow-lg rounded-md max-h-60 overflow-y-auto z-50 border border-gray-100 mt-1">
-                    {toAirports.map((airport) => (
-                      <div
-                        key={airport.location_code}
-                        className="px-4 py-3 hover:bg-gray-100 cursor-pointer text-sm"
-                        onClick={() => handleToSelect(airport)}
-                      >
-                        <div className="font-medium">{airport.name}</div>
-                        <div className="text-xs text-gray-500">{airport.location_code}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
               {showToDropdown && isEditing && toAirports.length > 0 && (
                 <div className="absolute left-0 top-full w-full bg-white shadow-lg rounded-md max-h-60 overflow-y-auto z-50 border border-gray-100 mt-1">
@@ -668,16 +572,6 @@ const OneWayPage = () => {
                 <input type="text"
                   value={isEditing ? (editDepartureDate ? formatDate(editDepartureDate) : '') : (searchSummary?.formattedDate || '')}
                   placeholder="Select date" readOnly
-              <div
-                onClick={isEditing ? () => setShowDepartureCalendar(!showDepartureCalendar) : openEditMode}
-                className="flex items-center gap-3 px-6 h-16 rounded-md bg-white shadow-md cursor-pointer"
-              >
-                <FaCalendarAlt className="text-[#f36b32] w-5 h-5" />
-                <input
-                  type="text"
-                  value={isEditing ? (editDepartureDate ? formatDate(editDepartureDate) : "") : (searchSummary?.formattedDate || '')}
-                  placeholder="Select date"
-                  readOnly
                   className="w-full text-base font-bold outline-none bg-transparent cursor-pointer"
                 />
               </div>
@@ -710,17 +604,6 @@ const OneWayPage = () => {
                 <FaUser className="text-[#f36b32] w-5 h-5" />
                 <span className="text-base font-bold text-gray-700 flex-1 truncate">
                   {isEditing ? (editPassengers ? `${editPassengers.ADT} Adult${editPassengers.ADT !== 1 ? 's' : ''} · ${editTravelClass}` : 'Select') : passengerText}
-              <div
-                onClick={isEditing ? openTravellerModalEdit : openEditMode}
-                className="flex items-center gap-3 px-6 h-16 rounded-md bg-white shadow-md cursor-pointer"
-              >
-                <FaUser className="text-[#f36b32] w-5 h-5" />
-                <span className="text-base font-bold text-gray-700 flex-1 truncate">
-                  {isEditing ? (
-                    editPassengers ? `${editPassengers.ADT} Adult${editPassengers.ADT !== 1 ? 's' : ''} · ${editTravelClass}` : 'Select'
-                  ) : (
-                    passengerText
-                  )}
                 </span>
                 <FaChevronDown className="text-gray-400 w-4 h-4" />
               </div>
@@ -748,20 +631,6 @@ const OneWayPage = () => {
         <div className="min-h-[calc(100vh-200px)] flex items-center justify-center p-4">
           <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
             <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4"><FaExclamationTriangle className="text-3xl text-red-500" /></div>
-      {/* ============ CONTENT AREA - Changes based on loading/error/results ============ */}
-      
-      {/* Loading State - Imported FlightLoadingAnimation component */}
-      {isLoading && (
-        <FlightLoadingAnimation searchSummary={searchSummary} isLoading={isLoading} />
-      )}
-
-      {/* API Error State */}
-      {!isLoading && apiError && (
-        <div className="min-h-[calc(100vh-200px)] flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
-            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <FaExclamationTriangle className="text-3xl text-red-500" />
-            </div>
             <h2 className="text-2xl font-bold text-gray-800 mb-3">Search Failed</h2>
             <p className="text-gray-600 mb-4">{apiError}</p>
             {searchSummary && (
@@ -778,197 +647,6 @@ const OneWayPage = () => {
             </div>
           </div>
         </div>
-              <button
-                onClick={() => window.location.reload()}
-                className="flex-1 bg-gray-100 text-gray-700 font-semibold py-3 px-4 rounded-xl hover:bg-gray-200 transition-colors"
-              >
-                Try Again
-              </button>
-              <button
-                onClick={handleModifySearch}
-                className="flex-1 bg-[#FD561E] hover:bg-[#e04e1b] text-white font-semibold py-3 px-4 rounded-xl transition-all hover:shadow-lg"
-              >
-                Modify Search
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Context Error State */}
-      {!isLoading && !apiError && error && (
-        <div className="min-h-[calc(100vh-200px)] flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
-            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <FaExclamationTriangle className="text-3xl text-red-500" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-3">Search Failed</h2>
-            <p className="text-gray-600 mb-6">{error}</p>
-            <button
-              onClick={handleModifySearch}
-              className="w-full bg-[#FD561E] hover:bg-[#e04e1b] text-white font-semibold py-3 px-4 rounded-xl transition-all hover:shadow-lg"
-            >
-              Try Search Again
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* No Flights State */}
-      {!isLoading && !apiError && !error && (!flights || flights.length === 0) && (
-        <div className="min-h-[calc(100vh-200px)] flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8 text-center">
-            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <FaPlane className="text-3xl text-blue-500" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-3">No Flights Found</h2>
-            <p className="text-gray-600 mb-4">We couldn't find any flights matching your search criteria.</p>
-            {searchSummary && (
-              <div className="bg-gray-50 p-3 rounded-lg mb-6 text-left">
-                <p className="text-sm text-gray-600">You searched for:</p>
-                <p className="font-medium text-sm mt-1">{searchSummary.fromName} → {searchSummary.toName}</p>
-                <p className="text-xs text-gray-500 mt-1">{searchSummary.formattedDate}</p>
-                <p className="text-xs text-gray-500 mt-1">{passengerText} · Economy</p>
-              </div>
-            )}
-            <div className="flex gap-3">
-              <button
-                onClick={handleModifySearch}
-                className="flex-1 bg-[#FD561E] hover:bg-[#e04e1b] text-white font-semibold py-3 px-4 rounded-xl transition-all hover:shadow-lg"
-              >
-                Modify Search
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Flight Results State */}
-      {!isLoading && !apiError && !error && flights && flights.length > 0 && (
-        <>
-          {/* Main Content */}
-          <div className="container mx-auto px-4 py-6">
-            <div className="flex flex-col lg:flex-row gap-6">
-              {/* Left Sidebar - FilterSidebar (Desktop) */}
-              <div className="hidden lg:block lg:w-1/4">
-                <FilterSidebar
-                  priceRange={priceRange}
-                  setPriceRange={setPriceRange}
-                  selectedAirlines={selectedAirlines}
-                  toggleAirline={toggleAirline}
-                  selectedStops={selectedStops}
-                  toggleStops={toggleStops}
-                  selectedTimes={selectedTimes}
-                  toggleTime={toggleTime}
-                  resetFilters={resetFilters}
-                  activeFilterCount={activeFilterCount}
-                  airlines={airlines}
-                  flightPriceRange={flightPriceRange}
-                  tripDetails={{
-                    from: searchSummary?.fromName,
-                    to: searchSummary?.toName,
-                    date: searchSummary?.formattedDate,
-                    passengers: passengerText
-                  }}
-                  onModifySearch={handleModifySearch}
-                  tripType="one-way"
-                />
-              </div>
-
-              {/* Right Side - Flight List */}
-              <div className="lg:w-3/4">
-                {/* Sort Bar */}
-                <div className="bg-white rounded-xl p-4 mb-4 shadow-sm flex justify-between items-center">
-                  <div className="text-sm text-gray-600">
-                    Showing {filteredAndSortedFlights.length} of {flights.length} flights
-                  </div>
-                  
-                  <div className="relative">
-                    <button
-                      onClick={() => setShowSortDropdown(!showSortDropdown)}
-                      className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100"
-                    >
-                      Sort by: {sortOptions.find(o => o.value === sortBy)?.label || 'Price'}
-                      <FaChevronDown size={12} />
-                    </button>
-                    
-                    {showSortDropdown && (
-                      <div className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-lg border border-gray-200 z-20 min-w-[180px]">
-                        {sortOptions.map(option => (
-                          <button
-                            key={option.value}
-                            onClick={() => {
-                              setSortBy(option.value);
-                              setShowSortDropdown(false);
-                            }}
-                            className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
-                              sortBy === option.value ? 'text-[#FD561E] font-medium' : 'text-gray-700'
-                            }`}
-                          >
-                            {option.label}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Mobile Filter Button */}
-                  <button
-                    onClick={() => setShowMobileFilters(true)}
-                    className="lg:hidden flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-lg text-sm font-medium text-gray-700"
-                  >
-                    <FaFilter size={12} />
-                    Filters
-                    {activeFilterCount > 0 && (
-                      <span className="bg-[#FD561E] text-white text-xs rounded-full px-1.5 py-0.5">
-                        {activeFilterCount}
-                      </span>
-                    )}
-                  </button>
-                </div>
-                
-                {filteredAndSortedFlights.length === 0 ? (
-                  <div className="bg-white rounded-xl p-8 text-center shadow-sm">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <FaFilter className="text-2xl text-gray-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-2">No flights match your filters</h3>
-                    <p className="text-gray-600 mb-4">Try adjusting your filter criteria</p>
-                    <button
-                      onClick={resetFilters}
-                      className="text-[#FD561E] font-medium hover:underline"
-                    >
-                      Clear all filters
-                    </button>
-                  </div>
-                ) : (
-                  filteredAndSortedFlights.map((flight) => (
-                    <OneWayFlightCard
-                      key={flight.id}
-                      flight={flight}
-                      isSelected={false}
-                      onSelect={() => {}}
-                      onViewDetails={handleViewDetails}
-                      passengerCounts={passengerCounts}
-                      airlineData={airlinesMap[flight.airlineCode]}
-                      airlinesLoading={airlinesLoading}
-                    />
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* OneWaySheet */}
-      {showDetailSheet && selectedFlightForSheet && (
-        <OneWaySheet 
-          isOpen={showDetailSheet}
-          onClose={handleCloseSheet}
-          flight={selectedFlightForSheet}
-          passengerCounts={passengerCounts}
-        />
       )}
 
       {!showLoading && !apiError && error && (
@@ -1133,8 +811,6 @@ const OneWayPage = () => {
 
       {/* Mobile Filters (unchanged) */}
       {showMobileFilters && !showLoading && flights && flights.length > 0 && (
-      {/* Mobile Filters Modal */}
-      {showMobileFilters && !isLoading && flights && flights.length > 0 && (
         <div className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex animate-fadeIn">
           <div className="bg-white w-full max-w-sm ml-auto h-full overflow-auto shadow-xl">
             <div className="sticky top-0 bg-white border-b z-10">
