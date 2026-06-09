@@ -2,6 +2,33 @@
 @import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Outfit:wght@300;400;500;600;700&display=swap');
 
+/* ============================================================
+   GLOBAL OVERFLOW FIX — whole project (idi lekapote page drag avtundi)
+   • Horizontal drag/scroll ni clip chestundi
+   • position: sticky ni BREAK cheyyadu (hidden kాదు → clip)
+   ============================================================ */
+html {
+  overflow-x: clip;
+}
+
+body {
+  overflow-x: clip;
+  max-width: 100%;
+  position: relative;
+}
+
+#root {
+  overflow-x: clip;
+  max-width: 100%;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+/* ============================================================ */
+
 /* Remove Microsoft Edge password reveal icon */
 input::-ms-reveal,
 input::-ms-clear {
@@ -103,4 +130,3 @@ input::-ms-clear {
 nav {
   transition: background-color 0.4s ease-in-out, box-shadow 0.3s ease-in-out;
 }
-

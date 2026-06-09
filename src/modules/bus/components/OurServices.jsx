@@ -9,42 +9,61 @@ import hotels from "../../../assets/hotels.jpg";
 import holiday from "../../../assets/holiday.jpg";
 import cab from "../../../assets/cab.jpg";
 import bill from "../../../assets/bill.png";
-import service from "../../../assets/IT_Services.jpg";
+import service from "../../../../public/assets/Service.jpg";
 
-const imageHover = {
-  rest: { y: 0, scale: 1, rotate: 0 },
+/* Card slightly lifts + shadow grows on hover */
+const cardLift = {
+  rest: {
+    y: 0,
+    boxShadow: "0 8px 22px rgba(15, 23, 42, 0.12)",
+  },
   hover: {
-    y: -8,
-    scale: 1.1,
-    rotate: 2,
-    transition: { type: "spring", stiffness: 300, damping: 14 },
+    y: -6,
+    boxShadow: "0 26px 55px rgba(15, 23, 42, 0.28)",
+    transition: { type: "spring", stiffness: 220, damping: 18 },
   },
 };
 
+/* Background image zoom in / zoom out */
+const imageZoom = {
+  rest: { scale: 1 },
+  hover: { scale: 1.12, transition: { duration: 0.6, ease: "easeOut" } },
+};
+
+/* Extra dark overlay deepens on hover (so revealed text is readable) */
+const overlayShift = {
+  rest: { opacity: 0 },
+  hover: { opacity: 1, transition: { duration: 0.3 } },
+};
+
+/* Description reveals just below the heading on hover (last image effect) */
+const descReveal = {
+  rest: { height: 0, opacity: 0, marginTop: 0 },
+  hover: {
+    height: "auto",
+    opacity: 1,
+    marginTop: 8,
+    transition: { duration: 0.35, ease: "easeOut" },
+  },
+};
+
+/* CTA arrow nudge */
+const arrowNudge = {
+  rest: { x: 0 },
+  hover: { x: 4 },
+};
+
+/* Desktop grid entry animation */
 const cardEntry = {
-  hidden: { opacity: 0, y: 30 },
+  hidden: { opacity: 0, y: 24 },
   show: (i) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.06, duration: 0.5, ease: "easeOut" },
+    transition: { delay: i * 0.06, duration: 0.45, ease: "easeOut" },
   }),
 };
 
-const cardHover = {
-  rest: {
-    y: 0,
-    boxShadow: "0 10px 20px rgba(0,0,0,0.08)",
-    scale: 1,
-  },
-  hover: {
-    y: -8,
-    boxShadow: "0 25px 40px rgba(253,86,30,0.15)",
-    scale: 1,
-    transition: { type: "spring", stiffness: 200, damping: 18 },
-  },
-};
-
-function ServiceCard({ image, title, description, contain, route }) {
+function ServiceCard({ image, title, description, contain, route, light }) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -62,59 +81,81 @@ function ServiceCard({ image, title, description, contain, route }) {
       initial="rest"
       whileHover="hover"
       animate="rest"
-      variants={cardHover}
+      variants={cardLift}
       onClick={handleClick}
-      className={`group relative bg-white hover:bg-gradient-to-br hover:from-[#fff1ea] hover:via-[#ffe2d6] hover:to-[#ffd2c1] rounded-2xl px-5 pb-6 pt-24 flex flex-col items-center text-center transition-colors duration-300 w-full h-full ${
-        route ? "cursor-pointer" : "cursor-default"
-      }`}
+      className={`group relative w-[74vw] sm:w-[300px] md:w-full max-w-[360px] h-52 sm:h-56 md:h-60 flex-shrink-0 md:flex-shrink overflow-hidden rounded-[26px] border ${
+        light
+          ? "border-slate-200 bg-gradient-to-br from-[#f5f6f8] to-[#e7e9ec]"
+          : "border-slate-200/40 bg-slate-900"
+      } ${route ? "cursor-pointer" : "cursor-default"}`}
     >
-      {/* Fixed size image box - same for ALL cards */}
-      <motion.div
-        variants={imageHover}
-        className="absolute -top-14 left-1/2 -translate-x-1/2 z-10"
+      {/* Background image — zooms in on hover */}
+      <motion.img
+        variants={imageZoom}
+        src={image}
+        alt={title}
+        className="absolute inset-0 h-full w-full"
         style={{
-          width: "120px",
-          height: "90px",
-          minWidth: "120px",
-          minHeight: "90px",
+          objectFit: contain ? "contain" : "cover",
+          padding: contain ? "30px" : "0",
         }}
-      >
-        <div className="w-full h-full rounded-xl overflow-hidden border-[5px] border-white shadow-xl bg-white flex items-center justify-center">
-          <img
-            src={image}
-            alt={title}
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: contain ? "contain" : "cover",
-              padding: contain ? "6px" : "0",
-            }}
+      />
+
+      {/* Dark gradients ONLY for image cards (not the light Bill Payments card) */}
+      {!light && (
+        <>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/5" />
+          <motion.div
+            variants={overlayShift}
+            className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-black/10"
           />
+        </>
+      )}
+
+      {/* Content pinned to bottom — grows upward as description reveals */}
+      <div className="absolute inset-x-0 bottom-0 z-10 p-5 text-left">
+        <h3
+          className={`text-lg sm:text-xl font-bold leading-tight ${
+            light ? "text-slate-900" : "text-white drop-shadow-md"
+          }`}
+        >
+          {title}
+        </h3>
+
+        {/* Description — hidden by default, slides open below heading on hover */}
+        <motion.div variants={descReveal} className="overflow-hidden">
+          <p
+            className={`pr-1 text-[13px] leading-snug line-clamp-4 ${
+              light ? "text-slate-600" : "text-white/90"
+            }`}
+          >
+            {description}
+          </p>
+        </motion.div>
+
+        {/* CTA */}
+        <div
+          className={`mt-3 flex items-center gap-1.5 text-sm font-semibold ${
+            light ? "text-[#fd561e]" : "text-white"
+          }`}
+        >
+          <span>Explore Service</span>
+          <motion.svg
+            variants={arrowNudge}
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#fd561e"
+            strokeWidth="2.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M9 18l6-6-6-6" />
+          </motion.svg>
         </div>
-      </motion.div>
-
-      {/* Title - orange line anni cards ki */}
-      <motion.h3
-        variants={{
-          rest: { y: 0, color: "#111827" },
-          hover: { y: -3, color: "#fd561e", scale: 1.02 },
-        }}
-        className="text-base sm:text-lg font-bold mb-2 relative"
-      >
-        {title}
-        <motion.span
-          variants={{
-            rest: { width: 0, opacity: 0, left: "50%" },
-            hover: { width: "60%", opacity: 1, left: "20%" },
-          }}
-          className="absolute -bottom-1 h-[2.5px] bg-gradient-to-r from-[#fd561e] to-[#ff8a5c] rounded-full"
-        />
-      </motion.h3>
-
-      {/* Description */}
-      <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
-        {description}
-      </p>
+      </div>
     </motion.div>
   );
 }
@@ -125,14 +166,14 @@ export default function OurServices() {
       image: bus,
       title: "Bus Ticketing",
       description:
-        "Convenient and affordable online bus ticket booking through our website and BOBROS mobile App (Get it on Google Play Store)",
+        "Convenient and affordable online bus ticket booking through our website and BOBROS mobile App (Get it on Google Play Store).",
       route: "/",
     },
     {
       image: flights,
       title: "Flights",
       description:
-        "Quick and hassle-free flight bookings(off-line) for domestic and international travel. For bookings, visit any of our branch or contact us",
+        "Quick and hassle-free flight bookings for domestic and international travel. Visit any branch or contact us for bookings.",
       route: "/flights",
     },
     {
@@ -141,6 +182,7 @@ export default function OurServices() {
       description:
         "Simplifying your bill payments. Safe, fast, and convenient payments across all services.",
       contain: true,
+      light: true,
       route: "/BillHomePage",
     },
     {
@@ -155,7 +197,7 @@ export default function OurServices() {
       title: "Holiday Package",
       description:
         "Curated travel packages to explore the best destinations. Visit any branch or contact us for bookings.",
-         route: "/Holiday",
+      route: "/Holiday",
     },
     {
       image: cab,
@@ -167,20 +209,53 @@ export default function OurServices() {
       image: service,
       title: "IT Services",
       description:
-        "Reliable IT services to support your business and enhance your business operations. Visit any branch or contact our Business Analyst for more info.",
-         route: "/ItService",
+        "Reliable IT services to support your business and enhance your operations. Visit any branch or contact our Business Analyst for more info.",
+      route: "/ItService",
     },
   ];
 
   return (
-    <div className="bg-white py-16 sm:py-20 px-4 sm:px-6">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-center mb-12 text-gray-900">
-          Our Services
-        </h1>
+    <section className="bg-slate-50 py-16 sm:py-20 px-4 sm:px-6 overflow-hidden">
+      <div className="mx-auto max-w-7xl">
+        <motion.div
+          initial={{ opacity: 0, y: -18 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="mx-auto mb-4 max-w-3xl text-center"
+        >
+          <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-orange-100 px-4 py-1.5 text-sm font-semibold text-[#fd561e]">
+            Our Services
+          </p>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-slate-900">
+            Everything you need in one place
+          </h1>
+          <p className="mt-2 text-sm sm:text-base leading-relaxed text-slate-600">
+            Clean, modern, and easy-to-use services for travel and business.
+          </p>
+        </motion.div>
 
-        {/* Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-20 items-stretch">
+        {/* Mobile auto scroll */}
+        <div className="mt-8 md:hidden overflow-hidden">
+          <motion.div
+            className="flex w-max gap-4"
+            animate={{ x: ["0%", "-50%"] }}
+            transition={{
+              duration: 22,
+              ease: "linear",
+              repeat: Infinity,
+            }}
+          >
+            {[...services, ...services].map((service, index) => (
+              <div key={index} className="flex-shrink-0">
+                <ServiceCard {...service} />
+              </div>
+            ))}
+          </motion.div>
+        </div>
+
+        {/* Desktop grid */}
+        <div className="mt-10 hidden md:grid grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-8">
           {services.map((service, index) => (
             <motion.div
               key={index}
@@ -189,36 +264,13 @@ export default function OurServices() {
               whileInView="show"
               viewport={{ once: true }}
               custom={index}
-              className="mt-14 flex"
+              className="flex justify-center"
             >
               <ServiceCard {...service} />
             </motion.div>
           ))}
         </div>
-
-        {/* CTA SECTION */}
-        <div className="mt-14">
-          <div className="relative bg-gradient-to-r from-gray-900 to-gray-800 rounded-2xl overflow-hidden">
-            <div
-              className="absolute inset-0 opacity-10"
-              style={{
-                backgroundImage: `url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h40v40H0z' fill='none'/%3E%3Cpath d='M20 0v40M0 20h40' stroke='%23ffffff' stroke-width='0.5'/%3E%3C/svg%3E")`,
-              }}
-            ></div>
-            {/* <div className="relative px-8 py-12 text-center">
-              <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
-                Ready to Get Started?
-              </h2>
-              <p className="text-gray-300 mb-6">
-                Experience seamless service with our expert support team
-              </p>
-              <button className="inline-flex items-center gap-2 px-8 py-3 bg-white text-gray-900 rounded-full font-semibold">
-                Contact Our Team
-              </button>
-            </div> */}
-          </div>
-        </div>
       </div>
-    </div>
+    </section>
   );
 }

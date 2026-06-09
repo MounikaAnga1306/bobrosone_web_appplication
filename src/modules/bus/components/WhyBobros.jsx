@@ -1,337 +1,258 @@
-import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+// WhyBobros — accordion left + ANIMATED orbiting brand hub right (no phone)
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  ShieldCheck,
-  Wallet,
+  Plane,
+  Hotel,
+  Palmtree,
   Bus,
-  Lock,
-  Gift,
   MonitorSmartphone,
+  Headphones,
+  ChevronDown,
+  Sparkles,
+  MapPin,
 } from "lucide-react";
+
+const BRAND = "#FD561E";
 
 const features = [
   {
-    icon: ShieldCheck,
-    title: "Trusted Travel and IT Services Brand in India",
+    icon: Plane,
+    title: "Flights that fit every plan & pocket",
     description:
-      "Bobros is a trusted travel and technology platform delivering reliable booking experiences across India.",
-    badge: "Trusted",
-    theme: {
-      bg: "from-blue-500 to-cyan-400",
-      soft: "bg-blue-50",
-      border: "border-blue-100",
-      text: "text-blue-600",
-      glow: "shadow-blue-500/20",
-      cardGlow: "from-blue-400 to-cyan-300",
-      bar: "from-blue-400 to-cyan-300",
-    },
+      "Search smarter, not harder. Bobros pulls live fares from top airlines so you can lock in the lowest price on domestic and international routes — no hidden charges, no surprises.",
   },
   {
-    icon: Wallet,
-    title: "Pay Only What You See – No Extra Charges",
+    icon: Hotel,
+    title: "Stays you'll actually want to come back to",
     description:
-      "Transparent pricing with no hidden fees. What you see is what you pay.",
-    badge: "No Hidden Fees",
-    theme: {
-      bg: "from-emerald-500 to-teal-400",
-      soft: "bg-emerald-50",
-      border: "border-emerald-100",
-      text: "text-emerald-600",
-      glow: "shadow-emerald-500/20",
-      cardGlow: "from-emerald-400 to-teal-300",
-      bar: "from-emerald-400 to-teal-300",
-    },
+      "Hand-picked hotels, homestays and luxury resorts with verified reviews, free cancellation and pay-at-hotel options. Comfort guaranteed, every single night.",
+  },
+  {
+    icon: Palmtree,
+    title: "Holiday packages, planned end-to-end",
+    description:
+      "Weekend escapes or 15-day grand tours — we bundle flights, stays, sightseeing and transfers into one stress-free package so you only focus on the memories.",
   },
   {
     icon: Bus,
-    title: "500+ Bus Operators on 10,000+ Routes",
+    title: "Bus tickets across 10,000+ Indian routes",
     description:
-      "Access a large network of operators and routes across major cities.",
-    badge: "Vast Network",
-    theme: {
-      bg: "from-violet-500 to-purple-400",
-      soft: "bg-violet-50",
-      border: "border-violet-100",
-      text: "text-violet-600",
-      glow: "shadow-violet-500/20",
-      cardGlow: "from-violet-400 to-purple-300",
-      bar: "from-violet-400 to-purple-300",
-    },
-  },
-  {
-    icon: Lock,
-    title: "Highly Secured User Journey",
-    description:
-      "Your bookings and payments are protected with modern security standards.",
-    badge: "Secure",
-    theme: {
-      bg: "from-amber-500 to-orange-400",
-      soft: "bg-amber-50",
-      border: "border-amber-100",
-      text: "text-amber-700",
-      glow: "shadow-amber-500/20",
-      cardGlow: "from-amber-400 to-orange-300",
-      bar: "from-amber-400 to-orange-300",
-    },
-  },
-  {
-    icon: Gift,
-    title: "Earn Reward Points on Every Journey",
-    description:
-      "Get reward points for every booking and redeem them for future travel.",
-    badge: "Rewards",
-    theme: {
-      bg: "from-rose-500 to-pink-400",
-      soft: "bg-rose-50",
-      border: "border-rose-100",
-      text: "text-rose-600",
-      glow: "shadow-rose-500/20",
-      cardGlow: "from-rose-400 to-pink-300",
-      bar: "from-rose-400 to-pink-300",
-    },
+      "Live seat selection, 500+ trusted operators and on-time guarantees. From metros to small towns, Bobros gets you there safely and on schedule.",
   },
   {
     icon: MonitorSmartphone,
-    title: "Affordable, Fast & Easy Digital Services",
+    title: "IT services — websites & hosting that scale",
     description:
-      "Bobros also provides web designing and hosting services for your digital journey.",
-    badge: "IT Services",
-    theme: {
-      bg: "from-sky-500 to-blue-400",
-      soft: "bg-sky-50",
-      border: "border-sky-100",
-      text: "text-sky-600",
-      glow: "shadow-sky-500/20",
-      cardGlow: "from-sky-400 to-blue-300",
-      bar: "from-sky-400 to-blue-300",
-    },
+      "Beyond travel, Bobros is your digital partner. Fast, modern websites paired with reliable hosting plans built for startups, small businesses and creators.",
+  },
+  {
+    icon: Headphones,
+    title: "24×7 human support, not chatbots",
+    description:
+      "Bookings, refunds, last-minute changes or travel emergencies — our team is one tap away, any hour of the day, every day of the year.",
   },
 ];
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      delayChildren: 0.15,
-      staggerChildren: 0.12,
-    },
-  },
-};
+// Chips that orbit around the hub
+const orbitItems = [
+  { icon: Plane, label: "Flights" },
+  { icon: Hotel, label: "Hotels" },
+  { icon: Palmtree, label: "Holidays" },
+  { icon: Bus, label: "Bus" },
+  { icon: MonitorSmartphone, label: "IT Services" },
+  { icon: Headphones, label: "24×7 Support" },
+];
 
-const itemVariants = {
-  hidden: { y: 40, opacity: 0, scale: 0.96, filter: "blur(6px)" },
-  visible: {
-    y: 0,
-    opacity: 1,
-    scale: 1,
-    filter: "blur(0px)",
-    transition: {
-      type: "spring",
-      stiffness: 100,
-      damping: 15,
-      mass: 0.8,
-    },
-  },
-};
+const ORBIT_RADIUS = 150; // px — sits on the outer dashed ring
+const ORBIT_DURATION = 32; // seconds per full revolution
 
-export default function Home() {
-  const navigate = useNavigate();
-
-  // "Start Your Journey" click -> homepage ki velli, same page top ki smooth scroll
-  const handleStartJourney = () => {
-    navigate("/");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+export default function WhyBobros() {
+  const [openIndex, setOpenIndex] = useState(0);
 
   return (
-    <main className="min-h-screen bg-white relative overflow-hidden">
-      {/* Decorative Background Elements */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[500px] h-[500px] rounded-full bg-[radial-gradient(circle,rgba(253,86,30,0.05)_0%,transparent_70%)]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] rounded-full bg-[radial-gradient(circle,rgba(124,58,237,0.04)_0%,transparent_70%)]" />
-        <div className="absolute top-[30%] right-[10%] w-[300px] h-[300px] rounded-full bg-[radial-gradient(circle,rgba(16,185,129,0.04)_0%,transparent_70%)]" />
-      </div>
-
-      <section className="py-20 px-6 min-h-screen flex items-center justify-center font-sans relative z-10">
-        <div className="max-w-7xl mx-auto w-full">
-          {/* Header Section */}
-          <div className="text-center mb-20 max-w-3xl mx-auto relative">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-              className="mb-6"
-            >
-              <span className="inline-flex items-center gap-2 text-sm font-semibold text-[#FD561E] bg-[#FFF1EC] border border-[#FD561E]/20 px-5 py-2 rounded-full tracking-wide uppercase">
-                <span className="w-2 h-2 rounded-full bg-[#FD561E] animate-pulse" />
-                Our Promise to You
-              </span>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: -20, scale: 0.97 }}
-              whileInView={{ opacity: 1, y: 0, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
-            >
-              <h2 className="text-4xl md:text-6xl font-extrabold text-slate-900 mb-5 tracking-tight leading-[1.1]">
-                Why Choose{" "}
-                <span className="relative inline-block">
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FD561E] to-orange-400">
-                    BOBROS?
-                  </span>
-                  <svg
-                    className="absolute -bottom-2 left-0 w-full"
-                    viewBox="0 0 300 12"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <motion.path
-                      d="M2 8C50 2 100 2 150 6C200 10 250 8 298 4"
-                      stroke="url(#grad)"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      fill="none"
-                      initial={{ pathLength: 0, opacity: 0 }}
-                      whileInView={{ pathLength: 1, opacity: 1 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 1.2, delay: 0.6, ease: "easeInOut" }}
-                    />
-                    <defs>
-                      <linearGradient id="grad" x1="0" y1="0" x2="300" y2="0">
-                        <stop offset="0%" stopColor="#fd561e" />
-                        <stop offset="100%" stopColor="#fb923c" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                </span>
-              </h2>
-              <p className="text-lg md:text-xl text-slate-500 max-w-2xl mx-auto leading-relaxed">
-                Experience the best travel and digital services with our
-                reliable, secure, and affordable platform.
-              </p>
-            </motion.div>
-
-            {/* Decorative dots */}
-            <div className="absolute -top-4 left-1/4 hidden lg:block">
-              <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
-                {[0, 1, 2, 3, 4].map((row) =>
-                  [0, 1, 2, 3, 4].map((col) => (
-                    <circle
-                      key={`${row}-${col}`}
-                      cx={8 + col * 12}
-                      cy={8 + row * 12}
-                      r="1.5"
-                      fill="#fd561e"
-                      opacity={0.15 + (row + col) * 0.03}
-                    />
-                  ))
-                )}
-              </svg>
+    <section className="py-16 md:py-20 bg-gradient-to-b from-orange-50/30 to-white">
+      <div className="max-w-7xl mx-auto px-4 md:px-6">
+        <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+          <div className="p-8 md:p-10 lg:p-12">
+            {/* Heading */}
+            <div className="mb-10 md:mb-12 text-center md:text-left max-w-3xl mx-auto md:mx-0">
+              <motion.h2
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+                className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900"
+              >
+                Why choose <span style={{ color: BRAND }}>BOBROS</span>?
+              </motion.h2>
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+                className="mt-4 text-base md:text-lg text-slate-600 leading-relaxed"
+              >
+                Experience the best travel and digital services with our reliable, secure, and affordable platform.
+              </motion.p>
             </div>
-            <div className="absolute -bottom-8 right-1/4 hidden lg:block">
-              <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-                {[0, 1, 2, 3].map((row) =>
-                  [0, 1, 2, 3].map((col) => (
-                    <circle
-                      key={`${row}-${col}`}
-                      cx={8 + col * 10}
-                      cy={8 + row * 10}
-                      r="1.5"
-                      fill="#fd561e"
-                      opacity={0.1 + (row + col) * 0.04}
-                    />
-                  ))
-                )}
-              </svg>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10 items-center">
+              {/* LEFT: Accordion */}
+              <div className="space-y-2 order-2 lg:order-1">
+                {features.map((feature, idx) => {
+                  const Icon = feature.icon;
+                  const isOpen = openIndex === idx;
+                  return (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, y: 16 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true, margin: "-50px" }}
+                      transition={{ duration: 0.4, delay: idx * 0.05 }}
+                      className="rounded-xl border bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5"
+                      style={{
+                        borderColor: isOpen ? `${BRAND}55` : "#f1f5f9",
+                        boxShadow: isOpen ? `0 4px 12px ${BRAND}1A` : "0 1px 3px rgba(15,23,42,0.05)",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setOpenIndex(isOpen ? -1 : idx)}
+                        className="flex w-full items-center gap-3 px-4 py-3 text-left"
+                        aria-expanded={isOpen}
+                      >
+                        <span
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors"
+                          style={{ backgroundColor: isOpen ? BRAND : `${BRAND}15`, color: isOpen ? "#fff" : BRAND }}
+                        >
+                          <Icon className="h-4 w-4" strokeWidth={2.2} />
+                        </span>
+                        <h3 className="flex-1 text-sm md:text-base font-semibold text-slate-900 leading-snug">
+                          {feature.title}
+                        </h3>
+                        <motion.span
+                          animate={{ rotate: isOpen ? 180 : 0 }}
+                          transition={{ duration: 0.25 }}
+                          className="text-slate-400"
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                        </motion.span>
+                      </button>
+
+                      <AnimatePresence initial={false}>
+                        {isOpen && (
+                          <motion.div
+                            key="content"
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.3, ease: "easeInOut" }}
+                            className="overflow-hidden"
+                          >
+                            <p className="px-4 pb-4 pl-[52px] text-xs md:text-sm leading-relaxed text-slate-600">
+                              {feature.description}
+                            </p>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              {/* RIGHT: Orbiting brand hub */}
+              <div className="relative order-1 lg:order-2 flex items-center justify-center min-h-[380px] md:min-h-[460px]">
+                {/* Pulsing glow */}
+                <motion.div
+                  animate={{ opacity: [0.25, 0.45, 0.25], scale: [1, 1.08, 1] }}
+                  transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                  className="pointer-events-none absolute h-[280px] w-[280px] rounded-full blur-3xl"
+                  style={{ backgroundColor: `${BRAND}40` }}
+                />
+
+                {/* Rotating dashed rings (track) */}
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
+                  className="absolute h-[300px] w-[300px] rounded-full border-2 border-dashed"
+                  style={{ borderColor: `${BRAND}33` }}
+                />
+                <motion.div
+                  animate={{ rotate: -360 }}
+                  transition={{ duration: 75, repeat: Infinity, ease: "linear" }}
+                  className="absolute h-[210px] w-[210px] rounded-full border border-dashed"
+                  style={{ borderColor: `${BRAND}26` }}
+                />
+
+                {/* Central hub */}
+                <motion.div
+                  animate={{ scale: [1, 1.05, 1] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  className="relative z-10 flex h-28 w-28 md:h-36 md:w-36 flex-col items-center justify-center rounded-full text-white shadow-2xl"
+                  style={{ background: `linear-gradient(135deg, ${BRAND}, #ff8a5c)` }}
+                >
+                  <Sparkles className="h-5 w-5 md:h-6 md:w-6 mb-1" />
+                  <span className="text-base md:text-xl font-extrabold tracking-tight">BOBROS</span>
+                  <span className="text-[9px] md:text-[10px] opacity-90">Travel + Tech</span>
+                </motion.div>
+
+                {/* Orbiting service chips */}
+                <div className="absolute inset-0 z-20 scale-[0.7] sm:scale-90 md:scale-100">
+                  <motion.div
+                    className="absolute inset-0"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: ORBIT_DURATION, repeat: Infinity, ease: "linear" }}
+                  >
+                    {orbitItems.map((item, i) => {
+                      const Icon = item.icon;
+                      const a = (-90 + (360 / orbitItems.length) * i) * (Math.PI / 180);
+                      const x = Math.cos(a) * ORBIT_RADIUS;
+                      const y = Math.sin(a) * ORBIT_RADIUS;
+                      return (
+                        <div
+                          key={i}
+                          className="absolute"
+                          style={{ left: `calc(50% + ${x}px)`, top: `calc(50% + ${y}px)` }}
+                        >
+                          {/* centering wrapper (static) */}
+                          <div style={{ transform: "translate(-50%, -50%)" }}>
+                            {/* counter-rotate so the chip stays upright while orbiting */}
+                            <motion.div
+                              animate={{ rotate: -360 }}
+                              transition={{ duration: ORBIT_DURATION, repeat: Infinity, ease: "linear" }}
+                              className="flex items-center gap-2 rounded-2xl bg-white px-3 py-2 shadow-lg ring-1 ring-slate-100"
+                            >
+                              <span
+                                className="flex h-7 w-7 items-center justify-center rounded-lg"
+                                style={{ backgroundColor: `${BRAND}15`, color: BRAND }}
+                              >
+                                <Icon className="h-4 w-4" strokeWidth={2.2} />
+                              </span>
+                              <span className="text-xs font-semibold text-slate-800 whitespace-nowrap">
+                                {item.label}
+                              </span>
+                            </motion.div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </motion.div>
+                </div>
+
+                {/* Decorative map pin */}
+                <motion.div
+                  animate={{ y: [0, -8, 0] }}
+                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute -top-1 left-1/2 -translate-x-1/2 z-10 hidden md:block"
+                >
+                  <MapPin className="h-7 w-7 drop-shadow-md" fill={BRAND} stroke="#fff" strokeWidth={1.6} />
+                </motion.div>
+              </div>
             </div>
           </div>
-
-          {/* Feature Grid */}
-          <motion.div
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7"
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-80px" }}
-          >
-            {features.map((feature, index) => {
-              const Icon = feature.icon;
-              const t = feature.theme;
-              return (
-                <motion.div
-                  key={index}
-                  variants={itemVariants}
-                  whileHover={{
-                    y: -10,
-                    scale: 1.02,
-                    transition: { type: "spring", stiffness: 280, damping: 20 },
-                  }}
-                  className="group relative"
-                >
-                  {/* Card glow on hover - unique per card */}
-                  <div className={`absolute -inset-[1px] bg-gradient-to-br ${t.cardGlow} rounded-[22px] opacity-0 group-hover:opacity-100 blur-[8px] transition-opacity duration-500`} />
-
-                  <div className={`relative ${t.soft} backdrop-blur-xl p-8 rounded-[20px] border ${t.border} shadow-[0_4px_24px_rgba(0,0,0,0.03)] group-hover:shadow-[0_20px_50px_rgba(0,0,0,0.08)] transition-shadow duration-500 h-full`}>
-                    {/* Subtle top gradient line */}
-                    <div className={`absolute top-0 left-8 right-8 h-[2px] bg-gradient-to-r from-transparent ${t.bar} to-transparent rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
-
-                    <div className="flex flex-col h-full">
-                      <div className="flex justify-between items-start mb-7">
-                        {/* Icon Badge - unique color */}
-                        <motion.div
-                          whileHover={{ rotate: -6, scale: 1.1 }}
-                          transition={{ type: "spring", stiffness: 280, damping: 14 }}
-                          className={`relative w-[52px] h-[52px] rounded-2xl bg-gradient-to-br ${t.bg} flex items-center justify-center shadow-lg ${t.glow}`}
-                        >
-                          <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/20 to-transparent pointer-events-none" />
-                          <Icon className="w-6 h-6 text-white relative z-10" strokeWidth={2.2} />
-                        </motion.div>
-
-                        {/* Badge - matching color */}
-                        <span className={`text-[11px] font-bold uppercase tracking-widest ${t.text} ${t.soft} border ${t.border} px-4 py-1.5 rounded-full`}>
-                          {feature.badge}
-                        </span>
-                      </div>
-
-                      {/* Content */}
-                      <h3 className="text-[1.15rem] font-bold text-slate-900 mb-3 group-hover:text-[#FD561E] transition-colors duration-400 leading-snug">
-                        {feature.title}
-                      </h3>
-                      <p className="text-slate-500 leading-relaxed flex-grow text-[0.95rem]">
-                        {feature.description}
-                      </p>
-
-                      {/* Bottom accent bar */}
-                      <div className={`mt-6 h-[3px] rounded-full bg-gradient-to-r ${t.bar} opacity-0 group-hover:opacity-70 transition-opacity duration-500 w-16`} />
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </motion.div>
-
-          {/* Bottom CTA */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.7, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="mt-20 text-center"
-          >
-            <button
-              type="button"
-              onClick={handleStartJourney}
-              className="inline-flex items-center gap-3 px-8 py-4 rounded-full bg-gradient-to-r from-[#FD561E] to-orange-500 text-white font-semibold text-sm shadow-lg shadow-[#FD561E]/30 hover:shadow-xl transition-shadow duration-300 cursor-pointer"
-            >
-              <ShieldCheck className="w-5 h-5" />
-              Start Your Journey with Bobros
-            </button>
-          </motion.div>
         </div>
-      </section>
-    </main>
+      </div>
+    </section>
   );
 }

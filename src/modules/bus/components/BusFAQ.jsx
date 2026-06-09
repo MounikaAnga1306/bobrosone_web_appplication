@@ -127,14 +127,18 @@ export default function FAQPage() {
 
   return (
     <div className="bg-white ">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 md:px-8 lg:px-6 py-6 sm:pt-8 md:pt-10 ml-0 md:ml-4 lg:ml-8 xl:ml-16">
-        
+      {/* Standard site container — Popular Routes tho same left edge nundi start avtundi */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:pt-8 md:pt-10">
+        {/* lg:-ml-4 -> Popular Routes heading tho align avvadaniki konchem left nudge.
+            Inka kavale: lg:-ml-6 (ekkuva left) / lg:-ml-2 (takkuva). */}
+        <div className="max-w-4xl lg:-ml-4">
+
         <h1 className="text-xl sm:text-2xl md:text-2xl lg:text-3xl font-bold text-gray-900 mb-4 sm:mb-5 md:mb-6">
           FAQs related to Bus Tickets Booking
         </h1>
 
         {/* Tabs - Horizontal scroll on mobile */}
-        <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+        <div className="overflow-x-auto  -mx-4 sm:mx-0 px-4 sm:px-0">
           <div className="flex border-b border-gray-200 mb-0 min-w-max sm:min-w-0">
             {faqData.map((cat, idx) => (
               <button
@@ -145,7 +149,7 @@ export default function FAQPage() {
                   setFeedback({});
                 }}
                 className={`
-                  px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium whitespace-nowrap relative transition-all
+                  ${idx === 0 ? "pl-0 pr-3 sm:pr-4" : "px-3 sm:px-4"} py-2.5 sm:py-3 text-xs sm:text-sm font-medium whitespace-nowrap relative transition-all
                   ${activeTab === idx
                     ? 'text-[#FD561E]'
                     : 'text-gray-600 hover:text-[#FD561E]'
@@ -157,7 +161,10 @@ export default function FAQPage() {
                 {activeTab === idx && (
                   <span
                     className="absolute bottom-0 h-0.5 sm:h-1 bg-[#FD561E]"
-                    style={{ width: "60%", left: "20%" }}
+                    style={{
+                      width: idx === 0 ? "75%" : "60%",
+                      left: idx === 0 ? "0%" : "20%",
+                    }}
                   />
                 )}
               </button>
@@ -240,6 +247,7 @@ export default function FAQPage() {
               </div>
             );
           })}
+        </div>
         </div>
       </div>
     </div>

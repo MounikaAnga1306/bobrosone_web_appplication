@@ -9,17 +9,20 @@ import BusFAQ from "../components/BusFAQ";
 import BookingForm from "../components/BookingForm";
 import Advertisement from "../components/Advertisement";
 import PopularDestinations from "../components/PopularDestinations";
+import ServiceCard from "../components/ServiceCard";
 
-function HomePage() {
+function HomePage() { 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col overflow-x-clip max-w-full">
       <Helmet>
         <title>BOBROS - Bus Booking</title>
         <meta name="description" content="Book bus tickets online at best prices. Fast, easy and secure bus booking with BOBROS." />
         <meta name="keywords" content="bus booking, online bus tickets, BOBROS bus" />
       </Helmet>
 
-      <main className="flex-grow">
+      {/* min-w-0 → column-flex item viewport kంటే peరగకుండా shrink avtundi.
+          overflow-x-clip → ఏ child wide aయినా clip avtundi (sticky ni break cheయదు). */}
+      <main className="flex-grow min-w-0 max-w-full overflow-x-clip">
         {/* Bus Booking Hero Section - FULL WIDTH */}
         <BookingForm />
 
@@ -46,6 +49,10 @@ function HomePage() {
            {/* App Download */}
           <div>
             <AppDownload />
+          </div>
+
+           <div>
+            <ServiceCard />
           </div>
            {/* Popular Bus Routes */}
           <div className="mt-14">

@@ -28,6 +28,9 @@ const EMPTY_FILTERS = () => ({
  */
 const NAVBAR_OFFSET = 0;
 
+// Bus Primo aా kాదా — flag normalize (parent → BusResultCard ki primo prop)
+const isPrimoTrip = (trip) => trip?.primo === true || trip?.primo === "true";
+
 export default function BusResultsPage() {
   const location     = useLocation();
   const searchParams = new URLSearchParams(location.search);
@@ -338,6 +341,7 @@ export default function BusResultsPage() {
                     seatsLeft={Number(trip.availableSeats || 0)}
                     onSelectSeat={handleSeatOpen}
                     cancellationPolicyParsed={trip.cancellationPolicyParsed}
+                    primo={isPrimoTrip(trip)}
                   />
                 ))}
               </div>
@@ -368,6 +372,7 @@ export default function BusResultsPage() {
                   seatsLeft={Number(trip.availableSeats || 0)}
                   onSelectSeat={handleSeatOpen}
                   cancellationPolicyParsed={trip.cancellationPolicyParsed}
+                  primo={isPrimoTrip(trip)}
                 />
               ))}
             </div>
