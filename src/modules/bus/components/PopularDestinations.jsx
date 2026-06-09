@@ -1,13 +1,10 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 
 const API = import.meta.env.VITE_API_BASE_URL;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CITY_INFO — prati city ki landmark image + gradient fallback.
-// City eppudu destination ga vachina ide image vstundi.
-//  • Hyderabad → Charminar (/assets/charminar.jpg ni assets lo pettandi)
-//  • image leka pothe / fail aithe → gradient fallback card baaga ne untundi.
 // ─────────────────────────────────────────────────────────────────────────────
 const CITY_INFO = {
   Hyderabad:     { image: "/assets/charminar.jpg", gradient: "linear-gradient(155deg,#6d28d9 0%,#1e1b4b 100%)" },
@@ -32,7 +29,6 @@ const CITY_INFO = {
   Patna:     { image: "https://tse4.mm.bing.net/th/id/OIP.JcYt8772Fbrghxex0i3c8QHaEK?rs=1&pid=ImgDetMain&o=7&rm=3", gradient: "linear-gradient(155deg,#6d28d9 0%,#1e1b4b 100%)" },
   Durgapur:     { image: "https://cdn1.tripoto.com/media/filter/tst/img/2024753/SpotDocument/1611994821_1611994817293.jpg", gradient: "linear-gradient(155deg,#6d28d9 0%,#1e1b4b 100%)" },
   Mangalore:     { image: "https://i.pinimg.com/originals/40/0f/ff/400fff1dd8c7c78b8eac59cd59e268d5.jpg", gradient: "linear-gradient(155deg,#6d28d9 0%,#1e1b4b 100%)" },
-
   Bangalore:     { image: "https://www.shutterstock.com/image-photo/bangalore-india-december-12-2024-600nw-2450402849.jpg", gradient: "linear-gradient(155deg,#1e3a5f 0%,#0f172a 100%)" },
   Chennai:       { image: "https://iantiark.sirv.com/ER/bg/Chennai-bg.jpg?q=75&progressive=true", gradient: "linear-gradient(155deg,#7c2d12 0%,#1c1917 100%)" },
   Vijayawada:    { image: "https://media-cdn.tripadvisor.com/media/photo-c/1280x250/0f/b5/db/4f/prakasam-barrage.jpg", gradient: "linear-gradient(155deg,#155e75 0%,#0c1320 100%)" },
@@ -48,8 +44,6 @@ const CITY_INFO = {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ROUTES_FROM — source city → popular destination cities.
-// Dropdown lo ee keys (supported sources) chupistam.
-// City ki route ledu ante DEFAULT (Hyderabad) list fallback.
 // ─────────────────────────────────────────────────────────────────────────────
 const ROUTES_FROM = {
   Hyderabad:  ["Bangalore", "Chennai", "Vijayawada", "Tirupati", "Visakhapatnam", "Goa", "Mumbai", "Pune", "Warangal", "Nagpur", "Srisailam"],
@@ -63,17 +57,13 @@ const ROUTES_FROM = {
   Vijayawada: ["Hyderabad", "Visakhapatnam", "Chennai", "Bangalore", "Tirupati"],
 };
 
-// Dropdown lo chupinche source cities (routes unnavi)
 const SOURCE_CITIES = Object.keys(ROUTES_FROM);
-
 const DEFAULT_GRADIENT = "linear-gradient(155deg,#334155 0%,#0f172a 100%)";
 const norm = (s) => (s || "").trim().toLowerCase();
 
-// source batti destinations list build cheyyadam
 const buildDestinations = (fromCity) => {
   const sourceKey =
     Object.keys(ROUTES_FROM).find((k) => norm(k) === norm(fromCity)) || "Hyderabad";
-
   return (ROUTES_FROM[sourceKey] || [])
     .filter((city) => norm(city) !== norm(fromCity))
     .map((city) => {
@@ -86,12 +76,113 @@ export default function PopularDestinations({ fromCity = "Hyderabad" }) {
   const scrollerRef = useRef(null);
   const cityCache = useRef({});
   const dropRef = useRef(null);
+  const autoScrollIntervalRef = useRef(null);
+  const inactivityTimeoutRef = useRef(null);
 
-  const [from, setFrom] = useState(fromCity);   // ← selected source (component lone manage)
+  const [from, setFrom] = useState(fromCity);
   const [dropOpen, setDropOpen] = useState(false);
   const [loadingCity, setLoadingCity] = useState(null);
+  const [isMobileView, setIsMobileView] = useState(false);
 
-  // dropdown bayata click aithe close
+  // ── Helper: pause auto-scroll & optionally schedule restart ──
+  const pauseAutoScroll = useCallback((scheduleRestart = true) => {
+    if (autoScrollIntervalRef.current) {
+      clearInterval(autoScrollIntervalRef.current);
+      autoScrollIntervalRef.current = null;
+    }
+    if (inactivityTimeoutRef.current) {
+      clearTimeout(inactivityTimeoutRef.current);
+      inactivityTimeoutRef.current = null;
+    }
+    if (scheduleRestart && isMobileView && scrollerRef.current) {
+      inactivityTimeoutRef.current = setTimeout(() => {
+        startAutoScroll();
+      }, 2000); // resume after 2 sec of inactivity
+    }
+  }, [isMobileView]);
+
+  // ── Start auto-scroll (mobile only) ──
+  const startAutoScroll = useCallback(() => {
+    if (!isMobileView) return;
+    if (autoScrollIntervalRef.current) clearInterval(autoScrollIntervalRef.current);
+    // only start if there is at least 2 cards
+    const cards = scrollerRef.current?.querySelectorAll(".pd-card");
+    if (!cards || cards.length < 2) return;
+
+    autoScrollIntervalRef.current = setInterval(() => {
+      const el = scrollerRef.current;
+      if (!el) return;
+      const cardsArr = Array.from(el.querySelectorAll(".pd-card"));
+      if (cardsArr.length === 0) return;
+
+      // Find current visible card index based on scroll position
+      const scrollPos = el.scrollLeft;
+      let currentIndex = 0;
+      for (let i = 0; i < cardsArr.length; i++) {
+        const card = cardsArr[i];
+        const cardLeft = card.offsetLeft;
+        if (scrollPos >= cardLeft - 20) {
+          currentIndex = i;
+        } else break;
+      }
+
+      // Determine next card index (loop to first after last)
+      const nextIndex = (currentIndex + 1) % cardsArr.length;
+      const nextCard = cardsArr[nextIndex];
+      if (nextCard) {
+        el.scrollTo({ left: nextCard.offsetLeft, behavior: "smooth" });
+      }
+    }, 4000); // every 4 seconds -> slow automatic scrolling
+  }, [isMobileView]);
+
+  // ── Stop auto-scroll completely ──
+  const stopAutoScroll = useCallback(() => {
+    if (autoScrollIntervalRef.current) {
+      clearInterval(autoScrollIntervalRef.current);
+      autoScrollIntervalRef.current = null;
+    }
+    if (inactivityTimeoutRef.current) {
+      clearTimeout(inactivityTimeoutRef.current);
+      inactivityTimeoutRef.current = null;
+    }
+  }, []);
+
+  // ── Detect mobile view (width < 768px) ──
+  useEffect(() => {
+    const checkMobile = () => setIsMobileView(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // ── Setup / teardown auto-scroll when mobile view or list changes ──
+  useEffect(() => {
+    if (isMobileView) {
+      startAutoScroll();
+    } else {
+      stopAutoScroll();
+    }
+    return () => stopAutoScroll();
+  }, [isMobileView, startAutoScroll, stopAutoScroll, from]); // re-run when from city changes
+
+  // ── Attach event listeners to pause auto-scroll on user interaction ──
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+
+    const handleUserInteraction = () => pauseAutoScroll(true);
+    scroller.addEventListener("touchstart", handleUserInteraction);
+    scroller.addEventListener("scroll", handleUserInteraction);
+    scroller.addEventListener("wheel", handleUserInteraction);
+    // also pause when clicking on arrows (we'll attach manually to buttons)
+    return () => {
+      scroller.removeEventListener("touchstart", handleUserInteraction);
+      scroller.removeEventListener("scroll", handleUserInteraction);
+      scroller.removeEventListener("wheel", handleUserInteraction);
+    };
+  }, [pauseAutoScroll]);
+
+  // ── Dropdown outside click ──
   useEffect(() => {
     const handler = (e) => {
       if (dropRef.current && !dropRef.current.contains(e.target)) setDropOpen(false);
@@ -100,9 +191,7 @@ export default function PopularDestinations({ fromCity = "Hyderabad" }) {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const list = buildDestinations(from);
-
-  // ── Resolve city id from API (cached) ──────────────────────────────────────
+  // ── API helpers (unchanged) ──
   const getCityId = async (cityName) => {
     try {
       if (cityCache.current[cityName]) return cityCache.current[cityName];
@@ -110,9 +199,7 @@ export default function PopularDestinations({ fromCity = "Hyderabad" }) {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (!Array.isArray(data) || data.length === 0) return null;
-      const match = data.find(
-        (c) => c.cityname.toLowerCase() === cityName.toLowerCase()
-      );
+      const match = data.find((c) => c.cityname.toLowerCase() === cityName.toLowerCase());
       const id = match?.sid || data[0]?.sid;
       cityCache.current[cityName] = id;
       return id;
@@ -128,32 +215,21 @@ export default function PopularDestinations({ fromCity = "Hyderabad" }) {
     return today.toISOString().split("T")[0];
   };
 
-  // ── Click a destination → full page load to results page (real API search)
   const handleRouteClick = async (toCity) => {
     if (loadingCity) return;
     setLoadingCity(toCity);
     try {
-      const [sourceId, destinationId] = await Promise.all([
-        getCityId(from),
-        getCityId(toCity),
-      ]);
-
+      const [sourceId, destinationId] = await Promise.all([getCityId(from), getCityId(toCity)]);
       if (!sourceId || !destinationId) {
         console.error("City ID not found", from, toCity);
         setLoadingCity(null);
         return;
       }
-
       const date = getTomorrowDate();
-
       sessionStorage.setItem("sourceName", from);
       sessionStorage.setItem("destinationName", toCity);
-
-      const url = `/results?source=${sourceId}&destination=${destinationId}&doj=${date}&fromName=${encodeURIComponent(
-        from
-      )}&toName=${encodeURIComponent(toCity)}`;
-
-      window.location.href = url; // full refresh navigation
+      const url = `/results?source=${sourceId}&destination=${destinationId}&doj=${date}&fromName=${encodeURIComponent(from)}&toName=${encodeURIComponent(toCity)}`;
+      window.location.href = url;
     } catch (err) {
       console.error("Navigation error:", err);
       setLoadingCity(null);
@@ -164,13 +240,18 @@ export default function PopularDestinations({ fromCity = "Hyderabad" }) {
     setFrom(city);
     setDropOpen(false);
     if (scrollerRef.current) scrollerRef.current.scrollTo({ left: 0, behavior: "smooth" });
+    // pause auto-scroll and restart after delay
+    pauseAutoScroll(true);
   };
 
   const scrollByDir = (dir) => {
     const el = scrollerRef.current;
     if (!el) return;
     el.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: "smooth" });
+    pauseAutoScroll(true);
   };
+
+  const list = buildDestinations(from);
 
   return (
     <section className="w-full max-w-[90%] lg:max-w-[82%] mx-auto">
@@ -192,12 +273,10 @@ export default function PopularDestinations({ fromCity = "Hyderabad" }) {
         }
       `}</style>
 
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="flex items-center justify-between gap-4 mb-5">
         <h2 className="text-xl sm:text-2xl font-bold text-gray-900 flex flex-wrap items-center gap-x-2">
           <span>Bus Tickets to Popular Destinations from</span>
-
-          {/* ── FROM CITY DROPDOWN (arrow tho) ── */}
           <span className="relative inline-block" ref={dropRef}>
             <button
               type="button"
@@ -205,11 +284,8 @@ export default function PopularDestinations({ fromCity = "Hyderabad" }) {
               className="inline-flex items-center gap-1 text-[#FD561E] hover:opacity-80 transition-opacity cursor-pointer"
             >
               {from}
-              <ChevronDown
-                className={`w-5 h-5 transition-transform duration-200 ${dropOpen ? "rotate-180" : ""}`}
-              />
+              <ChevronDown className={`w-5 h-5 transition-transform duration-200 ${dropOpen ? "rotate-180" : ""}`} />
             </button>
-
             {dropOpen && (
               <div className="pd-drop absolute left-0 top-full mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
                 <ul className="max-h-72 overflow-y-auto py-1">
@@ -221,9 +297,7 @@ export default function PopularDestinations({ fromCity = "Hyderabad" }) {
                           type="button"
                           onClick={() => handleSelectSource(city)}
                           className={`w-full text-left px-4 py-2.5 text-sm font-medium cursor-pointer transition-colors ${
-                            active
-                              ? "bg-orange-50 text-[#FD561E]"
-                              : "text-gray-700 hover:bg-orange-50 hover:text-[#FD561E]"
+                            active ? "bg-orange-50 text-[#FD561E]" : "text-gray-700 hover:bg-orange-50 hover:text-[#FD561E]"
                           }`}
                         >
                           {city}
@@ -257,7 +331,7 @@ export default function PopularDestinations({ fromCity = "Hyderabad" }) {
         </div>
       </div>
 
-      {/* ── Carousel ── */}
+      {/* Carousel */}
       <div
         ref={scrollerRef}
         className="pd-scroller flex gap-3 sm:gap-4 overflow-x-auto pb-2 snap-x snap-mandatory scroll-smooth"
@@ -272,10 +346,7 @@ export default function PopularDestinations({ fromCity = "Hyderabad" }) {
               style={{ animationDelay: `${i * 70}ms` }}
               className="pd-card group relative shrink-0 snap-start w-[150px] sm:w-[180px] h-[200px] sm:h-[230px] rounded-2xl overflow-hidden text-left shadow-sm hover:shadow-2xl transition-all duration-300 ease-out hover:-translate-y-1.5 active:scale-[0.98] cursor-pointer"
             >
-              {/* gradient fallback (always present) */}
               <div className="absolute inset-0" style={{ background: d.gradient }} />
-
-              {/* famous-place image (image unte matrame render) */}
               {d.image && (
                 <img
                   src={d.image}
@@ -285,16 +356,10 @@ export default function PopularDestinations({ fromCity = "Hyderabad" }) {
                   className="absolute inset-0 w-full h-full object-cover transition-transform duration-[800ms] ease-out group-hover:scale-110"
                 />
               )}
-
-              {/* dark overlay for text readability */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-black/25 transition-opacity duration-300 group-hover:from-black/90" />
-
-              {/* place name only */}
               <h3 className="absolute bottom-4 left-4 right-4 text-white text-lg sm:text-xl font-extrabold leading-tight drop-shadow-md transition-transform duration-300 group-hover:-translate-y-0.5">
                 {d.city}
               </h3>
-
-              {/* loading overlay while resolving city ids */}
               {isLoading && (
                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                   <div className="w-7 h-7 border-2 border-white/40 border-t-white rounded-full animate-spin" />

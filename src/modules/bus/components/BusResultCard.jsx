@@ -14,7 +14,8 @@ const BusResultCard = ({
   price,
   seatsLeft,
   onSelectSeat,
-  cancellationPolicyParsed
+  cancellationPolicyParsed,
+  primo = false,            // ← parent nుండి pass cheyali: primo={bus.primo === true || bus.primo === "true"}
 }) => {
   const [showPolicyModal, setShowPolicyModal] = useState(false);
   const [policyData, setPolicyData] = useState(cancellationPolicyParsed || null);
@@ -53,6 +54,24 @@ const BusResultCard = ({
     } finally {
       setLoadingPolicy(false);
     }
+  };
+
+  // Cancellation Policy click — card click (seat layout) trigger avvakుండా stop
+  const handlePolicyClick = (e) => {
+    e?.stopPropagation?.();
+    fetchCancellationPolicy();
+  };
+
+  // Select Seat button click — card click tho double-fire avvakుండా stop
+  const handleSelectSeatClick = (e) => {
+    e?.stopPropagation?.();
+    onSelectSeat(id);
+  };
+
+  // Whole card click → seat layout open (sold out aithe kాదు)
+  const handleCardClick = () => {
+    if (seatsLeft === 0) return;
+    onSelectSeat(id);
   };
 
   const getSeatAvailabilityText = () => {
@@ -162,9 +181,29 @@ const BusResultCard = ({
     </div>
   );
 
+  // Primo badge — bus Primo aithe default ga top lo SVG logo chూపిస్తుంది
+  const PrimoBadge = () =>
+    primo ? (
+      <div className="mb-3">
+        <img
+          src="/assets/primo.svg"
+          alt="Primo"
+          className="h-6 sm:h-7 w-auto object-contain"
+        />
+      </div>
+    ) : null;
+
   return (
     <>
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+      <div
+        onClick={handleCardClick}
+        className={`bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow ${
+          seatsLeft === 0 ? "cursor-default" : "cursor-pointer"
+        }`}
+      >
+        {/* Primo badge — top lo, anni views ki common */}
+        <PrimoBadge />
+
         {/* Laptop & Desktop View (lg and above) */}
         <div className="hidden lg:block">
           <div className="flex flex-row items-center gap-4">
@@ -207,7 +246,7 @@ const BusResultCard = ({
 
           <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
             <button
-              onClick={fetchCancellationPolicy}
+              onClick={handlePolicyClick}
               disabled={loadingPolicy}
               className="text-xs text-[#fd561e] cursor-pointer font-medium flex items-center gap-1.5 hover:underline transition-all"
             >
@@ -219,7 +258,7 @@ const BusResultCard = ({
             <Button
               size="sm"
               className="font-bold cursor-pointer bg-[#fd561e] hover:bg-[#e04a16] text-white px-4 py-1.5 text-sm min-w-[100px]"
-              onClick={() => onSelectSeat(id)}
+              onClick={handleSelectSeatClick}
               disabled={seatsLeft === 0}
             >
               {seatsLeft === 0 ? "Sold Out" : "Select Seat"}
@@ -272,7 +311,7 @@ const BusResultCard = ({
           {/* Bottom row — clean: Cancellation Policy + Select Seat */}
           <div className="mt-3 pt-2 border-t border-gray-100 flex items-center justify-between gap-2">
             <button
-              onClick={fetchCancellationPolicy}
+              onClick={handlePolicyClick}
               disabled={loadingPolicy}
               className="text-[10px] text-[#fd561e] cursor-pointer font-medium flex items-center gap-1 hover:underline transition-all shrink-0"
             >
@@ -284,7 +323,7 @@ const BusResultCard = ({
             <Button
               size="sm"
               className="font-bold cursor-pointer bg-[#fd561e] hover:bg-[#e04a16] text-white px-4 py-1.5 text-xs min-w-[100px] shrink-0"
-              onClick={() => onSelectSeat(id)}
+              onClick={handleSelectSeatClick}
               disabled={seatsLeft === 0}
             >
               {seatsLeft === 0 ? "Sold Out" : "Select Seat"}
@@ -334,7 +373,7 @@ const BusResultCard = ({
           <div className="mt-4 pt-3 border-t border-gray-100">
             <div className="flex items-center justify-between gap-3">
               <button
-                onClick={fetchCancellationPolicy}
+                onClick={handlePolicyClick}
                 disabled={loadingPolicy}
                 className="text-xs text-[#fd561e] cursor-pointer font-medium flex items-center gap-1.5 hover:underline transition-all whitespace-nowrap"
               >
@@ -346,7 +385,7 @@ const BusResultCard = ({
               <Button
                 size="sm"
                 className="font-bold cursor-pointer bg-[#fd561e] hover:bg-[#e04a16] text-white px-4 py-1.5 text-sm min-w-[100px]"
-                onClick={() => onSelectSeat(id)}
+                onClick={handleSelectSeatClick}
                 disabled={seatsLeft === 0}
               >
                 {seatsLeft === 0 ? "Sold Out" : "Select Seat"}
