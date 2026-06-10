@@ -92,15 +92,21 @@ const SuccessToast = ({ message, subtitle, onDone }) => {
   );
 };
 
+/* ── FULL COVER IMAGE PANEL: panel ki fixed width (52%), img objectFit "cover" —
+      image panel ni MOTHAM cover chestundi, eppudu gap radu. Panel ratio image
+      ratio ki daggara ga unchamu kabatti crop almost zero. */
 const LeftImagePanel = () => (
-  <div
-    className="hidden md:flex flex-col items-center justify-center rounded-l-2xl overflow-hidden flex-shrink-0"
-    style={{ alignSelf: "stretch", width: "380px", backgroundColor: "#fff8f5" }}
-  >
+  <div className="hidden md:block h-full rounded-l-2xl overflow-hidden flex-shrink-0 md:w-[52%]">
     <img
-      src="/assets/travel_image.png"
+      src="/assets/login_Image.png"
       alt="Tour & Travel"
-      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+      style={{
+        width: "100%",
+        height: "100%",
+        objectFit: "cover",
+        objectPosition: "center",
+        display: "block",
+      }}
     />
   </div>
 );
@@ -388,7 +394,7 @@ const AccountDeletionCard = ({ onBack, onClose }) => {
 };
 
 const InputField = ({ icon: Icon, ...props }) => (
-  <div className="flex items-center border border-gray-300 rounded-xl px-3 sm:px-4 py-2 sm:py-3 mb-3 sm:mb-4 focus-within:border-[#FD561E] focus-within:ring-1 focus-within:ring-[#FD561E] transition-all">
+  <div className="flex items-center border border-gray-300 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 mb-3 focus-within:border-[#FD561E] focus-within:ring-1 focus-within:ring-[#FD561E] transition-all">
     <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 mr-2 sm:mr-3 flex-shrink-0" />
     <input {...props} className="w-full outline-none text-xs sm:text-sm bg-transparent" style={{ cursor: "text" }} />
   </div>
@@ -520,14 +526,17 @@ const SignUpForm = ({ closeModal, openSignin }) => {
       )}
 
       <div className="flex items-center justify-center p-3 sm:p-4 min-h-screen md:min-h-0">
+        {/* Card size taggincham: height min(620px, 90vh), width 880px.
+            Panel ratio (52% of 880 = ~458px at 620px height) image ratio ki
+            daggara ga untundi — cover tho crop negligible, gap zero. */}
         <div
-          className="relative bg-white rounded-2xl shadow-2xl flex flex-col md:flex-row items-stretch overflow-hidden w-full max-w-[95%] sm:max-w-[500px] md:max-w-[900px] mx-auto"
+          className="relative bg-white rounded-2xl shadow-2xl flex flex-col md:flex-row items-stretch overflow-hidden w-full max-w-[95%] sm:max-w-[500px] md:max-w-[880px] mx-auto md:h-[min(620px,90vh)]"
           style={{ maxHeight: "90vh" }}
         >
           <LeftImagePanel />
 
           <div
-            className="flex-1 p-5 sm:p-6 md:p-8 lg:p-10 overflow-y-auto bg-white"
+            className="flex-1 p-5 sm:p-6 md:p-7 lg:p-8 overflow-y-auto bg-white md:h-full"
             style={{ maxHeight: "90vh" }}
           >
             <button
@@ -553,9 +562,9 @@ const SignUpForm = ({ closeModal, openSignin }) => {
             ) : (
               <div className="flex flex-col h-full justify-center">
                 <h2 className="text-xl sm:text-2xl font-bold text-center text-gray-800 mb-1">
-                  Sign up with <span className="text-[#fd561e]">BOBROS</span>
+                  Sign up 
                 </h2>
-                <p className="text-center text-gray-500 text-xs sm:text-sm mb-4 sm:mb-6 md:mb-8">
+                <p className="text-center text-gray-500 text-xs sm:text-sm mb-4 sm:mb-5">
                   Avail Great Discounts and Earn Reward Points
                 </p>
 
@@ -655,11 +664,11 @@ const SignUpForm = ({ closeModal, openSignin }) => {
                     </div>
                   </div>
 
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <div className="mb-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Security Verification
                     </label>
-                    <div className="flex justify-center my-4 overflow-x-auto">
+                    <div className="flex justify-center my-2 overflow-x-auto">
                       <div className="transform scale-90 sm:scale-100 origin-center">
                         <Turnstile
                           ref={turnstileRef}
@@ -678,13 +687,13 @@ const SignUpForm = ({ closeModal, openSignin }) => {
                     type="submit"
                     disabled={loading}
                     style={{ cursor: loading ? "not-allowed" : "pointer" }}
-                    className="w-full bg-[#FD561E] text-white py-2.5 sm:py-3.5 rounded-xl font-bold hover:bg-[#e64d19] transition shadow-lg mt-2 text-sm sm:text-base disabled:opacity-60"
+                    className="w-full bg-[#FD561E] text-white py-2.5 sm:py-3 rounded-xl font-bold hover:bg-[#e64d19] transition shadow-lg mt-1 text-sm sm:text-base disabled:opacity-60"
                   >
                     {loading ? "Please wait..." : "Sign Up"}
                   </button>
                 </form>
 
-                <p className="text-center text-xs sm:text-sm mt-4 sm:mt-6">
+                <p className="text-center text-xs sm:text-sm mt-3 sm:mt-4">
                   Already Registered?{" "}
                   <span
                     onClick={openSignin}
@@ -695,7 +704,7 @@ const SignUpForm = ({ closeModal, openSignin }) => {
                   </span>
                 </p>
 
-                <div className="mt-6 sm:mt-8 pt-3 sm:pt-4 border-t border-gray-100 text-center">
+                <div className="mt-4 sm:mt-5 pt-3 border-t border-gray-100 text-center">
                   <p className="text-[10px] sm:text-xs text-gray-400">No longer wish to use BOBROS Account?</p>
                   <p
                     onClick={() => setShowDeletion(true)}

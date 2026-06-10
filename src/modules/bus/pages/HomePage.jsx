@@ -9,7 +9,7 @@ import BusFAQ from "../components/BusFAQ";
 import BookingForm from "../components/BookingForm";
 import Advertisement from "../components/Advertisement";
 import PopularDestinations from "../components/PopularDestinations";
-import ServiceCard from "../components/ServiceCard";
+// import ServiceCard from "../components/ServiceCard";
 
 function HomePage() { 
   return (
@@ -37,29 +37,30 @@ function HomePage() {
           <div className="mt-8">
             <Services />
           </div>
+
+           {/* Why Bobros */}
+          <div className="mt-6">
+            <WhyBobros />
+          </div>
+          
           <div className="mt-5">
             <PopularDestinations />
           </div>
 
-          {/* Why Bobros */}
-          <div className="mt-6">
-            <WhyBobros />
-          </div>
+         
 
            {/* App Download */}
           <div>
             <AppDownload />
           </div>
 
-           <div>
+           {/* <div>
             <ServiceCard />
-          </div>
+          </div> */}
            {/* Popular Bus Routes */}
           <div className="mt-14">
             <PopularBusRoutes />
           </div>
-
-          
 
           {/* Bus FAQ */}
           <div className="mt-16">

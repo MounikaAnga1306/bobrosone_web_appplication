@@ -441,7 +441,7 @@ const BookingSuccess = () => {
             {/* Promo Code */}
             {!isGuest && (
               <div className="booking-success-card" style={{ background: "#fff", borderRadius: "16px", border: "1px solid #e8e8e8", padding: "20px", marginBottom: "20px" }}>
-                <div style={{ fontSize: "14px", fontWeight: "700", color: "#1a1a2e", marginBottom: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <div style={{ fontSize: "18px", fontWeight: "700", color: "#1a1a2e", marginBottom: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
                   <span>🏷️</span> Have a coupon code?
                 </div>
                 {promoApplied ? (
@@ -471,22 +471,22 @@ const BookingSuccess = () => {
             {!isGuest && (
               <div className="booking-success-card" style={{ background: "linear-gradient(135deg, #fff9f5, #fff2ec)", borderRadius: "16px", border: "1px solid #ffe0d0", padding: "20px", marginBottom: "20px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
-                  <span style={{ fontSize: "22px" }}>⭐</span>
-                  <span style={{ fontSize: "15px", fontWeight: "800", color: "#1a1a2e" }}>Your Reward Points</span>
+                 
+                  <span style={{ fontSize: "18px", fontWeight: "800", color: "#1a1a2e" }}>Your Reward Points</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "12px", flexWrap: "wrap" }}>
-                  <span style={{ fontSize: "13px", color: "#555" }}>Available Balance</span>
+                  <span style={{ fontSize: "15px", color: "#555" }}>Available Balance</span>
                   <span style={{ fontSize: "22px", fontWeight: "800", color: "#fd561e" }}>₹{availableRewardPoint.toFixed(2)}</span>
                 </div>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "8px", borderTop: "1px dashed #ffe0d0" }}>
-                  <span style={{ fontSize: "12.5px", color: "#555" }}>Earn on this booking</span>
+                  <span style={{ fontSize: "15px", color: "#555" }}>Reward for this booking</span>
                   <span style={{ fontSize: "15px", fontWeight: "700", color: "#16a34a" }}>+ ₹{rewardpoint.toFixed(2)}</span>
                 </div>
                 {availableRewardPoint > 0 && (
-                  <div style={{ marginTop: "14px", background: "#fff", borderRadius: "12px", padding: "12px", fontSize: "12px", color: canPayFullWithRewards ? "#16a34a" : "#92400e", fontWeight: "500", textAlign: "center" }}>
+                  <div style={{ marginTop: "14px", background: "#fff", borderRadius: "12px", padding: "12px", fontSize: "16px", color: canPayFullWithRewards ? "#16a34a" : "#92400e", fontWeight: "500", textAlign: "center" }}>
                     {canPayFullWithRewards
                       ? "✅ Your reward balance can cover the full fare!"
-                      : `💡 ₹${availableRewardPoint} will be deducted automatically. You'll pay ₹${remainingAfterRewards} via gateway.`}
+                      : `₹${availableRewardPoint} will be deducted automatically. You'll pay ₹${remainingAfterRewards} via gateway.`}
                   </div>
                 )}
               </div>
@@ -575,11 +575,7 @@ const BookingSuccess = () => {
                   {state?.operator && <div style={{ fontSize: "13px", fontWeight: "600", color: "#333" }}>{state.operator}</div>}
                   {state?.busType && <div style={{ fontSize: "12px", color: "#666", marginTop: "2px" }}>{state.busType}</div>}
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "5px", background: "#fff5f0", padding: "4px 10px", borderRadius: "40px" }}>
-                  <span style={{ fontSize: "14px" }}>⭐</span>
-                  <span style={{ fontWeight: "800", color: "#1a1a2e" }}>4.8</span>
-                  <span style={{ fontSize: "11px", color: "#666" }}>(2.1k ratings)</span>
-                </div>
+               
               </div>
               <div style={{ fontSize: "13px", color: "#555", marginTop: "8px" }}>📅 {state?.date}</div>
               <div style={{ fontSize: "12px", color: "#888", marginTop: "4px" }}>🎫 Booking Ref: <strong>{state?.ticketId}</strong></div>

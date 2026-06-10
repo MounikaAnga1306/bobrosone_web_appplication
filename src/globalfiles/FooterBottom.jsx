@@ -65,9 +65,9 @@ export default function FooterBottom() {
 
       {/* OUR SOCIAL MEDIA HANDLES — logos only (URL text removed) */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-center gap-5 lg:gap-12">
-        <span className="text-sm sm:text-base font-bold text-gray-900 whitespace-nowrap text-center lg:text-left">
-          Our Social Media Handles :
-        </span>
+      <span className="text-sm sm:text-base font-bold text-gray-900 whitespace-nowrap text-center lg:text-left">
+  Our Social Media Handles :
+</span>
 
         <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-6 sm:gap-x-14">
 

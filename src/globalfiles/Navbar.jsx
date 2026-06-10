@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
-import { Menu, X, Briefcase, MapPin, User, ChevronDown } from "lucide-react";
+import { Menu, X, User, ChevronDown } from "lucide-react";
 import { Bus, Plane, Building2, Palmtree, Car } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import AuthModal from "../modules/bus/pages/AuthModal";
@@ -14,92 +14,36 @@ import CancellationCard from "../modules/bus/pages/CancellationCard";
 import PrintTicketModal from "../modules/bus/pages/PrintTicketModal";
 import PrintFlightTicketModal from "../modules/flights/pages/PrintFlightTicketModal";
 
-/* ─────────────────────────────────────────────
-   GiftBox SVG — no background, orange box with
-   white ribbon, lid lifts on animate prop
-───────────────────────────────────────────── */
-const GiftBox = ({ animate }) => {
-  // particles: [x, y, angle, color, size, delay]
-  const particles = [
-    { x: 12, y: 9, angle: -60, color: "#FFD700", r: 1.8, delay: 0 },
-    { x: 12, y: 9, angle: -90, color: "#FD561E", r: 1.4, delay: 0.05 },
-    { x: 12, y: 9, angle: -120, color: "#FFB300", r: 1.6, delay: 0.02 },
-    { x: 12, y: 9, angle: -45, color: "#FF8C00", r: 1.2, delay: 0.08 },
-    { x: 12, y: 9, angle: -135, color: "#FFD700", r: 1.5, delay: 0.04 },
-    { x: 12, y: 9, angle: -75, color: "#FD561E", r: 1.0, delay: 0.06 },
-    { x: 12, y: 9, angle: -105, color: "#FFB300", r: 1.3, delay: 0.03 },
-  ];
-
-  const dist = 7; // how far particles travel
-
-  return (
-    <svg
-      width="22" height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      style={{ display: "block", flexShrink: 0, overflow: "visible" }}
-    >
-      {/* ── PARTICLES — shoot out when animate=true ── */}
-      {particles.map((p, i) => {
-        const rad = (p.angle * Math.PI) / 180;
-        const tx = Math.cos(rad) * dist;
-        const ty = Math.sin(rad) * dist;
-        return (
-          <circle
-            key={i}
-            cx={p.x}
-            cy={p.y}
-            r={p.r}
-            fill={p.color}
-            style={{
-              transform: animate ? `translate(${tx}px, ${ty}px) scale(0)` : "translate(0,0) scale(1)",
-              opacity: animate ? 0 : 1,
-              transition: animate
-                ? `transform 0.55s cubic-bezier(0.2,0.8,0.4,1) ${p.delay}s, opacity 0.4s ease ${0.15 + p.delay}s`
-                : "none",
-              transformOrigin: `${p.x}px ${p.y}px`,
-            }}
-          />
-        );
-      })}
-
-      {/* ── BOX BODY ── */}
-      <rect x="2" y="12" width="20" height="10" rx="1.5" fill="#FD561E" />
-      {/* body ribbon vertical */}
-      <rect x="10.5" y="12" width="3" height="10" fill="#FFB300" />
-      {/* body ribbon horizontal */}
-      <rect x="2" y="15.5" width="20" height="2" fill="#FFB300" />
-
-      {/* ── LID — opens (rotates back) on animate ── */}
-      <g style={{
-        transformOrigin: "12px 12px",
-        transform: animate
-          ? "translateY(-3px) rotateX(60deg)"
-          : "translateY(0px) rotateX(0deg)",
-        transition: "transform 0.4s cubic-bezier(0.34,1.2,0.64,1)",
-      }}>
-        {/* lid body */}
-        <rect x="1" y="8" width="22" height="5" rx="1.5" fill="#E8470A" />
-        {/* lid ribbon horizontal */}
-        <rect x="1" y="9.5" width="22" height="2" fill="#FFB300" />
-        {/* lid ribbon vertical */}
-        <rect x="10.5" y="8" width="3" height="5" fill="#FFB300" />
-        {/* bow left */}
-        <path d="M12 8 C10.5 5.5, 6 5, 6.5 8" fill="#FFB300" />
-        {/* bow right */}
-        <path d="M12 8 C13.5 5.5, 18 5, 17.5 8" fill="#FFB300" />
-        {/* bow knot */}
-        <ellipse cx="12" cy="8" rx="2" ry="1.4" fill="#E8A000" />
-      </g>
-    </svg>
-  );
-};
+const GiftBox = () => (
+  <div style={{
+    width: 34, height: 34,
+    flexShrink: 0,
+    borderRadius: "50%",
+    overflow: "hidden",
+    display: "flex", alignItems: "center", justifyContent: "center",
+    background: "white",
+  }}>
+    <video
+      src="/videos/gift_box.mp4"
+      autoPlay
+      loop
+      muted
+      playsInline
+      disablePictureInPicture
+      style={{
+        width: 42,
+        height: 42,
+        objectFit: "cover",
+        display: "block",
+        pointerEvents: "none",
+      }}
+    />
+  </div>
+);
 
 // ── Session timeout config ──
-const SESSION_IDLE_LIMIT = 30 * 60 * 1000; // 30 nimishalu — idi marchu (e.g. 10*60*1000 = 10 min)
+const SESSION_IDLE_LIMIT = 30 * 60 * 1000;
 
-// login valid ah? expire ayithe clear chesi false istundi
 const hasValidLogin = () => {
   if (localStorage.getItem("isLoggedIn") !== "true") return false;
   const last = Number(localStorage.getItem("lastActivity") || 0);
@@ -135,28 +79,12 @@ const Navbar = () => {
   const [openDropdown, setOpenDropdown] = useState(false);
   const closeTimeout = useRef(null);
 
+  const [showRewardPopup, setShowRewardPopup] = useState(false);
+  const rewardPopupRef = useRef(null);
   const [rewardBalance, setRewardBalance] = useState(null);
 
-  // Gift box auto-animation
-  const [giftOpen, setGiftOpen] = useState(false);
-  const giftTimerRef = useRef(null);
-  const giftIntervalRef = useRef(null);
 
-  useEffect(() => {
-    const run = () => {
-      setGiftOpen(true);
-      giftTimerRef.current = setTimeout(() => setGiftOpen(false), 800);
-    };
-    // first play after 2s, then every 4s
-    giftTimerRef.current = setTimeout(() => {
-      run();
-      giftIntervalRef.current = setInterval(run, 4000);
-    }, 2000);
-    return () => {
-      clearTimeout(giftTimerRef.current);
-      clearInterval(giftIntervalRef.current);
-    };
-  }, []);
+
 
   const fetchRewardBalance = async (userId) => {
     if (!userId) return;
@@ -219,59 +147,52 @@ const Navbar = () => {
       if (mobileDropdownRef.current && !mobileDropdownRef.current.contains(event.target)) {
         setMobileDropdownOpen(false);
       }
+      if (rewardPopupRef.current && !rewardPopupRef.current.contains(event.target)) {
+        setShowRewardPopup(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // activity meeda session refresh + idle ayithe auto logout
-useEffect(() => {
-  const bump = () => {
-    if (localStorage.getItem("isLoggedIn") === "true") {
-      localStorage.setItem("lastActivity", String(Date.now()));
-    }
-  };
-  const events = ["click", "keydown", "scroll", "touchstart"];
-  events.forEach((ev) => window.addEventListener(ev, bump));
+  useEffect(() => {
+    const bump = () => {
+      if (localStorage.getItem("isLoggedIn") === "true") {
+        localStorage.setItem("lastActivity", String(Date.now()));
+      }
+    };
+    const events = ["click", "keydown", "scroll", "touchstart"];
+    events.forEach((ev) => window.addEventListener(ev, bump));
+    const interval = setInterval(() => {
+      if (localStorage.getItem("isLoggedIn") === "true" && !hasValidLogin()) {
+        setIsLoggedIn(false);
+        setUser(null);
+        setRewardBalance(null);
+        window.dispatchEvent(new Event("storage"));
+      }
+    }, 60 * 1000);
+    return () => {
+      events.forEach((ev) => window.removeEventListener(ev, bump));
+      clearInterval(interval);
+    };
+  }, []);
 
-  const interval = setInterval(() => {
-    if (localStorage.getItem("isLoggedIn") === "true" && !hasValidLogin()) {
-      setIsLoggedIn(false);
-      setUser(null);
-      setRewardBalance(null);
-      window.dispatchEvent(new Event("storage"));
-    }
-  }, 60 * 1000); // prati nimishaniki check
-
-  return () => {
-    events.forEach((ev) => window.removeEventListener(ev, bump));
-    clearInterval(interval);
-  };
-}, []);
-
- useEffect(() => {
-  
- const loggedIn = hasValidLogin();
-if (loggedIn) return;
-
-  const alreadyShown = sessionStorage.getItem("popupShown");
-  if (alreadyShown) return;
-
-  sessionStorage.setItem("popupShown", "true");
-
-  setTimeout(() => {
-    setOpenAuthModal(true);
-  }, 1200);
-
-}, []);
+  useEffect(() => {
+    const loggedIn = hasValidLogin();
+    if (loggedIn) return;
+    const alreadyShown = sessionStorage.getItem("popupShown");
+    if (alreadyShown) return;
+    sessionStorage.setItem("popupShown", "true");
+    setTimeout(() => { setOpenAuthModal(true); }, 1200);
+  }, []);
 
   useEffect(() => {
     const checkLogin = () => {
-  const loggedIn = hasValidLogin();
-  const userData = loggedIn ? JSON.parse(localStorage.getItem("user")) : null;
-  setIsLoggedIn(loggedIn);
-  setUser(userData?.user || userData || null);
-};
+      const loggedIn = hasValidLogin();
+      const userData = loggedIn ? JSON.parse(localStorage.getItem("user")) : null;
+      setIsLoggedIn(loggedIn);
+      setUser(userData?.user || userData || null);
+    };
     checkLogin();
     window.addEventListener("storage", checkLogin);
     return () => window.removeEventListener("storage", checkLogin);
@@ -334,12 +255,12 @@ if (loggedIn) return;
   }, [isDynamicPage]);
 
   const tabs = [
-    { id: "bus", label: "Bus", icon: Bus, path: "/HomePage" },
-    { id: "billpayment", label: "Bill Payments", icon: Bus, path: "/BillHomePage" },
-    { id: "flights", label: "Flights", icon: Plane, path: "/flights" },
-    { id: "hotels", label: "Hotels", icon: Building2, path: "/hotels" },
-    { id: "holidays", label: "Holidays", icon: Palmtree, path: "/Holiday" },
-    { id: "cabs", label: "Cabs", icon: Car, path: "/cabs" },
+    { id: "bus",         label: "Bus",          icon: Bus,       path: "/HomePage"     },
+    { id: "billpayment", label: "Bill Payments", icon: Bus,       path: "/BillHomePage" },
+    { id: "flights",     label: "Flights",       icon: Plane,     path: "/flights"      },
+    { id: "hotels",      label: "Hotels",        icon: Building2, path: "/hotels"       },
+    { id: "holidays",    label: "Holidays",      icon: Palmtree,  path: "/Holiday"      },
+    { id: "cabs",        label: "Cabs",          icon: Car,       path: "/cabs"         },
   ];
 
   const getActiveTab = () => {
@@ -354,25 +275,25 @@ if (loggedIn) return;
       (path.startsWith("/my-account") && location.search.includes("source=bill"))
     ) return "billpayment";
     if (
-      path === "/" ||
-      path === "/HomePage" ||
+      path === "/" || path === "/HomePage" ||
       path.startsWith("/results") ||
       path.startsWith("/booking-success") ||
       path.startsWith("/payment-status")
     ) return "bus";
-    if (path.startsWith("/flights")) return "flights";
-    if (path.startsWith("/hotels")) return "hotels";
-    if (path.startsWith("/Holiday")) return "holidays";
-    if (path.startsWith("/cabs")) return "cabs";
+    if (path.startsWith("/flights"))  return "flights";
+    if (path.startsWith("/hotels"))   return "hotels";
+    if (path.startsWith("/Holiday"))  return "holidays";
+    if (path.startsWith("/cabs"))     return "cabs";
     return "";
   };
 
   const activeTab = getActiveTab();
   const userInitial = user?.uname?.charAt(0)?.toUpperCase() || "U";
+  // first name only — space తర్వాత trim
+  const userName = user?.uname?.split(" ")[0] || "Account";
 
   return (
     <>
-      {/* Keyframes for dropdown slide-in */}
       <style>{`
         @keyframes ddFadeIn {
           from { opacity: 0; transform: translateY(-6px) scale(0.97); }
@@ -395,7 +316,7 @@ if (loggedIn) return;
               className={`h-auto transition-all duration-500 ease-in-out hover:scale-105
                 w-[100px] sm:w-[140px] md:w-[180px] lg:w-[220px] xl:w-[250px]
                 -ml-2 sm:-ml-1 md:-ml-0
-                ${isSolid ? 'filter-none' : 'brightness-0 invert'}`}
+                ${isSolid ? "filter-none" : "brightness-0 invert"}`}
             />
           </div>
 
@@ -408,10 +329,7 @@ if (loggedIn) return;
                 return (
                   <button
                     key={tab.id}
-                    onClick={() => {
-                      navigate(tab.path);
-                      window.scrollTo({ top: 0, behavior: "smooth" });
-                    }}
+                    onClick={() => { navigate(tab.path); window.scrollTo({ top: 0, behavior: "smooth" }); }}
                     className={`flex items-center gap-2 px-3 xl:px-4 py-2 rounded-full whitespace-nowrap text-sm font-semibold transition-all duration-300 border cursor-pointer ${
                       active
                         ? "bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white border-transparent shadow-lg"
@@ -426,21 +344,8 @@ if (loggedIn) return;
             </div>
           )}
 
-          {/* RIGHT SIDE */}
+          {/* ── RIGHT SIDE — desktop ── */}
           <div className="hidden lg:flex items-center gap-3 xl:gap-4 flex-shrink-0">
-            <button className={`flex items-center gap-2 px-3 xl:px-4 py-2 rounded-full border transition-all duration-300 cursor-pointer text-sm ${
-              isSolid ? "border-gray-300 text-gray-700 hover:bg-gray-100" : "border-white/40 text-white hover:bg-white/10"
-            }`}>
-              <Briefcase className="w-4 h-4" />
-              Business
-            </button>
-
-            <button className={`flex items-center gap-2 px-3 xl:px-4 py-2 whitespace-nowrap rounded-full border transition-all duration-300 cursor-pointer text-sm ${
-              isSolid ? "border-gray-300 text-gray-700 hover:bg-gray-100" : "border-white/40 text-white hover:bg-white/10"
-            }`}>
-              <MapPin className="w-4 h-4" />
-              For Travel Agent
-            </button>
 
             {/* LOGIN AREA */}
             <div
@@ -459,49 +364,163 @@ if (loggedIn) return;
               }}
             >
               {isLoggedIn ? (
-                /* ── LOGGED IN: reward chip + avatar ── */
+                /* ── LOGGED IN ── */
                 <div className="flex items-center gap-2">
 
-                  {/* REWARD CHIP — orange+gold combo */}
-                  <div style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    padding: "5px 10px",
-                    background: "#FFFAF5",
-                    border: "1.5px solid #FFB300",
-                    borderRadius: 20,
-                  }}>
-                    <GiftBox animate={giftOpen} />
-                    <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                      <span style={{ fontSize: 8, fontWeight: 700, color: "#999", letterSpacing: "0.6px", textTransform: "uppercase", lineHeight: 1 }}>
-                        Reward Points
-                      </span>
-                      <span style={{ display: "flex", alignItems: "baseline", gap: 1, lineHeight: 1 }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: "#FD561E" }}>₹</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: "#FD561E" }}>{rewardBalance ?? "—"}</span>
-                        <span style={{ fontSize: 8, color: "#bbb", fontWeight: 500, marginLeft: 1 }}>pts</span>
+                  {/* REWARD CHIP — clickable, opens popup */}
+                  <div style={{ position: "relative" }} ref={rewardPopupRef}>
+                    <div
+                      onClick={() => setShowRewardPopup(!showRewardPopup)}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 4,
+                        padding: "3px 12px 3px 4px",
+                        background: "white",
+                        border: "1.5px solid #FFB300",
+                        borderRadius: 24,
+                        cursor: "pointer",
+                        transition: "box-shadow 0.2s",
+                        boxShadow: showRewardPopup ? "0 0 0 2px #FFB30033" : "none",
+                      }}
+                    >
+                      <GiftBox />
+                      <span style={{ fontSize: 15, fontWeight: 800, color: "#FD561E", letterSpacing: "-0.2px" }}>
+                        ₹{rewardBalance ?? "—"}
                       </span>
                     </div>
+
+                    {/* REWARD POPUP */}
+                    {showRewardPopup && (
+                      <div
+                        style={{
+                          position: "absolute", top: "calc(100% + 10px)", right: 0,
+                          width: 300,
+                          background: "white",
+                          borderRadius: 20,
+                          boxShadow: "0 12px 40px rgba(0,0,0,0.18)",
+                          border: "1px solid #f0f0f0",
+                          overflow: "hidden",
+                          animation: "ddFadeIn 0.2s ease forwards",
+                          zIndex: 100,
+                        }}
+                      >
+                        {/* Header */}
+                        <div style={{
+                          background: "linear-gradient(135deg, #FD561E 0%, #ff9a00 100%)",
+                          padding: "18px 16px 16px 18px",
+                        }}>
+                          {/* Top row: title + close */}
+                          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                            <span style={{ color: "rgba(255,255,255,0.9)", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.8px" }}>
+                              Reward Balance
+                            </span>
+                            <button
+                              onClick={() => setShowRewardPopup(false)}
+                              style={{
+                                background: "rgba(255,255,255,0.2)",
+                                border: "none", borderRadius: "50%",
+                                width: 26, height: 26,
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                cursor: "pointer", color: "white", fontSize: 13, fontWeight: 700,
+                                flexShrink: 0,
+                              }}
+                            >✕</button>
+                          </div>
+                          {/* Balance row */}
+                          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                            <div style={{
+                              width: 52, height: 52, borderRadius: "50%",
+                              background: "rgba(255,255,255,0.2)",
+                              display: "flex", alignItems: "center", justifyContent: "center",
+                              flexShrink: 0,
+                            }}>
+                              <GiftBox />
+                            </div>
+                            <div>
+                              <p style={{ margin: 0, color: "rgba(255,255,255,0.8)", fontSize: 12, fontWeight: 500 }}>
+                                Your current balance
+                              </p>
+                              <p style={{ margin: "2px 0 0", color: "white", fontSize: 30, fontWeight: 800, lineHeight: 1 }}>
+                                ₹{rewardBalance ?? "0"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Body */}
+                        <div style={{ padding: "14px 16px 16px" }}>
+                          {/* Earn info */}
+                          <div style={{
+                            display: "flex", alignItems: "flex-start", gap: 10,
+                            background: "#FFF8F0",
+                            borderRadius: 12,
+                            padding: "12px 14px",
+                            marginBottom: 10,
+                            border: "1px solid #FFE5C8",
+                          }}>
+                            <span style={{ fontSize: 22, flexShrink: 0 }}>🎯</span>
+                            <div>
+                              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#222" }}>
+                                Earn 4% on Every Booking!
+                              </p>
+                              <p style={{ margin: "4px 0 0", fontSize: 11.5, color: "#777", lineHeight: 1.5 }}>
+                                Book with BOBROS and earn 4% of your fare as reward points automatically.
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Thank you */}
+                          <div style={{
+                            display: "flex", alignItems: "flex-start", gap: 10,
+                            background: "#F0FFF4",
+                            borderRadius: 12,
+                            padding: "12px 14px",
+                            border: "1px solid #C6F6D5",
+                          }}>
+                            <span style={{ fontSize: 22, flexShrink: 0 }}>🙏</span>
+                            <div>
+                              <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "#276749" }}>
+                                Thank you for travelling with us!
+                              </p>
+                              <p style={{ margin: "4px 0 0", fontSize: 11.5, color: "#777", lineHeight: 1.5 }}>
+                                Your loyalty means everything. Keep booking, keep earning!
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  {/* AVATAR — only this toggles dropdown */}
+                  {/* AVATAR + NAME — click toggles dropdown */}
                   <div
                     onClick={() => setOpenDropdown(!openDropdown)}
                     style={{
-                      width: 36, height: 36,
-                      borderRadius: "50%",
-                      background: "#FD561E",
-                      color: "white",
-                      fontSize: 15, fontWeight: 600,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      flexShrink: 0, cursor: "pointer",
-                      transition: "transform 0.15s",
+                      display: "flex", alignItems: "center", gap: 7,
+                      padding: "5px 10px 5px 5px",
+                      borderRadius: 24,
+                      border: "1.5px solid #e5e7eb",
+                      background: "white",
+                      cursor: "pointer",
+                      transition: "border-color 0.2s, box-shadow 0.2s",
                     }}
-                    onMouseEnter={e => e.currentTarget.style.transform = "scale(1.08)"}
-                    onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = "#FD561E"; e.currentTarget.style.boxShadow = "0 0 0 2px #FD561E22"; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = "#e5e7eb"; e.currentTarget.style.boxShadow = "none"; }}
                   >
-                    {userInitial}
+                    {/* circle avatar */}
+                    <div style={{
+                      width: 30, height: 30, borderRadius: "50%",
+                      background: "#FD561E", color: "white",
+                      fontSize: 14, fontWeight: 700,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      flexShrink: 0,
+                    }}>
+                      {userInitial}
+                    </div>
+                    {/* name */}
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#374151", maxWidth: 90, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {userName}
+                    </span>
+                    <ChevronDown style={{ width: 14, height: 14, color: "#9ca3af", transition: "transform 0.2s", transform: openDropdown ? "rotate(180deg)" : "rotate(0deg)" }} />
                   </div>
 
                   {/* LOGGED IN DROPDOWN */}
@@ -510,7 +529,6 @@ if (loggedIn) return;
                       className="absolute right-0 mt-3 w-56 bg-white rounded-xl shadow-lg border border-gray-100 text-gray-700 overflow-hidden z-50"
                       style={{ top: "100%", animation: "ddFadeIn 0.18s ease forwards" }}
                     >
-                      {/* Reward points header */}
                       <div className="px-4 py-3 border-b border-gray-100" style={{ background: "#FFF3EE" }}>
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                           <span style={{ fontSize: 13, color: "#666" }}>Reward Points</span>
@@ -546,7 +564,7 @@ if (loggedIn) return;
                   )}
                 </div>
               ) : (
-                /* ── GUEST: login button + dropdown on hover ── */
+                /* ── GUEST ── */
                 <>
                   <button
                     onClick={() => { setAuthPage("signin"); setOpenAuthModal(true); }}
@@ -558,7 +576,6 @@ if (loggedIn) return;
                     Login/Signup
                   </button>
 
-                  {/* GUEST DROPDOWN */}
                   {openDropdown && (
                     <div
                       className="absolute right-0 top-12 w-64 bg-white rounded-xl shadow-lg border border-gray-100 text-gray-700 overflow-hidden z-50"
@@ -598,7 +615,7 @@ if (loggedIn) return;
             </div>
           </div>
 
-          {/* Mobile right: Bharat Connect + Hamburger */}
+          {/* Mobile right: hamburger */}
           <div className="flex items-center gap-2 lg:hidden">
             {isBillPayment && (
               <img
@@ -618,7 +635,7 @@ if (loggedIn) return;
           </div>
         </div>
 
-        {/* Mobile Menu - Side Drawer */}
+        {/* Mobile Menu */}
         {mobileOpen && (
           <>
             <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setMobileOpen(false)} />
@@ -626,7 +643,6 @@ if (loggedIn) return;
               <div className="pt-16 pb-4">
                 <button onClick={() => setMobileOpen(false)} className="absolute top-3 right-3 p-1.5 rounded-lg hover:bg-gray-100"><X size={18} /></button>
 
-                {/* Tabs in Mobile */}
                 <div className="flex flex-col gap-2 px-4">
                   {tabs.map((tab) => {
                     const Icon = tab.icon;
@@ -648,42 +664,22 @@ if (loggedIn) return;
                   })}
                 </div>
 
-                <div className="border-t border-gray-200 my-3 mx-4"></div>
-
-                <div className="px-4">
-                  <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm mb-2">
-                    <Briefcase className="w-4 h-4" />
-                    Business
-                  </button>
-                  <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 text-sm mb-4">
-                    <MapPin className="w-4 h-4" />
-                    For Travel Agent
-                  </button>
-                </div>
-
-                <div className="border-t border-gray-200 my-3 mx-4"></div>
+                <div className="border-t border-gray-200 my-3 mx-4" />
 
                 {/* Mobile reward chip */}
                 {isLoggedIn && (
                   <div className="px-4 mb-3">
                     <div style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                      padding: "5px 12px",
-                      background: "#FFFAF5",
+                      display: "inline-flex", alignItems: "center", gap: 4,
+                      padding: "3px 12px 3px 4px",
+                      background: "white",
                       border: "1.5px solid #FFB300",
-                      borderRadius: 20,
+                      borderRadius: 24,
                     }}>
-                      <GiftBox animate={giftOpen} />
-                      <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-                        <span style={{ fontSize: 8, fontWeight: 700, color: "#999", letterSpacing: "0.6px", textTransform: "uppercase", lineHeight: 1 }}>Reward Points</span>
-                        <span style={{ display: "flex", alignItems: "baseline", gap: 1, lineHeight: 1 }}>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: "#FD561E" }}>₹</span>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: "#FD561E" }}>{rewardBalance ?? "—"}</span>
-                          <span style={{ fontSize: 8, color: "#bbb", fontWeight: 500, marginLeft: 1 }}>pts</span>
-                        </span>
-                      </div>
+                      <GiftBox />
+                      <span style={{ fontSize: 15, fontWeight: 800, color: "#FD561E", letterSpacing: "-0.2px" }}>
+                        ₹{rewardBalance ?? "—"}
+                      </span>
                     </div>
                   </div>
                 )}
@@ -709,7 +705,7 @@ if (loggedIn) return;
                       )}
                       {isLoggedIn ? (
                         <span style={{ fontSize: 13, fontWeight: 600, color: "#FD561E" }}>
-                          {user?.uname || "My Account"}
+                          {userName}
                         </span>
                       ) : (
                         <span className="text-sm font-medium">Login/Signup</span>
@@ -718,15 +714,12 @@ if (loggedIn) return;
                     <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${mobileDropdownOpen ? "rotate-180" : ""}`} />
                   </button>
 
-                  {/* Mobile Dropdown */}
                   {mobileDropdownOpen && (
                     <div className="mt-2 bg-white rounded-lg border border-gray-200 overflow-hidden">
                       {isLoggedIn && (
                         <div className="px-4 py-2.5 border-b border-gray-200 flex items-center justify-between" style={{ background: "#FFF3EE" }}>
                           <span className="text-sm font-medium text-gray-700">Reward Points</span>
-                          <span style={{ color: "#FD561E", fontWeight: 700, fontSize: 14 }}>
-                            ₹ {rewardBalance ?? "—"}
-                          </span>
+                          <span style={{ color: "#FD561E", fontWeight: 700, fontSize: 14 }}>₹ {rewardBalance ?? "—"}</span>
                         </div>
                       )}
 
@@ -792,14 +785,13 @@ if (loggedIn) return;
 
         {/* Auth Modal */}
         <AuthModal isOpen={openAuthModal} onClose={() => setOpenAuthModal(false)}>
-          {authPage === "signin" && <SignIn closeModal={() => setOpenAuthModal(false)} openSignup={() => setAuthPage("signup")} openForgot={() => setAuthPage("forgot")} />}
-          {authPage === "signup" && <SignupForm closeModal={() => setOpenAuthModal(false)} openSignin={() => setAuthPage("signin")} openVerifyOtp={(data) => { setSignupData(data); setAuthPage("verifyotp"); }} />}
+          {authPage === "signin"    && <SignIn closeModal={() => setOpenAuthModal(false)} openSignup={() => setAuthPage("signup")} openForgot={() => setAuthPage("forgot")} />}
+          {authPage === "signup"    && <SignupForm closeModal={() => setOpenAuthModal(false)} openSignin={() => setAuthPage("signin")} openVerifyOtp={(data) => { setSignupData(data); setAuthPage("verifyotp"); }} />}
           {authPage === "verifyotp" && <VerifyOTP signupData={signupData} closeModal={() => setOpenAuthModal(false)} />}
-          {authPage === "forgot" && <ForgotPassword closeModal={() => setOpenAuthModal(false)} openSignin={() => setAuthPage("signin")} openResetPassword={(data) => { setResetData(data); setAuthPage("reset"); }} />}
-          {authPage === "reset" && <ResetPassword resetData={resetData} closeModal={() => setOpenAuthModal(false)} openSignin={() => setAuthPage("signin")} />}
+          {authPage === "forgot"    && <ForgotPassword closeModal={() => setOpenAuthModal(false)} openSignin={() => setAuthPage("signin")} openResetPassword={(data) => { setResetData(data); setAuthPage("reset"); }} />}
+          {authPage === "reset"     && <ResetPassword resetData={resetData} closeModal={() => setOpenAuthModal(false)} openSignin={() => setAuthPage("signin")} />}
         </AuthModal>
 
-        {/* Guest Bookings Modal */}
         {showGuestBookings && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 w-[90%] sm:w-[420px] mx-4 relative max-h-[90vh] overflow-y-auto">

@@ -1,4 +1,4 @@
-// WhyBobros — accordion left + ANIMATED orbiting brand hub right (no phone)
+// WhyBobros — accordion left + ANIMATED orbiting brand hub right
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -9,9 +9,16 @@ import {
   MonitorSmartphone,
   Headphones,
   ChevronDown,
-  Sparkles,
   MapPin,
+  ShieldCheck,
+  Gift,
+  Percent,
+  Ticket,
+  Route,
 } from "lucide-react";
+
+import bobrosLogo from "/assets/Bobros_logo.png";
+import bobrosWhiteLogo from "/assets/Bobros_whitelogo.png";
 
 const BRAND = "#FD561E";
 
@@ -54,18 +61,17 @@ const features = [
   },
 ];
 
-// Chips that orbit around the hub
 const orbitItems = [
-  { icon: Plane, label: "Flights" },
-  { icon: Hotel, label: "Hotels" },
-  { icon: Palmtree, label: "Holidays" },
-  { icon: Bus, label: "Bus" },
-  { icon: MonitorSmartphone, label: "IT Services" },
+  { icon: Ticket, label: "JOINBOBROS 10%" },
+  { icon: Gift, label: "50 Reward Points" },
+  { icon: Percent, label: "4% Rewards" },
+  { icon: ShieldCheck, label: "Secure Payments" },
+  { icon: Route, label: "10,000+ Routes" },
   { icon: Headphones, label: "24×7 Support" },
 ];
 
-const ORBIT_RADIUS = 150; // px — sits on the outer dashed ring
-const ORBIT_DURATION = 32; // seconds per full revolution
+const ORBIT_RADIUS = 185;
+const ORBIT_DURATION = 32;
 
 export default function WhyBobros() {
   const [openIndex, setOpenIndex] = useState(0);
@@ -76,22 +82,29 @@ export default function WhyBobros() {
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
           <div className="p-8 md:p-10 lg:p-12">
             {/* Heading */}
-            <div className="mb-10 md:mb-12 text-center md:text-left max-w-3xl mx-auto md:mx-0">
+            <div className="mb-3 md:mb-4 text-center md:text-left max-w-3xl mx-auto md:mx-0">
               <motion.h2
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5 }}
-                className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900"
+                className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 flex flex-wrap items-center gap-x-3 gap-y-1"
               >
-                Why choose <span style={{ color: BRAND }}>BOBROS</span>?
+                Why choose{" "}
+                <img
+                  src={bobrosLogo}
+                  alt="Bobros"
+                  className="h-10 md:h-12 lg:h-14 w-auto inline-block"
+                  style={{ verticalAlign: "middle" }}
+                />{" "}
+                ?
               </motion.h2>
               <motion.p
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: 0.1 }}
-                className="mt-4 text-base md:text-lg text-slate-600 leading-relaxed"
+                className="mt-3 text-base md:text-lg text-slate-600 leading-relaxed"
               >
                 Experience the best travel and digital services with our reliable, secure, and affordable platform.
               </motion.p>
@@ -162,7 +175,7 @@ export default function WhyBobros() {
               </div>
 
               {/* RIGHT: Orbiting brand hub */}
-              <div className="relative order-1 lg:order-2 flex items-center justify-center min-h-[380px] md:min-h-[460px]">
+              <div className="relative order-1 lg:order-2 flex items-center justify-center min-h-[420px] md:min-h-[540px]">
                 {/* Pulsing glow */}
                 <motion.div
                   animate={{ opacity: [0.25, 0.45, 0.25], scale: [1, 1.08, 1] }}
@@ -171,17 +184,17 @@ export default function WhyBobros() {
                   style={{ backgroundColor: `${BRAND}40` }}
                 />
 
-                {/* Rotating dashed rings (track) */}
+                {/* Rotating dashed rings */}
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
-                  className="absolute h-[300px] w-[300px] rounded-full border-2 border-dashed"
+                  className="absolute h-[370px] w-[370px] rounded-full border-2 border-dashed"
                   style={{ borderColor: `${BRAND}33` }}
                 />
                 <motion.div
                   animate={{ rotate: -360 }}
                   transition={{ duration: 75, repeat: Infinity, ease: "linear" }}
-                  className="absolute h-[210px] w-[210px] rounded-full border border-dashed"
+                  className="absolute h-[235px] w-[235px] rounded-full border border-dashed"
                   style={{ borderColor: `${BRAND}26` }}
                 />
 
@@ -189,15 +202,20 @@ export default function WhyBobros() {
                 <motion.div
                   animate={{ scale: [1, 1.05, 1] }}
                   transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                  className="relative z-10 flex h-28 w-28 md:h-36 md:w-36 flex-col items-center justify-center rounded-full text-white shadow-2xl"
+                  className="relative z-10 flex h-28 w-28 md:h-32 md:w-32 flex-col items-center justify-center rounded-full text-white shadow-2xl"
                   style={{ background: `linear-gradient(135deg, ${BRAND}, #ff8a5c)` }}
                 >
-                  <Sparkles className="h-5 w-5 md:h-6 md:w-6 mb-1" />
-                  <span className="text-base md:text-xl font-extrabold tracking-tight">BOBROS</span>
-                  <span className="text-[9px] md:text-[10px] opacity-90">Travel + Tech</span>
+                  <img
+                    src={bobrosWhiteLogo}
+                    alt="Bobros"
+                    className="h-10 w-auto md:h-14 object-contain"
+                  />
+                  <span className="mt-1 text-[9px] md:text-[10px] opacity-90 tracking-wide">
+                    Travel + Tech
+                  </span>
                 </motion.div>
 
-                {/* Orbiting service chips */}
+                {/* Orbiting offer chips */}
                 <div className="absolute inset-0 z-20 scale-[0.7] sm:scale-90 md:scale-100">
                   <motion.div
                     className="absolute inset-0"
@@ -215,9 +233,7 @@ export default function WhyBobros() {
                           className="absolute"
                           style={{ left: `calc(50% + ${x}px)`, top: `calc(50% + ${y}px)` }}
                         >
-                          {/* centering wrapper (static) */}
                           <div style={{ transform: "translate(-50%, -50%)" }}>
-                            {/* counter-rotate so the chip stays upright while orbiting */}
                             <motion.div
                               animate={{ rotate: -360 }}
                               transition={{ duration: ORBIT_DURATION, repeat: Infinity, ease: "linear" }}

@@ -437,8 +437,7 @@ const BookingForm = () => {
         </div>
 
         {/* FROSTED GLASS FORM */}
-        <div className="bf-animate-fade-up relative bg-gradient-to-br from-white/95 via-white/90 to-white/84 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl ring-1 ring-white/50 p-3 sm:p-4 md:p-6 lg:p-8 border border-white/60" style={{ animationDelay: '0.08s' }}>
-
+         <div className="bf-animate-fade-up relative bg-gradient-to-br from-white/30 via-white/25 to-white/20 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl ring-1 ring-white/20 p-3 sm:p-4 md:p-6 lg:p-8 border border-white/30">
           {/* TABS */}
           <div className="flex flex-nowrap md:flex-wrap items-center justify-between md:justify-start gap-1.5 sm:gap-2 md:gap-3 mb-6 md:mb-8">
             {tabs.map((tab, i) => {
@@ -467,7 +466,7 @@ const BookingForm = () => {
           {/* ── MOBILE FORM ── */}
           <div className="md:hidden space-y-0">
             {/* FROM - FIX 2: overflow-visible so dropdown not clipped */}
-            <div className="relative border border-gray-200 rounded-xl bg-white/55" style={{ overflow: 'visible' }}>
+            <div className="relative border border-gray-200 rounded-xl bg-white/10" style={{ overflow: 'visible' }}>
               <div ref={fromRef} className="relative px-3 pt-3 pb-2 pr-10">
                 <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-1">Depart From</p>
                 <div className={`flex items-center gap-2 pb-1 ${fromError ? "border-red-400" : "border-gray-200"}`}>

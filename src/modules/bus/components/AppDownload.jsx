@@ -13,13 +13,13 @@ export default function AppDownload() {
         transition={{ duration: 0.6, ease: "easeOut" }}
         className="relative max-w-7xl mx-auto bg-white rounded-2xl sm:rounded-3xl shadow-xl border border-gray-100 overflow-hidden px-5 sm:px-6 md:px-8 lg:px-12 pt-8 sm:pt-10 md:pt-12 pb-0 flex flex-col lg:flex-row items-center lg:items-end justify-between gap-8 lg:gap-6"
       >
-        {/* LEFT — heading */}
+        {/* LEFT — heading (comes after the phone, from the left) */}
         <div className="w-full lg:w-[30%] text-center lg:text-left lg:self-center lg:pb-12 order-1">
           <motion.p
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true, amount: 0.4 }}
-            transition={{ duration: 0.5, delay: 0.15, ease: "easeOut" }}
+            transition={{ duration: 0.5, delay: 0.45, ease: "easeOut" }}
             className="text-[#fd561e] text-sm sm:text-base md:text-lg lg:text-xl mb-2 sm:mb-3 font-semibold tracking-wide"
           >
             Try on Mobile
@@ -29,7 +29,7 @@ export default function AppDownload() {
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true, amount: 0.4 }}
-            transition={{ duration: 0.6, delay: 0.25, ease: "easeOut" }}
+            transition={{ duration: 0.6, delay: 0.55, ease: "easeOut" }}
             className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight"
           >
             Download our app for{" "}
@@ -39,13 +39,13 @@ export default function AppDownload() {
           </motion.h2>
         </div>
 
-        {/* CENTER — realistic phone, rises from bottom & half-cut by the card */}
+        {/* CENTER — realistic phone (rises first). Cut down to ~Search Buses. */}
         <motion.div
           initial={{ opacity: 0, y: 150 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.25 }}
           transition={{ duration: 0.9, ease: easeOutExpo }}
-          className="w-full lg:w-auto flex justify-center self-end -mb-[50px] lg:-mb-[130px] order-2"
+          className="w-full lg:w-auto flex justify-center self-end -mb-[110px] sm:-mb-[140px] lg:-mb-[200px] order-2"
         >
           <motion.div
             animate={{ y: [0, -10, 0] }}
@@ -67,41 +67,43 @@ export default function AppDownload() {
             {/* frame */}
             <div className="relative rounded-[46px] bg-slate-900 p-[9px] shadow-[0_35px_70px_-20px_rgba(15,23,42,0.55)] ring-1 ring-slate-800">
               <div className="relative h-[470px] sm:h-[520px] md:h-[560px] lg:h-[600px] w-full overflow-hidden rounded-[38px] bg-white">
-                {/* dynamic island */}
-                <div className="absolute left-1/2 top-2.5 z-20 h-[26px] w-[92px] -translate-x-1/2 rounded-full bg-slate-900" />
-
-                {/* app screen */}
-                <img
-                  src="/assets/Mobile_View.png"
-                  alt="Bobros app preview"
-                  className="absolute inset-0 h-full w-full object-cover object-top"
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                  }}
-                />
-
-                {/* fallback */}
-                <div className="absolute inset-0 -z-10 flex items-center justify-center bg-slate-50">
-                  <span className="text-2xl font-extrabold" style={{ color: BRAND }}>
-                    bobros
-                  </span>
+                {/* status / island area — app navbar ee strip kింద vastundi (crop avvadu) */}
+                <div className="relative z-20 flex h-9 items-center justify-center bg-white">
+                  <div className="h-[26px] w-[92px] rounded-full bg-slate-900" />
                 </div>
 
-                {/* subtle reflection */}
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/15 via-transparent to-transparent" />
+                {/* app screen — island kింద nుండి start (navbar full kanిపిస్తుంది) */}
+                <div className="relative h-[calc(100%-2.25rem)] w-full overflow-hidden">
+                  <img
+                    src="/assets/Mobile_View.png"
+                    alt="Bobros app preview"
+                    className="absolute inset-0 h-full w-full object-cover object-top"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
+                  {/* fallback */}
+                  <div className="absolute inset-0 -z-10 flex items-center justify-center bg-slate-50">
+                    <span className="text-2xl font-extrabold" style={{ color: BRAND }}>
+                      bobros
+                    </span>
+                  </div>
+                  {/* subtle reflection */}
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/15 via-transparent to-transparent" />
+                </div>
               </div>
             </div>
           </motion.div>
         </motion.div>
 
-        {/* RIGHT — QR + store buttons */}
-        <div className="w-full lg:w-[30%] flex flex-col items-center lg:items-start gap-4 sm:gap-5 lg:self-center lg:pb-12 order-3">
+        {/* RIGHT — scanner + caption (after heading) then buttons */}
+        <div className="w-full lg:w-[30%] flex flex-col items-center lg:items-start gap-3 sm:gap-4 lg:self-center lg:pb-12 order-3">
           {/* QR Code */}
           <motion.div
             initial={{ opacity: 0, scale: 0.85, x: 30 }}
             whileInView={{ opacity: 1, scale: 1, x: 0 }}
             viewport={{ once: true, amount: 0.4 }}
-            transition={{ duration: 0.5, delay: 0.4, ease: "easeOut" }}
+            transition={{ duration: 0.5, delay: 0.7, ease: "easeOut" }}
             whileHover={{ scale: 1.05 }}
             className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 bg-white p-2.5 md:p-3 rounded-2xl shadow-2xl border border-gray-100 flex items-center justify-center flex-shrink-0"
           >
@@ -112,8 +114,19 @@ export default function AppDownload() {
             />
           </motion.div>
 
-          {/* Store buttons */}
-          <div className="flex flex-col gap-2.5 md:gap-3">
+          {/* caption next to scanner */}
+          <motion.p
+            initial={{ opacity: 0, x: 30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true, amount: 0.4 }}
+            transition={{ duration: 0.5, delay: 0.78, ease: "easeOut" }}
+            className="text-xs sm:text-sm font-medium text-slate-500 text-center lg:text-left max-w-[180px]"
+          >
+            Scan to download the BOBROS app
+          </motion.p>
+
+          {/* Store buttons (come last) */}
+          <div className="flex flex-col gap-2.5 md:gap-3 mt-1">
             <motion.a
               href="https://play.google.com/store/apps/details?id=app.bobrosone.android"
               target="_blank"
@@ -121,7 +134,7 @@ export default function AppDownload() {
               initial={{ opacity: 0, x: 30 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true, amount: 0.4 }}
-              transition={{ duration: 0.5, delay: 0.5, ease: "easeOut" }}
+              transition={{ duration: 0.5, delay: 0.92, ease: "easeOut" }}
               whileHover={{ y: -2, scale: 1.04 }}
               className="cursor-pointer"
             >
@@ -139,7 +152,7 @@ export default function AppDownload() {
               initial={{ opacity: 0, x: 30 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true, amount: 0.4 }}
-              transition={{ duration: 0.5, delay: 0.6, ease: "easeOut" }}
+              transition={{ duration: 0.5, delay: 1.05, ease: "easeOut" }}
               whileHover={{ y: -2, scale: 1.04 }}
               className="cursor-pointer"
             >
