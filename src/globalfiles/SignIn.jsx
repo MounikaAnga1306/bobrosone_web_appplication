@@ -262,7 +262,7 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
 
             <div className="mb-4 sm:mb-6 text-center">
               <h2 className="text-xl sm:text-2xl font-bold text-gray-800">
-                Login with <span className="text-[#fd561e]">BOBROS</span>
+                Login to <span className="text-[#fd561e]">BOBROS</span>
               </h2>
               <p className="text-gray-500 text-xs sm:text-sm mt-1">Avail Exclusive Member Benefits</p>
             </div>

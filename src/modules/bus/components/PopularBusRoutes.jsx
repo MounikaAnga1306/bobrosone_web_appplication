@@ -1,9 +1,10 @@
+import { useState } from "react";
 import { Bus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const API = import.meta.env.VITE_API_BASE_URL;
 
-// ✅ Routes data same
+// ✅ Existing routes same — kindha kotha cities (Indore, Ahmedabad, Goa) add chesa (reference image nundi)
 const routes = [
   {
     city: "Delhi",
@@ -41,10 +42,46 @@ const routes = [
     city: "Coimbatore",
     to: ["Chennai", "Ooty", "Bangalore", "Mysore"],
   },
+  // 🆕 View More click chesthe ivi kanipisthayi (4th row)
+  {
+    city: "Indore",
+    to: ["Mumbai", "Pune", "Ahmedabad", "Nagpur"],
+  },
+  {
+    city: "Ahmedabad",
+    to: ["Porbandar", "Jamnagar", "Udaipur", "Rajkot"],
+  },
+  {
+    city: "Goa",
+    to: ["Hyderabad", "Bangalore", "Pune", "Mumbai"],
+  },
 ];
+
+// 🖼️ PLACEHOLDER images (picsum) — temporary photos, reference design laga kanipinchadaniki
+// Nuvvu generate chesina images ni public/images/cities/ lo pettesi
+// paths ni "/images/cities/delhi.jpg" laga replace cheskovachu
+const cityImages = {
+  Delhi: "https://picsum.photos/seed/delhi-indiagate/200/200",
+  Mumbai: "https://picsum.photos/seed/mumbai-gateway/200/200",
+  Chennai: "https://picsum.photos/seed/chennai-temple/200/200",
+  Bangalore: "https://picsum.photos/seed/bangalore-vidhana/200/200",
+  Hyderabad: "https://picsum.photos/seed/hyderabad-charminar/200/200",
+  Pune: "https://picsum.photos/seed/pune-shaniwar/200/200",
+  Kolkata: "https://picsum.photos/seed/kolkata-victoria/200/200",
+  Chandigarh: "https://picsum.photos/seed/chandigarh-rock/200/200",
+  Coimbatore: "https://picsum.photos/seed/coimbatore-adiyogi/200/200",
+  Indore: "https://picsum.photos/seed/indore-rajwada/200/200",
+  Ahmedabad: "https://picsum.photos/seed/ahmedabad-mosque/200/200",
+  Goa: "https://picsum.photos/seed/goa-beach/200/200",
+};
+
+// First 3 rows (lg lo 3 columns × 3 rows = 9 cities)
+const INITIAL_VISIBLE = 9;
 
 export default function PopularBusRoutes() {
   const navigate = useNavigate();
+
+  const [showAll, setShowAll] = useState(false);
 
   // 🔥 Cache (avoid multiple API calls)
   const cityCache = {};
@@ -96,7 +133,7 @@ export default function PopularBusRoutes() {
     return today.toISOString().split("T")[0];
   };
 
-  // 🔥 MODIFIED: Full page refresh navigation
+  // 🔥 Full page refresh navigation
   const handleRouteClick = async (fromCity, toCity) => {
     try {
       // ✅ Fetch both IDs
@@ -111,61 +148,98 @@ export default function PopularBusRoutes() {
       }
 
       const date = getTomorrowDate();
-      
+
       // Build the full URL with parameters
-      const url = `/results?source=${sourceId}&destination=${destinationId}&doj=${date}&fromName=${encodeURIComponent(fromCity)}&toName=${encodeURIComponent(toCity)}`;
-      
-      // ✅ Perform a full page reload (refresh) to the new URL
-      window.location.href = url;
-      
-      // Note: The state (sourceName, destinationName) can be passed via URL params or sessionStorage if needed.
-      // Since window.location.href doesn't support React Router state, you can optionally store names in sessionStorage:
+      const url = `/results?source=${sourceId}&destination=${destinationId}&doj=${date}&fromName=${encodeURIComponent(
+        fromCity
+      )}&toName=${encodeURIComponent(toCity)}`;
+
+      // Store names in sessionStorage (window.location.href doesn't support router state)
       sessionStorage.setItem("sourceName", fromCity);
       sessionStorage.setItem("destinationName", toCity);
-      
-      // Scroll to top is automatic on page reload.
+
+      // ✅ Perform a full page reload (refresh) to the new URL
+      window.location.href = url;
     } catch (err) {
       console.error("Navigation error:", err);
     }
   };
 
-  return (
-    <div className="w-full max-w-[82%] mx-auto -mt-8">
-      <h2 className="text-2xl font-bold text-gray-900 mb-6">
-        Popular Bus Routes
-      </h2>
+  const visibleRoutes = showAll ? routes : routes.slice(0, INITIAL_VISIBLE);
 
-      <div className="bg-white rounded-xl shadow-sm p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-8">
-          {routes.map((route, index) => (
-            <div key={index} className="flex gap-3">
-              {/* Icon */}
-              <Bus className="w-5 h-5 mt-1 text-gray-500" />
+  return (
+    <div className="w-full max-w-[84%] mx-auto -mt-8">
+      <div className="bg-white rounded-xl shadow-sm p-5">
+        {/* ✅ Heading — left side, card lopala, mundhu lagane */}
+        <h2 className="text-2xl font-bold text-gray-900 mb-5">
+          Popular Bus Routes
+        </h2>
+
+        {/* ✅ Routes grid — compact spacing */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-5 gap-x-8">
+          {visibleRoutes.map((route, index) => (
+            <div key={index} className="flex gap-3 items-start">
+              {/* 🖼️ From city famous place image (fallback: bus icon) */}
+              <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
+                {cityImages[route.city] ? (
+                  <img
+                    src={cityImages[route.city]}
+                    alt={`${route.city} buses`}
+                    loading="lazy"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                      e.currentTarget.nextSibling.style.display = "flex";
+                    }}
+                  />
+                ) : null}
+                {/* Fallback — image lekapothe / load avvakapothe */}
+                <div
+                  className="w-full h-full hidden items-center justify-center bg-[#fd561e]/10"
+                  style={{ display: cityImages[route.city] ? "none" : "flex" }}
+                >
+                  <Bus className="w-6 h-6 text-[#fd561e]" />
+                </div>
+              </div>
 
               {/* Text */}
               <div>
                 <h3 className="font-bold text-lg text-gray-900">
-                  {route.city} Buses
+                  {route.city}
                 </h3>
 
-                <p className="text-gray-600 text-sm mt-1">
+                <p className="text-gray-600 text-sm mt-0.5 leading-relaxed">
                   To:{" "}
                   {route.to.map((place, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => handleRouteClick(route.city, place)}
-                      className="text-[#fd561e] hover:underline cursor-pointer"
-                    >
-                      {place}
-                      {i !== route.to.length - 1 && ", "}
-                    </button>
+                    <span key={i}>
+                      <button
+                        type="button"
+                        onClick={() => handleRouteClick(route.city, place)}
+                        className="relative inline-block text-gray-700 cursor-pointer transition-colors duration-200 hover:text-[#fd561e] active:text-[#fd561e] after:content-[''] after:absolute after:-bottom-0.5 after:left-1/2 after:-translate-x-1/2 after:h-[2px] after:w-0 after:rounded-full after:bg-[#fd561e] after:transition-[width] after:duration-300 after:ease-out hover:after:w-[calc(100%+10px)]"
+                      >
+                        {place}
+                      </button>
+                      {i !== route.to.length - 1 && <span>,&nbsp;</span>}
+                    </span>
                   ))}
                 </p>
               </div>
             </div>
           ))}
         </div>
+
+        {/* ✅ View More / View Less */}
+        {routes.length > INITIAL_VISIBLE && (
+          <div className="flex justify-center mt-6">
+            <button
+              type="button"
+              onClick={() => setShowAll((prev) => !prev)}
+              className="bg-[#fd561e] hover:bg-[#e64a14] text-white font-semibold text-sm px-7 py-2 rounded-full transition-colors duration-200"
+            >
+              {showAll ? "View Less" : "View More"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

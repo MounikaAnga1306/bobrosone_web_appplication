@@ -268,7 +268,7 @@ const DesktopSearchBar = ({ state, navigate, isSticky }) => {
           <div>
             <button onClick={handleSearch}
               className="w-[150px] h-12 bg-white text-black font-bold rounded-md shadow cursor-pointer transition-all duration-300 hover:text-[#fd561e]">
-              MODIFY SEARCH
+              Modify Search
             </button>
           </div>
         </div>
@@ -538,7 +538,7 @@ const MobileSearchBar = ({ state, navigate, isSticky }) => {
               onClick={handleSearch}
               className="w-full h-14 bg-[#fd561e] hover:bg-[#f36b32] active:scale-[0.98] text-white font-bold text-base rounded-xl shadow transition-all duration-200 tracking-wide"
             >
-              MODIFY SEARCH
+              Modify Search
             </button>
           </div>
         </div>

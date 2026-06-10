@@ -1,69 +1,57 @@
 // src/modules/bus/components/OurServices.jsx
+import { useRef, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 
 // Images
-import flights from "../../../assets/flights.jpg";
-import bus from "../../../assets/bus.jpg";
-import hotels from "../../../assets/hotels.jpg";
-import holiday from "../../../assets/holiday.jpg";
-import cab from "../../../assets/cab.jpg";
-import bill from "../../../assets/bill.png";
-import service from "../../../../public/assets/Service.jpg";
+import flights from "/assets/Flight_booking.png";
+import bus from "/assets/bus_booking.png";
+import hotels from "/assets/hotel_booking.png";
+import holiday from "/assets/Holiday_booking.png";
+import cab from "/assets/cab_booking.png";
+import bill from "/assets/billpayment_booking.png";
+import service from "/assets/It_Service.png";
 
-/* Card slightly lifts + shadow grows on hover */
+/* ---------- Per-card hover animations ---------- */
+
+/* Card lifts up + shadow grows on hover */
 const cardLift = {
-  rest: {
-    y: 0,
-    boxShadow: "0 8px 22px rgba(15, 23, 42, 0.12)",
-  },
+  rest: { y: 0, boxShadow: "0 10px 25px rgba(15, 23, 42, 0.15)" },
   hover: {
-    y: -6,
-    boxShadow: "0 26px 55px rgba(15, 23, 42, 0.28)",
+    y: -10,
+    boxShadow: "0 30px 60px rgba(15, 23, 42, 0.35)",
     transition: { type: "spring", stiffness: 220, damping: 18 },
   },
 };
 
-/* Background image zoom in / zoom out */
+/* Background image zoom on hover */
 const imageZoom = {
   rest: { scale: 1 },
-  hover: { scale: 1.12, transition: { duration: 0.6, ease: "easeOut" } },
+  hover: { scale: 1.14, transition: { duration: 0.7, ease: "easeOut" } },
 };
 
-/* Extra dark overlay deepens on hover (so revealed text is readable) */
+/* Extra dark overlay deepens on hover (keeps text readable) */
 const overlayShift = {
   rest: { opacity: 0 },
-  hover: { opacity: 1, transition: { duration: 0.3 } },
+  hover: { opacity: 1, transition: { duration: 0.35 } },
 };
 
-/* Description reveals just below the heading on hover (last image effect) */
-const descReveal = {
-  rest: { height: 0, opacity: 0, marginTop: 0 },
-  hover: {
-    height: "auto",
-    opacity: 1,
-    marginTop: 8,
-    transition: { duration: 0.35, ease: "easeOut" },
-  },
-};
-
-/* CTA arrow nudge */
+/* CTA arrow nudge on hover */
 const arrowNudge = {
   rest: { x: 0 },
-  hover: { x: 4 },
+  hover: { x: 5 },
 };
 
-/* Desktop grid entry animation */
-const cardEntry = {
-  hidden: { opacity: 0, y: 24 },
-  show: (i) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.06, duration: 0.45, ease: "easeOut" },
-  }),
-};
-
-function ServiceCard({ image, title, description, contain, route, light }) {
+function ServiceCard({
+  image,
+  title,
+  description,
+  cta,
+  accent,
+  contain,
+  light,
+  route,
+}) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -83,10 +71,10 @@ function ServiceCard({ image, title, description, contain, route, light }) {
       animate="rest"
       variants={cardLift}
       onClick={handleClick}
-      className={`group relative w-[74vw] sm:w-[300px] md:w-full max-w-[360px] h-52 sm:h-56 md:h-60 flex-shrink-0 md:flex-shrink overflow-hidden rounded-[26px] border ${
+      className={`group relative h-[470px] w-[210px] sm:w-[220px] flex-shrink-0 overflow-hidden border ${
         light
-          ? "border-slate-200 bg-gradient-to-br from-[#f5f6f8] to-[#e7e9ec]"
-          : "border-slate-200/40 bg-slate-900"
+          ? "border-slate-200 bg-gradient-to-br from-[#f7f8fa] to-[#e8eaee]"
+          : "border-white/10 bg-slate-900"
       } ${route ? "cursor-pointer" : "cursor-default"}`}
     >
       {/* Background image — zooms in on hover */}
@@ -97,14 +85,15 @@ function ServiceCard({ image, title, description, contain, route, light }) {
         className="absolute inset-0 h-full w-full"
         style={{
           objectFit: contain ? "contain" : "cover",
-          padding: contain ? "30px" : "0",
+          padding: contain ? "34px" : "0",
         }}
       />
 
       {/* Dark gradients ONLY for image cards (not the light Bill Payments card) */}
       {!light && (
         <>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/5" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent" />
           <motion.div
             variants={overlayShift}
             className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/55 to-black/10"
@@ -112,34 +101,32 @@ function ServiceCard({ image, title, description, contain, route, light }) {
         </>
       )}
 
-      {/* Content pinned to bottom — grows upward as description reveals */}
-      <div className="absolute inset-x-0 bottom-0 z-10 p-5 text-left">
+      {/* Title pinned to top */}
+      <div className="absolute inset-x-0 top-0 z-10 p-5">
         <h3
-          className={`text-lg sm:text-xl font-bold leading-tight ${
+          className={`text-2xl font-extrabold leading-tight ${
             light ? "text-slate-900" : "text-white drop-shadow-md"
           }`}
         >
           {title}
         </h3>
+      </div>
 
-        {/* Description — hidden by default, slides open below heading on hover */}
-        <motion.div variants={descReveal} className="overflow-hidden">
-          <p
-            className={`pr-1 text-[13px] leading-snug line-clamp-4 ${
-              light ? "text-slate-600" : "text-white/90"
-            }`}
-          >
-            {description}
-          </p>
-        </motion.div>
-
-        {/* CTA */}
-        <div
-          className={`mt-3 flex items-center gap-1.5 text-sm font-semibold ${
-            light ? "text-[#fd561e]" : "text-white"
+      {/* Description + CTA pinned to bottom */}
+      <div className="absolute inset-x-0 bottom-0 z-10 p-5 text-left">
+        <p
+          className={`mb-4 text-sm font-medium leading-snug line-clamp-3 ${
+            light ? "text-slate-600" : "text-white/90"
           }`}
         >
-          <span>Explore Service</span>
+          {description}
+        </p>
+
+        <span
+          className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-lg"
+          style={{ backgroundColor: accent }}
+        >
+          {cta}
           <motion.svg
             variants={arrowNudge}
             xmlns="http://www.w3.org/2000/svg"
@@ -147,16 +134,45 @@ function ServiceCard({ image, title, description, contain, route, light }) {
             height="16"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#fd561e"
+            stroke="currentColor"
             strokeWidth="2.6"
             strokeLinecap="round"
             strokeLinejoin="round"
           >
             <path d="M9 18l6-6-6-6" />
           </motion.svg>
-        </div>
+        </span>
       </div>
     </motion.div>
+  );
+}
+
+/* Round arrow button for manual scrolling */
+function ArrowButton({ direction, onClick }) {
+  const isLeft = direction === "left";
+  return (
+    <button
+      type="button"
+      aria-label={isLeft ? "Scroll left" : "Scroll right"}
+      onClick={onClick}
+      className={`absolute top-1/2 z-20 -translate-y-1/2 grid h-11 w-11 place-items-center rounded-full bg-white text-slate-700 shadow-[0_8px_24px_rgba(15,23,42,0.18)] ring-1 ring-slate-200 transition hover:bg-[#fd561e] hover:text-white ${
+        isLeft ? "left-1 sm:left-2" : "right-1 sm:right-2"
+      }`}
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="22"
+        height="22"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d={isLeft ? "M15 18l-6-6 6-6" : "M9 18l6-6-6-6"} />
+      </svg>
+    </button>
   );
 }
 
@@ -167,6 +183,8 @@ export default function OurServices() {
       title: "Bus Ticketing",
       description:
         "Convenient and affordable online bus ticket booking through our website and BOBROS mobile App (Get it on Google Play Store).",
+      cta: "Book Bus",
+      accent: "#fd561e",
       route: "/",
     },
     {
@@ -174,6 +192,8 @@ export default function OurServices() {
       title: "Flights",
       description:
         "Quick and hassle-free flight bookings for domestic and international travel. Visit any branch or contact us for bookings.",
+      cta: "Search Flights",
+      accent: "#2563eb",
       route: "/flights",
     },
     {
@@ -181,8 +201,8 @@ export default function OurServices() {
       title: "Bill Payments",
       description:
         "Simplifying your bill payments. Safe, fast, and convenient payments across all services.",
-      contain: true,
-      light: true,
+      cta: "Pay Bills",
+      accent: "#059669",
       route: "/BillHomePage",
     },
     {
@@ -190,6 +210,8 @@ export default function OurServices() {
       title: "Hotels",
       description:
         "Book comfortable stays at top hotels with ease and flexibility. Visit any branch or contact us for bookings.",
+      cta: "Book Stay",
+      accent: "#d97706",
       route: "/hotels",
     },
     {
@@ -197,6 +219,8 @@ export default function OurServices() {
       title: "Holiday Package",
       description:
         "Curated travel packages to explore the best destinations. Visit any branch or contact us for bookings.",
+      cta: "Plan Trip",
+      accent: "#0d9488",
       route: "/Holiday",
     },
     {
@@ -204,15 +228,60 @@ export default function OurServices() {
       title: "Cab Service",
       description:
         "Affordable and convenient cab rentals for personal travel or business commute. Visit any branch or contact us for bookings.",
+      cta: "Book Cab",
+      accent: "#7c3aed",
     },
     {
       image: service,
       title: "IT Services",
       description:
         "Reliable IT services to support your business and enhance your operations. Visit any branch or contact our Business Analyst for more info.",
+      cta: "Learn More",
+      accent: "#4f46e5",
       route: "/ItService",
     },
   ];
+
+  const trackRef = useRef(null);
+  const [paused, setPaused] = useState(false);
+
+  // Continuous auto-scroll (seamless loop). Pauses on hover / touch.
+  useEffect(() => {
+    const el = trackRef.current;
+    if (!el) return;
+
+    let raf;
+    const tick = () => {
+      if (!paused) {
+        el.scrollLeft += 0.6; // scroll speed
+        const half = el.scrollWidth / 2; // width of one full set
+        if (half > 0 && el.scrollLeft >= half) {
+          el.scrollLeft -= half; // jump back seamlessly
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [paused]);
+
+  // Manual scroll by one card via the arrow buttons
+  const nudge = (direction) => {
+    const el = trackRef.current;
+    if (!el) return;
+    const amount = 244; // card width + gap
+    const half = el.scrollWidth / 2;
+
+    // keep the left direction looping seamlessly
+    if (direction === "left" && el.scrollLeft < amount && half > 0) {
+      el.scrollLeft += half;
+    }
+    el.scrollBy({
+      left: direction === "left" ? -amount : amount,
+      behavior: "smooth",
+    });
+  };
 
   return (
     <section className="bg-slate-50 py-16 sm:py-20 px-4 sm:px-6 overflow-hidden">
@@ -235,40 +304,27 @@ export default function OurServices() {
           </p>
         </motion.div>
 
-        {/* Mobile auto scroll */}
-        <div className="mt-8 md:hidden overflow-hidden">
-          <motion.div
-            className="flex w-max gap-4"
-            animate={{ x: ["0%", "-50%"] }}
-            transition={{
-              duration: 22,
-              ease: "linear",
-              repeat: Infinity,
-            }}
-          >
-            {[...services, ...services].map((service, index) => (
-              <div key={index} className="flex-shrink-0">
-                <ServiceCard {...service} />
-              </div>
-            ))}
-          </motion.div>
-        </div>
+        {/* Carousel: auto-scroll + manual arrows on every screen size.
+            Pause handlers live on the WRAPPER so hovering the arrows pauses too,
+            which lets the smooth scroll work instead of being overridden. */}
+        <div
+          className="relative mt-10"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+          onTouchStart={() => setPaused(true)}
+          onTouchEnd={() => setPaused(false)}
+        >
+          <ArrowButton direction="left" onClick={() => nudge("left")} />
+          <ArrowButton direction="right" onClick={() => nudge("right")} />
 
-        {/* Desktop grid */}
-        <div className="mt-10 hidden md:grid grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-8">
-          {services.map((service, index) => (
-            <motion.div
-              key={index}
-              variants={cardEntry}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-              custom={index}
-              className="flex justify-center"
-            >
-              <ServiceCard {...service} />
-            </motion.div>
-          ))}
+          <div
+            ref={trackRef}
+            className="flex gap-6 overflow-x-auto px-2 py-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+          >
+            {[...services, ...services].map((s, index) => (
+              <ServiceCard key={index} {...s} />
+            ))}
+          </div>
         </div>
       </div>
     </section>
