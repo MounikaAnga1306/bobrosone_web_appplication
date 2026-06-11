@@ -140,13 +140,14 @@ const FiltersSidebar = ({ onFilterChange, trips = [], externalFilters = null }) 
     sync(amensRef, new Set(externalFilters.amens     || []), setAmens);
   }, [externalFilters]);
 
+  const isValidPointName = (name) => /[a-zA-Z]/.test(name); 
   // ── Derived data ──────────────────────────────────────────────────────────
   const boardingPoints = useMemo(() => {
     const set = new Set();
     trips.forEach((t) => {
       (Array.isArray(t.boardingTimes) ? t.boardingTimes : [t.boardingTimes]).forEach((p) => {
         const n = p?.bpName || p?.name || p?.pointName;
-        if (n?.trim()) set.add(n.trim());
+        if (n?.trim() && isValidPointName(n.trim())) set.add(n.trim());
       });
     });
     return [...set].sort();
@@ -157,7 +158,7 @@ const FiltersSidebar = ({ onFilterChange, trips = [], externalFilters = null }) 
     trips.forEach((t) => {
       (Array.isArray(t.droppingTimes) ? t.droppingTimes : [t.droppingTimes]).forEach((p) => {
         const n = p?.bpName || p?.name || p?.pointName;
-        if (n?.trim()) set.add(n.trim());
+       if (n?.trim() && isValidPointName(n.trim())) set.add(n.trim());
       });
     });
     return [...set].sort();
