@@ -108,10 +108,10 @@ return (
 
 <form
 onSubmit={handleSubmit}
-className="max-w-6xl mx-auto bg-white p-4 sm:p-6 md:p-8 rounded-2xl shadow-lg border border-gray-100"
+className="max-w-6xl mx-auto bg-white p-3 sm:p-4  rounded-2xl shadow-lg border border-gray-100"
 >
 
-<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 lg:gap-10">
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6  items-start">
 
 <div className="lg:col-span-1">
 
@@ -123,7 +123,7 @@ Passenger Details
 
 <div
 key={seat.name}
-className={`mb-6 sm:mb-8 pb-4 sm:pb-6 ${
+className={`mb-3 sm:mb-4 pb-3 sm:pb-4 ${
 index !== selectedSeats.length - 1
 ? "border-b border-gray-200"
 : ""
@@ -134,7 +134,7 @@ index !== selectedSeats.length - 1
 Name <span className="text-red-500">*</span>
 </label>
 
-<div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-4">
+<div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-2">
 
 <select
 value={passengers[index]?.title}
@@ -165,7 +165,7 @@ required
 Gender <span className="text-red-500">*</span>
 </label>
 
-<div className="flex gap-4 sm:gap-6 mb-4">
+<div className="flex gap-4 sm:gap-6 mb-2">
 
 <label className="flex items-center gap-2 cursor-pointer">
 <input
@@ -207,7 +207,7 @@ placeholder="Enter age"
 value={passengers[index]?.age}
 min="0"
 onChange={(e) => handleChange(index, "age", e.target.value)}
-className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-4 outline-none focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] transition"
+className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-2 outline-none focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] transition"
 required
 />
 
@@ -236,13 +236,12 @@ Seat Fare :
 </div>
 
 {/* CONTACT */}
-<div className="lg:col-span-1">
+<div className="lg:col-span-1 lg:sticky lg:top-4">
+  <h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6 text-gray-800">
+    Contact Details
+  </h2>
 
-<h2 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-6 text-gray-800">
-Contact Details
-</h2>
-
-<div className="space-y-4">
+<div className="space-y-3">
 
 <div>
 <label className="block text-sm font-medium mb-1">
@@ -250,7 +249,7 @@ Address <span className="text-red-500">*</span>
 </label>
 <textarea
 placeholder="Enter your address"
-rows="3"
+rows="2"
 className="w-full border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] transition"
 required
 value={contact.address}
@@ -314,12 +313,12 @@ onChange={(e)=>handleContactChange("email",e.target.value)}
 </div>
 </div>
 
-<div className="mt-6 sm:mt-8 text-center">
-<p className="text-xs sm:text-sm text-gray-600 mb-3 sm:mb-4">
+<div className="mt-3 sm:mt-4 text-center">
+<p className="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3">
 You will receive booking-related SMS updates on the mobile number provided above.
 </p>
 
-<div className="flex items-center justify-center gap-2 mb-4 sm:mb-5 flex-wrap">
+<div className="flex items-center justify-center gap-2 mb-3  flex-wrap">
   <input
     type="checkbox"
     checked={termsAccepted}

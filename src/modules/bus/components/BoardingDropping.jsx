@@ -10,6 +10,7 @@ const minutesToTime = (minutes) => {
 
   return `${hrs12}:${String(mins).padStart(2, "0")} ${period}`;
 };
+const isValidPointName = (name) => /[a-zA-Z]/.test(name);
 
 const BoardingDropping = ({
   tripDetails,
@@ -35,7 +36,9 @@ const BoardingDropping = ({
 
           {/* Scrollable list container */}
           <div className="space-y-2 overflow-y-auto max-h-[300px] md:max-h-[400px] pr-1">
-            {tripDetails?.boardingTimes?.map((bp, i) => (
+           {tripDetails?.boardingTimes
+              ?.filter((bp) => isValidPointName(bp.bpName || "")) 
+              .map((bp, i) => (
               <label
                 key={i}
                 className={`flex items-center justify-between p-2 sm:p-3 border rounded-lg cursor-pointer transition
@@ -93,7 +96,9 @@ const BoardingDropping = ({
 
           {/* Scrollable list container */}
           <div className="space-y-2 overflow-y-auto max-h-[300px] md:max-h-[400px] pr-1">
-            {tripDetails?.droppingTimes?.map((dp, i) => (
+            {tripDetails?.droppingTimes
+              ?.filter((dp) => isValidPointName(dp.bpName || "")) 
+              .map((dp, i) => (
               <label
                 key={i}
                 className={`flex items-center justify-between p-2 sm:p-3 border rounded-lg cursor-pointer transition

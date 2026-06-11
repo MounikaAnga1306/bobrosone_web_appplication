@@ -303,7 +303,6 @@ const BookingForm = () => {
     return date < today;
   };
 
-  // FIX 1: Reusable city dropdown rows — city bold + state below, no crop
   const CityRow = ({ city, onClick, isMobile }) => (
     <div
       onClick={onClick}
@@ -382,7 +381,7 @@ const BookingForm = () => {
         }
       `}</style>
 
-      {/* Background Carousel — overflow-hidden here only, not on section */}
+      {/* Background Carousel */}
       <div className="absolute inset-0 w-full h-full overflow-hidden" style={{ backgroundColor: "#0f172a" }}>
         <div
           className="absolute inset-0 w-full h-full"
@@ -436,8 +435,64 @@ const BookingForm = () => {
           </p>
         </div>
 
-        {/* FROSTED GLASS FORM */}
-         <div className="bf-animate-fade-up relative bg-gradient-to-br from-white/30 via-white/25 to-white/20 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-2xl ring-1 ring-white/20 p-3 sm:p-4 md:p-6 lg:p-8 border border-white/30">
+        {/* ── FROSTED GLASS FORM — ONLY THIS DIV CHANGED ── */}
+        <div
+          className="bf-animate-fade-up relative rounded-2xl sm:rounded-3xl p-3 sm:p-4 md:p-6 lg:p-8"
+          style={{
+            overflow: 'visible',
+            // Reference image laga: heavy frosted glass + glowing white edges
+            background: 'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.10) 45%, rgba(255,255,255,0.18) 100%)',
+            backdropFilter: 'blur(28px) saturate(1.4)',
+            WebkitBackdropFilter: 'blur(28px) saturate(1.4)',
+            border: '1px solid rgba(255,255,255,0.55)',
+            boxShadow: [
+              '0 20px 50px rgba(0,0,0,0.35)',
+              '0 0 30px rgba(255,255,255,0.12)',
+              'inset 0 1.5px 1px rgba(255,255,255,0.8)',
+              'inset 0 -1px 1px rgba(255,255,255,0.3)',
+              'inset 1px 0 1px rgba(255,255,255,0.25)',
+              'inset -1px 0 1px rgba(255,255,255,0.25)',
+            ].join(', '),
+          }}
+        >
+          {/* Subtle glass shine (top-left) */}
+          <div
+            className="absolute inset-0 rounded-2xl sm:rounded-3xl pointer-events-none"
+            style={{
+              background: 'linear-gradient(128deg, rgba(255,255,255,0.40) 0%, rgba(255,255,255,0.12) 30%, rgba(255,255,255,0) 55%, rgba(255,255,255,0.10) 100%)',
+            }}
+          />
+          {/* Top edge glow line (reference lo laga bright) */}
+          <div
+            className="absolute -top-px left-[10%] right-[10%] h-[3px] rounded-full pointer-events-none"
+            style={{
+              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.95), transparent)',
+              filter: 'blur(1px)',
+            }}
+          />
+          {/* Bottom edge soft glow line */}
+          <div
+            className="absolute -bottom-px left-[18%] right-[18%] h-[3px] rounded-full pointer-events-none"
+            style={{
+              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)',
+              filter: 'blur(1.5px)',
+            }}
+          />
+          {/* Corner glow — top-left */}
+          <div
+            className="absolute top-0 left-0 w-44 h-24 pointer-events-none rounded-tl-3xl"
+            style={{
+              background: 'radial-gradient(ellipse at 0% 0%, rgba(255,255,255,0.40), transparent 70%)',
+            }}
+          />
+          {/* Corner glow — bottom-right */}
+          <div
+            className="absolute bottom-0 right-0 w-44 h-24 pointer-events-none rounded-br-3xl"
+            style={{
+              background: 'radial-gradient(ellipse at 100% 100%, rgba(255,255,255,0.30), transparent 70%)',
+            }}
+          />
+
           {/* TABS */}
           <div className="flex flex-nowrap md:flex-wrap items-center justify-between md:justify-start gap-1.5 sm:gap-2 md:gap-3 mb-6 md:mb-8">
             {tabs.map((tab, i) => {
@@ -453,7 +508,7 @@ const BookingForm = () => {
                   className={`bf-animate-fade-in flex-1 md:flex-none flex items-center justify-center gap-0 md:gap-2 py-2 px-2.5 md:px-3 lg:px-4 xl:px-5 md:py-2 xl:py-2.5 cursor-pointer rounded-xl md:rounded-full text-[11px] md:text-sm font-semibold transition-all duration-300 border hover:-translate-y-0.5 active:scale-95 ${
                     active
                       ? "bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white border-transparent shadow-lg md:scale-105"
-                      : "border-gray-200 text-gray-600 hover:border-[#FD561E] hover:text-[#FD561E] bg-white/70"
+                      : "border-white/40 text-gray-700 hover:border-[#FD561E] hover:text-[#FD561E] bg-white/60 backdrop-blur-sm"
                   }`}
                 >
                   <Icon className="w-6 h-6 md:w-4 md:h-4 flex-shrink-0" />
@@ -465,16 +520,16 @@ const BookingForm = () => {
 
           {/* ── MOBILE FORM ── */}
           <div className="md:hidden space-y-0">
-            {/* FROM - FIX 2: overflow-visible so dropdown not clipped */}
-            <div className="relative border border-gray-200 rounded-xl bg-white/10" style={{ overflow: 'visible' }}>
+            {/* FROM */}
+            <div className="relative border border-white/30 rounded-xl bg-white/10" style={{ overflow: 'visible' }}>
               <div ref={fromRef} className="relative px-3 pt-3 pb-2 pr-10">
-                <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-1">Depart From</p>
-                <div className={`flex items-center gap-2 pb-1 ${fromError ? "border-red-400" : "border-gray-200"}`}>
-                  <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${fromError ? "text-red-400" : "text-gray-400"}`} />
+                <p className="text-[10px] text-white/85 drop-shadow uppercase tracking-widest mb-1">Depart From</p>
+                <div className={`flex items-center gap-2 pb-1 ${fromError ? "border-red-400" : "border-gray-300"}`}>
+                  <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${fromError ? "text-red-400" : "text-white/85"}`} />
                   <input
                     type="text"
                     placeholder="From"
-                    className="w-full text-sm font-semibold outline-none bg-transparent py-0.5 text-gray-800 placeholder-gray-500"
+                    className="w-full text-sm font-semibold outline-none bg-transparent py-0.5 text-white placeholder-white/75 drop-shadow"
                     value={fromQuery}
                     onChange={(e) => {
                       const val = e.target.value;
@@ -498,16 +553,16 @@ const BookingForm = () => {
             </div>
 
             {/* TO */}
-            <div className="relative mt-2 border border-gray-200 rounded-xl bg-white/55" style={{ overflow: 'visible' }}>
-              <div className="mx-3 border-t border-dashed border-gray-200" />
+            <div className="relative mt-2 border border-white/30 rounded-xl bg-white/10" style={{ overflow: 'visible' }}>
+              <div className="mx-3 border-t border-dashed border-white/30" />
               <div ref={toRef} className="relative px-3 pt-2 pb-3 pr-10">
-                <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-1">Going To</p>
-                <div className={`flex items-center gap-2 pb-1 ${toError || sameCityError ? "border-red-400" : "border-gray-200"}`}>
-                  <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${toError || sameCityError ? "text-red-400" : "text-gray-400"}`} />
+                <p className="text-[10px] text-white/85 drop-shadow uppercase tracking-widest mb-1">Going To</p>
+                <div className={`flex items-center gap-2 pb-1 ${toError || sameCityError ? "border-red-400" : "border-gray-300"}`}>
+                  <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${toError || sameCityError ? "text-red-400" : "text-white/85"}`} />
                   <input
                     type="text"
                     placeholder="To"
-                    className="w-full text-sm font-semibold outline-none bg-transparent py-0.5 text-gray-800 placeholder-gray-500"
+                    className="w-full text-sm font-semibold outline-none bg-transparent py-0.5 text-white placeholder-white/75 drop-shadow"
                     value={toQuery}
                     onChange={(e) => {
                       const val = e.target.value;
@@ -539,14 +594,13 @@ const BookingForm = () => {
             </div>
 
             {/* DATE - mobile */}
-            <div className="relative mt-3 border border-gray-200 rounded-xl px-3 py-3 bg-white/55" style={{ overflow: 'visible' }}>
-              <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-1">Travel Date</p>
+            <div className="relative mt-3 border border-white/30 rounded-xl px-3 py-3 bg-white/10" style={{ overflow: 'visible' }}>
+              <p className="text-[10px] text-white/85 drop-shadow uppercase tracking-widest mb-1">Travel Date</p>
               <div onClick={() => setShowCalendar(!showCalendar)} className="flex items-center gap-2 cursor-pointer">
-                <Calendar className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                <span className="text-sm font-semibold text-gray-800">{formatDate(selectedDate)}</span>
+                <Calendar className="w-3.5 h-3.5 text-white/85 flex-shrink-0" />
+                <span className="text-sm font-semibold text-white drop-shadow">{formatDate(selectedDate)}</span>
               </div>
               {showCalendar && (
-                // FIX 3: calendar bigger on mobile, overflow visible
                 <div ref={calendarRef} onMouseDown={(e) => e.stopPropagation()} className="bf-animate-pop absolute left-0 right-0 bg-white rounded-2xl shadow-2xl z-50 mt-2 border border-gray-100" style={{ padding: '16px' }}>
                   <div className="flex justify-between items-center mb-4">
                     {(() => { const today = new Date(); const isPrevDisabled = currentDate.getFullYear() === today.getFullYear() && currentDate.getMonth() === today.getMonth(); return (
@@ -575,20 +629,19 @@ const BookingForm = () => {
                 </div>
               )}
             </div>
-            {/* FIX 4: Special Fares removed — space tīseyyadam valla search button up ki vastundi */}
           </div>
 
           {/* ── DESKTOP / TABLET FORM ── */}
           <div className="hidden md:block relative">
             <div className="grid grid-cols-12 md:grid-cols-12 lg:grid-cols-12 gap-2 md:gap-2">
 
-              {/* FROM - FIX 2 desktop: overflow visible on col container */}
+              {/* FROM */}
               <div ref={fromRef} className="col-span-5 md:col-span-4 lg:col-span-4 group relative" style={{ overflow: 'visible' }}>
-                <p className="text-[11px] sm:text-xs text-gray-600 uppercase tracking-wide mb-1 transition-colors duration-300 group-hover:text-[#FD561E]">Depart From</p>
-                <div className={`flex items-center gap-2 pb-1.5 border-b transition-colors duration-300 ${fromError ? "border-red-400" : "border-gray-300 group-hover:border-[#FD561E] focus-within:border-[#FD561E]"}`}>
-                  <MapPin className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors duration-300 flex-shrink-0 ${fromError ? "text-red-400" : "text-gray-400 group-hover:text-[#FD561E]"}`} />
+                <p className="text-[11px] sm:text-xs text-white/85 drop-shadow uppercase tracking-wide mb-1 transition-colors duration-300 group-hover:text-[#FD561E]">Depart From</p>
+                <div className={`flex items-center gap-2 pb-1.5 border-b transition-colors duration-300 ${fromError ? "border-red-400" : "border-white/50 group-hover:border-[#FD561E] focus-within:border-[#FD561E]"}`}>
+                  <MapPin className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors duration-300 flex-shrink-0 ${fromError ? "text-red-400" : "text-white/85 group-hover:text-[#FD561E]"}`} />
                   <input type="text" placeholder="From"
-                    className="w-full text-base sm:text-lg md:text-xl font-bold outline-none bg-transparent py-1 text-gray-800 placeholder-gray-400"
+                    className="w-full text-base sm:text-lg md:text-xl font-bold outline-none bg-transparent py-1 text-white placeholder-white/75 drop-shadow"
                     value={fromQuery}
                     onChange={(e) => { const val = e.target.value; setFromQuery(val); setFromSelected(false); setFromCity(null); setFromError(""); setSameCityError(""); searchCities(val); }} />
                 </div>
@@ -606,18 +659,18 @@ const BookingForm = () => {
 
               {/* SWAP */}
               <div className="flex justify-center items-center md:col-span-[auto] lg:col-span-1 w-auto px-0">
-                <button className="p-1.5 sm:p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-all duration-500 hover:rotate-180 active:scale-90 cursor-pointer" onClick={handleSwap}>
+                <button className="p-1.5 sm:p-2 rounded-full bg-white/70 hover:bg-white transition-all duration-500 hover:rotate-180 active:scale-90 cursor-pointer shadow-sm border border-white/40" onClick={handleSwap}>
                   <ArrowRightLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-600" />
                 </button>
               </div>
 
               {/* TO */}
               <div ref={toRef} className="col-span-5 md:col-span-4 lg:col-span-4 group relative" style={{ overflow: 'visible' }}>
-                <p className="text-[11px] sm:text-xs text-gray-600 uppercase tracking-wide mb-1 transition-colors duration-300 group-hover:text-[#FD561E]">Going To</p>
-                <div className={`flex items-center gap-2 pb-1.5 border-b transition-colors duration-300 ${toError || sameCityError ? "border-red-400" : "border-gray-300 group-hover:border-[#FD561E] focus-within:border-[#FD561E]"}`}>
-                  <MapPin className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors duration-300 flex-shrink-0 ${toError || sameCityError ? "text-red-400" : "text-gray-400 group-hover:text-[#FD561E]"}`} />
+                <p className="text-[11px] sm:text-xs text-white/85 drop-shadow uppercase tracking-wide mb-1 transition-colors duration-300 group-hover:text-[#FD561E]">Going To</p>
+                <div className={`flex items-center gap-2 pb-1.5 border-b transition-colors duration-300 ${toError || sameCityError ? "border-red-400" : "border-white/50 group-hover:border-[#FD561E] focus-within:border-[#FD561E]"}`}>
+                  <MapPin className={`w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors duration-300 flex-shrink-0 ${toError || sameCityError ? "text-red-400" : "text-white/85 group-hover:text-[#FD561E]"}`} />
                   <input type="text" placeholder="To"
-                    className="w-full text-base sm:text-lg md:text-xl font-bold outline-none bg-transparent py-1 text-gray-800 placeholder-gray-400"
+                    className="w-full text-base sm:text-lg md:text-xl font-bold outline-none bg-transparent py-1 text-white placeholder-white/75 drop-shadow"
                     value={toQuery}
                     onChange={(e) => { const val = e.target.value; setToQuery(val); setToSelected(false); setToCity(null); setToError(""); setSameCityError(""); searchToCities(val); }} />
                 </div>
@@ -635,16 +688,15 @@ const BookingForm = () => {
 
               {/* DATE - desktop */}
               <div className="col-span-12 md:col-span-3 lg:col-span-3 relative group" style={{ overflow: 'visible' }}>
-                <p className="text-[11px] sm:text-xs text-gray-600 uppercase tracking-wide mb-1 transition-colors duration-300 group-hover:text-[#FD561E]">Travel Date</p>
+                <p className="text-[11px] sm:text-xs text-white/85 drop-shadow uppercase tracking-wide mb-1 transition-colors duration-300 group-hover:text-[#FD561E]">Travel Date</p>
                 <div onClick={() => setShowCalendar(!showCalendar)}
-                  className="flex items-center gap-2 pb-1.5 border-b border-gray-300 transition-colors duration-300 group-hover:border-[#FD561E] cursor-pointer">
-                  <Calendar className="text-gray-400 w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors duration-300 group-hover:text-[#FD561E] flex-shrink-0" />
+                  className="flex items-center gap-2 pb-1.5 border-b border-white/50 transition-colors duration-300 group-hover:border-[#FD561E] cursor-pointer">
+                  <Calendar className="text-white/85 w-3.5 h-3.5 sm:w-4 sm:h-4 transition-colors duration-300 group-hover:text-[#FD561E] flex-shrink-0" />
                   <input type="text" value={formatDate(selectedDate)} placeholder="Select Date" readOnly
-                    className="w-full text-sm sm:text-base md:text-lg font-semibold outline-none cursor-pointer bg-transparent py-1 text-gray-800 placeholder-gray-500" />
+                    className="w-full text-sm sm:text-base md:text-lg font-semibold outline-none cursor-pointer bg-transparent py-1 text-white placeholder-white/75 drop-shadow" />
                 </div>
                 <div className="h-4 mt-0.5" />
                 {showCalendar && (
-                  // FIX 3 desktop: bigger calendar card
                   <div ref={calendarRef} className="bf-animate-pop absolute top-full right-0 bg-white rounded-2xl shadow-2xl z-50 mt-2 border border-gray-100" style={{ width: '340px', padding: '20px', transformOrigin: 'top right' }}>
                     <div className="flex justify-between items-center mb-4">
                       {(() => { const today = new Date(); const isPrevDisabled = currentDate.getFullYear() === today.getFullYear() && currentDate.getMonth() === today.getMonth(); return (
@@ -674,10 +726,9 @@ const BookingForm = () => {
                 )}
               </div>
             </div>
-            {/* FIX 4: Special Fares removed desktop too */}
           </div>
 
-          {/* SEARCH BUTTON — original position unchanged */}
+          {/* SEARCH BUTTON — position unchanged */}
           <div className="absolute left-1/2 -bottom-5 sm:-bottom-6 md:-bottom-7 transform -translate-x-1/2">
             <button onClick={handleSearch}
               className="bf-search relative overflow-hidden bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white cursor-pointer px-6 sm:px-8 md:px-14 py-1.5 sm:py-2 md:py-3 rounded-full text-xs sm:text-sm md:text-base font-semibold shadow-xl hover:scale-110 active:scale-100 transition-transform duration-300 whitespace-nowrap">
