@@ -56,7 +56,7 @@ export default function AppDownload() {
                     <img
                       src="/assets/Mobile_View.png"
                       alt="Bobros app preview"
-                      className="absolute inset-0 h-full w-full object-cover object-top"
+                      className="absolute inset-0 h-full w-full object-contain object-top"
                       onError={(e) => {
                         e.currentTarget.style.display = "none";
                       }}
