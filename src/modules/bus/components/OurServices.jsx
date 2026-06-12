@@ -77,12 +77,12 @@ function ServiceCard({ image, title, description, cta, accent, contain, light, r
           />
         </>
       )}
-      <div className="absolute inset-x-0 top-0 z-10 p-5">
+      <div className="absolute inset-x-0 top-0 z-10 p-5 text-center">
         <h3 className={`text-2xl font-extrabold leading-tight ${light ? "text-slate-900" : "text-white drop-shadow-md"}`}>
           {title}
         </h3>
       </div>
-      <div className="absolute inset-x-0 bottom-0 z-10 p-5 text-left">
+      <div className="absolute inset-x-0 bottom-0 z-10 p-5 text-center">
         <p className={`mb-4 text-sm font-medium leading-snug line-clamp-3 ${light ? "text-slate-600" : "text-white drop-shadow-sm"}`}>
           {description}
         </p>

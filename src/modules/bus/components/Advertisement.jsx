@@ -37,7 +37,7 @@ export default function Advertisement() {
         <svg
           className="absolute inset-0 w-full h-full"
           viewBox="0 0 1200 260"
-          preserveAspectRatio="xMidYMid slice"
+          preserveAspectRatio="none"
           xmlns="http://www.w3.org/2000/svg"
           aria-hidden="true"
         >

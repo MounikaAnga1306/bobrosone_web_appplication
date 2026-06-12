@@ -169,7 +169,7 @@ const GuestBookings = ({ onClose }) => {
       padding: "0"
     }}>
       <div style={{ textAlign: "center", marginBottom: "24px" }}>
-        <div style={{ fontSize: "40px", marginBottom: "8px" }}>🎟️</div>
+        
         <h2 style={{ fontSize: "20px", fontWeight: "700", color: "#1a1a2e", margin: "0 0 4px" }}>
           {step === "form" ? "Find Your Bookings" : "Enter OTP"}
         </h2>

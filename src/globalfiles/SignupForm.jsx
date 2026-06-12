@@ -7,6 +7,11 @@ import { Turnstile } from "@marsidev/react-turnstile";
 
 const API = "https://api.bobros.co.in";
 
+// ====== IMAGE PATHS ======
+const SIGNUP_IMAGE = "/assets/login_Image.png";
+// PLACEHOLDER: deletion card image — mee image path ikkada replace cheyandi
+const DELETION_IMAGE = "/assets/delete_account_image.png";
+
 const SuccessToast = ({ message, subtitle, onDone }) => {
   useEffect(() => {
     const t = setTimeout(onDone, 2800);
@@ -92,24 +97,29 @@ const SuccessToast = ({ message, subtitle, onDone }) => {
   );
 };
 
-/* ── FULL COVER IMAGE PANEL: panel ki fixed width (52%), img objectFit "cover" —
-      image panel ni MOTHAM cover chestundi, eppudu gap radu. Panel ratio image
-      ratio ki daggara ga unchamu kabatti crop almost zero. */
-const LeftImagePanel = () => (
-  <div className="hidden md:block h-full rounded-l-2xl overflow-hidden flex-shrink-0 md:w-[52%]">
-    <img
-      src="/assets/login_Image.png"
-      alt="Tour & Travel"
-      style={{
-        width: "100%",
-        height: "100%",
-        objectFit: "cover",
-        objectPosition: "center",
-        display: "block",
-      }}
-    />
-  </div>
-);
+// CHANGE: deletion ki kuda signup laage full cover — gaps lekunda panel motham fill avutundi
+const LeftImagePanel = ({ src = SIGNUP_IMAGE, variant = "signup" }) => {
+  const isDeletion = variant === "deletion";
+  return (
+    <div
+      className={`hidden md:block h-full rounded-l-2xl overflow-hidden flex-shrink-0 ${
+        isDeletion ? "md:w-[48%]" : "md:w-[52%]"
+      }`}
+    >
+      <img
+        src={src}
+        alt={isDeletion ? "Account Deletion" : "Tour & Travel"}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover", // panel full fill — gaps undavu
+          objectPosition: isDeletion ? "center center" : "center top",
+          display: "block",
+        }}
+      />
+    </div>
+  );
+};
 
 const OtpBoxes = ({ value, onChange }) => {
   const inputs = useRef([]);
@@ -345,8 +355,8 @@ const AccountDeletionCard = ({ onBack, onClose }) => {
   }
 
   return (
-    <div>
-      <div className="flex items-center gap-2 sm:gap-3 mb-6 sm:mb-8">
+    <div className="flex flex-col justify-center h-full">
+      <div className="flex items-center gap-2 sm:gap-3 mb-5 sm:mb-6">
         <button onClick={onBack} style={{ cursor: "pointer" }}
           className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors">
           <ArrowLeft size={14} />
@@ -393,10 +403,11 @@ const AccountDeletionCard = ({ onBack, onClose }) => {
   );
 };
 
-const InputField = ({ icon: Icon, ...props }) => (
+// FIX 1: className prop support added — password fields pr-8 pass chesthe eye icon cover avvadu
+const InputField = ({ icon: Icon, className = "", ...props }) => (
   <div className="flex items-center border border-gray-300 rounded-xl px-3 sm:px-4 py-2 sm:py-2.5 mb-3 focus-within:border-[#FD561E] focus-within:ring-1 focus-within:ring-[#FD561E] transition-all">
     <Icon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500 mr-2 sm:mr-3 flex-shrink-0" />
-    <input {...props} className="w-full outline-none text-xs sm:text-sm bg-transparent" style={{ cursor: "text" }} />
+    <input {...props} className={`w-full outline-none text-xs sm:text-sm bg-transparent ${className}`} style={{ cursor: "text" }} />
   </div>
 );
 
@@ -425,11 +436,9 @@ const SignUpForm = ({ closeModal, openSignin }) => {
     }
   }, [location.state]);
 
-  // ── VALIDATION: username = letters+spaces only, email = letters+numbers+@+dot only
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name === "user") {
-      // Only letters and spaces
       setFormData({ ...formData, [name]: value.replace(/[^a-zA-Z\s]/g, "") });
     } else {
       setFormData({ ...formData, [name]: value });
@@ -446,7 +455,6 @@ const SignUpForm = ({ closeModal, openSignin }) => {
       return;
     }
 
-    // Email: only letters, numbers, @, dot allowed
     const emailValid = /^[a-zA-Z0-9.]+@[a-zA-Z0-9.]+\.[a-zA-Z]{2,}$/.test(formData.email);
     if (!emailValid) {
       setError("Please enter a valid email. Only letters, numbers, @ and dot are allowed.");
@@ -526,17 +534,24 @@ const SignUpForm = ({ closeModal, openSignin }) => {
       )}
 
       <div className="flex items-center justify-center p-3 sm:p-4 min-h-screen md:min-h-0">
-        {/* Card size taggincham: height min(620px, 90vh), width 880px.
-            Panel ratio (52% of 880 = ~458px at 620px height) image ratio ki
-            daggara ga untundi — cover tho crop negligible, gap zero. */}
+        {/* Deletion: compact card | Signup: full size */}
         <div
-          className="relative bg-white rounded-2xl shadow-2xl flex flex-col md:flex-row items-stretch overflow-hidden w-full max-w-[95%] sm:max-w-[500px] md:max-w-[880px] mx-auto md:h-[min(620px,90vh)]"
+          className={`relative bg-white rounded-2xl shadow-2xl flex flex-col md:flex-row items-stretch overflow-hidden w-full mx-auto ${
+            showDeletion
+              ? "max-w-[95%] sm:max-w-[420px] md:max-w-[620px] md:h-[380px]"
+              : "max-w-[95%] sm:max-w-[500px] md:max-w-[880px] md:h-[min(620px,90vh)]"
+          }`}
           style={{ maxHeight: "90vh" }}
         >
-          <LeftImagePanel />
+          <LeftImagePanel
+            src={showDeletion ? DELETION_IMAGE : SIGNUP_IMAGE}
+            variant={showDeletion ? "deletion" : "signup"}
+          />
 
           <div
-            className="flex-1 p-5 sm:p-6 md:p-7 lg:p-8 overflow-y-auto bg-white md:h-full"
+            className={`flex-1 overflow-y-auto bg-white md:h-full ${
+              showDeletion ? "p-5 sm:p-6 md:p-7" : "p-5 sm:p-6 md:p-7 lg:p-8"
+            }`}
             style={{ maxHeight: "90vh" }}
           >
             <button
@@ -562,7 +577,7 @@ const SignUpForm = ({ closeModal, openSignin }) => {
             ) : (
               <div className="flex flex-col h-full justify-center">
                 <h2 className="text-xl sm:text-2xl font-bold text-center text-gray-800 mb-1">
-                  Sign up 
+                  Sign up
                 </h2>
                 <p className="text-center text-gray-500 text-xs sm:text-sm mb-4 sm:mb-5">
                   Avail Great Discounts and Earn Reward Points
@@ -576,7 +591,6 @@ const SignUpForm = ({ closeModal, openSignin }) => {
 
                 <form onSubmit={handleSignup}>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 sm:gap-x-4">
-                    {/* Username — letters and spaces only */}
                     <InputField
                       icon={User}
                       type="text"
@@ -586,7 +600,6 @@ const SignUpForm = ({ closeModal, openSignin }) => {
                       onChange={handleChange}
                       required
                     />
-                    {/* Email — letters, numbers, @, dot only */}
                     <InputField
                       icon={Mail}
                       type="email"
@@ -616,6 +629,7 @@ const SignUpForm = ({ closeModal, openSignin }) => {
                   />
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 sm:gap-x-4">
+                    {/* FIX 1: className="pr-8" — eye icon cover avvadu */}
                     <div className="relative">
                       <InputField
                         icon={Lock}
@@ -624,6 +638,7 @@ const SignUpForm = ({ closeModal, openSignin }) => {
                         placeholder="Password"
                         value={formData.password}
                         onChange={handleChange}
+                        className="pr-8"
                         required
                       />
                       <button
@@ -639,6 +654,7 @@ const SignUpForm = ({ closeModal, openSignin }) => {
                         )}
                       </button>
                     </div>
+                    {/* FIX 1: className="pr-8" — eye icon cover avvadu */}
                     <div className="relative">
                       <InputField
                         icon={Lock}
@@ -647,6 +663,7 @@ const SignUpForm = ({ closeModal, openSignin }) => {
                         placeholder="Confirm Password"
                         value={formData.confirmPassword}
                         onChange={handleChange}
+                        className="pr-8"
                         required
                       />
                       <button

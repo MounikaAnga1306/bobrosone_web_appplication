@@ -256,16 +256,7 @@ const CancellationCard = ({ onClose }) => {
         </button>
 
         <div className="px-7 pt-7 pb-7">
-          <div className="flex justify-center mb-4">
-            <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, #f43f5e, #fb923c)", boxShadow: "0 8px 20px rgba(244,63,94,0.3)" }}
-            >
-              <svg viewBox="0 0 24 24" className="w-7 h-7 text-white" fill="currentColor">
-                <path d="M20 12c0-1.1.9-2 2-2V6a2 2 0 00-2-2H4a2 2 0 00-2 2v4c1.1 0 2 .9 2 2s-.9 2-2 2v4a2 2 0 002 2h16a2 2 0 002-2v-4c-1.1 0-2-.9-2-2z" />
-              </svg>
-            </div>
-          </div>
+          
 
           <h2 className="text-xl font-bold text-center text-gray-900 mb-1">Cancel Ticket</h2>
           <p className="text-xs text-center text-gray-400 mb-6">

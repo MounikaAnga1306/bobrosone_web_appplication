@@ -1,4 +1,4 @@
-import { React, useState } from "react";
+import { useState } from "react";
 import { getUserDetails } from "../../../utils/authHelper";
 
 const PassengerForm = ({
@@ -22,14 +22,19 @@ const loggedUser = storedUser?.user || null;
 const user = getUserDetails();
 const [showTerms, setShowTerms] = useState(false);
 
+// ── FIX: always build passengers from selectedSeats length.
+// existingPassengers may have FEWER entries than the current seats
+// (e.g. user saved 3, went back and selected 6) — merging per-index
+// guarantees passengers[index] always exists, so gender/age work for ALL seats.
 const [passengers, setPassengers] = useState(
-  existingPassengers ||
-  selectedSeats.map(() => ({
-    title: "",
-    name: "",
-    gender: "",
-    age: ""
-  }))
+  selectedSeats.map((seat, i) =>
+    existingPassengers?.[i] || {
+      title: "Mr",
+      name: "",
+      gender: "",
+      age: ""
+    }
+  )
 );
 
 const [contact, setContact] = useState(
@@ -45,16 +50,18 @@ const [termsAccepted, setTermsAccepted] = useState(false);
 const [error, setError] = useState("");
 
 const handleChange = (index, field, value) => {
+  // ── age: digits only, max 3 chars (manual typing, no spinners) ──
   if (field === "age") {
-    if (value < 0) return;
+    value = value.replace(/\D/g, "").slice(0, 3);
   }
   // ── name: only letters and spaces ──
   if (field === "name") {
     value = value.replace(/[^a-zA-Z\u0C00-\u0C7F\u0900-\u097F\s]/g, "");
   }
-  const updatedPassengers = [...passengers];
-  updatedPassengers[index][field] = value;
-  setPassengers(updatedPassengers);
+  // ── FIX: immutable update — never mutate undefined/shared objects ──
+  setPassengers(prev =>
+    prev.map((p, i) => (i === index ? { ...p, [field]: value } : p))
+  );
 };
 
 const handleContactChange = (field, value) => {
@@ -76,15 +83,11 @@ const handleSubmit = (e) => {
   e.preventDefault();
 
   for (let p of passengers) {
-    if (p.age < 0) {
-      alert("Age cannot be negative");
-      return;
-    }
     if (!p.name || !p.gender || !p.age) {
       alert("⚠️ Please enter complete passenger details.");
       return;
     }
-    if (p.age < 1 || p.age > 120) {
+    if (Number(p.age) < 1 || Number(p.age) > 120) {
       alert("⚠️ Please enter a valid passenger age.");
       return;
     }
@@ -137,21 +140,21 @@ Name <span className="text-red-500">*</span>
 <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-2">
 
 <select
-value={passengers[index]?.title}
+value={passengers[index]?.title || "Mr"}
 onChange={(e) =>
 handleChange(index, "title", e.target.value)
 }
 className="border border-gray-300 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] transition w-full sm:w-auto"
 >
-<option>Mr</option>
-<option>Mrs</option>
-<option>Miss</option>
+<option value="Mr">Mr</option>
+<option value="Mrs">Mrs</option>
+<option value="Miss">Miss</option>
 </select>
 
 <input
 type="text"
 placeholder="Enter Your Name"
-value={passengers[index]?.name}
+value={passengers[index]?.name || ""}
 onChange={(e) =>
 handleChange(index, "name", e.target.value)
 }
@@ -201,11 +204,11 @@ Age <span className="text-red-500">*</span>
 </label>
 
 <input
-type="number"
-max="120"
+type="text"
+inputMode="numeric"
+maxLength={3}
 placeholder="Enter age"
-value={passengers[index]?.age}
-min="0"
+value={passengers[index]?.age || ""}
 onChange={(e) => handleChange(index, "age", e.target.value)}
 className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-2 outline-none focus:ring-2 focus:ring-[#fd561e] focus:border-[#fd561e] transition"
 required
@@ -329,9 +332,9 @@ You will receive booking-related SMS updates on the mobile number provided above
   <span className="text-sm">I accept the</span>
   <span
     onClick={() => setShowTerms(true)}
-    className="text-[#fd561e] underline cursor-pointer text-sm"
+    className="text-[#fd561e] underline cursor-pointer text-sm -ml-1"
   >
-    terms and conditions
+  terms and conditions
   </span>
 </div>
 
@@ -350,7 +353,7 @@ Confirm Booking
 
 {showTerms && (
   <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-    
+
     {/* BACKDROP */}
     <div
       className="absolute inset-0 bg-black/40 backdrop-blur-sm"
