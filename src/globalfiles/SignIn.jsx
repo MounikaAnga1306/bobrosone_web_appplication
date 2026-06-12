@@ -95,9 +95,7 @@ const SuccessToast = ({ message, subtitle, onDone }) => {
 };
 
 // ─────────────────────────────────────────────────────────────
-// FIX: Both signin and gmailverify must use the same base URL
-// Previously API_URL was "https://api.bobros.in" which caused
-// the Google login network error — gmailverify is on .co.in
+// API BASE URL (signin + gmailverify okate base — .co.in)
 // ─────────────────────────────────────────────────────────────
 const API_URL = "https://api.bobros.co.in";
 
@@ -112,24 +110,19 @@ const InputField = ({ icon: Icon, ...props }) => (
 );
 
 // ─────────────────────────────────────────────────────────────
-// LEFT PANEL
+// LEFT PANEL — signup form lo laga same approach
+// (h-full + md:w-[52%] + objectPosition center top)
 // ─────────────────────────────────────────────────────────────
 const LeftImagePanel = () => (
-  <div
-    className="hidden md:flex flex-col items-center justify-center rounded-l-2xl overflow-hidden flex-shrink-0"
-    style={{
-      alignSelf: "stretch",
-      width: "380px",
-      backgroundColor: "#fff8f5"
-    }}
-  >
+  <div className="hidden md:block h-full rounded-l-2xl overflow-hidden flex-shrink-0 md:w-[52%]">
     <img
-      src="/assets/travel_image.png"
+      src="/assets/login_Image.png"
       alt="Tour & Travel"
       style={{
         width: "100%",
         height: "100%",
         objectFit: "cover",
+        objectPosition: "center top",
         display: "block",
       }}
     />
@@ -160,7 +153,7 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
         });
         const email = userInfoRes.data.email;
 
-        // Step 2: Verify with BOBROS backend (fixed URL — was api.bobros.in)
+        // Step 2: Verify with BOBROS backend
         const verify = await axios.get(`${API_URL}/gmailverify`, {
           params: { email },
         });
@@ -248,11 +241,17 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
       )}
 
       <div className="flex items-center justify-center p-3 sm:p-4 min-h-screen md:min-h-0">
-        <div className="relative bg-white rounded-2xl shadow-2xl flex flex-col md:flex-row items-stretch overflow-hidden w-full max-w-[95%] sm:max-w-[500px] md:max-w-[900px] mx-auto" style={{ maxHeight: "90vh", minHeight: "auto" }}>
-
+        {/* Signup laga fixed height container — md:h-[min(620px,90vh)] */}
+        <div
+          className="relative bg-white rounded-2xl shadow-2xl flex flex-col md:flex-row items-stretch overflow-hidden w-full max-w-[95%] sm:max-w-[500px] md:max-w-[880px] mx-auto md:h-[min(620px,90vh)]"
+          style={{ maxHeight: "90vh" }}
+        >
           <LeftImagePanel />
 
-          <div className="flex-1 p-5 sm:p-6 md:p-8 lg:p-10 bg-white flex flex-col justify-center overflow-y-auto" style={{ maxHeight: "90vh" }}>
+          <div
+            className="flex-1 p-5 sm:p-6 md:p-7 lg:p-8 bg-white flex flex-col justify-center overflow-y-auto md:h-full"
+            style={{ maxHeight: "90vh" }}
+          >
             <button
               onClick={closeModal}
               className="absolute top-3 right-3 sm:top-5 sm:right-5 cursor-pointer text-gray-400 hover:text-black z-10 bg-white rounded-full p-1"
@@ -273,7 +272,7 @@ const SignIn = ({ closeModal, openSignup, openForgot }) => {
               </p>
             )}
 
-            <form onSubmit={handleLogin} className="flex-1">
+            <form onSubmit={handleLogin}>
               <InputField
                 icon={Phone}
                 type="tel"

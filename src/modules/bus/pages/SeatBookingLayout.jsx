@@ -4,7 +4,7 @@ import { fetchTripDetails } from "../services/TripDetailsService";
 import { blockTicket } from "../services/blockTicketService";
 import { useNavigate } from "react-router-dom";
 import { getUserDetails } from "../../../utils/authHelper";
-import { Bus, MapPin, Armchair, Users, Phone } from "lucide-react";
+import { Bus, MapPin, Armchair, Users, Phone, Clock, Calendar, Mail, Building2, Home, Smartphone } from "lucide-react";
 
 import SeatBookingHeader from "../components/SeatBookingHeader";
 import SeatSelection from "../components/SeatSelection";
@@ -96,6 +96,8 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
     const hrs12  = hrs24 % 12 || 12;
     return `${hrs12}:${String(mins).padStart(2, "0")} ${period}`;
   };
+
+  const totalFareAmount = selectedSeats.reduce((sum, s) => sum + s.totalFare, 0);
 
   const handleConfirmBooking = async () => {
     if (isBooking) return;
@@ -197,7 +199,7 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
           {icon}
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-gray-900 mb-1.5">{title}</h3>
+          <h3 className="font-semibold text-gray-900 mb-2">{title}</h3>
           <div className="text-gray-700">{children}</div>
         </div>
       </div>
@@ -276,7 +278,7 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
 
           {/* ── STEP 4: Review Booking ── */}
           {step === 4 && savedPassengers && savedContact && (
-            <div className="max-w-5xl mx-auto">
+            <div className="max-w-6xl mx-auto">
 
               {/* Header */}
               <div className="flex items-center gap-3 mb-4">
@@ -289,12 +291,14 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
               <div className="flex flex-col lg:flex-row gap-4 items-start">
 
                 {/* ── LEFT: Review Cards ── */}
-                <div className="flex-1 space-y-2.5">
+                <div className="flex-1 w-full space-y-3">
 
                   {/* Travel Itinerary */}
                   <ReviewCard icon={<Bus size={22} />} title="Travel Itinerary">
-                    <p className="text-sm text-gray-700">{fromCity} → {toCity}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">Date: {date}</p>
+                    <p className="text-base text-gray-800 font-medium">{fromCity} → {toCity}</p>
+                    <p className="text-sm text-gray-500 mt-1 flex items-center gap-1.5">
+                      <Calendar size={14} /> Date: {date}
+                    </p>
                     {tripDetails?.travels && (
                       <p className="text-xs text-gray-400 mt-0.5">{tripDetails.travels} · {tripDetails.busType}</p>
                     )}
@@ -302,65 +306,146 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
 
                   {/* Boarding & Dropping */}
                   <ReviewCard icon={<MapPin size={22} />} title="Boarding & Dropping">
-                    <div className="space-y-0.5 text-sm text-gray-700">
-                      <div className="flex justify-between">
-                        <span><span className="font-medium">Boarding:</span>&nbsp;&nbsp;{boardingPoint?.bpName}</span>
-                        <span className="text-gray-500">{minutesToTime(boardingPoint?.time)}</span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:divide-x md:divide-gray-200">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1">Boarding Point</p>
+                        <p className="text-sm font-medium text-gray-900">{boardingPoint?.bpName}</p>
+                        <p className="text-sm text-gray-500 mt-1 flex items-center gap-1.5">
+                          <Clock size={14} /> {minutesToTime(boardingPoint?.time)}
+                        </p>
                       </div>
-                      <div className="flex justify-between">
-                        <span><span className="font-medium">Dropping:</span>&nbsp;&nbsp;{droppingPoint?.bpName}</span>
-                        <span className="text-gray-500">{minutesToTime(droppingPoint?.time)}</span>
+                      <div className="md:pl-6">
+                        <p className="text-xs text-gray-500 mb-1">Dropping Point</p>
+                        <p className="text-sm font-medium text-gray-900">{droppingPoint?.bpName}</p>
+                        <p className="text-sm text-gray-500 mt-1 flex items-center gap-1.5">
+                          <Clock size={14} /> {minutesToTime(droppingPoint?.time)}
+                        </p>
                       </div>
                     </div>
                   </ReviewCard>
 
                   {/* Seat Details */}
                   <ReviewCard icon={<Armchair size={22} />} title="Seat Details">
-                    <div className="flex flex-wrap gap-x-8 text-sm text-gray-700">
-                      {selectedSeats.map((seat, i) => (
-                        <span key={i}>
-                          Seat:&nbsp;<span className="font-medium">{seat.name}</span>
-                          &nbsp;&nbsp;&nbsp;Fare:&nbsp;<span className="font-medium">&#8377;{seat.totalFare}</span>
-                          &nbsp;&nbsp;&nbsp;Total Seats:&nbsp;<span className="font-medium">{selectedSeats.length}</span>
-                        </span>
-                      ))}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:divide-x md:divide-gray-200">
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">
+                          Selected Seats
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedSeats.map((seat, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-0.5 rounded-md bg-orange-50 border border-orange-200 text-[#fd561e] font-semibold text-xs"
+                            >
+                              {seat.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="md:pl-6">
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                          Total Seats
+                        </p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          {selectedSeats.length}
+                        </p>
+                      </div>
+                      <div className="md:pl-6">
+                        <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+                          Fare (Total)
+                        </p>
+                        <p className="text-2xl font-bold text-gray-900">
+                          &#8377;{totalFareAmount}
+                        </p>
+                      </div>
                     </div>
                   </ReviewCard>
 
-                  {/* Passenger Details */}
-                  <ReviewCard icon={<Users size={22} />} title="Passenger Details">
-                    {savedPassengers.map((p, i) => (
-                      <div key={i} className="flex gap-6 text-sm text-gray-700">
-                        <span>{p.title} {p.name}</span>
-                        <span>{p.gender}</span>
-                        <span>{p.age}</span>
-                        <span>{selectedSeats[i]?.name}</span>
-                      </div>
-                    ))}
+                  {/* Traveller Details */}
+                  <ReviewCard icon={<Users size={22} />} title="Traveller Details">
+                    <div className="overflow-x-auto rounded-xl border border-gray-200">
+                      <table className="w-full min-w-[420px]">
+                        <thead>
+                          <tr className="bg-orange-50">
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800">#</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800">Name</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800">Gender</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800">Age</th>
+                            <th className="px-4 py-3 text-left text-sm font-semibold text-gray-800">Seat</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {savedPassengers.map((p, i) => (
+                            <tr key={i} className="border-t border-gray-100">
+                              <td className="px-4 py-3 text-sm text-gray-500">{i + 1}</td>
+                              <td className="px-4 py-3 text-sm text-gray-800">{p.title} {p.name}</td>
+                              <td className="px-4 py-3 text-sm text-gray-800">{p.gender}</td>
+                              <td className="px-4 py-3 text-sm text-gray-800">{p.age}</td>
+                              <td className="px-4 py-3">
+                                <span className="px-2 py-1 rounded-md bg-orange-50 text-[#fd561e] font-semibold text-sm">
+                                  {selectedSeats[i]?.name}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </ReviewCard>
 
                   {/* Contact Details */}
                   <ReviewCard icon={<Phone size={22} />} title="Contact Details">
-                    <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-sm text-gray-700">
-                      <span>Mobile: {savedContact?.mobile}</span>
-                      <span>Email: {savedContact?.email}</span>
-                      <span>City: {savedContact?.city}</span>
-                      <span>Address: {savedContact?.address}</span>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:divide-x md:divide-gray-200">
+                      <div>
+                        <p className="text-xs text-gray-500 mb-1 flex items-center gap-1.5">
+                          <Smartphone size={13} /> Mobile
+                        </p>
+                        <p className="text-sm font-medium text-gray-900 break-words">{savedContact.mobile}</p>
+                      </div>
+                      <div className="md:pl-6">
+                        <p className="text-xs text-gray-500 mb-1 flex items-center gap-1.5">
+                          <Mail size={13} /> Email
+                        </p>
+                        <p className="text-sm font-medium text-gray-900 break-words">{savedContact.email}</p>
+                      </div>
+                      <div className="md:pl-6">
+                        <p className="text-xs text-gray-500 mb-1 flex items-center gap-1.5">
+                          <Building2 size={13} /> City
+                        </p>
+                        <p className="text-sm font-medium text-gray-900 break-words">{savedContact.city}</p>
+                      </div>
+                      <div className="md:pl-6">
+                        <p className="text-xs text-gray-500 mb-1 flex items-center gap-1.5">
+                          <Home size={13} /> Address
+                        </p>
+                        <p className="text-sm font-medium text-gray-900 break-words">{savedContact.address}</p>
+                      </div>
                     </div>
                   </ReviewCard>
 
                 </div>
 
-                {/* ── RIGHT: Fare Card with bus illustration ── */}
-                <div className="lg:w-60 w-full flex-shrink-0">
+                {/* ── RIGHT: Fare Summary Card with bus illustration ── */}
+                <div className="lg:w-80 w-full flex-shrink-0">
                   <div className="bg-orange-50 border border-orange-100 rounded-2xl overflow-hidden">
 
-                    {/* Fare section */}
-                    <div className="p-5 text-center border-b border-orange-100">
-                      <p className="text-gray-600 font-medium text-sm mb-1">Total Fare</p>
-                      <p className="text-4xl font-bold text-gray-900">
-                        &#8377;{selectedSeats.reduce((sum, s) => sum + s.totalFare, 0)}
-                      </p>
+                    {/* Fare Summary section */}
+                    <div className="p-5 border-b border-orange-100">
+                      <h3 className="font-bold text-lg text-gray-900 mb-4">
+                        Fare Summary
+                      </h3>
+
+                      <div className="space-y-2 text-sm text-gray-700">
+                        <div className="flex justify-between">
+                          <span>Base Fare</span>
+                          <span className="font-medium text-gray-900">&#8377;{totalFareAmount}</span>
+                        </div>
+
+                        <div className="border-t border-orange-200 pt-3 flex justify-between font-bold text-lg">
+                          <span className="text-gray-900">Total Fare</span>
+                          <span className="text-[#fd561e]">&#8377;{totalFareAmount}</span>
+                        </div>
+                      </div>
                     </div>
 
                     {/* Buttons */}
@@ -371,10 +456,10 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
                         className={`w-full py-2.5 rounded-xl border font-semibold text-sm bg-white transition ${
                           isBooking
                             ? "border-gray-200 text-gray-300 cursor-not-allowed"
-                            : "border-gray-300 text-gray-700 hover:bg-gray-50 cursor-pointer"
+                            : "border-[#fd561e] text-[#fd561e] hover:bg-orange-50 cursor-pointer"
                         }`}
                       >
-                        Edit
+                        Edit Booking
                       </button>
 
                       <button
@@ -390,51 +475,206 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
                       </button>
                     </div>
 
-                    {/* Bus + city illustration */}
-                    <div className="px-2 pb-2">
-                      <svg viewBox="0 0 220 130" xmlns="http://www.w3.org/2000/svg" className="w-full">
-                        {/* City skyline — light orange tones */}
-                        <rect x="0"   y="75" width="12" height="35" rx="1" fill="#fbd0b0" />
-                        <rect x="14"  y="60" width="16" height="50" rx="1" fill="#fbd0b0" />
-                        <rect x="16"  y="50" width="12" height="12" rx="1" fill="#f9bfa0" />
-                        <rect x="32"  y="68" width="12" height="42" rx="1" fill="#fbd0b0" />
-                        <rect x="46"  y="55" width="18" height="55" rx="1" fill="#fbd0b0" />
-                        <rect x="49"  y="44" width="12" height="13" rx="1" fill="#f9bfa0" />
-                        <rect x="66"  y="70" width="14" height="40" rx="1" fill="#fbd0b0" />
-                        <rect x="82"  y="50" width="20" height="60" rx="1" fill="#fbd0b0" />
-                        <rect x="85"  y="38" width="14" height="14" rx="1" fill="#f9bfa0" />
-                        <rect x="104" y="63" width="16" height="47" rx="1" fill="#fbd0b0" />
-                        <rect x="122" y="72" width="12" height="38" rx="1" fill="#fbd0b0" />
-                        <rect x="136" y="56" width="18" height="54" rx="1" fill="#fbd0b0" />
-                        <rect x="139" y="45" width="12" height="13" rx="1" fill="#f9bfa0" />
-                        <rect x="156" y="65" width="14" height="45" rx="1" fill="#fbd0b0" />
-                        <rect x="172" y="74" width="12" height="36" rx="1" fill="#fbd0b0" />
-                        <rect x="186" y="60" width="16" height="50" rx="1" fill="#fbd0b0" />
-                        <rect x="204" y="70" width="16" height="40" rx="1" fill="#fbd0b0" />
+                    {/* Bus + city illustration — level stance, all wheels grounded */}
+                    <div className="px-3 pb-3 pt-4">
+                      <svg viewBox="0 0 420 250" className="w-full h-auto">
+                        <defs>
+                          <linearGradient id="busGlassDark" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#5d4842" />
+                            <stop offset="100%" stopColor="#43332e" />
+                          </linearGradient>
+                        </defs>
 
-                        {/* Road */}
-                        <rect x="0" y="108" width="220" height="22" fill="#f3e8e0" />
-                        <rect x="0" y="108" width="220" height="2"  fill="#e8d0c0" />
+                        {/* ── Background skyline ── */}
+                        <g fill="#fae3d2">
+                          <rect x="14"  y="78"  width="26" height="130" rx="2" />
+                          <rect x="46"  y="48"  width="36" height="160" rx="2" />
+                          <rect x="54"  y="36"  width="14" height="13"  rx="2" />
+                          <rect x="88"  y="92"  width="24" height="116" rx="2" />
+                          <rect x="118" y="60"  width="42" height="148" rx="2" />
+                          <rect x="166" y="86"  width="28" height="122" rx="2" />
+                          <rect x="200" y="42"  width="40" height="166" rx="2" />
+                          <rect x="208" y="30"  width="16" height="13"  rx="2" />
+                          <rect x="246" y="76"  width="30" height="132" rx="2" />
+                          <rect x="282" y="56"  width="40" height="152" rx="2" />
+                          <rect x="328" y="90"  width="26" height="118" rx="2" />
+                          <rect x="360" y="66"  width="36" height="142" rx="2" />
+                        </g>
+                        {/* Clouds */}
+                        <g fill="#f6cfae" opacity="0.7">
+                          <ellipse cx="70"  cy="34" rx="16" ry="7" />
+                          <ellipse cx="330" cy="28" rx="18" ry="7" />
+                        </g>
 
-                        {/* Bus body */}
-                        <rect x="18" y="76" width="148" height="34" rx="7" fill="#fd7c50" opacity="0.85" />
-                        {/* Bus front face */}
-                        <rect x="158" y="80" width="10" height="26" rx="3" fill="#fd6030" opacity="0.85" />
-                        {/* Windows */}
-                        <rect x="28"  y="81" width="20" height="13" rx="2" fill="white" opacity="0.75" />
-                        <rect x="54"  y="81" width="20" height="13" rx="2" fill="white" opacity="0.75" />
-                        <rect x="80"  y="81" width="20" height="13" rx="2" fill="white" opacity="0.75" />
-                        <rect x="106" y="81" width="20" height="13" rx="2" fill="white" opacity="0.75" />
-                        <rect x="132" y="81" width="16" height="13" rx="2" fill="white" opacity="0.75" />
-                        {/* Destination strip */}
-                        <rect x="28" y="97" width="62" height="8"  rx="2" fill="#e24c16" opacity="0.7" />
-                        {/* Wheels */}
-                        <circle cx="52"  cy="112" r="9" fill="#c0604a" />
-                        <circle cx="52"  cy="112" r="4" fill="#e8a090" />
-                        <circle cx="130" cy="112" r="9" fill="#c0604a" />
-                        <circle cx="130" cy="112" r="4" fill="#e8a090" />
-                        {/* Headlight */}
-                        <rect x="162" y="85" width="7" height="5" rx="1.5" fill="#fef3c7" opacity="0.9" />
+                        {/* ── Trees ── */}
+                        <g>
+                          <rect x="20"  y="190" width="5" height="24" rx="2" fill="#e6ab88" />
+                          <circle cx="22.5" cy="182" r="14" fill="#f8c9a7" />
+                          <rect x="50"  y="200" width="4" height="14" rx="2" fill="#e6ab88" />
+                          <circle cx="52" cy="195" r="9" fill="#fad6ba" />
+                          <rect x="392" y="188" width="5" height="26" rx="2" fill="#e6ab88" />
+                          <circle cx="394.5" cy="179" r="16" fill="#f8c9a7" />
+                          <rect x="366" y="200" width="4" height="14" rx="2" fill="#e6ab88" />
+                          <circle cx="368" cy="194" r="9" fill="#fad6ba" />
+                        </g>
+
+                        {/* ── Ground shadow (wheels sit on this line) ── */}
+                        <ellipse cx="232" cy="216" rx="170" ry="10" fill="#e9d2c2" opacity="0.8" />
+
+                        {/* ══ BUS — level stance, front facing right ══ */}
+                        <g>
+
+                          {/* Front-right wheel (behind the front face, peeks below bumper) */}
+                          <g>
+                            <circle cx="342" cy="193" r="19" fill="#2f2622" />
+<circle cx="342" cy="193" r="11" fill="#51413a" />
+<circle cx="342" cy="193" r="6" fill="#d8b49a" />
+                          </g>
+
+                          {/* ── SIDE (recedes slightly to the left) ── */}
+                          <path
+                            d="M295 96
+                               L120 112
+                               Q86 110 86 122
+                               L86 180
+                               Q86 191 100 191
+                               L295 196
+                               Z"
+                            fill="#fd561e"
+                          />
+
+                          {/* Side roof edge highlight */}
+                          <path d="M295 96 L100 108 Q90 110 88 118 L88 124 Q92 114 102 113 L295 102 Z"
+                                fill="#ffffff" opacity="0.35" />
+
+                          {/* Side window band */}
+                          <path
+                            d="M290 104
+                               L125 118
+                               Q96 116 96 124
+                               L96 146
+                               L290 150
+                               Z"
+                            fill="url(#busGlassDark)"
+                          />
+                          {/* Window pillars */}
+                          <g stroke="#fd6c38" strokeWidth="3">
+                            <line x1="140" y1="113" x2="140" y2="147" />
+                            <line x1="180" y1="111" x2="180" y2="148" />
+                            <line x1="220" y1="109" x2="220" y2="149" />
+                            <line x1="258" y1="107" x2="258" y2="149" />
+                          </g>
+
+                          7
+
+                          {/* Side skirt */}
+                          <path d="M86 174 L86 180 Q86 191 100 191 L295 196 L295 186 L102 182 Q90 181 86 174 Z"
+                                fill="#d63e0a" />
+
+                          {/* ── Side wheels (grounded at y≈210) — dual rear axle ── */}
+                          {/* Rear Wheel */}
+{/* Rear Outer Wheel */}
+
+<g>
+  <circle cx="128" cy="194" r="18" fill="#2f2622" />
+  <circle cx="122" cy="194" r="11" fill="#51413a" />
+  <circle cx="122" cy="194" r="6" fill="#d8b49a" />
+</g>
+
+{/* Rear Inner Wheel */}
+<g>
+  <circle cx="155" cy="194" r="18" fill="#2f2622" />
+  <circle cx="165" cy="194" r="11" fill="#51413a" />
+  <circle cx="165" cy="194" r="6" fill="#d8b49a" />
+</g>
+<path
+  d="
+    M135 156
+    Q170 156 185 180
+    L185 195
+    L135 195
+    Z
+  "
+  fill="#fd561e"
+/>
+
+{/* Middle Wheel */}
+<g>
+  <path
+    d="M236 182
+       a24 24 0 0 1 48 0"
+    stroke="#c93c0a"
+    strokeWidth="8"
+    fill="none"
+  />
+
+  <circle cx="260" cy="194" r="20" fill="#2f2622" />
+  <circle cx="260" cy="194" r="12" fill="#51413a" />
+  <circle cx="260" cy="194" r="7" fill="#d8b49a" />
+</g>
+
+{/* Front Wheel */}
+<g>
+  <circle cx="342" cy="193" r="19" fill="#2f2622" />
+  <circle cx="342" cy="193" r="11" fill="#51413a" />
+  <circle cx="342" cy="193" r="6" fill="#d8b49a" />
+</g>
+
+                          {/* ── FRONT FACE (right) ── */}
+                          <path
+                            d="M295 96
+                               L352 99
+                               Q378 100 379 122
+                               L380 180
+                               Q380 195 364 196
+                               L312 197
+                               Q295 197 295 182
+                               Z"
+                            fill="#fd561e"
+                          />
+
+                          {/* Front roof highlight */}
+                          <path d="M295 96 L352 99 Q374 100 378 116 L378 121 Q372 106 352 105 L295 102 Z"
+                                fill="#ffffff" opacity="0.4" />
+
+                          {/* Mirrors (subtle, at windshield corners) */}
+                          <g fill="#e8480f">
+                            <rect x="290" y="98"  width="6" height="13" rx="3" />
+                            <rect x="376" y="101" width="6" height="13" rx="3" />
+                          </g>
+
+                          {/* Windshield — dark tinted */}
+                          <path
+                            d="M301 106
+                               L366 109
+                               Q373 110 373 118
+                               L374 160
+                               L301 156
+                               Q298 156 298 151
+                               L298 111
+                               Q298 106 301 106
+                               Z"
+                            fill="url(#busGlassDark)"
+                          />
+                          {/* Diagonal shine */}
+                          <path d="M312 107 L334 108 L306 155 L300 152 L300 128 Z" fill="#ffffff" opacity="0.14" />
+                          {/* Wiper */}
+                          <path d="M308 152 L334 132" stroke="#2f2421" strokeWidth="2" opacity="0.5" fill="none" />
+
+                          {/* Headlights */}
+                          <path d="M300 176 L318 177 L318 185 L300 184 Z" fill="#fff6e0" />
+                          <path d="M356 178 L374 177 L374 185 L356 186 Z" fill="#fff6e0" />
+
+                          {/* Number plate */}
+                          <rect x="327" y="182" width="20" height="8" rx="2" fill="#ffe9d6" />
+
+                          {/* Grille line */}
+                          <path d="M300 170 L376 171" stroke="#e8480f" strokeWidth="3" opacity="0.8" />
+
+                          {/* Front bumper */}
+                          <path d="M295 186 L380 184 Q380 195 364 196 L312 197 Q295 197 295 186 Z" fill="#d63e0a" />
+
+                        </g>
                       </svg>
                     </div>
 
@@ -479,7 +719,7 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
               </div>
             ) : (
               <>
-                <div className="text-3xl text-center mb-3">🎟️</div>
+
                 <h3 className="text-lg font-bold text-gray-900 text-center mb-2">Confirm Booking?</h3>
                 <p className="text-sm text-gray-500 text-center mb-6 leading-relaxed">
                   Are you sure you want to confirm now and proceed for Payment?
