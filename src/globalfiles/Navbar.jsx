@@ -177,14 +177,32 @@ const Navbar = () => {
     };
   }, []);
 
-  useEffect(() => {
-    const loggedIn = hasValidLogin();
-    if (loggedIn) return;
-    const alreadyShown = sessionStorage.getItem("popupShown");
-    if (alreadyShown) return;
-    sessionStorage.setItem("popupShown", "true");
-    setTimeout(() => { setOpenAuthModal(true); }, 1200);
-  }, []);
+  // ఈ useEffect Tab open అయినప్పుడు ఒక్కసారే రన్ అవుతుంది
+useEffect(() => {
+  if (!sessionStorage.getItem("tabInitialPath")) {
+    sessionStorage.setItem("tabInitialPath", location.pathname);
+  }
+}, []); // empty dependency array
+useEffect(() => {
+  const loggedIn = hasValidLogin();
+  if (loggedIn) return;
+
+  // Popup only on home page
+  const isHomePage = location.pathname === "/" || location.pathname === "/HomePage";
+  if (!isHomePage) return;
+
+  // ఈ tab లో మొదట open అయిన పేజీ home కాకపోతే popup వద్దు
+  const initialPath = sessionStorage.getItem("tabInitialPath");
+  if (initialPath !== "/" && initialPath !== "/HomePage") return;
+
+  // ఇప్పటికే ఈ tab లో popup చూపించామా?
+  const alreadyShown = sessionStorage.getItem("popupShownInTab");
+  if (alreadyShown) return;
+
+  // First time home page as initial page in this tab → show popup
+  sessionStorage.setItem("popupShownInTab", "true");
+  setTimeout(() => { setOpenAuthModal(true); }, 1200);
+}, [location.pathname]);
 
   useEffect(() => {
     const checkLogin = () => {
