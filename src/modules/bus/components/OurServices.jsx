@@ -50,7 +50,7 @@ function ServiceCard({ image, title, description, cta, accent, contain, light, r
       variants={cardLift}
       onClick={handleClick}
       style={{ width: CARD_WIDTH, minWidth: CARD_WIDTH, flexShrink: 0 }}
-      className={`group relative h-[400px] overflow-hidden rounded-xl border ${
+      className={`group relative h-[400px] overflow-hidden rounded-4xl border ${
         light
           ? "border-slate-200 bg-gradient-to-br from-[#f7f8fa] to-[#e8eaee]"
           : "border-white/10 bg-slate-900"
@@ -220,7 +220,7 @@ export default function OurServices() {
           transition={{ duration: 0.6 }}
           className="mx-auto mb-4 max-w-3xl text-center"
         >
-          <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-orange-100 px-4 py-1.5 text-sm font-semibold text-[#fd561e]">
+          <p className="mb-3 inline-flex items-center gap-2 rounded-full bg-orange-100 px-4 py-1.5 text-[20px] font-semibold text-[#fd561e]">
             Our Services
           </p>
           <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-slate-900">

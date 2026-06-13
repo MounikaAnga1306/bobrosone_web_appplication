@@ -350,11 +350,11 @@ const BookingForm = () => {
             {/* FROM */}
             <div className="relative border border-white/30 rounded-xl bg-white/20" style={{ overflow:'visible' }}>
               <div ref={fromRef} className="relative px-3 pt-3 pb-2 pr-10">
-                <p className="text-[10px] text-white/80 font-semibold uppercase tracking-widest mb-1 drop-shadow-sm">Depart From</p>
+                <p className="text-[10px] text-black font-semibold uppercase tracking-widest mb-1 drop-shadow-sm">Depart From</p>
                 <div className={`flex items-center gap-2 pb-1 border-b ${fromError ? "border-red-400" : "border-white/40"}`}>
-                  <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${fromError ? "text-red-400" : "text-white/80"}`} />
+                  <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${fromError ? "text-red-400" : "text-black"}`} />
                   <input type="text" placeholder="From"
-                    className="w-full text-sm font-bold outline-none bg-transparent py-0.5 text-white placeholder-white/70 drop-shadow-sm"
+                    className="w-full text-sm font-bold outline-none bg-transparent py-0.5 text-black placeholder-black drop-shadow-sm"
                     value={fromQuery}
                     onChange={(e) => { const v=e.target.value; setFromQuery(v); setFromSelected(false); setFromCity(null); setFromError(""); setSameCityError(""); searchCities(v); }} />
                 </div>
@@ -374,11 +374,11 @@ const BookingForm = () => {
             <div className="relative mt-2 border border-white/30 rounded-xl bg-white/20" style={{ overflow:'visible' }}>
               <div className="mx-3 border-t border-dashed border-gray-300/50" />
               <div ref={toRef} className="relative px-3 pt-2 pb-3 pr-10">
-                <p className="text-[10px] text-white/80 font-semibold uppercase tracking-widest mb-1 drop-shadow-sm">Going To</p>
+                <p className="text-[10px] text-black font-semibold uppercase tracking-widest mb-1 drop-shadow-sm">Going To</p>
                 <div className={`flex items-center gap-2 pb-1 border-b ${toError||sameCityError ? "border-red-400" : "border-white/40"}`}>
-                  <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${toError||sameCityError ? "text-red-400" : "text-white/80"}`} />
+                  <MapPin className={`w-3.5 h-3.5 flex-shrink-0 ${toError||sameCityError ? "text-red-400" : "text-black"}`} />
                   <input type="text" placeholder="To"
-                    className="w-full text-sm font-bold outline-none bg-transparent py-0.5 text-white placeholder-white/70 drop-shadow-sm"
+                    className="w-full text-sm font-bold outline-none bg-transparent py-0.5 text-black placeholder-white/70 drop-shadow-sm"
                     value={toQuery}
                     onChange={(e) => { const v=e.target.value; setToQuery(v); setToSelected(false); setToCity(null); setToError(""); setSameCityError(""); searchToCities(v); }} />
                 </div>
@@ -402,9 +402,9 @@ const BookingForm = () => {
 
             {/* DATE mobile */}
             <div className="relative mt-3 border border-white/30 rounded-xl px-3 py-3 bg-white/20" style={{ overflow:'visible' }}>
-              <p className="text-[10px] text-white/80 font-semibold uppercase tracking-widest mb-1 drop-shadow-sm">Travel Date</p>
+              <p className="text-[10px] text-black font-semibold uppercase tracking-widest mb-1 drop-shadow-sm">Travel Date</p>
               <div onClick={() => setShowCalendar(!showCalendar)} className="flex items-center gap-2 cursor-pointer">
-                <Calendar className="w-3.5 h-3.5 text-white/80 flex-shrink-0" />
+                <Calendar className="w-3.5 h-3.5 text-black flex-shrink-0" />
                 <span className="text-sm font-bold text-white drop-shadow-sm">{formatDate(selectedDate)}</span>
               </div>
               {showCalendar && (
@@ -445,11 +445,11 @@ const BookingForm = () => {
 
               {/* FROM */}
               <div ref={fromRef} className="col-span-4 group relative" style={{ overflow:'visible' }}>
-                <p className="text-xs text-white/80 font-semibold uppercase tracking-wide mb-1 transition-colors duration-300 group-hover:text-[#FD561E] drop-shadow-sm">Depart From</p>
+                <p className="text-xs text-black font-semibold uppercase tracking-wide mb-1 transition-colors duration-300 group-hover:text-[#FD561E] drop-shadow-sm">Depart From</p>
                 <div className={`flex items-center gap-2 pb-1.5 border-b transition-colors duration-300 ${fromError?"border-red-400":"border-white/40 group-hover:border-[#FD561E] focus-within:border-[#FD561E]"}`}>
-                  <MapPin className={`w-4 h-4 transition-colors duration-300 flex-shrink-0 ${fromError?"text-red-400":"text-white/80 group-hover:text-[#FD561E]"}`} />
+                  <MapPin className={`w-4 h-4 transition-colors duration-300 flex-shrink-0 ${fromError?"text-red-400":"text-black group-hover:text-[#FD561E]"}`} />
                   <input type="text" placeholder="From"
-                    className="w-full text-xl font-bold outline-none bg-transparent py-1 text-white placeholder-white/70 drop-shadow-sm"
+                    className="w-full text-xl font-bold outline-none bg-transparent py-1 text-black placeholder-black drop-shadow-sm"
                     value={fromQuery}
                     onChange={(e) => { const v=e.target.value; setFromQuery(v); setFromSelected(false); setFromCity(null); setFromError(""); setSameCityError(""); searchCities(v); }} />
                 </div>
@@ -474,11 +474,11 @@ const BookingForm = () => {
 
               {/* TO */}
               <div ref={toRef} className="col-span-4 group relative" style={{ overflow:'visible' }}>
-                <p className="text-xs text-white/80 font-semibold uppercase tracking-wide mb-1 transition-colors duration-300 group-hover:text-[#FD561E] drop-shadow-sm">Going To</p>
+                <p className="text-xs text-black font-semibold uppercase tracking-wide mb-1 transition-colors duration-300 group-hover:text-[#FD561E] drop-shadow-sm">Going To</p>
                 <div className={`flex items-center gap-2 pb-1.5 border-b transition-colors duration-300 ${toError||sameCityError?"border-red-400":"border-white/40 group-hover:border-[#FD561E] focus-within:border-[#FD561E]"}`}>
-                  <MapPin className={`w-4 h-4 transition-colors duration-300 flex-shrink-0 ${toError||sameCityError?"text-red-400":"text-white/80 group-hover:text-[#FD561E]"}`} />
+                  <MapPin className={`w-4 h-4 transition-colors duration-300 flex-shrink-0 ${toError||sameCityError?"text-red-400":"text-black group-hover:text-[#FD561E]"}`} />
                   <input type="text" placeholder="To"
-                    className="w-full text-xl font-bold outline-none bg-transparent py-1 text-white placeholder-white/70 drop-shadow-sm"
+                    className="w-full text-xl font-bold outline-none bg-transparent py-1 text-black placeholder-black drop-shadow-sm"
                     value={toQuery}
                     onChange={(e) => { const v=e.target.value; setToQuery(v); setToSelected(false); setToCity(null); setToError(""); setSameCityError(""); searchToCities(v); }} />
                 </div>
@@ -495,12 +495,12 @@ const BookingForm = () => {
 
               {/* DATE */}
               <div className="col-span-3 group relative" style={{ overflow:'visible' }}>
-                <p className="text-xs text-white/80 font-semibold uppercase tracking-wide mb-1 transition-colors duration-300 group-hover:text-[#FD561E] drop-shadow-sm">Travel Date</p>
+                <p className="text-xs text-black font-semibold uppercase tracking-wide mb-1 transition-colors duration-300 group-hover:text-[#FD561E] drop-shadow-sm">Travel Date</p>
                 <div onClick={() => setShowCalendar(!showCalendar)}
                   className="flex items-center gap-2 pb-1.5 border-b border-white/40 transition-colors duration-300 group-hover:border-[#FD561E] cursor-pointer">
-                  <Calendar className="text-white/80 w-4 h-4 transition-colors duration-300 group-hover:text-[#FD561E] flex-shrink-0" />
+                  <Calendar className="text-black w-4 h-4 transition-colors duration-300 group-hover:text-[#FD561E] flex-shrink-0" />
                   <input type="text" value={formatDate(selectedDate)} placeholder="Select Date" readOnly
-                    className="w-full text-lg font-bold outline-none cursor-pointer bg-transparent py-1 text-white placeholder-white/70 drop-shadow-sm" />
+                    className="w-full text-lg font-bold outline-none cursor-pointer bg-transparent py-1 text-black placeholder-white/70 drop-shadow-sm" />
                 </div>
                 <div className="h-4 mt-0.5" />
                 {showCalendar && (

@@ -86,7 +86,7 @@ const SeatSelection = ({
       key={seat.id}
       onClick={() => toggleSeat(seat)}
       onMouseEnter={(e) =>
-        setTooltip({ seatId: seat.id, fare: seat.totalFare, x: e.clientX, y: e.clientY })
+        setTooltip({ seatId: seat.id, fare: seat.baseFare, x: e.clientX, y: e.clientY })
       }
       onMouseMove={(e) =>
         setTooltip((prev) => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)

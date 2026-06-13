@@ -12,7 +12,7 @@ const SelectedSeatSummary = ({ selectedSeats, onProceed }) => {
     const count = selectedSeats.length;
 
     const price = selectedSeats.reduce(
-      (sum, seat) => sum + Number(seat.totalFare || 0),
+      (sum, seat) => sum + Number(seat.baseFare || 0),
       0
     );
 
@@ -97,7 +97,7 @@ const SelectedSeatSummary = ({ selectedSeats, onProceed }) => {
               </button>
             </div>
 
-            <p className="text-sm text-gray-500 mb-2">Taxes included</p>
+            <p className="text-sm text-gray-500 mb-2">Taxes Excluded</p>
 
             {/* Seat List */}
             <div className="space-y-2">
@@ -112,7 +112,7 @@ const SelectedSeatSummary = ({ selectedSeats, onProceed }) => {
                     Seat {seat.name || seat.seatName}
                   </span>
                   <span className="font-medium text-gray-800">
-                    ₹{seat.totalFare}
+                    ₹{seat.baseFare}
                   </span>
                 </div>
               ))}

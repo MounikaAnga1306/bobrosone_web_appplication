@@ -15,7 +15,7 @@ const BusResultCard = ({
   seatsLeft,
   onSelectSeat,
   cancellationPolicyParsed,
-  primo = false,            // ← parent nుండి pass cheyali: primo={bus.primo === true || bus.primo === "true"}
+  primo = false,   // pass cheyali: primo={bus.primo === true || bus.primo === "true"}
 }) => {
   const [showPolicyModal, setShowPolicyModal] = useState(false);
   const [policyData, setPolicyData] = useState(cancellationPolicyParsed || null);
@@ -237,10 +237,7 @@ const BusResultCard = ({
 
             <div className="w-[100px] shrink-0 text-right -mb-6">
               <p className="text-xl font-extrabold -mt-5 text-gray-900">₹{price?.toLocaleString("en-IN")}</p>
-              <div className="-mt-1 mr-0.5">
-              <p className="text-[10px] text-gray-500 mt-0.5 italic  ">(Incl. GST)</p>
-              <p className="text-[12px] text-gray-600 -mt-1.5">Onwards</p>
-              </div>
+              
             </div>
           </div>
 
@@ -303,8 +300,7 @@ const BusResultCard = ({
             {/* Price — own column (like desktop), clean spacing */}
             <div className="w-[74px] shrink-0 text-right">
               <p className="text-base font-extrabold text-gray-900 leading-tight">₹{price?.toLocaleString("en-IN")}</p>
-              <p className="text-[9px] text-gray-500 italic leading-tight">(Incl. GST)</p>
-              <p className="text-[11px] text-gray-600 leading-tight">Onwards</p>
+              
             </div>
           </div>
 
@@ -347,8 +343,6 @@ const BusResultCard = ({
             <div className="text-right shrink-0">
               <p className="text-[15px] ml-1 font-extrabold text-gray-900">₹{price?.toLocaleString("en-IN")}</p>
               <div className="-mt-1 -mr-1">
-              <p className="text-[10px] text-gray-500 mt-0.5 italic ">(Incl. GST)</p>
-              <p className="text-[12px] text-gray-600 -mt-1.5">Onwards</p>
               </div>
             </div>
           </div>

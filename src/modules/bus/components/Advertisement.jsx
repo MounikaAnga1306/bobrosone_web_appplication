@@ -36,8 +36,8 @@ export default function Advertisement() {
         {/* ── Scene: soft sky, sun, skyline, green hills, road, bushes (banner image laga) ── */}
         <svg
           className="absolute inset-0 w-full h-full"
-          viewBox="0 0 1200 260"
-          preserveAspectRatio="none"
+          viewBox="0 0 1200 300"
+          preserveAspectRatio="xMidYMid slice"
           xmlns="http://www.w3.org/2000/svg"
           aria-hidden="true"
         >
@@ -207,11 +207,11 @@ export default function Advertisement() {
               New User Offer
             </p>
 
-            <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-extrabold leading-tight mt-2 text-slate-900">
+            <h3 className="text-base sm:text-lg md:text-xl lg:text-2xl font-extrabold leading-tight mt-1 text-slate-900">
               Get <span className="text-[#FD561E]">10% OFF</span> on your first bus booking!
             </h3>
 
-            <p className="text-[11px] sm:text-xs md:text-sm mt-1.5 text-slate-700 flex flex-wrap items-center justify-center md:justify-start gap-1.5">
+            <p className="text-[11px] sm:text-xs md:text-sm mt-1.7 text-slate-700 flex flex-wrap items-center justify-center md:justify-start gap-1.5">
               Use promocode
               <span className="font-bold text-[#FD561E] bg-white border border-dashed border-[#FD561E] px-2.5 py-0.5 rounded-md inline-block text-[10px] sm:text-xs tracking-wider shadow-sm">
                 JOINBOBROS
@@ -220,16 +220,7 @@ export default function Advertisement() {
             </p>
           </div>
 
-          <button
-            onClick={handleBookNow}
-            className="ad-btn relative overflow-hidden mt-1 md:mt-6 bg-[#FD561E] cursor-pointer text-white font-bold px-6 sm:px-7 md:px-8 py-2.5 md:py-3 rounded-xl text-xs sm:text-sm md:text-base shadow-lg shadow-[#FD561E]/30 hover:scale-105 transition-all duration-300 whitespace-nowrap flex-shrink-0 flex items-center gap-1.5"
-          >
-            <span className="relative z-10 flex items-center gap-1.5">
-              Book Now
-              <ArrowRight className="w-4 h-4" />
-            </span>
-            <span className="ad-shine-sweep" aria-hidden="true" />
-          </button>
+          
         </div>
       </div>
     </div>

@@ -31,7 +31,7 @@ export const formatTripDetails = (data) => {
   const rawSeats = normalizeArray(data?.seats);
   const seatsWithId = rawSeats.map((seat, index) => ({
     ...seat,
-    id: seat.id || seat.name || `seat-${index}`,  // name unique కాబట్టి use చెయ్యి
+    id: seat.id || seat.name || `seat-${index}`,  
     available: seat.available === true || seat.available === "true",
     ladiesSeat: seat.ladiesSeat === true || seat.ladiesSeat === "true",
     zIndex: Number(seat.zIndex ?? 0),
@@ -39,6 +39,7 @@ export const formatTripDetails = (data) => {
     column: Number(seat.column ?? 0),
     length: Number(seat.length ?? 1),
     width: Number(seat.width ?? 1),
+    baseFare: Number(seat.baseFare ?? 0), 
     totalFare: Number(seat.totalFare ?? seat.fare ?? 0),
   }));
 
