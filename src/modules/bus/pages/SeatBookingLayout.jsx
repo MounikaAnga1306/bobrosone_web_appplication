@@ -1,5 +1,5 @@
 // src/modules/bus/pages/SeatBookingLayout.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { fetchTripDetails } from "../services/TripDetailsService";
 import { blockTicket } from "../services/blockTicketService";
 import { useNavigate } from "react-router-dom";
@@ -27,6 +27,8 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
   const [showBookConfirm, setShowBookConfirm] = useState(false);
   const [showErrorPopup, setShowErrorPopup]   = useState(false);
   const [errorMessage, setErrorMessage]       = useState("");
+
+  const scrollContainerRef = useRef(null);
 
   const showWarning = (msg) => setWarning(msg);
 
@@ -68,6 +70,14 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
     loadTripDetails();
   }, [tripId]);
 
+  // Scroll to top of the content area whenever the step changes
+  // (fixes Review Booking step opening in the middle instead of the top)
+  useEffect(() => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({ top: 0, behavior: "auto" });
+    }
+  }, [step]);
+
   useEffect(() => {
     if (!isBooking) return;
     window.history.pushState(null, "", window.location.href);
@@ -96,6 +106,11 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
     const hrs12  = hrs24 % 12 || 12;
     return `${hrs12}:${String(mins).padStart(2, "0")} ${period}`;
   };
+
+  const totalBaseAmount = selectedSeats.reduce((sum, s) => sum + Number(s.baseFare || 0), 0);
+const totalGstAmount  = selectedSeats.reduce(
+  (sum, s) => sum + (Number(s.totalFare || 0) - Number(s.baseFare || 0)), 0
+);
 
   const totalFareAmount = selectedSeats.reduce((sum, s) => sum + s.totalFare, 0);
 
@@ -155,6 +170,8 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
         state: {
           ticketId:             response.blockedTicketId,
           totalFare,
+          baseFareTotal: totalBaseAmount,   
+          gstTotal:      totalGstAmount, 
           seats:                selectedSeats,
           passengers:           inventoryItems.map(i => i.passenger[0]),
           contact:              savedContact,
@@ -229,7 +246,7 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
           operator={operator || tripDetails?.travels}
         />
 
-        <div className="flex-1 overflow-y-auto p-2 sm:p-4 lg:p-6 pb-24">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-2 sm:p-4 lg:p-6 pb-24">
 
           {/* ── STEP 1: Seat Selection ── */}
           {step === 1 && tripDetails && (
@@ -355,7 +372,7 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
                           Fare (Total)
                         </p>
                         <p className="text-2xl font-bold text-gray-900">
-                          &#8377;{totalFareAmount}
+                          &#8377;{totalFareAmount.toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -438,12 +455,16 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
                       <div className="space-y-2 text-sm text-gray-700">
                         <div className="flex justify-between">
                           <span>Base Fare</span>
-                          <span className="font-medium text-gray-900">&#8377;{totalFareAmount}</span>
+                          <span className="font-medium text-gray-900">&#8377;{totalBaseAmount.toFixed(2)}</span>
                         </div>
+                        <div className="flex justify-between">
+    <span>GST</span>
+    <span className="font-medium text-gray-900">+ &#8377;{totalGstAmount.toFixed(2)}</span>
+  </div>
 
                         <div className="border-t border-orange-200 pt-3 flex justify-between font-bold text-lg">
                           <span className="text-gray-900">Total Fare</span>
-                          <span className="text-[#fd561e]">&#8377;{totalFareAmount}</span>
+                          <span className="text-[#fd561e]">&#8377;{totalFareAmount.toFixed(2)}</span>
                         </div>
                       </div>
                     </div>
@@ -475,207 +496,126 @@ const SeatBookingLayout = ({ tripId, open, onClose, fromCity, toCity, source, de
                       </button>
                     </div>
 
-                    {/* Bus + city illustration — level stance, all wheels grounded */}
+                    {/* Bus + city illustration — front-facing bus, 4 wheels visible, all grounded */}
                     <div className="px-3 pb-3 pt-4">
                       <svg viewBox="0 0 420 250" className="w-full h-auto">
-                        <defs>
-                          <linearGradient id="busGlassDark" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#5d4842" />
-                            <stop offset="100%" stopColor="#43332e" />
-                          </linearGradient>
-                        </defs>
+  <defs>
+    <linearGradient id="busGlassDark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stopColor="#5d4842" />
+      <stop offset="100%" stopColor="#43332e" />
+    </linearGradient>
+    <linearGradient id="busBodyGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stopColor="#ff6a35" />
+      <stop offset="100%" stopColor="#f24a0e" />
+    </linearGradient>
+  </defs>
 
-                        {/* ── Background skyline ── */}
-                        <g fill="#fae3d2">
-                          <rect x="14"  y="78"  width="26" height="130" rx="2" />
-                          <rect x="46"  y="48"  width="36" height="160" rx="2" />
-                          <rect x="54"  y="36"  width="14" height="13"  rx="2" />
-                          <rect x="88"  y="92"  width="24" height="116" rx="2" />
-                          <rect x="118" y="60"  width="42" height="148" rx="2" />
-                          <rect x="166" y="86"  width="28" height="122" rx="2" />
-                          <rect x="200" y="42"  width="40" height="166" rx="2" />
-                          <rect x="208" y="30"  width="16" height="13"  rx="2" />
-                          <rect x="246" y="76"  width="30" height="132" rx="2" />
-                          <rect x="282" y="56"  width="40" height="152" rx="2" />
-                          <rect x="328" y="90"  width="26" height="118" rx="2" />
-                          <rect x="360" y="66"  width="36" height="142" rx="2" />
-                        </g>
-                        {/* Clouds */}
-                        <g fill="#f6cfae" opacity="0.7">
-                          <ellipse cx="70"  cy="34" rx="16" ry="7" />
-                          <ellipse cx="330" cy="28" rx="18" ry="7" />
-                        </g>
+  {/* ── Background skyline ── */}
+  <g fill="#fae3d2">
+    <rect x="14"  y="78"  width="26" height="130" rx="2" />
+    <rect x="46"  y="48"  width="36" height="160" rx="2" />
+    <rect x="54"  y="36"  width="14" height="13"  rx="2" />
+    <rect x="88"  y="92"  width="24" height="116" rx="2" />
+    <rect x="118" y="60"  width="42" height="148" rx="2" />
+    <rect x="166" y="86"  width="28" height="122" rx="2" />
+    <rect x="200" y="42"  width="40" height="166" rx="2" />
+    <rect x="208" y="30"  width="16" height="13"  rx="2" />
+    <rect x="246" y="76"  width="30" height="132" rx="2" />
+    <rect x="282" y="56"  width="40" height="152" rx="2" />
+    <rect x="328" y="90"  width="26" height="118" rx="2" />
+    <rect x="360" y="66"  width="36" height="142" rx="2" />
+  </g>
+  {/* Building windows */}
+  <g fill="#fdf1e7">
+    <rect x="52"  y="60"  width="9" height="11" rx="1.5" /><rect x="67" y="60"  width="9" height="11" rx="1.5" />
+    <rect x="52"  y="80"  width="9" height="11" rx="1.5" /><rect x="67" y="80"  width="9" height="11" rx="1.5" />
+    <rect x="126" y="72"  width="10" height="12" rx="1.5" /><rect x="142" y="72" width="10" height="12" rx="1.5" />
+    <rect x="126" y="94"  width="10" height="12" rx="1.5" />
+    <rect x="206" y="54"  width="10" height="12" rx="1.5" /><rect x="222" y="54" width="10" height="12" rx="1.5" />
+    <rect x="206" y="76"  width="10" height="12" rx="1.5" /><rect x="222" y="76" width="10" height="12" rx="1.5" />
+    <rect x="288" y="68"  width="10" height="12" rx="1.5" /><rect x="304" y="68" width="10" height="12" rx="1.5" />
+    <rect x="288" y="90"  width="10" height="12" rx="1.5" />
+    <rect x="366" y="78"  width="10" height="12" rx="1.5" /><rect x="382" y="78" width="10" height="12" rx="1.5" />
+  </g>
+  {/* Clouds */}
+  <g fill="#f6cfae" opacity="0.7">
+    <ellipse cx="70"  cy="34" rx="16" ry="7" />
+    <ellipse cx="330" cy="28" rx="18" ry="7" />
+  </g>
 
-                        {/* ── Trees ── */}
-                        <g>
-                          <rect x="20"  y="190" width="5" height="24" rx="2" fill="#e6ab88" />
-                          <circle cx="22.5" cy="182" r="14" fill="#f8c9a7" />
-                          <rect x="50"  y="200" width="4" height="14" rx="2" fill="#e6ab88" />
-                          <circle cx="52" cy="195" r="9" fill="#fad6ba" />
-                          <rect x="392" y="188" width="5" height="26" rx="2" fill="#e6ab88" />
-                          <circle cx="394.5" cy="179" r="16" fill="#f8c9a7" />
-                          <rect x="366" y="200" width="4" height="14" rx="2" fill="#e6ab88" />
-                          <circle cx="368" cy="194" r="9" fill="#fad6ba" />
-                        </g>
+  {/* ── Trees ── */}
+  <g>
+    <rect x="20"  y="190" width="5" height="24" rx="2" fill="#e6ab88" />
+    <circle cx="22.5" cy="182" r="14" fill="#f8c9a7" />
+    <rect x="392" y="188" width="5" height="26" rx="2" fill="#e6ab88" />
+    <circle cx="394.5" cy="179" r="16" fill="#f8c9a7" />
+    <rect x="366" y="200" width="4" height="14" rx="2" fill="#e6ab88" />
+    <circle cx="368" cy="194" r="9" fill="#fad6ba" />
+  </g>
 
-                        {/* ── Ground shadow (wheels sit on this line) ── */}
-                        <ellipse cx="232" cy="216" rx="170" ry="10" fill="#e9d2c2" opacity="0.8" />
+  {/* ── Ground shadow ── */}
+  <ellipse cx="210" cy="222" rx="160" ry="9" fill="#e9d2c2" opacity="0.8" />
 
-                        {/* ══ BUS — level stance, front facing right ══ */}
-                        <g>
+  {/* ══ BUS — 3/4 view (same as loading screen) ══ */}
+  <g transform="translate(85, 94)">
 
-                          {/* Front-right wheel (behind the front face, peeks below bumper) */}
-                          <g>
-                            <circle cx="342" cy="193" r="19" fill="#2f2622" />
-<circle cx="342" cy="193" r="11" fill="#51413a" />
-<circle cx="342" cy="193" r="6" fill="#d8b49a" />
-                          </g>
+    {/* Far-side wheels — tucked behind near wheels */}
+    <g fill="#3d322c">
+      <circle cx="92"  cy="109" r="12" />
+      <circle cx="206" cy="109" r="12" />
+    </g>
+    <g fill="#6b5a50">
+      <circle cx="92"  cy="109" r="5" />
+      <circle cx="206" cy="109" r="5" />
+    </g>
 
-                          {/* ── SIDE (recedes slightly to the left) ── */}
-                          <path
-                            d="M295 96
-                               L120 112
-                               Q86 110 86 122
-                               L86 180
-                               Q86 191 100 191
-                               L295 196
-                               Z"
-                            fill="#fd561e"
-                          />
+    {/* Main body */}
+    <path
+      d="M24 36 Q24 22 40 22 L202 22 Q220 22 226 38 L240 84 L240 98 Q240 108 228 108 L36 108 Q24 108 24 96 Z"
+      fill="url(#busBodyGrad)"
+    />
 
-                          {/* Side roof edge highlight */}
-                          <path d="M295 96 L100 108 Q90 110 88 118 L88 124 Q92 114 102 113 L295 102 Z"
-                                fill="#ffffff" opacity="0.35" />
+    {/* Roof highlight */}
+    <path
+      d="M40 22 L202 22 Q218 22 224 36 L224 38 Q218 27 202 27 L42 27 Q32 27 30 35 L30 31 Q32 22 40 22 Z"
+      fill="#FFFFFF" opacity="0.35"
+    />
 
-                          {/* Side window band */}
-                          <path
-                            d="M290 104
-                               L125 118
-                               Q96 116 96 124
-                               L96 146
-                               L290 150
-                               Z"
-                            fill="url(#busGlassDark)"
-                          />
-                          {/* Window pillars */}
-                          <g stroke="#fd6c38" strokeWidth="3">
-                            <line x1="140" y1="113" x2="140" y2="147" />
-                            <line x1="180" y1="111" x2="180" y2="148" />
-                            <line x1="220" y1="109" x2="220" y2="149" />
-                            <line x1="258" y1="107" x2="258" y2="149" />
-                          </g>
+    {/* Side window band */}
+    <path d="M36 34 L192 34 Q204 34 208 46 L216 74 L36 74 Z" fill="url(#busGlassDark)" />
+    <g stroke="#fd6c38" strokeWidth="3">
+      <line x1="68"  y1="34" x2="68"  y2="74" />
+      <line x1="100" y1="34" x2="100" y2="74" />
+      <line x1="132" y1="34" x2="132" y2="74" />
+      <line x1="164" y1="34" x2="164" y2="74" />
+    </g>
 
-                          7
+    {/* Front windshield */}
+    <path d="M214 36 Q226 39 230 52 L238 80 L224 82 L210 44 Z" fill="url(#busGlassDark)" />
 
-                          {/* Side skirt */}
-                          <path d="M86 174 L86 180 Q86 191 100 191 L295 196 L295 186 L102 182 Q90 181 86 174 Z"
-                                fill="#d63e0a" />
+    {/* Bumper */}
+    <path
+      d="M24 96 Q24 108 36 108 L228 108 Q240 108 240 98 L240 102 Q240 112 228 112 L36 112 Q24 112 24 100 Z"
+      fill="#d63e0a"
+    />
 
-                          {/* ── Side wheels (grounded at y≈210) — dual rear axle ── */}
-                          {/* Rear Wheel */}
-{/* Rear Outer Wheel */}
+    {/* Headlight + mirror */}
+    <rect x="226" y="88" width="10" height="13" rx="3" fill="#fff6e0" />
+    <rect x="218" y="26" width="6"  height="12" rx="3" fill="#e8480f" />
 
-<g>
-  <circle cx="128" cy="194" r="18" fill="#2f2622" />
-  <circle cx="122" cy="194" r="11" fill="#51413a" />
-  <circle cx="122" cy="194" r="6" fill="#d8b49a" />
-</g>
-
-{/* Rear Inner Wheel */}
-<g>
-  <circle cx="155" cy="194" r="18" fill="#2f2622" />
-  <circle cx="165" cy="194" r="11" fill="#51413a" />
-  <circle cx="165" cy="194" r="6" fill="#d8b49a" />
-</g>
-<path
-  d="
-    M135 156
-    Q170 156 185 180
-    L185 195
-    L135 195
-    Z
-  "
-  fill="#fd561e"
-/>
-
-{/* Middle Wheel */}
-<g>
-  <path
-    d="M236 182
-       a24 24 0 0 1 48 0"
-    stroke="#c93c0a"
-    strokeWidth="8"
-    fill="none"
-  />
-
-  <circle cx="260" cy="194" r="20" fill="#2f2622" />
-  <circle cx="260" cy="194" r="12" fill="#51413a" />
-  <circle cx="260" cy="194" r="7" fill="#d8b49a" />
-</g>
-
-{/* Front Wheel */}
-<g>
-  <circle cx="342" cy="193" r="19" fill="#2f2622" />
-  <circle cx="342" cy="193" r="11" fill="#51413a" />
-  <circle cx="342" cy="193" r="6" fill="#d8b49a" />
-</g>
-
-                          {/* ── FRONT FACE (right) ── */}
-                          <path
-                            d="M295 96
-                               L352 99
-                               Q378 100 379 122
-                               L380 180
-                               Q380 195 364 196
-                               L312 197
-                               Q295 197 295 182
-                               Z"
-                            fill="#fd561e"
-                          />
-
-                          {/* Front roof highlight */}
-                          <path d="M295 96 L352 99 Q374 100 378 116 L378 121 Q372 106 352 105 L295 102 Z"
-                                fill="#ffffff" opacity="0.4" />
-
-                          {/* Mirrors (subtle, at windshield corners) */}
-                          <g fill="#e8480f">
-                            <rect x="290" y="98"  width="6" height="13" rx="3" />
-                            <rect x="376" y="101" width="6" height="13" rx="3" />
-                          </g>
-
-                          {/* Windshield — dark tinted */}
-                          <path
-                            d="M301 106
-                               L366 109
-                               Q373 110 373 118
-                               L374 160
-                               L301 156
-                               Q298 156 298 151
-                               L298 111
-                               Q298 106 301 106
-                               Z"
-                            fill="url(#busGlassDark)"
-                          />
-                          {/* Diagonal shine */}
-                          <path d="M312 107 L334 108 L306 155 L300 152 L300 128 Z" fill="#ffffff" opacity="0.14" />
-                          {/* Wiper */}
-                          <path d="M308 152 L334 132" stroke="#2f2421" strokeWidth="2" opacity="0.5" fill="none" />
-
-                          {/* Headlights */}
-                          <path d="M300 176 L318 177 L318 185 L300 184 Z" fill="#fff6e0" />
-                          <path d="M356 178 L374 177 L374 185 L356 186 Z" fill="#fff6e0" />
-
-                          {/* Number plate */}
-                          <rect x="327" y="182" width="20" height="8" rx="2" fill="#ffe9d6" />
-
-                          {/* Grille line */}
-                          <path d="M300 170 L376 171" stroke="#e8480f" strokeWidth="3" opacity="0.8" />
-
-                          {/* Front bumper */}
-                          <path d="M295 186 L380 184 Q380 195 364 196 L312 197 Q295 197 295 186 Z" fill="#d63e0a" />
-
-                        </g>
-                      </svg>
+    {/* Near-side wheels */}
+    <g>
+      <circle cx="78" cy="112" r="16" fill="#2f2622" />
+      <circle cx="78" cy="112" r="10" fill="#51413a" />
+      <circle cx="78" cy="112" r="3.5" fill="#d8b49a" />
+    </g>
+    <g>
+      <circle cx="192" cy="112" r="16" fill="#2f2622" />
+      <circle cx="192" cy="112" r="10" fill="#51413a" />
+      <circle cx="192" cy="112" r="3.5" fill="#d8b49a" />
+    </g>
+  </g>
+</svg>
                     </div>
 
                   </div>

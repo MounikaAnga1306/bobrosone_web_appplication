@@ -11,6 +11,17 @@ export const formatTrips = (data) => {
       ? trip.fares.map((fare) => Number(fare))
       : [Number(trip.fares) || 0];
 
+
+    // ✅ fareDetails nunchi lowest BASE fare
+    let details = trip.fareDetails;
+    if (details && !Array.isArray(details)) details = [details];
+    const baseFares = Array.isArray(details)
+      ? details.map((d) => Number(d.baseFare || 0)).filter((n) => n > 0)
+      : [];
+    const lowestBaseFare = baseFares.length
+      ? Math.min(...baseFares)
+      : (faresArray.length ? Math.min(...faresArray) : 0); 
+
     return {
       id: trip.id || "",
       travels: trip.travels || "Unknown Travels",
@@ -20,7 +31,7 @@ export const formatTrips = (data) => {
       arrivalTime: trip.arrivalTime || "",
       duration: trip.duration || "",
       availableSeats: trip.availableSeats || 0,
-      fare: faresArray.length ? Math.min(...faresArray) : 0,
+      fare:lowestBaseFare,
       boardingTimes: trip.boardingTimes || [],
       droppingTimes: trip.droppingTimes || [],
       AC: trip.AC ?? false,
