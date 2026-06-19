@@ -3,9 +3,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Plane,
-  Hotel,
-  Palmtree,
   Bus,
   MonitorSmartphone,
   Headphones,
@@ -15,46 +12,51 @@ import {
   Percent,
   Ticket,
   Route,
+  Lock,
+  IndianRupee,
+  BadgeCheck,
+  ReceiptText,
+  Globe,
 } from "lucide-react";
 
 const BRAND = "#FD561E";
 
 const features = [
   {
-    icon: Plane,
-    title: "Flights that fit every plan & pocket",
+    icon: BadgeCheck,        // Trust / verified partner
+    title: "India's travel & tech partner you can rely on",
     description:
-      "Search smarter, not harder. Bobros pulls live fares from top airlines so you can lock in the lowest price on domestic and international routes — no hidden charges, no surprises.",
+      "Thousands of travellers trust BOBROS for every trip and every digital need, every single day.",
   },
   {
-    icon: Hotel,
-    title: "Stays you'll actually want to come back to",
+    icon: ReceiptText,       // Transparent pricing / no hidden fees
+    title: "The price you see is the price you pay",
     description:
-      "Hand-picked hotels, homestays and luxury resorts with verified reviews, free cancellation and pay-at-hotel options. Comfort guaranteed, every single night.",
+      "Zero hidden fees, zero surprises. Full fare transparency from search to booking confirmation.",
   },
   {
-    icon: Palmtree,
-    title: "Holiday packages, planned end-to-end",
+    icon: Bus,               // Bus routes — already correct
+    title: "500+ operators. 10,000+ routes. One platform.",
     description:
-      "Weekend escapes or 15-day grand tours — we bundle flights, stays, sightseeing and transfers into one stress-free package so you only focus on the memories.",
+      "India's widest bus network — from metro corridors to remote routes — all in one seamless search.",
   },
   {
-    icon: Bus,
-    title: "Bus tickets across 10,000+ Indian routes",
+    icon: Lock,              // Security — already correct
+    title: "Bank-grade security at every step",
     description:
-      "Live seat selection, 500+ trusted operators and on-time guarantees. From metros to small towns, Bobros gets you there safely and on schedule.",
+      "Your data, payments, and identity are protected by industry-standard encryption throughout.",
   },
   {
-    icon: MonitorSmartphone,
-    title: "IT services — websites & hosting that scale",
+    icon: IndianRupee,             // Rewards / earn points — already correct
+    title: "Earn rewards every time you book",
     description:
-      "Beyond travel, Bobros is your digital partner. Fast, modern websites paired with reliable hosting plans built for startups, small businesses and creators.",
+      "Collect BOBROS points on every trip. Redeem them for discounts on your next booking — instantly.",
   },
   {
-    icon: Headphones,
-    title: "24×7 human support, not chatbots",
+    icon: Globe,             // Websites & digital presence
+    title: "Websites and hosting built for growth",
     description:
-      "Bookings, refunds, last-minute changes or travel emergencies — our team is one tap away, any hour of the day, every day of the year.",
+      "Affordable, fast, and fully managed — your digital presence launched and scaled by our experts.",
   },
 ];
 
@@ -291,7 +293,7 @@ export default function WhyBobros() {
                     }}
                   />
                   <img
-                    src="/assets/Bobros_whitelogo.png"
+                    src="/assets/Bobros.png"
                     alt="Bobros"
                     className="relative h-10 w-auto md:h-14 object-contain drop-shadow"
                   />

@@ -34,12 +34,9 @@ const tabRoutes = {
 };
 
 const backgroundImages = [
- // "/assets/blue_image.png",
-  "/assets/green_bus.png",
- // "/assets/bluecolor.png",
-  "/assets/orange_bus.png",
-  //"/assets/whitebus.png",
-  //"/assets/redbus.jpeg",
+
+  "/assets/closed_bus.png",
+ 
 ];
 
 const heroSlides = [

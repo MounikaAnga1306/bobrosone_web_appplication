@@ -3,7 +3,6 @@ import { useLocation } from "react-router-dom";
 import axios from "axios";
 import { User, Mail, Phone, Lock, Eye, EyeOff, X, ArrowLeft } from "lucide-react";
 import { createPortal } from "react-dom";
-import { Turnstile } from "@marsidev/react-turnstile";
 
 const API = "https://api.bobros.co.in";
 
@@ -423,8 +422,6 @@ const SignUpForm = ({ closeModal, openSignin }) => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState("");
-  const turnstileRef = useRef(null);
 
   useEffect(() => {
     if (location.state) {
@@ -469,10 +466,6 @@ const SignUpForm = ({ closeModal, openSignin }) => {
       setError("Password must be at least 6 characters.");
       return;
     }
-    if (!captchaToken) {
-      setError("Please complete the captcha verification.");
-      return;
-    }
 
     try {
       setLoading(true);
@@ -481,7 +474,6 @@ const SignUpForm = ({ closeModal, openSignin }) => {
         email: formData.email,
         mobile: Number(mobileDigits),
         password: formData.password,
-        captchaToken,
       });
       setView("otp");
     } catch (err) {
@@ -496,10 +488,6 @@ const SignUpForm = ({ closeModal, openSignin }) => {
 
       if (isDuplicate) {
         setError("An account with this email or mobile already exists. Please sign in.");
-      } else if (msg.toLowerCase().includes("captcha") || msg.toLowerCase().includes("turnstile")) {
-        setError("Captcha verification failed. Please try again.");
-        if (turnstileRef.current) turnstileRef.current.reset();
-        setCaptchaToken("");
       } else {
         setError(msg || "Signup failed. Please try again.");
       }
@@ -678,25 +666,6 @@ const SignUpForm = ({ closeModal, openSignin }) => {
                           <Eye size={14} className="sm:w-4 -mt-3 sm:h-4" />
                         )}
                       </button>
-                    </div>
-                  </div>
-
-                  <div className="mb-3">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Security Verification
-                    </label>
-                    <div className="flex justify-center my-2 overflow-x-auto">
-                      <div className="transform scale-90 sm:scale-100 origin-center">
-                        <Turnstile
-                          ref={turnstileRef}
-                          siteKey="0x4AAAAAABvRHvXzt4EuTFLs"
-                          onSuccess={(token) => setCaptchaToken(token)}
-                          options={{
-                            theme: "light",
-                            size: "flexible",
-                          }}
-                        />
-                      </div>
                     </div>
                   </div>
 
