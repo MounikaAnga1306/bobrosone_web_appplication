@@ -126,7 +126,7 @@ export default function OurServices() {
     { image: hotels,  title: "Hotels",           description: "Book comfortable stays at top hotels with ease and flexibility. Visit any branch or contact us for bookings.",                   cta: "Book Stay",      accent: "#d97706", route: "/hotels"        },
     { image: holiday, title: "Holiday Package",  description: "Curated travel packages to explore the best destinations. Visit any branch or contact us for bookings.",                        cta: "Plan Trip",      accent: "#0d9488", route: "/Holiday"       },
     { image: cab,     title: "Cab Service",      description: "Affordable and convenient cab rentals for personal travel or business commute. Visit any branch or contact us for bookings.",   cta: "Book Cab",       accent: "#7c3aed",                          imagePosition: "center 60%" },
-    { image: service, title: "IT Services",      description: "Reliable IT services to support your business and enhance your operations. Visit any branch or contact our Business Analyst for more info.", cta: "Learn More", accent: "#4f46e5", route: "/ItService" },
+    { image: service, title: "IT Services",      description: "Reliable IT services to support your business and enhance your operations. Visit any branch or contact our Business Analyst for more info.", cta: "For Business", accent: "#4f46e5", route: "/ItService" },
   ];
 
   const N = services.length; // 7
