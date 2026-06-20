@@ -226,7 +226,7 @@ Seat Number :
 <p>
 Seat Fare :
 <span className="text-[#fd561e] font-semibold ml-1">
-₹{seat.totalFare}
+₹{seat.baseFare}
 </span>
 </p>
 

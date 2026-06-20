@@ -11,8 +11,6 @@ import {
   FaCity, FaHome,
 } from "react-icons/fa";
 import { Bus, Plane, Building2, Palmtree, Car, IndianRupee } from "lucide-react";
-// 🔴 REMOVED: import { useHotelSearch } from "../hooks/useHotelSearch";
-// (this hook was internally calling the broken /api/hotel/new/search endpoint)
 
 /* ─── Tab config ─────────────────────────────────────────────────────────── */
 const tabs = [
@@ -276,7 +274,6 @@ const GuestsModal = React.memo(({
 ════════════════════════════════════════════════════════════════════════════ */
 const HotelHeroSection = () => {
   const navigate = useNavigate();
-  // 🔴 REMOVED: const { executeSearch, loading: hookLoading } = useHotelSearch();
 
   /* ── state ── */
   const [location,        setLocation]        = useState("");
@@ -307,6 +304,12 @@ const HotelHeroSection = () => {
   const checkinFieldRef         = useRef(null);
   const checkoutFieldRef        = useRef(null);
   const calendarOpen            = useRef(null);
+
+  // 🟢 NEW: when a suggestion is selected, we programmatically set `location`.
+  // That state change used to re-trigger the autocomplete effect below and
+  // re-open the dropdown ~300ms later. This flag tells the effect to skip
+  // exactly one run right after a selection.
+  const skipNextSearchRef = useRef(false);
 
   const maxRooms           = 5;
   const maxAdultsPerRoom   = 4;
@@ -352,7 +355,13 @@ const HotelHeroSection = () => {
     );
   }, [calPos]);
 
+  /* ── autocomplete (FIXED: skips the refetch caused by selecting a suggestion) ── */
   useEffect(() => {
+    if (skipNextSearchRef.current) {
+      skipNextSearchRef.current = false;
+      return;
+    }
+
     const q = location.trim();
     if (q.length < 2) {
       setSuggestions([]); setShowSuggestions(false); return;
@@ -424,6 +433,7 @@ const HotelHeroSection = () => {
 
   const handleSelectSuggestion = useCallback((feature) => {
     const { name, subtitle } = formatSuggestionLabel(feature);
+    skipNextSearchRef.current = true; // 🟢 prevents the dropdown from reopening
     setLocation(subtitle ? `${name}, ${subtitle}` : name);
     const [lng, lat] = feature.geometry.coordinates;
     setSelectedCoords({ lat, lng });
@@ -479,13 +489,7 @@ const HotelHeroSection = () => {
     [guests]
   );
 
-  /* ── search ──────────────────────────────────────────────────────────────
-     ✅ Only 2 APIs involved now:
-       1. Photon (already used above for autocomplete / fallback geocoding)
-       2. https://api.bobros.org/hotel/availability
-     No more handoff to executeSearch() / hotelSearchService.js, so the
-     broken /api/hotel/new/search call can never fire from this screen.
-  ─────────────────────────────────────────────────────────────────────── */
+  /* ── search ── */
   const handleSearch = async () => {
     if (!location.trim())              { setError("Please enter a city or hotel name"); return; }
     if (!checkinDate || !checkoutDate) { setError("Please select check-in and check-out dates"); return; }
@@ -509,7 +513,6 @@ const HotelHeroSection = () => {
         children: guests.children > 0 ? buildChildrenAges(guests.children) : [],
         radius:   20,
       };
-      console.log("🔵 Hotel search payload:", JSON.stringify(payload, null, 2));
       const response = await fetch("https://api.bobros.org/hotel/availability", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -517,16 +520,12 @@ const HotelHeroSection = () => {
       });
       if (!response.ok) {
         const errText = await response.text().catch(() => "");
-        console.error("❌ API error body:", errText);
         let errMsg = `Server error (${response.status})`;
         try { const b = JSON.parse(errText); errMsg = b?.message || b?.error || errMsg; } catch {}
         throw new Error(errMsg);
       }
       const data = await response.json();
-      console.log("✅ Hotel availability:", data);
 
-      // 🟢 NEW: go straight to the results screen with the data we already have.
-      // No second network call needed.
       navigate("/hotels/results", {
         state: {
           location: location.trim(),
@@ -805,12 +804,12 @@ const HotelHeroSection = () => {
               <button
                 onClick={handleSearch}
                 disabled={loading}
-                className="bg-gradient-to-r from-[#FD561E] to-[#ff7b4a] text-white px-6 sm:px-8 md:px-10 py-2 sm:py-3 rounded-full font-bold text-sm sm:text-base shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 whitespace-nowrap"
+                className="bg-gradient-to-r  cursor-pointer from-[#FD561E] to-[#ff7b4a] text-white px-6 sm:px-8 md:px-10 py-2 sm:py-3 rounded-full font-bold text-sm sm:text-base shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 whitespace-nowrap"
               >
                 {loading ? (
                   <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" /><span>SEARCHING…</span></>
                 ) : (
-                  <span>SEARCH HOTELS</span>
+                  <span>SEARCH</span>
                 )}
               </button>
             </div>

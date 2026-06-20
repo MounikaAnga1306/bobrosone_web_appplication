@@ -123,22 +123,28 @@ const PaymentStatus = () => {
         )}
 
         {/* ── CANCELLED ── */}
-        {status === "cancelled" && (
-          <>
-            <h1 className="text-3xl font-bold text-yellow-600 mb-6 text-center">Payment Cancelled ⚠️</h1>
-            <p className="text-center text-gray-500 mb-6">
-              You cancelled the payment. Your seats may have been released.
-            </p>
-            <div className="text-center">
-              <button
-                onClick={() => navigate("/")}
-                className="bg-[#fd561e] text-white px-8 py-3 rounded-xl font-semibold hover:bg-[#e14d1a] transition"
-              >
-                Back to Home
-              </button>
-            </div>
-          </>
-        )}
+{status === "cancelled" && (
+  <>
+    <h1 className="text-3xl font-bold text-yellow-600 mb-6 text-center">Payment Cancelled ⚠️</h1>
+    <p className="text-center text-gray-500 mb-6">
+      You cancelled the payment. Your seats may have been released.
+    </p>
+    <div className="flex items-center justify-center gap-4">
+      <button
+        onClick={() => navigate("/booking-success")}
+        className="bg-[#fd561e] text-white px-8 py-3 rounded-xl font-semibold hover:bg-[#e14d1a] transition"
+      >
+        Try Again
+      </button>
+      <button
+        onClick={() => navigate("/")}
+        className="bg-gray-200 text-gray-800 px-8 py-3 rounded-xl font-semibold hover:bg-gray-300 transition"
+      >
+        Back to Home
+      </button>
+    </div>
+  </>
+)}
 
       </div>
     </div>

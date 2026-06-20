@@ -28,9 +28,12 @@ import TicketConfirmationScreen from "./modules/flights/pages/TicketConfirmation
 import FlightPaymentResult      from "./modules/flights/pages/FlightPaymentResult";
 
 // ── Hotel ─────────────────────────────────────────────────────────
-import HotelsHomeScreen   from "./modules/hotels/pages/HotelsHomeScreen";
-import HotelSearchResults from "./modules/hotels/pages/HotelSearchResults";
-import { HotelSearchProvider } from "./modules/hotels/context/HotelSearchContext";
+// ✅ HotelSearchProvider REMOVED — hotels now use location.state directly
+import HotelsHomeScreen      from "./modules/hotels/pages/HotelsHomeScreen";
+import HotelSearchResults    from "./modules/hotels/pages/HotelSearchResults";
+import HotelBookingPage      from "./modules/hotels/pages/HotelBookingPage";
+import HotelDetailPage       from "./modules/hotels/pages/HotelDetailPage";
+import HotelConfirmationPage from "./modules/hotels/pages/HotelConfirmationPage";
 
 // ── Global layout ─────────────────────────────────────────────────
 import Navbar       from "./globalfiles/Navbar";
@@ -136,6 +139,14 @@ const MainContent = ({ children }) => {
 // ── Flight booking layout (Zustand — no provider wrapping needed) ──
 const FlightBookingLayout = () => <Outlet />;
 
+
+const HotelResultsRoute = () => {
+  const location = useLocation();
+  // 🟢 key={location.key} forces a full remount of HotelSearchResults on
+  // every navigate() — even replace:true to the same path — so stale
+  // pageCache / serverMeta / filters / sort never leak into a new search.
+  return <HotelSearchResults key={location.key} />;
+};
 // ── Scroll to top on route change ─────────────────────────────────
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -151,91 +162,93 @@ function App() {
     <GoogleOAuthProvider clientId="429781379228-bigvifjtcvo0toouf2i08fpc3u4k3vnq.apps.googleusercontent.com">
       <FlightMasterProvider>
         <FlightSearchProvider>
-          <HotelSearchProvider>
-            <Router>
-              <ScrollToTop />
-              <div className="min-h-screen bg-gray-100 flex flex-col w-full">
-                <Navbar />
+          {/* ✅ HotelSearchProvider removed — no longer needed */}
+          <Router>
+            <ScrollToTop />
+            <div className="min-h-screen bg-gray-100 flex flex-col w-full">
+              <Navbar />
 
-                <MainContent>
-                  <Routes>
+              <MainContent>
+                <Routes>
 
-                    {/* ── Bus: Home ─────────────────────────── */}
-                    <Route path="/"         element={<Home />} />
-                    <Route path="/HomePage" element={<Home />} />
-                    <Route path="/holiday"  element={<Holiday />} />
-                    <Route path="/ItService" element={<ItServicesPage />} />
+                  {/* ── Bus: Home ─────────────────────────── */}
+                  <Route path="/"         element={<Home />} />
+                  <Route path="/HomePage" element={<Home />} />
+                  <Route path="/holiday"  element={<Holiday />} />
+                  <Route path="/ItService" element={<ItServicesPage />} />
 
-                    {/* ── Bus: Static pages ─────────────────── */}
-                    <Route path="/about"      element={<AboutUs />} />
-                    <Route path="/contact"    element={<ContactUs />} />
-                    <Route path="/privacy"    element={<PrivacyPolicy />} />
-                    <Route path="/terms"      element={<TermsAndConditions />} />
-                    <Route path="/cancel"     element={<CancellationPolicy />} />
-                    <Route path="/disclaimer" element={<DisclaimerPolicy />} />
+                  {/* ── Bus: Static pages ─────────────────── */}
+                  <Route path="/about"      element={<AboutUs />} />
+                  <Route path="/contact"    element={<ContactUs />} />
+                  <Route path="/privacy"    element={<PrivacyPolicy />} />
+                  <Route path="/terms"      element={<TermsAndConditions />} />
+                  <Route path="/cancel"     element={<CancellationPolicy />} />
+                  <Route path="/disclaimer" element={<DisclaimerPolicy />} />
 
-                    {/* ── Auth ──────────────────────────────── */}
-                    <Route path="/signin"          element={<SignIn />} />
-                    <Route path="/signup"          element={<SignupForm />} />
-                    <Route path="/verify-otp"      element={<VerifyOTP />} />
-                    <Route path="/forgot-password" element={<ForgotPassword />} />
-                    <Route path="/reset-password"  element={<ResetPassword />} />
+                  {/* ── Auth ──────────────────────────────── */}
+                  <Route path="/signin"          element={<SignIn />} />
+                  <Route path="/signup"          element={<SignupForm />} />
+                  <Route path="/verify-otp"      element={<VerifyOTP />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password"  element={<ResetPassword />} />
 
-                    {/* ── Bus: Account ──────────────────────── */}
-                    <Route path="/my-bookings"    element={<MyBookings />} />
-                    <Route path="/guest-bookings" element={<GuestBookingsPage />} />
-                    <Route path="/cancel-ticket"  element={<CancelTicketPage />} />
-                    <Route path="/my-account"     element={<MyAccount />} />
-                    <Route path="/my-profile"     element={<MyProfile />} />
+                  {/* ── Bus: Account ──────────────────────── */}
+                  <Route path="/my-bookings"    element={<MyBookings />} />
+                  <Route path="/guest-bookings" element={<GuestBookingsPage />} />
+                  <Route path="/cancel-ticket"  element={<CancelTicketPage />} />
+                  <Route path="/my-account"     element={<MyAccount />} />
+                  <Route path="/my-profile"     element={<MyProfile />} />
 
-                    {/* ── Bus: Results ──────────────────────── */}
-                    <Route path="/results"         element={<BusResultsPage />} />
-                    <Route path="/booking-success" element={<BookingSuccess />} />
-                    <Route path="/payment-status"  element={<PaymentStatus />} />
+                  {/* ── Bus: Results ──────────────────────── */}
+                  <Route path="/results"         element={<BusResultsPage />} />
+                  <Route path="/booking-success" element={<BookingSuccess />} />
+                  <Route path="/payment-status"  element={<PaymentStatus />} />
 
-                    {/* ── Bill Payments ─────────────────────── */}
-                    <Route path="/BillHomePage"        element={<BillHomeScreen />} />
-                    <Route path="/billers"             element={<BillersList />} />
-                    <Route path="/bill-details"        element={<BillDetails />} />
-                    <Route path="/bill-payment-status" element={<BillPaymentStatus />} />
-                    <Route path="/bill-complaints"     element={<Complaints />} />
-                    <Route path="/bill-transactions"   element={<Transactions />} />
+                  {/* ── Bill Payments ─────────────────────── */}
+                  <Route path="/BillHomePage"        element={<BillHomeScreen />} />
+                  <Route path="/billers"             element={<BillersList />} />
+                  <Route path="/bill-details"        element={<BillDetails />} />
+                  <Route path="/bill-payment-status" element={<BillPaymentStatus />} />
+                  <Route path="/bill-complaints"     element={<Complaints />} />
+                  <Route path="/bill-transactions"   element={<Transactions />} />
 
-                    {/* ── Flights: Search (no padding) ──────── */}
-                    <Route path="/flights" element={<SearchPage />} />
+                  {/* ── Flights: Search (no padding) ──────── */}
+                  <Route path="/flights" element={<SearchPage />} />
 
-                    {/* ── Flights: Booking flow (pt-20 padding) */}
-                    <Route element={<FlightBookingLayout />}>
-                      <Route path="/flights/results"             element={<OneWayPage />} />
-                      <Route path="/flights/round-trip"          element={<RoundTripPage />} />
-                      <Route path="/flights/multi-city"          element={<MultiCityPage />} />
-                      <Route path="/flights/booking/review"      element={<BookingReviewPage />} />
-                      <Route path="/flights/booking/seat-map"    element={<SeatMapPage />} />
-                      <Route path="/flights/passenger-review"    element={<PassengerDetailsReview />} />
-                      <Route path="/flights/ticket-confirmation" element={<TicketConfirmationScreen />} />
-                    </Route>
+                  {/* ── Flights: Booking flow (pt-20 padding) */}
+                  <Route element={<FlightBookingLayout />}>
+                    <Route path="/flights/results"             element={<OneWayPage />} />
+                    <Route path="/flights/round-trip"          element={<RoundTripPage />} />
+                    <Route path="/flights/multi-city"          element={<MultiCityPage />} />
+                    <Route path="/flights/booking/review"      element={<BookingReviewPage />} />
+                    <Route path="/flights/booking/seat-map"    element={<SeatMapPage />} />
+                    <Route path="/flights/passenger-review"    element={<PassengerDetailsReview />} />
+                    <Route path="/flights/ticket-confirmation" element={<TicketConfirmationScreen />} />
+                  </Route>
 
-                    {/* ── Flights: Special pages (no padding) ── */}
-                    <Route path="/flights/tracker"    element={<FlightTracker />} />
-                    <Route path="/flights/pnr-search" element={<PNRSearch />} />
+                  {/* ── Flights: Special pages (no padding) ── */}
+                  <Route path="/flights/tracker"    element={<FlightTracker />} />
+                  <Route path="/flights/pnr-search" element={<PNRSearch />} />
 
-                    {/* ── Flight payment result ─────────────── */}
-                    <Route path="/flight-payment-result" element={<FlightPaymentResult />} />
+                  {/* ── Flight payment result ─────────────── */}
+                  <Route path="/flight-payment-result" element={<FlightPaymentResult />} />
 
-                    {/* ── Hotels ────────────────────────────── */}
-                    <Route path="/hotels"         element={<HotelsHomeScreen />} />
-                    <Route path="/hotels/results" element={<HotelSearchResults />} />
+                  {/* ── Hotels ────────────────────────────── */}
+                  <Route path="/hotels"              element={<HotelsHomeScreen />} />
+                  <Route path="/hotels/results"      element={<HotelResultsRoute />} />
+                  <Route path="/hotels/detail"        element={<HotelDetailPage />} />
+                  <Route path="/hotels/booking"      element={<HotelBookingPage />} />
+                  <Route path="/hotels/confirmation" element={<HotelConfirmationPage />} />
 
-                    {/* ── 404 ───────────────────────────────── */}
-                    <Route path="*" element={<Navigate to="/" />} />
+                  {/* ── 404 ───────────────────────────────── */}
+                  <Route path="*" element={<Navigate to="/" />} />
 
-                  </Routes>
-                </MainContent>
+                </Routes>
+              </MainContent>
 
-                <FooterBottom />
-              </div>
-            </Router>
-          </HotelSearchProvider>
+              <FooterBottom />
+            </div>
+          </Router>
         </FlightSearchProvider>
       </FlightMasterProvider>
     </GoogleOAuthProvider>

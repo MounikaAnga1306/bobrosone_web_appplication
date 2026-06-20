@@ -1,16 +1,16 @@
 // src/modules/hotels/pages/HotelSearchResults.jsx
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import React, { useState, useMemo, useCallback, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import ReactDOM from "react-dom";
 import {
   FaStar, FaStarHalfAlt, FaRegStar,
-  FaMapMarkerAlt, FaWifi, FaUtensils, FaCoffee,
-  FaSwimmingPool, FaSpa, FaCar, FaDumbbell,
+  FaMapMarkerAlt, FaWifi,
   FaChevronLeft, FaChevronRight, FaSlidersH, FaTimes,
   FaCheck, FaBan,
 } from "react-icons/fa";
-import { MdAir, MdFreeBreakfast } from "react-icons/md";
-import { Building2, ArrowLeft } from "lucide-react";
+import { MdFreeBreakfast } from "react-icons/md";
+import { Building2 } from "lucide-react";
+import HotelSearchBar from "../components/HotelSearchBar";
 
 /* ─── helpers ────────────────────────────────────────────────────────────── */
 const fmt = (n) => new Intl.NumberFormat("en-IN").format(Math.round(n));
@@ -18,11 +18,6 @@ const fmt = (n) => new Intl.NumberFormat("en-IN").format(Math.round(n));
 const nights = (cin, cout) => {
   const d = (new Date(cout) - new Date(cin)) / 86400000;
   return d > 0 ? d : 1;
-};
-
-const fmtDate = (iso) => {
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 };
 
 /* ─── star renderer ──────────────────────────────────────────────────────── */
@@ -39,50 +34,8 @@ const Stars = ({ value }) => {
   return <span className="flex items-center gap-0.5">{stars}</span>;
 };
 
-/* ─── amenity icon map ───────────────────────────────────────────────────── */
-const AMENITY_ICONS = {
-  "Outdoor Pool":       <FaSwimmingPool />,
-  "Indoor Pool":        <FaSwimmingPool />,
-  "Pool":               <FaSwimmingPool />,
-  "WiFI Available":     <FaWifi />,
-  "High-Speed Internet":<FaWifi />,
-  "Restaurant":         <FaUtensils />,
-  "Breakfast":          <MdFreeBreakfast />,
-  "Coffee/Tea":         <FaCoffee />,
-  "Spa Facilities":     <FaSpa />,
-  "Parking":            <FaCar />,
-  "Free Parking":       <FaCar />,
-  "Air Conditioning":   <MdAir />,
-  "Fitness Center / Gym":<FaDumbbell />,
-};
-
-const TopAmenities = ({ amenities = [] }) => {
-  const seen = new Set();
-  const icons = [];
-  for (const a of amenities) {
-    const icon = AMENITY_ICONS[a.category];
-    if (icon && !seen.has(a.category)) {
-      seen.add(a.category);
-      icons.push({ icon, label: a.category });
-    }
-    if (icons.length >= 4) break;
-  }
-  if (!icons.length) return null;
-  return (
-    <div className="flex items-center gap-2 flex-wrap">
-      {icons.map(({ icon, label }) => (
-        <span key={label} title={label}
-          className="flex items-center gap-1 text-xs text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full">
-          <span className="text-[#FD561E]">{icon}</span>
-          <span className="hidden sm:inline">{label}</span>
-        </span>
-      ))}
-    </div>
-  );
-};
-
 const getStars = (ratings = []) => {
-  const ntm  = ratings.find(r => r.provider === "NTM");
+  const ntm   = ratings.find(r => r.provider === "NTM");
   const giata = ratings.find(r => r.provider === "GIATA");
   return ntm?.value || giata?.value || 0;
 };
@@ -128,30 +81,46 @@ const ImageCarousel = ({ images }) => {
   );
 };
 
-/* ─── Hotel Card ─────────────────────────────────────────────────────────── */
-const HotelCard = ({ hotel, nightsCount }) => {
-  const p         = hotel.propertyInfo;
-  const stars     = getStars(p?.ratings || []);
-  const rate      = hotel.lowestPublicAvailableRate;
-  const hasPrice  = hotel.availability && rate;
-  const perNight  = rate?.averageNightlyTotalPrice?.amount;
-  const total     = rate?.totalPrice?.amount;
-  const dist      = p?.distanceFromSearchPoint;
-  const images    = p?.imageURLs || [];
+/* ─── Hotel Card ──────────────────────────────────────────────────────────────
+   🟢 Amenity icons row (pool/restaurant/spa/etc) REMOVED — that level of detail
+   already lives on the detail page. Card now shows: image → name → location →
+   rate badges (wifi/breakfast/free-cancellation, tied to the actual rate) →
+   price.
+──────────────────────────────────────────────────────────────────────────── */
+const HotelCard = ({ hotel, nightsCount, onBook }) => {
+  const p          = hotel.propertyInfo;
+  const stars      = getStars(p?.ratings || []);
+  const rate       = hotel.lowestPublicAvailableRate;
+  const hasPrice   = hotel.availability && rate;
+  const perNight   = rate?.averageNightlyTotalPrice?.amount;
+  const total      = rate?.totalPrice?.amount;
+  const dist       = p?.distanceFromSearchPoint;
+  const images     = p?.imageURLs || [];
   const refundable = rate?.terms?.refundable;
 
+  const handleClick = () => {
+    if (hotel.availability && onBook) onBook(hotel);
+  };
+
   return (
-    <div className={`bg-white rounded-2xl shadow-sm border overflow-hidden transition-shadow hover:shadow-md ${
-      hotel.availability ? "border-gray-100" : "border-gray-100 opacity-80"
-    }`}>
-      <div className="relative h-44 sm:h-48 overflow-hidden bg-gray-100">
+    <div
+      onClick={handleClick}
+      className={`bg-white rounded-2xl shadow-sm border overflow-hidden transition-all group ${
+        hotel.availability
+          ? "border-gray-100 hover:shadow-lg hover:border-[#FD561E]/20 cursor-pointer"
+          : "border-gray-100 opacity-75 cursor-default"
+      }`}
+    >
+      <div className="relative h-44 sm:h-52 overflow-hidden bg-gray-100">
         <ImageCarousel images={images} />
-        <div className={`absolute top-2.5 left-2.5 flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full shadow ${
-          hotel.availability ? "bg-green-500 text-white" : "bg-gray-700 text-white"
+
+        <div className={`absolute top-2.5 left-2.5 flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full shadow-sm ${
+          hotel.availability ? "bg-green-500 text-white" : "bg-gray-600 text-white"
         }`}>
           {hotel.availability ? <FaCheck className="w-2.5 h-2.5" /> : <FaBan className="w-2.5 h-2.5" />}
           {hotel.availability ? "Available" : "Unavailable"}
         </div>
+
         {stars > 0 && (
           <div className="absolute top-2.5 right-2.5 bg-black/50 backdrop-blur-sm px-2 py-0.5 rounded-full">
             <Stars value={stars} />
@@ -159,22 +128,21 @@ const HotelCard = ({ hotel, nightsCount }) => {
         )}
       </div>
 
-      <div className="p-3.5">
-        <h3 className="font-bold text-gray-900 text-sm leading-tight line-clamp-2 mb-1">
+      <div className="p-4">
+        <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2 mb-1.5 group-hover:text-[#FD561E] transition-colors">
           {hotel.name}
         </h3>
+
         {p?.address && (
-          <div className="flex items-start gap-1 text-xs text-gray-500 mb-1.5">
+          <div className="flex items-start gap-1 text-xs text-gray-500 mb-3">
             <FaMapMarkerAlt className="w-3 h-3 text-[#FD561E] flex-shrink-0 mt-0.5" />
             <span className="line-clamp-1">
-              {[p.address.street, p.address.city].filter(Boolean).join(", ")}
-              {dist && ` · ${dist.value.toFixed(1)} km`}
+              {[p.address.city, p.address.stateProvince].filter(Boolean).join(", ")}
+              {dist && <span className="text-gray-400"> · {dist.value.toFixed(1)} km</span>}
             </span>
           </div>
         )}
-        <div className="mb-2.5">
-          <TopAmenities amenities={p?.amenities} />
-        </div>
+
         {hasPrice && (
           <div className="flex items-center gap-1.5 flex-wrap mb-2.5">
             {rate.wifiIncluded && (
@@ -194,27 +162,33 @@ const HotelCard = ({ hotel, nightsCount }) => {
             )}
           </div>
         )}
-        <div className="flex items-end justify-between gap-2 mt-auto">
+
+        <div className="border-t border-gray-50 pt-3 flex items-end justify-between gap-2">
           {hasPrice ? (
             <div>
-              <div className="text-[10px] text-gray-400">per night</div>
-              <div className="text-lg font-black text-gray-900">₹{fmt(perNight)}</div>
-              <div className="text-[10px] text-gray-400">
+              <div className="text-[10px] text-gray-400 mb-0.5">Starting from</div>
+              <div className="text-xl font-black text-gray-900">
+                ₹{fmt(perNight)}
+                <span className="text-xs font-normal text-gray-400 ml-1">/ night</span>
+              </div>
+              <div className="text-[10px] text-gray-400 mt-0.5">
                 ₹{fmt(total)} total · {nightsCount} night{nightsCount > 1 ? "s" : ""}
               </div>
             </div>
           ) : (
             <div className="text-sm text-gray-400 italic">Price unavailable</div>
           )}
+
           <button
             disabled={!hotel.availability}
-            className={`flex-shrink-0 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            onClick={e => { e.stopPropagation(); handleClick(); }}
+            className={`flex-shrink-0 px-4 py-2.5 rounded-xl cursor-pointer text-xs font-bold transition-all whitespace-nowrap ${
               hotel.availability
-                ? "bg-[#FD561E] text-white hover:bg-[#e54d1a] hover:shadow-lg"
+                ? "bg-[#FD561E] text-white hover:bg-[#e54d1a] hover:shadow-md"
                 : "bg-gray-100 text-gray-400 cursor-not-allowed"
             }`}
           >
-            {hotel.availability ? "Book Now" : "Unavailable"}
+            {hotel.availability ? "Choose Room" : "Unavailable"}
           </button>
         </div>
       </div>
@@ -288,7 +262,6 @@ const FiltersSidebar = ({ filters, onChange, onReset, onClose, totalVisible, tot
       </div>
     </div>
 
-    {/* ── totals footer ── */}
     <div className="text-xs text-center pt-2 border-t border-gray-50 space-y-0.5">
       <div className="text-gray-700 font-semibold">{totalVisible} hotels shown</div>
       {totalServer > 0 && totalServer !== totalVisible && (
@@ -326,37 +299,6 @@ const SortBar = ({ sort, onChange, totalLoaded, totalServer }) => (
   </div>
 );
 
-/* ─── Search header ──────────────────────────────────────────────────────── */
-const SearchHeader = ({ location, checkinDate, checkoutDate, guests, onBack }) => {
-  const n = nights(checkinDate, checkoutDate);
-  return (
-    <div className="bg-white border-b border-gray-100 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center gap-3 flex-wrap">
-        <button onClick={onBack}
-          className="flex items-center gap-1 text-sm text-gray-500 hover:text-[#FD561E] transition-colors font-medium">
-          <ArrowLeft className="w-4 h-4" />
-          <span className="hidden sm:inline">Modify</span>
-        </button>
-        <div className="h-5 w-px bg-gray-200 hidden sm:block" />
-        <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-800">
-          <FaMapMarkerAlt className="text-[#FD561E] w-3.5 h-3.5" />
-          {location}
-        </div>
-        <div className="h-5 w-px bg-gray-200" />
-        <span className="text-sm text-gray-600">
-          {fmtDate(checkinDate)} → {fmtDate(checkoutDate)}
-          <span className="text-gray-400 ml-1">({n} night{n > 1 ? "s" : ""})</span>
-        </span>
-        <div className="h-5 w-px bg-gray-200" />
-        <span className="text-sm text-gray-600">
-          {guests.rooms} Room{guests.rooms > 1 ? "s" : ""} · {guests.adults} Adult{guests.adults > 1 ? "s" : ""}
-          {guests.children > 0 && `, ${guests.children} Child${guests.children > 1 ? "ren" : ""}`}
-        </span>
-      </div>
-    </div>
-  );
-};
-
 /* ─── Pagination ─────────────────────────────────────────────────────────── */
 const Pagination = ({ page, total, onChange, loadingPage }) => {
   if (total <= 1) return null;
@@ -371,15 +313,12 @@ const Pagination = ({ page, total, onChange, loadingPage }) => {
         className="w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
         <FaChevronLeft className="w-3 h-3" />
       </button>
-
       {start > 1 && (
         <>
-          <button onClick={() => onChange(1)}
-            className="w-8 h-8 rounded-full text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">1</button>
+          <button onClick={() => onChange(1)} className="w-8 h-8 rounded-full text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">1</button>
           {start > 2 && <span className="text-gray-400 text-sm">…</span>}
         </>
       )}
-
       {pages.map(p => (
         <button key={p} onClick={() => onChange(p)} disabled={loadingPage}
           className={`w-8 h-8 rounded-full text-sm font-bold transition-all relative ${
@@ -390,15 +329,12 @@ const Pagination = ({ page, total, onChange, loadingPage }) => {
             : p}
         </button>
       ))}
-
       {end < total && (
         <>
           {end < total - 1 && <span className="text-gray-400 text-sm">…</span>}
-          <button onClick={() => onChange(total)}
-            className="w-8 h-8 rounded-full text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">{total}</button>
+          <button onClick={() => onChange(total)} className="w-8 h-8 rounded-full text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors">{total}</button>
         </>
       )}
-
       <button onClick={() => onChange(page + 1)} disabled={page === total || loadingPage}
         className="w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
         <FaChevronRight className="w-3 h-3" />
@@ -422,56 +358,83 @@ const HotelSearchResults = () => {
   const [page,          setPage]          = useState(1);
   const [showMobFilter, setShowMobFilter] = useState(false);
 
-  /* ── server-side data store ─────────────────────────────────────────────
-     pageCache: { [serverPageNo]: propertyItems[] }
-     Keeps each fetched server page so we never re-fetch it.
-     allProperties: flat array of everything cached so far.
-  ─────────────────────────────────────────────────────────────────────── */
   const initialItems = state?.results?.hotelsResponse?.propertyItems || [];
   const initialPag   = state?.results?.pagination || {};
 
-  const [pageCache, setPageCache] = useState({ 1: initialItems });
+  const [pageCache,  setPageCache]  = useState({ 1: initialItems });
   const [serverMeta, setServerMeta] = useState({
-    currentPage:     initialPag.page         || 1,
-    totalPages:      initialPag.totalPages   || 1,
-    totalItems:      initialPag.totalItems   || initialItems.length,
+    currentPage:     initialPag.page            || 1,
+    totalPages:      initialPag.totalPages      || 1,
+    totalItems:      initialPag.totalItems      || initialItems.length,
     paginationToken: initialPag.paginationToken || null,
   });
   const [loadingPage,   setLoadingPage]   = useState(false);
   const [loadPageError, setLoadPageError] = useState(null);
+  const [searching,     setSearching]     = useState(false);
+  const searchBarRef = useRef(null);
 
-  // flat array of all cached properties
+  const loc          = state?.location;
+  const checkinDate  = state?.checkinDate;
+  const checkoutDate = state?.checkoutDate;
+  const guests       = state?.guests || { rooms: 1, adults: 2, children: 0 };
+  const lat          = state?.lat;
+  const lng          = state?.lng;
+  const nightsCount  = checkinDate && checkoutDate ? nights(checkinDate, checkoutDate) : 1;
+
   const allProperties = useMemo(() => {
     return Object.keys(pageCache)
       .sort((a, b) => Number(a) - Number(b))
       .flatMap(k => pageCache[k]);
   }, [pageCache]);
 
-  /* ── guard ── */
-  if (!state?.results) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-gray-50">
-        <Building2 className="w-12 h-12 text-gray-300" />
-        <p className="text-gray-500 font-medium">No search results found.</p>
-        <button onClick={() => navigate("/hotels")}
-          className="px-5 py-2 bg-[#FD561E] text-white rounded-xl font-bold text-sm hover:bg-[#e54d1a] transition-colors">
-          Back to Search
-        </button>
-      </div>
-    );
-  }
+  const handleModifySearch = useCallback(async (payload) => {
+    setSearching(true);
+    try {
+      const res = await fetch("https://api.bobros.org/hotel/availability", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          lat:      payload.lat,
+          lng:      payload.lng,
+          checkIn:  payload.checkinDate,
+          checkOut: payload.checkoutDate,
+          rooms:    payload.guests.rooms,
+          adults:   payload.guests.adults,
+          children: payload.guests.children
+            ? Array.from({ length: payload.guests.children }, () => 5)
+            : [],
+          radius: 20,
+        }),
+      });
+      if (!res.ok) throw new Error(`Search failed (${res.status})`);
+      const results = await res.json();
 
-  const { location: loc, checkinDate, checkoutDate, guests } = state;
-  const nightsCount = nights(checkinDate, checkoutDate);
+      window.scrollTo({ top: 0, behavior: "auto" });
 
-  /* ── fetch a specific server page ───────────────────────────────────────
-     Called when user navigates to a client page that needs data from a
-     server page we haven't fetched yet.
-  ─────────────────────────────────────────────────────────────────────── */
+      navigate("/hotels/results", {
+        state: {
+          results,
+          location:    payload.location,
+          lat:         payload.lat,
+          lng:         payload.lng,
+          checkinDate: payload.checkinDate,
+          checkoutDate:payload.checkoutDate,
+          guests:      payload.guests,
+        },
+        replace: true,
+      });
+    } catch (err) {
+      console.error("Re-search error:", err);
+      alert("Search failed: " + (err.message || "Please try again"));
+    } finally {
+      setSearching(false);
+    }
+  }, [navigate]);
+
   const fetchServerPage = useCallback(async (serverPageNo) => {
-    if (pageCache[serverPageNo]) return; // already cached
-    if (!serverMeta.paginationToken)    return;
-    if (loadingPage)                    return;
+    if (pageCache[serverPageNo]) return;
+    if (!serverMeta.paginationToken) return;
+    if (loadingPage) return;
 
     setLoadingPage(true);
     setLoadPageError(null);
@@ -491,25 +454,30 @@ const HotelSearchResults = () => {
         throw new Error(msg);
       }
       const data = await response.json();
-      console.log(`✅ Hotel newPage ${serverPageNo}:`, data);
-
       const newItems = data?.hotelsResponse?.propertyItems || [];
       setPageCache(prev => ({ ...prev, [serverPageNo]: newItems }));
-      setServerMeta({
-        currentPage:     data?.pagination?.page         || serverPageNo,
-        totalPages:      data?.pagination?.totalPages   || serverMeta.totalPages,
-        totalItems:      data?.pagination?.totalItems   || serverMeta.totalItems,
-        paginationToken: data?.pagination?.paginationToken || serverMeta.paginationToken,
-      });
+      setServerMeta(prev => ({
+        currentPage:     data?.pagination?.page            || serverPageNo,
+        totalPages:      data?.pagination?.totalPages      || prev.totalPages,
+        totalItems:      data?.pagination?.totalItems      || prev.totalItems,
+        paginationToken: data?.pagination?.paginationToken || prev.paginationToken,
+      }));
     } catch (err) {
-      console.error("❌ Hotel newPage error:", err);
       setLoadPageError(err.message || "Failed to load hotels. Please try again.");
     } finally {
       setLoadingPage(false);
     }
   }, [pageCache, serverMeta, loadingPage]);
 
-  /* ── filter ── */
+  const handleBookNow = useCallback((hotel) => {
+    const rate = hotel.lowestPublicAvailableRate
+      || hotel.roomTypes?.[0]?.rates?.[0]
+      || null;
+    navigate("/hotels/detail", {
+      state: { hotel, rate, checkinDate, checkoutDate, guests, location: loc, lat, lng },
+    });
+  }, [navigate, checkinDate, checkoutDate, guests, loc, lat, lng]);
+
   const filtered = useMemo(() => allProperties.filter(h => {
     if (filters.availability === "available"   && !h.availability) return false;
     if (filters.availability === "unavailable" &&  h.availability) return false;
@@ -522,7 +490,6 @@ const HotelSearchResults = () => {
     return true;
   }), [allProperties, filters]);
 
-  /* ── sort ── */
   const sorted = useMemo(() => {
     const arr = [...filtered];
     switch (sort) {
@@ -550,26 +517,14 @@ const HotelSearchResults = () => {
     }
   }, [filtered, sort]);
 
-  /* ── client pagination math ─────────────────────────────────────────────
-     Total client pages = ceil(totalServer / ITEMS_PER_PAGE)
-     so pagination always shows full extent even before all server pages load.
-  ─────────────────────────────────────────────────────────────────────── */
-  const totalClientPages = Math.ceil(serverMeta.totalItems / ITEMS_PER_PAGE);
+  const totalClientPages = Math.max(1, Math.ceil(serverMeta.totalItems / ITEMS_PER_PAGE));
   const paged = sorted.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
-  /* ── when user picks a client page, figure out which server page is needed ── */
   const handlePageChange = useCallback((clientPage) => {
     setPage(clientPage);
     window.scrollTo({ top: 0, behavior: "smooth" });
-
-    // which server page does this client page fall on?
-    // server page 1 = items 0-99, server page 2 = items 100-199, etc.
-    // client page N needs items [(N-1)*12 .. N*12-1]
-    // server page = floor((clientPage-1)*ITEMS_PER_PAGE / serverPageSize) + 1
-    // We don't know serverPageSize exactly, but initialItems.length = 100 is the hint.
-    const serverPageSize = initialItems.length || 100;
+    const serverPageSize   = initialItems.length || 100;
     const neededServerPage = Math.floor(((clientPage - 1) * ITEMS_PER_PAGE) / serverPageSize) + 1;
-
     if (!pageCache[neededServerPage] && neededServerPage <= serverMeta.totalPages) {
       fetchServerPage(neededServerPage);
     }
@@ -578,20 +533,40 @@ const HotelSearchResults = () => {
   const handleFilterChange = useCallback((f) => { setFilters(f); setPage(1); }, []);
   const handleSortChange   = useCallback((s) => { setSort(s);    setPage(1); }, []);
 
+  if (!state?.results && !searching) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-gray-50">
+        <Building2 className="w-12 h-12 text-gray-300" />
+        <p className="text-gray-500 font-medium">No search results found.</p>
+        <button onClick={() => navigate("/hotels")}
+          className="px-5 py-2 bg-[#FD561E] text-white rounded-xl font-bold text-sm hover:bg-[#e54d1a] transition-colors">
+          Back to Search
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="sticky top-0 z-40">
-        <SearchHeader
-          location={loc}
-          checkinDate={checkinDate}
-          checkoutDate={checkoutDate}
-          guests={guests}
-          onBack={() => navigate("/hotels")}
+
+      <div ref={searchBarRef} className="bg-gray-50">
+        <HotelSearchBar
+          key={`${loc}-${checkinDate}-${checkoutDate}`}
+          defaultValues={{ location: loc, lat, lng, checkinDate, checkoutDate, guests }}
+          onSearch={handleModifySearch}
         />
       </div>
 
+      {searching && (
+        <div className="fixed inset-0 bg-white/70 backdrop-blur-sm z-30 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="animate-spin rounded-full h-10 w-10 border-4 border-[#FD561E] border-t-transparent" />
+            <p className="text-sm font-semibold text-gray-600">Searching hotels…</p>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Mobile filter button */}
         <div className="lg:hidden mb-4">
           <button onClick={() => setShowMobFilter(true)}
             className="w-full flex items-center justify-center gap-2 bg-white py-3 rounded-xl shadow-sm text-gray-700 font-semibold border border-gray-100 hover:bg-gray-50 transition-colors text-sm">
@@ -601,7 +576,6 @@ const HotelSearchResults = () => {
         </div>
 
         <div className="flex gap-5">
-          {/* desktop sidebar */}
           <div className="hidden lg:block w-64 flex-shrink-0 self-start sticky top-24">
             <FiltersSidebar
               filters={filters}
@@ -612,7 +586,6 @@ const HotelSearchResults = () => {
             />
           </div>
 
-          {/* mobile sidebar portal */}
           {showMobFilter && ReactDOM.createPortal(
             <div className="fixed inset-0 z-50 flex">
               <div className="flex-1 bg-black/40" onClick={() => setShowMobFilter(false)} />
@@ -630,7 +603,6 @@ const HotelSearchResults = () => {
             document.body
           )}
 
-          {/* results */}
           <div className="flex-1 min-w-0">
             <SortBar
               sort={sort}
@@ -655,10 +627,10 @@ const HotelSearchResults = () => {
                       key={hotel.propertyCode || `hotel-${i}`}
                       hotel={hotel}
                       nightsCount={nightsCount}
+                      onBook={handleBookNow}
                     />
                   ))}
                 </div>
-
                 <Pagination
                   page={page}
                   total={totalClientPages}
