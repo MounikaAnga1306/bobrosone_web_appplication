@@ -268,14 +268,14 @@ const BookingForm = () => {
       <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/10 to-transparent pointer-events-none" />
 
       {/* Carousel Arrows */}
-      <button onClick={() => changeBackground('prev')} aria-label="Previous image"
+      {/* <button onClick={() => changeBackground('prev')} aria-label="Previous image"
         className="absolute left-4 md:left-8 z-20 bg-white/20 hover:bg-white/40 backdrop-blur-sm p-2 rounded-full text-white transition-all duration-300 hover:scale-110 active:scale-95">
         <ChevronLeft size={24} />
       </button>
       <button onClick={() => changeBackground('next')} aria-label="Next image"
         className="absolute right-4 md:right-8 z-20 bg-white/20 hover:bg-white/40 backdrop-blur-sm p-2 rounded-full text-white transition-all duration-300 hover:scale-110 active:scale-95">
         <ChevronRight size={24} />
-      </button>
+      </button> */}
 
       <div className="relative z-10 w-full max-w-6xl px-4 sm:px-6">
         {/* Hero Text */}
@@ -357,7 +357,7 @@ const BookingForm = () => {
                 </div>
                 {fromError && <p className="text-red-500 text-[10px] mt-0.5 flex items-center gap-1"><span>⚠</span>{fromError}</p>}
                 {showFromResults && fromResults.length > 0 && (
-                  <div className="bf-animate-dropdown absolute left-0 top-full w-full bg-white shadow-xl rounded-xl z-50 mt-1 border border-gray-100" style={{ overflow:"hidden", zIndex:200 }}>
+                  <div className="bf-animate-dropdown absolute left-0 top-full w-full bg-white shadow-xl rounded-xl z-50 mt-1 border border-gray-100" style={{ maxHeight:"280px", overflowY:"auto", overflowX:"hidden", zIndex:200 }}>
                     {fromResults.map((city) => (
                       <CityRow key={city.sid} city={city} isMobile
                         onClick={() => { setFromQuery(city.cityname); setFromCity(city); setFromSelected(true); setShowFromResults(false); setFromError(""); if (toCity?.sid===city.sid) setSameCityError("Departure and Destination cannot be the same"); else setSameCityError(""); }} />
@@ -381,7 +381,7 @@ const BookingForm = () => {
                 </div>
                 {(toError||sameCityError) && <p className="text-red-500 text-[10px] mt-0.5 flex items-center gap-1"><span>⚠</span>{sameCityError||toError}</p>}
                 {showToResults && toResults.length > 0 && (
-                  <div className="bf-animate-dropdown absolute left-0 top-full w-full bg-white shadow-xl rounded-xl z-50 mt-1 border border-gray-100" style={{ overflow:"hidden", zIndex:200 }}>
+                  <div className="bf-animate-dropdown absolute left-0 top-full w-full bg-white shadow-xl rounded-xl z-50 mt-1 border border-gray-100" style={{ maxHeight:"280px", overflowY:"auto", overflowX:"hidden", zIndex:200 }}>
                     {toResults.map((city) => (
                       <CityRow key={city.sid} city={city} isMobile
                         onClick={() => { setToQuery(city.cityname); setToCity(city); setToSelected(true); setShowToResults(false); setToError(""); if (fromCity?.sid===city.sid) setSameCityError("Departure and Destination cannot be the same"); else setSameCityError(""); }} />
@@ -452,7 +452,7 @@ const BookingForm = () => {
                 </div>
                 <div className="h-4 mt-0.5">{fromError&&<p className="text-red-500 text-[10px] flex items-center gap-1"><span>⚠</span>{fromError}</p>}</div>
                 {showFromResults && fromResults.length > 0 && (
-                  <div className="bf-animate-dropdown absolute left-0 top-full w-full bg-white shadow-xl rounded-xl z-50 mt-1 border border-gray-100" style={{ overflow:"hidden", zIndex:200 }}>
+                  <div className="bf-animate-dropdown absolute left-0 top-full w-full bg-white shadow-xl rounded-xl z-50 mt-1 border border-gray-100" style={{ maxHeight:"280px", overflowY:"auto", overflowX:"hidden", zIndex:200 }}>
                     {fromResults.map((city) => (
                       <CityRow key={city.sid} city={city}
                         onClick={() => { setFromQuery(city.cityname); setFromCity(city); setFromSelected(true); setShowFromResults(false); setFromError(""); if (toCity?.sid===city.sid) setSameCityError("Departure and Destination cannot be the same"); else setSameCityError(""); }} />
@@ -481,7 +481,7 @@ const BookingForm = () => {
                 </div>
                 <div className="h-4 mt-0.5">{(toError||sameCityError)&&<p className="text-red-500 text-[10px] flex items-center gap-1"><span>⚠</span>{sameCityError||toError}</p>}</div>
                 {showToResults && toResults.length > 0 && (
-                  <div className="bf-animate-dropdown absolute left-0 top-full w-full bg-white shadow-xl rounded-xl z-50 mt-1 border border-gray-100" style={{ overflow:"hidden", zIndex:200 }}>
+                  <div className="bf-animate-dropdown absolute left-0 top-full w-full bg-white shadow-xl rounded-xl z-50 mt-1 border border-gray-100" style={{ maxHeight:"280px", overflowY:"auto", overflowX:"hidden", zIndex:200 }}>
                     {toResults.map((city) => (
                       <CityRow key={city.sid} city={city}
                         onClick={() => { setToQuery(city.cityname); setToCity(city); setToSelected(true); setShowToResults(false); setToError(""); if (fromCity?.sid===city.sid) setSameCityError("Departure and Destination cannot be the same"); else setSameCityError(""); }} />
