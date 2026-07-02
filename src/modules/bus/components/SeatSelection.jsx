@@ -116,7 +116,7 @@ const SeatSelection = ({
       />
       {seat.available && (
         <span
-          className={`absolute font-semibold ${sel ? "text-white" : "text-gray-800"}`}
+          className={`absolute font-semibold ${sel ? "text-black" : "text-gray-800"}`}
           style={{
             fontSize: 10,
             top: "50%",
