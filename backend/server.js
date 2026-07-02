@@ -230,12 +230,26 @@ app.post("/billdesk/order", async (req, res) => {
 // =========================
 // VERIFY PAYMENT
 // =========================
+// app.post("/verifyPayment", async (req, res) => {
+//   try {
+//     const url = `${process.env.BASE_URL}/verifyPayment`;
+//     const headers = oauth.toHeader(oauth.authorize({ url, method: "POST" }));
+//     headers["Content-Type"] = "application/json";
+//     res.json((await axios.post(url, req.body, { headers })).data);
+//   } catch (error) { res.status(500).json({ success: false, message: "Payment verification failed" }); }
+// });
+
+
 app.post("/verifyPayment", async (req, res) => {
   try {
     const url = `${process.env.BASE_URL}/verifyPayment`;
-    const headers = oauth.toHeader(oauth.authorize({ url, method: "POST" }));
-    headers["Content-Type"] = "application/json";
-    res.json((await axios.post(url, req.body, { headers })).data);
+    console.log("[verifyPayment] request body:", JSON.stringify(req.body, null, 2));
+
+    // const headers = oauth.toHeader(oauth.authorize({ url, method: "POST" }));
+    // headers["Content-Type"] = "application/json";
+    // res.json((await axios.post(url, req.body, { headers })).data);
+
+    res.json({ success: true, message: "API call commented out — check logs for request body" });
   } catch (error) { res.status(500).json({ success: false, message: "Payment verification failed" }); }
 });
 
@@ -538,11 +552,13 @@ app.post("/offer/apply", async (req, res) => {
 // =========================
 app.get("/printTicket", async (req, res) => {
   try {
-    const { tin } = req.query;
+    const { tin, "cf-turnstile-response": captchaToken } = req.query;
     if (!tin) return res.status(400).json({ success: false, message: "tin is required" });
-    const url = `${process.env.BASE_URL}/email/print-ticket?tin=${tin}`;
-    const headers = oauth.toHeader(oauth.authorize({ url, method: "GET" }));
-    res.json((await axios.get(url, { headers })).data);
+    const url = `${process.env.BASE_URL}/ticket`;
+    const body = { tin, captchaToken: captchaToken || "" };
+    const headers = oauth.toHeader(oauth.authorize({ url, method: "POST", body }));
+    headers["Content-Type"] = "application/json";
+    res.json((await axios.post(url, body, { headers })).data);
   } catch (error) { res.status(500).json({ success: false, message: "Failed to fetch ticket details" }); }
 });
 

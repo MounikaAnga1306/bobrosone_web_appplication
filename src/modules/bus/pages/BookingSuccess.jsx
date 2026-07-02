@@ -571,7 +571,7 @@ const BookingSuccess = () => {
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 300, padding: "16px" }}>
           <div style={{ background: "white", borderRadius: "20px", padding: "24px", width: "100%", maxWidth: "380px", maxHeight: "90vh", overflowY: "auto" }}>
             <div style={{ textAlign: "center", marginBottom: "18px" }}>
-              <div style={{ fontSize: "38px", marginBottom: "6px" }}>💰</div>
+              
               <h2 style={{ fontSize: "17px", fontWeight: "800", color: "#1a1a2e", margin: 0 }}>Reward Points Summary</h2>
             </div>
             <div style={{ background: "#f8f9ff", borderRadius: "12px", padding: "16px", marginBottom: "14px" }}>

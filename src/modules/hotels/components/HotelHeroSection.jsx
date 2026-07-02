@@ -533,6 +533,7 @@ const HotelHeroSection = () => {
           checkoutDate: checkoutDate.toISOString().split("T")[0],
           guests, lat, lng,
           results: data,
+          traceId: data?.traceId || "", 
         },
       });
     } catch (err) {

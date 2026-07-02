@@ -379,6 +379,7 @@ const HotelSearchResults = () => {
   const guests       = state?.guests || { rooms: 1, adults: 2, children: 0 };
   const lat          = state?.lat;
   const lng          = state?.lng;
+  const traceId      = state?.traceId || "";
   const nightsCount  = checkinDate && checkoutDate ? nights(checkinDate, checkoutDate) : 1;
 
   const allProperties = useMemo(() => {
@@ -420,6 +421,7 @@ const HotelSearchResults = () => {
           checkinDate: payload.checkinDate,
           checkoutDate:payload.checkoutDate,
           guests:      payload.guests,
+          traceId:      results?.traceId || "", 
         },
         replace: true,
       });
@@ -474,9 +476,9 @@ const HotelSearchResults = () => {
       || hotel.roomTypes?.[0]?.rates?.[0]
       || null;
     navigate("/hotels/detail", {
-      state: { hotel, rate, checkinDate, checkoutDate, guests, location: loc, lat, lng },
+      state: { hotel, rate, checkinDate, checkoutDate, guests, location: loc, lat, lng, traceId },
     });
-  }, [navigate, checkinDate, checkoutDate, guests, loc, lat, lng]);
+  }, [navigate, checkinDate, checkoutDate, guests, loc, lat, lng, traceId]);
 
   const filtered = useMemo(() => allProperties.filter(h => {
     if (filters.availability === "available"   && !h.availability) return false;
