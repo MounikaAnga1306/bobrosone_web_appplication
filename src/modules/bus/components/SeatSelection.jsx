@@ -81,7 +81,10 @@ const SeatSelection = ({
     return availableSeat;
   };
 
-  const renderSeatCell = (seat) => (
+  const renderSeatCell = (seat) => {
+  const sel = selectedSeats.some((s) => s.id === seat.id);
+
+  return (
     <div
       key={seat.id}
       onClick={() => toggleSeat(seat)}
@@ -92,13 +95,17 @@ const SeatSelection = ({
         setTooltip((prev) => prev ? { ...prev, x: e.clientX, y: e.clientY } : null)
       }
       onMouseLeave={() => setTooltip(null)}
-      className="cursor-pointer relative flex items-center justify-center"
+      className={`cursor-pointer relative flex items-center justify-center ${
+        seat.available ? "group" : ""
+      }`}
       style={{ width: "100%", height: "100%" }}
     >
       <img
         src={getSeatImage(seat)}
         alt={seat.name}
-        className="object-contain"
+        className={`object-contain transition-transform duration-200 ease-out ${
+          seat.available ? "group-hover:scale-110 group-hover:z-20" : ""
+        }`}
         style={
           isVertSlp(seat)
             ? { height: 75, width: 45 }
@@ -107,20 +114,23 @@ const SeatSelection = ({
             : { height: 45, width: 40 }
         }
       />
-      <span
-        className="absolute font-semibold text-gray-800"
-        style={{
-          fontSize: 10,
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-        }}
-      >
-        {seat.name}
-      </span>
+      {seat.available && (
+        <span
+          className={`absolute font-semibold ${sel ? "text-white" : "text-gray-800"}`}
+          style={{
+            fontSize: 10,
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            zIndex: 30,
+          }}
+        >
+          ₹{seat.baseFare}
+        </span>
+      )}
     </div>
   );
-
+};
   const renderUnifiedGrid = (deckSeats) => {
     if (!deckSeats.length) return null;
 
@@ -298,10 +308,11 @@ const SeatSelection = ({
       {tooltip && (
         <div
           className="fixed z-[99999] pointer-events-none"
-          style={{ left: tooltip.x + 12, top: tooltip.y - 36 }}
+          style={{ left: tooltip.x + 20, top: tooltip.y - 55 }}
         >
           <div className="bg-white text-black text-xs md:text-sm font-semibold px-2 py-1 rounded shadow-md whitespace-nowrap border border-gray-200">
-            Fare: ₹{tooltip.fare}
+            {/* Fare: ₹{tooltip.fare} */}
+            Seat: {tooltip.seatId}
           </div>
           <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-white mx-auto" />
         </div>

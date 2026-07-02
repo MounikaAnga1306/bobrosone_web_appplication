@@ -6,7 +6,7 @@ export default function FooterBottom() {
         
         {/* AUTHORIZED BY */}
         <div className="flex flex-col items-center text-center">
-          <span className="text-xs font-bold text-gray-800 tracking-widest mb-3">
+          <span className="text-xs font-bold text-gray-800 tracking-widest mb-1">
             AUTHORIZED BY
           </span>
           <div className="flex items-center justify-center h-12 sm:h-14">

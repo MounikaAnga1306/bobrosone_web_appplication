@@ -280,7 +280,7 @@ const ContactUs = () => {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 0, background: "#fff", borderRadius: 24, overflow: "hidden", boxShadow: "0 8px 48px rgba(0,0,0,0.1)", border: "1px solid rgba(0,0,0,0.06)" }}>
 
           {/* LEFT dark panel */}
-          <div style={{ background: "linear-gradient(160deg, #1a1a2e 0%, #0f3460 65%, #1f1035 100%)", padding: "clamp(32px, 6vw, 48px) clamp(24px, 5vw, 40px)", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
+          <div style={{ background: "linear-gradient(135deg, #0f1432 0%, #1a2050 45%, #FD561E 160%)", padding: "clamp(32px, 6vw, 48px) clamp(24px, 5vw, 40px)", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
             <div>
               <h3 style={{ fontSize: "clamp(20px, 5vw, 26px)", fontWeight: 800, color: "#fff", margin: "0 0 14px", lineHeight: 1.25 }}>We'd Love to<br />Hear From You</h3>
               <p style={{ fontSize: "clamp(12px, 2.8vw, 14px)", color: "rgba(255,255,255,0.55)", margin: "0 0 clamp(24px, 5vw, 40px)", lineHeight: 1.75 }}>Fill in the form and our team will respond within 24 hours.</p>

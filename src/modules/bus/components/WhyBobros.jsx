@@ -293,11 +293,11 @@ export default function WhyBobros() {
                     }}
                   />
                   <img
-                    src="/assets/Bobros.png"
+                    src="/assets/Bobros_white.png"
                     alt="Bobros"
-                    className="relative h-10 w-auto md:h-14 object-contain drop-shadow"
+                    className="relative h-10 w-auto md:h-26 object-contain drop-shadow"
                   />
-                  <span className="relative mt-1 text-[9px] md:text-[10px] opacity-95 tracking-wide">
+                  <span className="relative mt-1 text-[9px] md:text-[14px] opacity-95 tracking-wide">
                     Travel + Tech
                   </span>
                 </div>

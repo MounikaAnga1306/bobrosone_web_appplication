@@ -11,7 +11,7 @@ export default defineConfig({
     }),
   ],
   server: {
-    port: 5174,        // eppుడూ ee port ney vadు
+    port: 5173,        // eppుడూ ee port ney vadు
     strictPort: true,  // 5173 busy aithే error istుంది (silently 5174 ki marదు)
     proxy: {
       '/bill/billers': 'http://localhost:5000',

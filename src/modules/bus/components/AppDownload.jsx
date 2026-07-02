@@ -51,7 +51,6 @@ export default function AppDownload() {
                   /* top leans LEFT (counter-clockwise), bottom stays right — exactly like 2nd image */
                   transform: "rotate(-18deg)",
                   transformOrigin: "bottom right",
-                  marginLeft: "clamp(10px, 2vw, 24px)",
                   marginBottom: "24px",
                   marginLeft:"100px",
                 }}

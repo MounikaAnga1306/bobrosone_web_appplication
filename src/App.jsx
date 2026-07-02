@@ -75,7 +75,9 @@ import BillPaymentStatus from "./modules/Bill Payments/pages/BillPaymentStatus";
 import Complaints        from "./modules/Bill Payments/pages/Complaints";
 import Transactions      from "./modules/Bill Payments/pages/Transactions";
 
+
 import { GoogleOAuthProvider } from "@react-oauth/google";
+//import BillPaymentMenu from "./modules/bus/components/BillPaymentMenu";
 
 // ─────────────────────────────────────────────────────────────────
 // NOTE: State is managed by Zustand stores — no providers needed.
@@ -176,6 +178,7 @@ function App() {
                   <Route path="/HomePage" element={<Home />} />
                   <Route path="/holiday"  element={<Holiday />} />
                   <Route path="/ItService" element={<ItServicesPage />} />
+                  {/* <Route path="/cabs" element={<BillPaymentMenu />} /> */}
 
                   {/* ── Bus: Static pages ─────────────────── */}
                   <Route path="/about"      element={<AboutUs />} />
