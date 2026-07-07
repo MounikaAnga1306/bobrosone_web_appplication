@@ -43,6 +43,7 @@ const MyProfile = () => {
   };
 
   const buildProfile = (u) => ({
+    uid: u.uid || "",
     firstName: u.uname?.split(" ")[0] || "",
     lastName: u.uname?.split(" ").slice(1).join(" ") || "",
     email: u.umail || u.uemail || u.email || "",
@@ -140,7 +141,7 @@ const MyProfile = () => {
 
           {/* Header Banner */}
           <div style={{
-            background: "linear-gradient(135deg, #1a3c34 0%, #2d5a45 100%)",
+            background: "linear-gradient(135deg, #fff4ee 0%, #fde8d8 100%)",
             borderRadius: "16px",
             padding: isMobile ? "16px" : "24px 32px",
             marginBottom: "20px",
@@ -149,30 +150,31 @@ const MyProfile = () => {
             justifyContent: "space-between",
             alignItems: isMobile ? "flex-start" : "center",
             gap: "16px",
+            border: "1px solid #fdd0b0",
           }}>
             <div>
-              <h1 style={{ fontSize: isMobile ? "20px" : "26px", fontWeight: "700", color: "white", marginBottom: "6px" }}>
+              <h1 style={{ fontSize: isMobile ? "20px" : "26px", fontWeight: "700", color: "#1a1a2e", marginBottom: "6px" }}>
                 My Profile
               </h1>
-              <p style={{ color: "rgba(255,255,255,0.8)", fontSize: "13px" }}>
+              <p style={{ color: "#7a6a63", fontSize: "13px" }}>
                 Your personal information
               </p>
             </div>
 
             {/* Reward Points */}
             <div style={{
-              background: "rgba(255,255,255,0.15)",
+              background: "rgba(255,255,255,0.6)",
               backdropFilter: "blur(10px)",
               borderRadius: "14px",
               padding: isMobile ? "10px 16px" : "12px 24px",
-              border: "1px solid rgba(255,255,255,0.2)",
+              border: "1px solid #fdd0b0",
               alignSelf: isMobile ? "stretch" : "auto",
               textAlign: isMobile ? "left" : "center",
             }}>
-              <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.7)", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
+              <div style={{ fontSize: "11px", color: "#a05a3a", textTransform: "uppercase", letterSpacing: "0.8px", marginBottom: "4px", display: "flex", alignItems: "center", gap: "4px" }}>
                 <Gift size={12} /> Reward Points
               </div>
-              <div style={{ fontSize: isMobile ? "22px" : "28px", fontWeight: "800", color: "white" }}>
+              <div style={{ fontSize: isMobile ? "22px" : "28px", fontWeight: "800", color: "#fd561e" }}>
                 ₹{rewardBalance}
               </div>
             </div>
@@ -256,6 +258,11 @@ const MyProfile = () => {
                 <div>
                   <label style={labelStyle}>Email Address</label>
                   <input style={fieldStyle} value={profile.email} readOnly />
+                </div>
+
+                <div>
+                  <label style={labelStyle}>User ID</label>
+                  <input style={fieldStyle} value={profile.uid} readOnly />
                 </div>
 
               </div>
