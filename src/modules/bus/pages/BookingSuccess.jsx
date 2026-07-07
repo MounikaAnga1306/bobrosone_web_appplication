@@ -168,17 +168,22 @@ const BookingSuccess = () => {
         theme: { color: "#fd561e" },
         handler: async (response) => {
           const verifyData = await verifyRazorpayPayment({ razorpay_payment_id: response.razorpay_payment_id, razorpay_order_id: response.razorpay_order_id, razorpay_signature: response.razorpay_signature });
-          if (!verifyData) { clearStoredBooking(); navigate("/payment-status", { state: { status: "failed", payment: { code: "VERIFY_FAILED", description: "Payment verification failed" } } }); return; }
+          if (!verifyData) {
+            navigate("/payment-status", { state: { status: "failed", payment: { code: "VERIFY_FAILED", description: "Payment verification failed" } } }); return;
+           }
           const isSuccess = verifyData?.success === true || verifyData?.status === "success";
-          clearStoredBooking();
+           if (isSuccess) clearStoredBooking();
           navigate("/payment-status", { state: { status: isSuccess ? "success" : "failed", paymentData: verifyData, passengers, seats: state?.seats, fromCity: state?.fromCity, toCity: state?.toCity, date: state?.date, totalFare: fare, ticketId: state?.ticketId } });
         },
-        modal: { ondismiss: () => { clearStoredBooking(); navigate("/payment-status", { state: { status: "cancelled" } }); } }
+        modal: { ondismiss: () => {
+          navigate("/payment-status", { state: { status: "cancelled" } }); } }
       };
       const rzp = new window.Razorpay(options);
-      rzp.on("payment.failed", (r) => { clearStoredBooking(); navigate("/payment-status", { state: { status: "failed", payment: { code: "PAYMENT_ERROR", reason: r.error.message } } }); });
+      rzp.on("payment.failed", (r) => {
+        navigate("/payment-status", { state: { status: "failed", payment: { code: "PAYMENT_ERROR", reason: r.error.message } } }); });
       rzp.open();
-    } catch (error) { clearStoredBooking(); navigate("/payment-status", { state: { status: "failed", payment: { code: "PAYMENT_ERROR", reason: error.message } } }); }
+    } catch (error) { 
+      navigate("/payment-status", { state: { status: "failed", payment: { code: "PAYMENT_ERROR", reason: error.message } } }); }
   };
 
   const handleBillDeskClick = async (fareToCharge) => {
@@ -195,7 +200,7 @@ const BookingSuccess = () => {
       const response = await createBillDeskOrder({ fare, uid: uid || "NA", pname: passengers[0]?.name || "Guest", tickid: state?.ticketId, redirect_url: `${APP_URL}/payment-status` });
       if (!response || !response.success || !response.authToken) { alert("BillDesk order creation failed"); return; }
       window.location.href = `https://uat.bobros.co.in/billdesk_checkout.php?merchantId=HYDBOBROS&bdorderid=${response.bdorderid}&authToken=${encodeURIComponent(response.authToken)}`;
-    } catch (error) { clearStoredBooking(); navigate("/payment-status", { state: { status: "failed", payment: { description: "BillDesk payment error", reason: error.message } } }); }
+    } catch (error) { navigate("/payment-status", { state: { status: "failed", payment: { description: "BillDesk payment error", reason: error.message } } }); }
   };
 
   if (!state) return null;

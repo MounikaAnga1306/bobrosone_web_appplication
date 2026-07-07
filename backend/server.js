@@ -190,68 +190,144 @@ app.post("/razorpayment/order", async (req, res) => {
 // =========================
 app.post("/billdesk/order", async (req, res) => {
   try {
-    const { fare, uid, pname, tickid, redirect_url } = req.body;
-    if (!fare || !tickid) return res.status(400).json({ success: false, message: "fare and ticketId required" });
+    console.log("========================================");
+    console.log("BILLDESK ORDER API CALLED");
+    console.log("========================================");
 
-    const returnUrl = redirect_url || "http://localhost:5173/payment-status";
+    console.log("Incoming Request Body:");
+    console.log(JSON.stringify(req.body, null, 2));
+
+    const { fare, uid, pname, tickid, redirect_url } = req.body;
+
+    if (!fare || !tickid) {
+      console.log("Validation Failed: fare or tickid missing");
+      return res.status(400).json({
+        success: false,
+        message: "fare and ticketId required",
+      });
+    }
+
+    const returnUrl =
+      redirect_url || "http://localhost:5173/payment-status";
 
     const body = new URLSearchParams({
-      fare:       String(fare),
-      uid:        uid   || "Not Applicable",
-      pname:      pname || "Guest",
-      tickid:     String(tickid),
+      fare: String(fare),
+      uid: uid || "Not Applicable",
+      pname: pname || "Guest",
+      tickid: String(tickid),
       return_url: returnUrl,
+    });
+
+    console.log("Request Payload Sent to PHP:");
+    console.log(body.toString());
+
+    const config = {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Accept: "application/json",
+        Authorization: `Basic ${Buffer.from(
+          `${process.env.BILLDESK_PHP_USER}:${process.env.BILLDESK_PHP_PASS}`
+        ).toString("base64")}`,
+      },
+      timeout: 30000,
+    };
+
+    console.log("Axios Config:");
+    console.log({
+      url: "https://uat.bobros.co.in/billdesktest.php",
+      method: "POST",
+      headers: {
+        ...config.headers,
+        Authorization: "***HIDDEN***",
+      },
+      timeout: config.timeout,
     });
 
     const result = await axios.post(
       "https://uat.bobros.co.in/billdesktest.php",
       body.toString(),
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          "Accept": "application/json",
-          "Authorization": `Basic ${Buffer.from(
-            `${process.env.BILLDESK_PHP_USER}:${process.env.BILLDESK_PHP_PASS}`
-          ).toString("base64")}`,
-        },
-        timeout: 30000,
-      }
+      config
     );
 
-    console.log("[BILLDESK BUS ORDER] response:", result.data);
-    res.json(result.data);
+    console.log("========================================");
+    console.log("BILLDESK RESPONSE");
+    console.log("========================================");
+
+    console.log("Status:", result.status);
+    console.log("Status Text:", result.statusText);
+
+    console.log("Response Headers:");
+    console.log(result.headers);
+
+    console.log("Response Data:");
+    console.log(JSON.stringify(result.data, null, 2));
+
+    console.log("========================================");
+
+    return res.json(result.data);
 
   } catch (error) {
-    console.error("[BILLDESK BUS ORDER] Error:", error.response?.status, error.message);
-    res.status(500).json({ success: false, message: "BillDesk order creation failed" });
+    console.log("========================================");
+    console.log("BILLDESK ERROR");
+    console.log("========================================");
+
+    console.error("Message:", error.message);
+    console.error("Code:", error.code);
+
+    if (error.response) {
+      console.error("Status:", error.response.status);
+      console.error("Status Text:", error.response.statusText);
+
+      console.error("Headers:");
+      console.error(error.response.headers);
+
+      console.error("Response Data:");
+      console.error(JSON.stringify(error.response.data, null, 2));
+    }
+
+    if (error.request) {
+      console.error("Request Sent But No Response:");
+      console.error(error.request);
+    }
+
+    console.error("Complete Error Object:");
+    console.error(error);
+
+    console.log("========================================");
+
+    return res.status(500).json({
+      success: false,
+      message: "BillDesk order creation failed",
+      error: error.response?.data || error.message,
+    });
   }
 });
 
-// =========================
-// VERIFY PAYMENT
-// =========================
-// app.post("/verifyPayment", async (req, res) => {
-//   try {
-//     const url = `${process.env.BASE_URL}/verifyPayment`;
-//     const headers = oauth.toHeader(oauth.authorize({ url, method: "POST" }));
-//     headers["Content-Type"] = "application/json";
-//     res.json((await axios.post(url, req.body, { headers })).data);
-//   } catch (error) { res.status(500).json({ success: false, message: "Payment verification failed" }); }
-// });
-
-
+//=========================
+//VERIFY PAYMENT
+//=========================
 app.post("/verifyPayment", async (req, res) => {
   try {
     const url = `${process.env.BASE_URL}/verifyPayment`;
-    console.log("[verifyPayment] request body:", JSON.stringify(req.body, null, 2));
+    const headers = oauth.toHeader(oauth.authorize({ url, method: "POST" }));
+    headers["Content-Type"] = "application/json";
+    res.json((await axios.post(url, req.body, { headers })).data);
+  } catch (error) { res.status(500).json({ success: false, message: "Payment verification failed" }); }
+});
+
+
+// app.post("/verifyPayment", async (req, res) => {
+//   try {
+//     const url = `${process.env.BASE_URL}/verifyPayment`;
+//     console.log("[verifyPayment] request body:", JSON.stringify(req.body, null, 2));
 
     // const headers = oauth.toHeader(oauth.authorize({ url, method: "POST" }));
     // headers["Content-Type"] = "application/json";
     // res.json((await axios.post(url, req.body, { headers })).data);
 
-    res.json({ success: true, message: "API call commented out — check logs for request body" });
-  } catch (error) { res.status(500).json({ success: false, message: "Payment verification failed" }); }
-});
+//     res.json({ success: true, message: "API call commented out — check logs for request body" });
+//   } catch (error) { res.status(500).json({ success: false, message: "Payment verification failed" }); }
+// });
 
 // =========================
 // BBPS BILL ORDER

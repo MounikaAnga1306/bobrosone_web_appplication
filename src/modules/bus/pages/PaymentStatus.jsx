@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { useLocation, useSearchParams, useNavigate } from "react-router-dom";
-
+import PrintTicketModal from "../../../modules/bus/pages/PrintTicketModal";
 const PaymentStatus = () => {
   const { state } = useLocation();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  const [showPrintModal, setShowPrintModal] = useState(false); // ✅ new state
 
   let finalState = state;
 
@@ -56,6 +59,9 @@ const PaymentStatus = () => {
 
   const { status, paymentData, passengers, seats, fromCity, toCity, date, totalFare, ticketId, payment } = finalState;
 
+  // ✅ ticket id ni ఏ field lo unna pick chesukunే helper
+  const resolvedTicketId = paymentData?.bookedTicketId || ticketId || "";
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-200 p-6">
       <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-3xl">
@@ -66,7 +72,7 @@ const PaymentStatus = () => {
             <h1 className="text-3xl font-bold text-[#fd561e] mb-4 text-center">Payment Successful 🎉</h1>
             <h2 className="text-xl font-semibold mb-4 text-center">Booking Confirmed</h2>
             <div className="space-y-2 text-lg">
-              <p><b>Booking ID:</b> {paymentData?.bookedTicketId ?? ticketId}</p>
+              <p><b>Booking ID:</b> {resolvedTicketId}</p>
               <p><b>Journey:</b> {fromCity} → {toCity}</p>
               <p><b>Date:</b> {date}</p>
               <p><b>Total Fare:</b> ₹{totalFare}</p>
@@ -92,12 +98,19 @@ const PaymentStatus = () => {
                 </tbody>
               </table>
             </div>
-            <div className="mt-6 text-center">
+            <div className="mt-6 flex items-center justify-center gap-4 flex-wrap">
+             
               <button
                 onClick={() => navigate("/")}
-                className="bg-[#fd561e] text-white px-8 py-3 rounded-xl font-semibold hover:bg-[#e14d1a] transition"
+                className="bg-[#fd561e] text-white cursor-pointer px-8 py-3 rounded-xl font-semibold hover:bg-[#e14d1a] transition"
               >
                 Back to Home
+              </button>
+               <button
+                onClick={() => setShowPrintModal(true)}
+                className="bg-white border-2 cursor-pointer border-[#fd561e] text-[#fd561e] px-8 py-3 rounded-xl font-semibold hover:bg-[#fd561e] hover:text-white transition"
+              >
+                ⬇️ Download Ticket
               </button>
             </div>
           </>
@@ -113,7 +126,7 @@ const PaymentStatus = () => {
             {payment?.reason      && <p className="mb-2"><strong>Reason:</strong> {payment.reason}</p>}
             <div className="mt-6 text-center">
               <button
-                onClick={() => navigate("/")}
+                onClick={() => navigate("/booking-success")}
                 className="bg-red-500 text-white px-8 py-3 rounded-xl font-semibold hover:bg-red-600 transition"
               >
                 Try Again
@@ -123,30 +136,52 @@ const PaymentStatus = () => {
         )}
 
         {/* ── CANCELLED ── */}
-{status === "cancelled" && (
-  <>
-    <h1 className="text-3xl font-bold text-yellow-600 mb-6 text-center">Payment Cancelled ⚠️</h1>
-    <p className="text-center text-gray-500 mb-6">
-      You cancelled the payment. Your seats may have been released.
-    </p>
-    <div className="flex items-center justify-center gap-4">
-      <button
-        onClick={() => navigate("/booking-success")}
-        className="bg-[#fd561e] text-white px-8 py-3 rounded-xl font-semibold hover:bg-[#e14d1a] transition"
-      >
-        Try Again
-      </button>
-      <button
-        onClick={() => navigate("/")}
-        className="bg-gray-200 text-gray-800 px-8 py-3 rounded-xl font-semibold hover:bg-gray-300 transition"
-      >
-        Back to Home
-      </button>
-    </div>
-  </>
-)}
+        {status === "cancelled" && (
+          <>
+            <h1 className="text-3xl font-bold text-yellow-600 mb-6 text-center">Payment Cancelled ⚠️</h1>
+            <p className="text-center text-gray-500 mb-6">
+              You cancelled the payment. Your seats may have been released.
+            </p>
+            <div className="flex items-center justify-center gap-4">
+              <button
+                onClick={() => navigate("/booking-success")}
+                className="bg-[#fd561e] text-white px-8 py-3 cursor-pointer rounded-xl font-semibold hover:bg-[#e14d1a] transition"
+              >
+                Try Again
+              </button>
+              <button
+                onClick={() => navigate("/")}
+                className="bg-gray-200 text-gray-800 px-8 py-3 cursor-pointer rounded-xl font-semibold hover:bg-gray-300 transition"
+              >
+                Back to Home
+              </button>
+            </div>
+          </>
+        )}
 
       </div>
+
+      {/* ── PRINT TICKET MODAL OVERLAY ── */}
+      {showPrintModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowPrintModal(false); }}
+        >
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 relative">
+           <button
+  onClick={() => setShowPrintModal(false)}
+  className="absolute top-3 right-4 w-8 h-8 flex items-center justify-center text-gray-400 cursor-pointer hover:text-gray-700  text-xl font-bold transition"
+  aria-label="Close"
+>
+  ×
+</button>
+            <PrintTicketModal
+              onClose={() => setShowPrintModal(false)}
+              prefillTin={resolvedTicketId}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
